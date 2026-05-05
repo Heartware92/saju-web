@@ -487,10 +487,13 @@ export default function GunghapPage() {
           const eng = record.engine_result as Record<string, unknown> | undefined;
           const cat = (eng?.gunghapCategory as string) ?? '';
           const customLbl = (eng?.customLabel as string) ?? '';
+          // 옛날 레코드는 partner_name 이 NULL 일 수 있음 — 생일이라도 보여 두 사람 식별 유지
+          const partnerLabel = record.partner_name
+            || (record.partner_birth_date ? record.partner_birth_date.replace(/-/g, '.') : '상대');
           setArchiveMeta({
             categoryLabel: customLbl || CATEGORY_LABEL_MAP[cat] || cat || '궁합',
             profileName: record.profile_name ?? '나',
-            partnerName: record.partner_name ?? '상대',
+            partnerName: partnerLabel,
             myRole: (eng?.myRole as string) ?? '',
             otherRole: (eng?.otherRole as string) ?? '',
           });
@@ -511,7 +514,7 @@ export default function GunghapPage() {
               if (record.partner_birth_date) {
                 const partnerGender = (eng?.partnerGender as string) || (record.gender === 'male' ? 'female' : 'male');
                 const otherBirth: BirthProfile = {
-                  id: 'archive_other', user_id: '', name: record.partner_name ?? '상대',
+                  id: 'archive_other', user_id: '', name: record.partner_name || record.partner_birth_date.replace(/-/g, '.'),
                   birth_date: record.partner_birth_date,
                   birth_time: (eng?.partnerBirthTime as string) ?? undefined,
                   birth_place: 'seoul',

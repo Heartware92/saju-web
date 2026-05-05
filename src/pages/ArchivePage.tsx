@@ -50,12 +50,12 @@ function formatDate(iso: string): string {
 
 /** 보관함에 표시할 프로필 라벨 — 신규 컬럼(profile_name) 우선, 없으면 생일로 fallback. */
 function getProfileLabel(record: SajuRecord): string {
-  if (record.profile_name) {
-    if (record.partner_name) return `${record.profile_name} × ${record.partner_name}`;
-    return record.profile_name;
-  }
   // 옛날 데이터는 profile_name 이 NULL — 생일을 짧게 표시
-  return (record.birth_date || '').replace(/-/g, '.');
+  if (!record.profile_name) return (record.birth_date || '').replace(/-/g, '.');
+  // 궁합: 두 사람 모두 보이도록 — 상대 이름 우선, 없으면 생일 fallback
+  if (record.partner_name) return `${record.profile_name} × ${record.partner_name}`;
+  if (record.partner_birth_date) return `${record.profile_name} × ${record.partner_birth_date.replace(/-/g, '.')}`;
+  return record.profile_name;
 }
 
 /** 사주 카테고리 → 결과 페이지 URL. recordId 를 쿼리로 붙인다. */
