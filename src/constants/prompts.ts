@@ -756,6 +756,115 @@ export interface TodayGanZhi {
   interactions: string[]; // 일진과 원국 간 합충형파 목록 (짧은 문자열)
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// 오늘의 운세 V3 — 시간대 + 입력값 기반 풀이
+// 13 섹션 + 9 항목 점수 + 시간대별 흐름 그래프.
+// 사용자의 취미·역할 입력에 따라 5번 운용법 섹션이 분기되고,
+// 시간대(자정/아침/오후/저녁)별로 다른 톤·관점으로 풀이된다.
+// ─────────────────────────────────────────────────────────────────────────────
+
+/** 0~24 시간 구간 — 진입 시점 기준 풀이 톤 결정 */
+export type TodayTimeSlot = 'midnight' | 'morning' | 'afternoon' | 'evening';
+
+export const TODAY_TIME_SLOT_LABELS: Record<TodayTimeSlot, string> = {
+  midnight: '자정·새벽',
+  morning:  '아침',
+  afternoon: '오후',
+  evening:  '저녁·밤',
+};
+
+/** 현재 시각(0~23)으로 시간 구간 판정 */
+export function getTodayTimeSlot(hour: number): TodayTimeSlot {
+  if (hour >= 0 && hour <= 5) return 'midnight';
+  if (hour >= 6 && hour <= 11) return 'morning';
+  if (hour >= 12 && hour <= 17) return 'afternoon';
+  return 'evening'; // 18~23
+}
+
+/** 시간대별 사용자에게 던지는 질문 2개 — 답변은 모두 선택사항 */
+export const TODAY_TIME_SLOT_QUESTIONS: Record<TodayTimeSlot, [string, string]> = {
+  midnight:  ['오늘 마무리 못한 일이 있다면?', '내일 가장 신경 쓰이는 것은?'],
+  morning:   ['오늘 가장 중요한 일은?', '지금 컨디션은 어떠세요?'],
+  afternoon: ['오전을 어떻게 보내셨나요?', '지금 가장 풀고 싶은 고민은?'],
+  evening:   ['오늘 가장 인상적이었던 순간은?', '내일은 어떤 하루가 되었으면 하나요?'],
+};
+
+/** 사용자 취미·역할 — 5번 섹션(운용법)이 이 값으로 분기 */
+export const TODAY_HOBBY_OPTIONS = [
+  '공부·시험', '업무·일', '창작·예술', '운동·체력',
+  '육아·돌봄', '투자·재테크', '인간관계', '자기계발', '휴식·재충전',
+] as const;
+export type TodayHobby = typeof TODAY_HOBBY_OPTIONS[number];
+
+/** 직업 상태 */
+export const TODAY_JOB_STATES = ['학생', '직장인', '자영업·프리랜서', '구직 중', '주부', '기타'] as const;
+export type TodayJobState = typeof TODAY_JOB_STATES[number];
+
+/** 연애 상태 */
+export const TODAY_LOVE_STATES = ['싱글', '호감 있는 상대 있음', '연애 중', '기혼', '공개 안 함'] as const;
+export type TodayLoveState = typeof TODAY_LOVE_STATES[number];
+
+/** 사용자 입력 컨텍스트 — 결과의 풀이 결을 좌우 */
+export interface TodayUserContext {
+  hobbies: TodayHobby[];           // 1+ 선택 (필수)
+  customHobby?: string;            // 자유 입력 (선택)
+  jobState: TodayJobState;         // 단일 (필수)
+  loveState: TodayLoveState;       // 단일 (필수)
+  timeSlot: TodayTimeSlot;         // 진입 시점 자동 판정
+  q1Answer?: string;               // 시간대별 질문 1 답변 (선택)
+  q2Answer?: string;               // 시간대별 질문 2 답변 (선택)
+}
+
+/** V3 결과 13 섹션 — 1·2·3은 카드 위 시각화, 4~13은 본문 */
+export const TODAY_V3_SECTION_KEYS = [
+  'today_basis',         // 4. 명리적 근거 (일진·오행·내 사주 관계)
+  'today_hobby_method',  // 5. 취미 운용법 (공부/업무/창작 등으로 분기)
+  'today_timeflow',      // 6. 시간대별 흐름
+  'today_sleep',         // 7. 수면 루틴
+  'today_meal',          // 8. 식사 가이드
+  'today_exercise',      // 9. 운동
+  'today_relationship',  // 10. 대인·이성운
+  'today_caution',       // 11. 주의할 점
+  'today_strength',      // 12. 좋은 포인트
+  'today_oneliner',      // 13. 한줄 결론
+] as const;
+export type TodayV3SectionKey = typeof TODAY_V3_SECTION_KEYS[number];
+
+export const TODAY_V3_SECTION_LABELS: Record<TodayV3SectionKey, string> = {
+  today_basis:        '명리적 근거',
+  today_hobby_method: '운용법',  // 헤더는 카드 렌더 시 취미명을 동적으로 prefix
+  today_timeflow:     '시간대별 흐름',
+  today_sleep:        '수면 루틴',
+  today_meal:         '식사 가이드',
+  today_exercise:     '운동',
+  today_relationship: '대인·이성',
+  today_caution:      '주의할 점',
+  today_strength:     '좋은 포인트',
+  today_oneliner:     '한줄 결론',
+};
+
+/** 9 항목 점수 — 각각 0~100 */
+export const TODAY_V3_DOMAIN_KEYS = [
+  'exam', 'focus', 'mental', 'social', 'love',
+  'money', 'exercise', 'recovery', 'luck',
+] as const;
+export type TodayV3DomainKey = typeof TODAY_V3_DOMAIN_KEYS[number];
+
+export const TODAY_V3_DOMAIN_LABELS: Record<TodayV3DomainKey, string> = {
+  exam:     '시험·합격',
+  focus:    '공부·집중',
+  mental:   '멘탈·안정',
+  social:   '대인관계',
+  love:     '이성운',
+  money:    '금전운',
+  exercise: '운동운',
+  recovery: '회복·수면',
+  luck:     '횡재운',
+};
+
+/** 4 시간대 흐름 — 각 구간 0~100 점수로 그래프 그림 */
+export const TODAY_V3_FLOW_SLOTS: TodayTimeSlot[] = ['midnight', 'morning', 'afternoon', 'evening'];
+
 /**
  * 오늘의 운세 프롬프트 v2
  * - 오늘 일진(日辰) 간지를 핵심 인풋으로 사용
@@ -882,8 +991,173 @@ ${METAPHOR_KB}
 출력은 [today_scores] 마커부터 시작. 마커 이전 텍스트 없어야 함.`;
 };
 
-// ─────────────────────────────────────────────
-// 지정일 운세 — 사용자가 직접 고른 날짜에 대한 종합 풀이
+// ─────────────────────────────────────────────────────────────────────────────
+// 오늘의 운세 V3 프롬프트 — 13 섹션 + 9 항목 점수 + 4 시간대 흐름
+//   사용자 입력(취미·직업·연애·시간대 답변)을 반영해 깊이 있는 맞춤 풀이.
+// ─────────────────────────────────────────────────────────────────────────────
+export const generateTodayFortuneV3Prompt = (
+  result: SajuResult,
+  todayGz: TodayGanZhi,
+  isoDate: string,
+  ctx: TodayUserContext,
+): string => {
+  const { pillars, elementPercent, yongSinElement, isStrong, daeWoon } = result;
+
+  const zeroEls = (Object.entries(elementPercent) as [string, number][])
+    .filter(([, v]) => v === 0).map(([k]) => k);
+  const missingEl = zeroEls.length > 0 ? `결핍: ${zeroEls.join('·')}` : '';
+
+  const [_y, _m, _d] = isoDate.split('-').map(Number);
+  const pickedYear = _y;
+  const curDW = daeWoon.find(d => d.gan && d.zhi && pickedYear >= d.startAge && pickedYear <= d.endAge);
+  const daeWoonStr = curDW
+    ? `${curDW.gan}${curDW.zhi}(${curDW.ganElement}${curDW.zhiElement}·${curDW.tenGod}·${curDW.twelveStage})`
+    : '없음';
+
+  const seWoon = result.seWoon.find(s => s.year === pickedYear) ?? result.currentSeWoon;
+  const interStr = todayGz.interactions.length > 0 ? todayGz.interactions.join(' / ') : '없음';
+  const monthSolar = Solar.fromYmd(_y, _m, _d);
+  const monthLunar = monthSolar.getLunar();
+  const monthGzStr = monthLunar.getMonthInGanZhi();
+  const _mGan = normalizeGan(monthGzStr[0]);
+  const _mZhi = normalizeZhi(monthGzStr[1]);
+  const _mTenGod = TEN_GODS_MAP[result.dayMaster]?.[_mGan] ?? '';
+  const _mGanEl = STEM_ELEMENT[_mGan] ?? '';
+  const _mZhiEl = BRANCH_ELEMENT[_mZhi] ?? '';
+  const monthRunStr = `${_mGan}${_mZhi}(${_mGanEl}${_mZhiEl}${_mTenGod ? `·${_mTenGod}` : ''})`;
+
+  const dateLabel = (() => {
+    const d = new Date(isoDate);
+    return d.toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' });
+  })();
+
+  // 사용자 입력 정리
+  const hobbiesStr = [...ctx.hobbies, ctx.customHobby].filter(Boolean).join(', ') || '미입력';
+  const primaryHobby = ctx.hobbies[0] || ctx.customHobby || '자기계발';
+  const slotLabel = TODAY_TIME_SLOT_LABELS[ctx.timeSlot];
+  const [q1, q2] = TODAY_TIME_SLOT_QUESTIONS[ctx.timeSlot];
+  const userInputBlock = `[사용자 현재 상황 — 이 정보를 모든 섹션 풀이에 적극 반영]
+- 진입 시간대: ${slotLabel} (${ctx.timeSlot})
+- 가장 많은 시간을 쏟는 분야: ${hobbiesStr}
+- 직업 상태: ${ctx.jobState}
+- 연애 상태: ${ctx.loveState}
+- 질문 1 ("${q1}"): ${ctx.q1Answer?.trim() || '(미답)'}
+- 질문 2 ("${q2}"): ${ctx.q2Answer?.trim() || '(미답)'}`;
+
+  // 5번 섹션의 분야별 가이드
+  const hobbyMethodGuide: Record<string, string> = {
+    '공부·시험':   '오늘의 공부 방향(어느 과목·어느 단원에 시간 안배), 추천 공부 방식(암기/문제풀이/개념정리 중 어느 것이 잘 맞는지), 금지해야 할 공부 방식(예: 신규 단원 진입, 장시간 강의 시청 등)을 실전 행동 기준으로 제시.',
+    '업무·일':     '오늘의 업무 우선순위(미루기 좋은 일·먼저 처리할 일), 추천 진행 방식(혼자/협업, 깊은 작업/얕은 처리), 피해야 할 일처리(즉답 회피, 거절할 회의 유형 등) 구체적으로 제시.',
+    '창작·예술':   '오늘 영감이 잘 떠오르는 주제·매체, 작업 방식(아이디어 스케치/마무리 다듬기/완전히 새로운 시작 중 추천), 창작 흐름이 막히는 함정 1가지 제시.',
+    '운동·체력':   '오늘 권장 운동 강도(저강도/중간/고강도), 추천 종목, 피해야 할 동작이나 부위, 운동 시간대 1구간 명시.',
+    '육아·돌봄':   '오늘 아이/돌봄 대상과 잘 통하는 활동, 피하면 좋은 자극(소음·일정 과밀 등), 부모 본인의 컨디션 관리 1가지 제시.',
+    '투자·재테크': '오늘 진입/관망/정리 중 어느 쪽이 유리한지, 주의 신호(충동 매수·소액 분할 등), 정보 검토에 좋은 시간대 1구간 제시.',
+    '인간관계':    '오늘 잘 풀리는 만남 유형, 거리를 둘 만한 관계 패턴, 메시지·연락에 좋은 시점 1가지 제시.',
+    '자기계발':    '오늘 새로운 시도 vs 익숙한 것 정리 중 추천, 인풋(독서·강의)/아웃풋(실행·기록) 중 효과적인 쪽, 피해야 할 자기소비 패턴 1가지 제시.',
+    '휴식·재충전': '오늘 권장 휴식 형태(혼자/관계/자연/실내), 피하면 좋은 자극, 회복에 가장 좋은 시간대 1구간 제시.',
+  };
+  const hobbyGuide = hobbyMethodGuide[primaryHobby] ?? hobbyMethodGuide['자기계발'];
+
+  return `당신은 35년 경력의 사주명리·생활처방 전문가입니다. 아래 사용자의 오늘 하루를 사주 원국·운기 4층(대운·세운·월운·일진) + 입력한 현재 상황에 근거해 풀이해주세요.
+
+[내 원국]
+일간: ${pillars.day.gan}(${pillars.day.ganElement}) / 일주: ${pillars.day.gan}${pillars.day.zhi}
+오행: 목${elementPercent.목}% 화${elementPercent.화}% 토${elementPercent.토}% 금${elementPercent.금}% 수${elementPercent.수}% ${missingEl}
+용신: ${yongSinElement} / ${isStrong ? '신강' : '신약'}
+간여지동: ${formatGanYeojidong(result)} / 병존·삼존: ${formatByeongjOn(result)}
+
+[운기 4개 층]
+대운(10년): ${daeWoonStr}
+세운(올해): ${seWoon.gan}${seWoon.zhi}(${seWoon.ganElement}${seWoon.zhiElement}·${seWoon.tenGod})
+월운(이번 달): ${monthRunStr}
+일운(오늘 일진): ${todayGz.gan}${todayGz.zhi}(${todayGz.hanja}) — ${todayGz.ganElement}·${todayGz.zhiElement} / 천간 십성 ${todayGz.tenGodGan} / 지지 십성 ${todayGz.tenGodZhi}
+일진×원국 합충: ${interStr}
+
+[오늘 날짜] ${dateLabel}
+
+${userInputBlock}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+[작성 규칙 — 절대 준수]
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+1) Markdown 절대 금지(\`#\` \`##\` \`**\` \`>\` 등). 이모지 전부 금지. AI 티 나는 표현 금지.
+2) 입력한 취미(${hobbiesStr})·직업(${ctx.jobState})·연애(${ctx.loveState})·시간대(${slotLabel})·답변을 본문에서 적극 인용·반영. 일반론 금지.
+3) 질문 1·2의 답변이 있으면 해당 답변에 직접 응답하는 톤으로 풀이.
+4) 모든 섹션의 첫 줄은 은유 부제목(자연·우주·계절 이미지 대비 7~16자, 쉼표 연결). 본문 첫 문장에서 이미지 회수.
+5) 단락 사이는 빈 줄 한 줄로 구분. 각 섹션은 [key] 마커 다음 줄에 은유 제목, 바로 본문.
+6) 점수 출력 규칙은 아래 별도 블록 참고. 출력은 [today_scores] [today_flow] 두 마커부터 시작.
+7) 분량 하한을 반드시 지킬 것 (밑돌면 풀이가 빈약해 사용자 불만).
+
+[점수 출력 규칙 — 본문 가장 먼저 두 줄 출력]
+첫 줄(반드시):
+[today_scores] 종합:XX 시험:XX 공부:XX 멘탈:XX 대인:XX 이성:XX 금전:XX 운동:XX 회복:XX 횡재:XX
+- 각 점수는 0~100 정수. 사주 원국 + 4층 운기 + 일진 합충을 근거로 산출.
+- 9개 항목 점수의 표준편차가 10 이상. 비슷한 점수 나열 금지.
+- 최고/최저 점수 차이 25 이상.
+- 사용자의 ${ctx.jobState}·${ctx.loveState} 상황에서 의미 있는 항목은 정확하게 반영(예: 학생→시험·공부 가중, 연애 중→이성·대인 강조).
+
+둘째 줄(반드시):
+[today_flow] 자정:XX 아침:XX 오후:XX 저녁:XX
+- 각 시간대 0~100. 4개 점수의 표준편차 10 이상이어야 함.
+- 일진·월운·시간 십이지(子丑寅卯辰巳午未申酉戌亥) 흐름을 반영해 자연스러운 곡선이 나오게.
+- 사용자 진입 시간대(${slotLabel})를 의식해 그 구간 점수가 가장 자세한 풀이의 근거가 되도록.
+
+[은유 부제목 규칙 — 모든 섹션 공통]
+${METAPHOR_KB}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+이제 아래 10개 섹션을 [key] 마커 + 은유 제목 + 본문 형태로 작성합니다.
+출력은 [today_scores] / [today_flow] / [today_basis] / ... / [today_oneliner] 순서.
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+[today_basis] — 220~300자 (명리적 근거)
+첫 줄: 은유 제목.
+본문: 일진(${todayGz.gan}${todayGz.zhi}, ${todayGz.ganElement}·${todayGz.zhiElement}) 천간/지지의 의미를 1문장으로 풀고, 그것이 내 일간(${pillars.day.gan})·용신(${yongSinElement})과 어떻게 만나는지 단정. 4층 운기 중 오늘 가장 강하게 작용하는 층 1개 지목해 그 이유까지. 합충(${interStr})이 있다면 어떻게 영향을 주는지 1문장.
+
+[today_hobby_method] — 280~360자 (취미·역할 운용법: ${primaryHobby} 분야)
+첫 줄: 은유 제목.
+본문: ${hobbyGuide}
+사용자가 입력한 시간대 답변(있으면)을 본문에 인용해 더 구체적으로 맞춤화. 마지막은 오늘 한 가지 실천 행동을 단정 문장으로.
+
+[today_timeflow] — 280~360자 (시간대별 흐름)
+첫 줄: 은유 제목.
+본문: 자정·아침·오후·저녁 4구간 각각 1문장씩 핵심 흐름 묘사([today_flow] 점수와 일관). 사용자 진입 시간(${slotLabel})에 더 자세히, 어떤 행동을 하면 좋고 어떤 것을 하면 손해인지 1~2가지 실전 조언. 가장 집중이 잘 되거나 운이 강한 1구간 명시.
+
+[today_sleep] — 160~220자 (수면 루틴)
+첫 줄: 은유 제목.
+본문: 다음날 컨디션을 고려한 권장 취침 시각(예: 23:30~24:00)과 기상 시각 구체적으로. 잠들기 전 피해야 할 자극, 잠들기 좋은 의식 1가지(따뜻한 차·짧은 산책·종이책 등 사주에 맞춰).
+
+[today_meal] — 180~240자 (식사 가이드)
+첫 줄: 은유 제목.
+본문: 용신(${yongSinElement})·결핍 오행을 보강하는 추천 음식 2가지(맛·색·재료 구체적으로), 피해야 할 음식 1가지(이유 포함). 식사 시간대도 1가지 권고.
+
+[today_exercise] — 160~220자 (운동)
+첫 줄: 은유 제목.
+본문: 오늘 운동 가능 여부·강도, 추천 종목 1~2가지, 피해야 할 동작이나 시간대 1가지. ${ctx.jobState} 상황과 무리 없이 어울리도록.
+
+[today_relationship] — 220~300자 (대인·이성)
+첫 줄: 은유 제목.
+본문: 오늘 일진 십성(${todayGz.tenGodGan}) 기준 잘 통하는 관계 유형과 마찰 유형. 연애 상태(${ctx.loveState})에 맞춰: 싱글이면 인연 들어오기 쉬운 상황·장소, 연애/기혼이면 파트너와의 흐름과 권장 행동 1개. 대인관계에서 조심할 말투·상황 1개.
+
+[today_caution] — 180~240자 (주의할 점)
+첫 줄: 은유 제목.
+본문: 오늘 합충(${interStr})에서 생기는 실수 유발 상황 1가지를 구체적 장면으로. 멘탈 붕괴 포인트 1가지(어떤 상황·말·생각이 무너뜨리는지). 대처 방법 1문장.
+
+[today_strength] — 160~220자 (좋은 포인트)
+첫 줄: 은유 제목.
+본문: 오늘의 운을 가장 잘 쓰는 행동 1~2가지를 구체 장면으로(시간·장소·대상). 사용자 취미(${primaryHobby})·시간대(${slotLabel})와 연결.
+
+[today_oneliner] — 50~90자 (한줄 결론)
+첫 줄(=본문): 은유 없이 직설적으로, 오늘 하루를 관통하는 핵심 한 문장. 사용자 상황을 손에 잡힐 듯 짚어주는 어조.
+
+[금지]
+- 사용자가 입력하지 않은 정보를 추정해서 시나리오 만들지 말 것.
+- "운이 좋은 날" "모든 일이 잘 풀립니다" 같은 일반론 금지.
+- 점수 마커([today_scores], [today_flow])는 반드시 첫 두 줄에, 정확한 형식으로.
+- 분량 하한 미만으로 작성 금지.
+
+출력 시작 — [today_scores] 마커부터.`;
+};
 // 차별 포인트: 오늘운세는 "오늘 흐름 점검", 지정일은 "이 날을 어떻게 보낼지/돌아볼지"의 의도 중심.
 // 7섹션 구조 — 핵심 / 시간대 흐름 / 시도하면 좋은 일 / 피하면 좋은 일 / 인연·환경 / 처방 / 마무리
 // ─────────────────────────────────────────────

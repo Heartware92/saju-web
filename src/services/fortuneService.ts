@@ -9,6 +9,12 @@ import {
   generateBasicPrompt,
   generateDetailedPrompt,
   generateTodayFortunePrompt,
+  generateTodayFortuneV3Prompt,
+  TODAY_V3_SECTION_KEYS,
+  type TodayV3SectionKey,
+  type TodayV3DomainKey,
+  type TodayUserContext,
+  type TodayTimeSlot,
   generateTarotPrompt,
   generateTodayTarotPrompt,
   generateMonthlyTarotPrompt,
@@ -1011,6 +1017,107 @@ export const getTodayFortuneReport = async (
       return { success: true, rawText: content, scores, todayGz, isoDate: date };
     }
     return { success: true, sections, scores, todayGz, isoDate: date };
+  } catch (error: any) {
+    return { success: false, error: error.message };
+  }
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 오늘의 운세 V3 — 13 섹션 + 9 항목 점수 + 4 시간대 흐름 + 사용자 입력 반영
+// ─────────────────────────────────────────────────────────────────────────────
+
+/** 9 항목 점수 (0~100) */
+export type TodayV3DomainScores = { overall: number } & Record<TodayV3DomainKey, number>;
+
+/** 4 시간대 흐름 점수 (0~100) */
+export type TodayV3FlowScores = Record<TodayTimeSlot, number>;
+
+export interface TodayFortuneV3AIResult {
+  success: boolean;
+  sections?: Partial<Record<TodayV3SectionKey, string>>;
+  domainScores?: TodayV3DomainScores;
+  flowScores?: TodayV3FlowScores;
+  rawText?: string;
+  error?: string;
+  todayGz?: TodayGanZhi;
+  isoDate?: string;
+  userContext?: TodayUserContext;
+}
+
+/** [today_scores] 종합:XX 시험:XX 공부:XX 멘탈:XX 대인:XX 이성:XX 금전:XX 운동:XX 회복:XX 횡재:XX */
+export function parseTodayV3DomainScores(raw: string): TodayV3DomainScores | undefined {
+  const m = raw.match(/\[today_scores\]\s*종합:(\d+)\s*시험:(\d+)\s*공부:(\d+)\s*멘탈:(\d+)\s*대인:(\d+)\s*이성:(\d+)\s*금전:(\d+)\s*운동:(\d+)\s*회복:(\d+)\s*횡재:(\d+)/);
+  if (!m) return undefined;
+  const clamp = (s: string) => Math.min(100, Math.max(0, Number(s)));
+  return {
+    overall:  clamp(m[1]),
+    exam:     clamp(m[2]),
+    focus:    clamp(m[3]),
+    mental:   clamp(m[4]),
+    social:   clamp(m[5]),
+    love:     clamp(m[6]),
+    money:    clamp(m[7]),
+    exercise: clamp(m[8]),
+    recovery: clamp(m[9]),
+    luck:     clamp(m[10]),
+  };
+}
+
+/** [today_flow] 자정:XX 아침:XX 오후:XX 저녁:XX */
+export function parseTodayV3FlowScores(raw: string): TodayV3FlowScores | undefined {
+  const m = raw.match(/\[today_flow\]\s*자정:(\d+)\s*아침:(\d+)\s*오후:(\d+)\s*저녁:(\d+)/);
+  if (!m) return undefined;
+  const clamp = (s: string) => Math.min(100, Math.max(0, Number(s)));
+  return {
+    midnight:  clamp(m[1]),
+    morning:   clamp(m[2]),
+    afternoon: clamp(m[3]),
+    evening:   clamp(m[4]),
+  };
+}
+
+/** 10 본문 섹션 파싱 — [key] 마커 기준 */
+export function parseTodayV3Sections(raw: string): Partial<Record<TodayV3SectionKey, string>> {
+  const out: Partial<Record<TodayV3SectionKey, string>> = {};
+  const keysPattern = TODAY_V3_SECTION_KEYS.join('|');
+  const parts = raw.split(new RegExp(`^\\s*\\[(${keysPattern})\\]\\s*$`, 'm'));
+  for (let i = 1; i < parts.length; i += 2) {
+    const key = parts[i] as TodayV3SectionKey;
+    const body = (parts[i + 1] || '').trim();
+    if (body) out[key] = body;
+  }
+  return out;
+}
+
+export const getTodayFortuneV3Report = async (
+  result: SajuResult,
+  ctx: TodayUserContext,
+  isoDate?: string,
+  profileId?: string,
+): Promise<TodayFortuneV3AIResult> => {
+  try {
+    const date = isoDate ?? new Date().toISOString().slice(0, 10);
+    const todayGz = calcTodayGanZhi(result, date);
+    const prompt = generateTodayFortuneV3Prompt(result, todayGz, date, ctx);
+    // 13 섹션 + 점수 2줄 + 흐름 — 약 1500~2000자 → 4500 토큰 여유
+    const content = await callGPT(prompt, 4500, undefined, { allowTruncated: true, timeoutMs: 60_000 });
+    const domainScores = parseTodayV3DomainScores(content);
+    const flowScores = parseTodayV3FlowScores(content);
+    const sections = parseTodayV3Sections(content);
+
+    archiveSaju({
+      profileId,
+      sourceBirth: sourceBirthFromSaju(result),
+      category: 'today',
+      resultData: result as unknown as Record<string, unknown>,
+      engineResult: { todayGz, isoDate: date, userContext: ctx, version: 'v3' } as Record<string, unknown>,
+      interpretation: content,
+    });
+
+    if (Object.keys(sections).length === 0) {
+      return { success: true, rawText: content, domainScores, flowScores, todayGz, isoDate: date, userContext: ctx };
+    }
+    return { success: true, sections, domainScores, flowScores, todayGz, isoDate: date, userContext: ctx };
   } catch (error: any) {
     return { success: false, error: error.message };
   }
