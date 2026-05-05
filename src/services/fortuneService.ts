@@ -1304,8 +1304,7 @@ export const getPickedDateReport = async (
   try {
     const todayGz = calcTodayGanZhi(result, isoDate);
     const prompt = generatePickedDateFortunePrompt(result, todayGz, isoDate);
-    // 7섹션 × 평균 220자 ≈ 1500자, 여유있게 4500 토큰
-    const content = await callGPT(prompt, 4500);
+    const content = await callGPT(prompt, 6000);
     const sections = parsePickedDateReport(content);
     archiveSaju({
       profileId,

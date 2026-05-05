@@ -1084,9 +1084,11 @@ export default function PeriodFortunePage({ scope }: { scope: FortuneScope | 'da
                     >
                       {metaphorTitle}
                     </div>
-                    <p className="text-[15px] text-text-secondary leading-relaxed whitespace-pre-line break-keep">
-                      {bodyText}
-                    </p>
+                    <div className="text-[15px] text-text-secondary leading-relaxed break-keep space-y-3">
+                      {bodyText.split(/\n\n+/).map((para, pi) => (
+                        <p key={pi} className="whitespace-pre-line">{para.trim()}</p>
+                      ))}
+                    </div>
                   </motion.div>
                 );
               })}

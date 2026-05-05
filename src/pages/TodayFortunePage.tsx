@@ -42,7 +42,7 @@ import {
   TODAY_JOB_STATES,
   TODAY_LOVE_STATES,
   TODAY_TIME_SLOT_LABELS,
-  TODAY_TIME_SLOT_QUESTIONS,
+  pickTwoQuestions,
   getTodayTimeSlot,
   type TodayHobby,
   type TodayJobState,
@@ -178,7 +178,7 @@ function InputForm({
   const [q1Answer, setQ1Answer] = useState('');
   const [q2Answer, setQ2Answer] = useState('');
 
-  const [q1, q2] = TODAY_TIME_SLOT_QUESTIONS[initialSlot];
+  const [[q1, q2]] = useState(() => pickTwoQuestions(initialSlot));
   const slotLabel = TODAY_TIME_SLOT_LABELS[initialSlot];
 
   const canSubmit =
@@ -198,6 +198,8 @@ function InputForm({
       jobState: jobState!,
       loveState: loveState!,
       timeSlot: initialSlot,
+      q1Text: q1,
+      q2Text: q2,
       q1Answer: q1Answer.trim() || undefined,
       q2Answer: q2Answer.trim() || undefined,
     });
@@ -847,9 +849,11 @@ export default function TodayFortunePage() {
                     {metaphorTitle}
                   </div>
                 )}
-                <p className="text-[15px] text-text-secondary leading-[1.85] whitespace-pre-line tracking-[-0.005em]">
-                  {bodyText}
-                </p>
+                <div className="text-[15px] text-text-secondary leading-[1.85] tracking-[-0.005em] space-y-3">
+                  {bodyText.split(/\n\n+/).map((para, pi) => (
+                    <p key={pi} className="whitespace-pre-line">{para.trim()}</p>
+                  ))}
+                </div>
               </motion.div>
             );
           })}

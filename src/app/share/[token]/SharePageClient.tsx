@@ -9,13 +9,18 @@ import {
   PICKED_DATE_SECTION_KEYS, PICKED_DATE_SECTION_LABELS,
   ZAMIDUSU_SECTION_KEYS, ZAMIDUSU_SECTION_LABELS,
   TOJEONG_SECTION_KEYS, TOJEONG_SECTION_LABELS,
+  TODAY_V3_DOMAIN_KEYS, TODAY_V3_DOMAIN_LABELS,
+  TODAY_TIME_SLOT_LABELS,
+  type TodayTimeSlot,
 } from '@/constants/prompts';
 import {
   parseJungtongsaju, parseNewyearReport, parseTodayFortune,
   parsePickedDateReport, parseZamidusuSections, parseTojeongSections,
+  parseTodayV3DomainScores, parseTodayV3FlowScores, parseTojeongScores,
 } from '@/services/fortuneService';
 import { parseGunghapHeader } from '@/lib/gunghap';
 import { GunghapResultBlock } from '@/components/gunghap/GunghapResultBlock';
+import { RadarChart } from '@/components/charts/RadarChart';
 
 interface Props {
   type: 'saju' | 'tarot';
@@ -46,6 +51,8 @@ function universalSectionParser(raw: string): { sections: { title: string; body:
     .replace(/\[gunghap_header\][\s\S]*?\[\/gunghap_header\]/g, '')
     .replace(/\[gunghap_scores\][\s\S]*?\[\/gunghap_scores\]/g, '')
     .replace(/\[tojeong_scores\][\s\S]*?\[\/tojeong_scores\]/g, '')
+    .replace(/\[today_scores\][^\n]*\n?/g, '')
+    .replace(/\[today_flow\][^\n]*\n?/g, '')
     .replace(/\[.*?\]/g, '')
     .trim();
 
@@ -73,6 +80,133 @@ function universalSectionParser(raw: string): { sections: { title: string; body:
   return { sections: parts.filter(p => p.body.length > 0) };
 }
 
+// ─── 점수 → 색상/등급 (오늘의 운세·토정비결 공통) ───
+function scoreColor(s: number): string {
+  return s >= 75 ? '#34D399' : s >= 60 ? '#A78BFA' : s >= 45 ? '#FBBF24' : s >= 30 ? '#FB923C' : '#F87171';
+}
+
+// ─── 오늘의 운세 — 시간대 흐름 SVG ───
+function TodayFlowChart({ flow }: { flow: { midnight: number; morning: number; afternoon: number; evening: number } }) {
+  const slots: TodayTimeSlot[] = ['midnight', 'morning', 'afternoon', 'evening'];
+  const points = slots.map((s, i) => ({ x: 30 + i * 80, y: 110 - (flow[s] ?? 50) * 0.85, slot: s, score: flow[s] ?? 50 }));
+  const path = points.map((p, i) => `${i === 0 ? 'M' : 'L'}${p.x},${p.y}`).join(' ');
+  return (
+    <svg viewBox="0 0 290 140" className="w-full">
+      <line x1="20" y1="110" x2="270" y2="110" stroke="rgba(255,255,255,0.08)" strokeWidth="1" />
+      <line x1="20" y1="68"  x2="270" y2="68"  stroke="rgba(255,255,255,0.05)" strokeDasharray="2 4" />
+      <line x1="20" y1="25"  x2="270" y2="25"  stroke="rgba(255,255,255,0.05)" strokeDasharray="2 4" />
+      <path d={path} fill="none" stroke="#A78BFA" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+      <path d={`${path} L${points[points.length-1].x},110 L${points[0].x},110 Z`} fill="url(#shareFlowGrad)" opacity="0.35" />
+      <defs>
+        <linearGradient id="shareFlowGrad" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="#A78BFA" stopOpacity="0.5" />
+          <stop offset="100%" stopColor="#A78BFA" stopOpacity="0" />
+        </linearGradient>
+      </defs>
+      {points.map((p, i) => (
+        <g key={i}>
+          <circle cx={p.x} cy={p.y} r={4} fill="#A78BFA" stroke="#1C1033" strokeWidth="2" />
+          <text x={p.x} y={p.y - 12} textAnchor="middle" fontSize="10" fontWeight="bold" fill="#A78BFA">{p.score}</text>
+          <text x={p.x} y={128} textAnchor="middle" fontSize="11" fill="rgba(255,255,255,0.7)">
+            {TODAY_TIME_SLOT_LABELS[p.slot]}
+          </text>
+        </g>
+      ))}
+    </svg>
+  );
+}
+
+// ─── 오늘의 운세 — 9도메인 점수 바 ───
+function TodayDomainBars({ scores }: { scores: Record<string, number> }) {
+  return (
+    <div className="space-y-2.5">
+      {TODAY_V3_DOMAIN_KEYS.map(k => {
+        const v = scores[k] ?? 50;
+        const c = scoreColor(v);
+        return (
+          <div key={k} className="flex items-center gap-3">
+            <span className="text-[12.5px] text-text-tertiary w-[68px] shrink-0 text-right">
+              {TODAY_V3_DOMAIN_LABELS[k]}
+            </span>
+            <div className="flex-1 h-2.5 rounded-full bg-white/5 overflow-hidden">
+              <div className="h-full rounded-full" style={{ backgroundColor: c, width: `${v}%`, transition: 'width 0.6s ease-out' }} />
+            </div>
+            <span className="text-[13px] font-semibold w-7 text-right" style={{ color: c }}>{v}</span>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+// ─── 토정비결 — 4영역 레이더 ───
+function TojeongRadarBlock({ scores }: { scores: { wealth: number; love: number; health: number; career: number } }) {
+  const domains = [
+    { label: '재물', score: scores.wealth, color: scoreColor(scores.wealth) },
+    { label: '애정', score: scores.love, color: scoreColor(scores.love) },
+    { label: '건강', score: scores.health, color: scoreColor(scores.health) },
+    { label: '직장', score: scores.career, color: scoreColor(scores.career) },
+  ];
+  return (
+    <div>
+      <RadarChart domains={domains} size={240} />
+      <div className="space-y-2 mt-3">
+        {domains.map(d => (
+          <div key={d.label} className="flex items-center gap-2">
+            <div className="w-14 shrink-0 text-[14px] font-semibold text-text-secondary">{d.label}</div>
+            <div className="flex-1 h-2 rounded-full bg-white/5 overflow-hidden">
+              <div className="h-full rounded-full" style={{ backgroundColor: d.color, width: `${d.score}%` }} />
+            </div>
+            <div className="w-8 text-right text-[14px] font-bold" style={{ color: d.color }}>{d.score}</div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ─── 택일 — 길일 카드 (engine_result 의 bestDays 또는 days 일부 사용) ───
+type TaekilDayLite = { date: string; grade?: string; rank?: number; score?: number };
+function TaekilRankBlock({ days, customLabel }: { days: TaekilDayLite[]; customLabel?: string }) {
+  const GRADE_BG: Record<string, string> = {
+    '대길': 'rgba(52,211,153,0.18)',
+    '길': 'rgba(134,239,172,0.16)',
+    '중길': 'rgba(251,191,36,0.16)',
+    '평': 'rgba(203,213,225,0.12)',
+    '중흉': 'rgba(251,146,60,0.16)',
+    '흉': 'rgba(248,113,113,0.16)',
+  };
+  const GRADE_FG: Record<string, string> = {
+    '대길': '#34D399', '길': '#86EFAC', '중길': '#FBBF24',
+    '평': '#CBD5E1', '중흉': '#FB923C', '흉': '#F87171',
+  };
+  const top = days.slice(0, 5);
+  return (
+    <div className="rounded-2xl mb-4 p-5 bg-gradient-to-br from-teal-500/15 to-emerald-500/8 border border-white/15">
+      <p className="text-[14px] font-semibold text-text-secondary text-center mb-3">
+        {customLabel ? `${customLabel} — 추천 일자` : '추천 일자'}
+      </p>
+      <div className="space-y-2">
+        {top.map((d, i) => {
+          const g = d.grade ?? '평';
+          return (
+            <div key={d.date}
+              className="flex items-center justify-between px-4 py-3 rounded-xl border"
+              style={{ backgroundColor: GRADE_BG[g] ?? GRADE_BG['평'], borderColor: `${GRADE_FG[g] ?? '#CBD5E1'}55` }}
+            >
+              <div className="flex items-center gap-3">
+                <span className="text-[12px] font-bold text-text-tertiary w-5">{i + 1}</span>
+                <span className="text-[15px] font-semibold text-text-primary">{d.date.replace(/-/g, '.')}</span>
+              </div>
+              <span className="text-[13px] font-bold" style={{ color: GRADE_FG[g] ?? '#CBD5E1' }}>{g}{d.score != null ? ` · ${d.score}` : ''}</span>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 export default function SharePageClient({ type, record }: Props) {
   const category: string = type === 'saju' ? record.category : 'tarot';
   const label = type === 'saju'
@@ -86,6 +220,22 @@ export default function SharePageClient({ type, record }: Props) {
   const gunghapHeader = isGunghap ? parseGunghapHeader(content) : null;
   // 궁합 본문은 헤더/스코어 블록을 제거한 body 만 섹션 파서에 넘긴다
   const bodyForSections = gunghapHeader ? gunghapHeader.body : content;
+
+  // 오늘의 운세 — 점수·시간대 흐름
+  const isToday = type === 'saju' && category === 'today';
+  const todayDomainScores = isToday ? parseTodayV3DomainScores(content) : undefined;
+  const todayFlowScores = isToday ? parseTodayV3FlowScores(content) : undefined;
+
+  // 토정비결 — 4영역 점수
+  const isTojeong = type === 'saju' && category === 'tojeong';
+  const tojeongScores = isTojeong ? parseTojeongScores(content) : undefined;
+  const tojeongGrade = (record.engine_result as any)?.gwae?.grade as string | undefined;
+  const tojeongHexagram = (record.engine_result as any)?.gwae?.name as string | undefined;
+
+  // 택일 — engine_result.bestDays 사용
+  const isTaekil = type === 'saju' && category === 'taekil';
+  const taekilDays = isTaekil ? (record.engine_result as any)?.bestDays as TaekilDayLite[] | undefined : undefined;
+  const taekilCustom = isTaekil ? (record.engine_result as any)?.customLabel as string | undefined : undefined;
 
   const config = SECTION_MAP[category];
   const useUniversal = !config;
@@ -154,6 +304,65 @@ export default function SharePageClient({ type, record }: Props) {
             score={gunghapHeader.score}
             domainScores={gunghapHeader.domainScores}
           />
+        </motion.div>
+      )}
+
+      {/* 오늘의 운세 — 9도메인 점수·시간대 흐름 */}
+      {isToday && todayDomainScores && (
+        <motion.div
+          initial={{ opacity: 0, y: 6 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.05 }}
+          className="rounded-2xl mb-4 p-5 bg-[rgba(124,92,252,0.08)] border border-[rgba(124,92,252,0.25)]"
+        >
+          <p className="text-[14px] font-semibold text-text-secondary mb-3 uppercase tracking-wider">오늘의 점수</p>
+          <TodayDomainBars scores={todayDomainScores as unknown as Record<string, number>} />
+          {todayFlowScores && (
+            <div className="mt-5 pt-4 border-t border-white/10">
+              <p className="text-[14px] font-semibold text-text-secondary mb-3 uppercase tracking-wider">시간대 흐름</p>
+              <TodayFlowChart flow={todayFlowScores} />
+            </div>
+          )}
+        </motion.div>
+      )}
+
+      {/* 토정비결 — 괘 등급 + 4영역 레이더 */}
+      {isTojeong && (tojeongScores || tojeongGrade) && (
+        <motion.div
+          initial={{ opacity: 0, y: 6 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.05 }}
+          className="rounded-2xl mb-4 p-5 bg-[rgba(20,12,38,0.55)] border border-[var(--border-subtle)]"
+        >
+          {tojeongGrade && (
+            <div className="text-center mb-4">
+              {tojeongHexagram && (
+                <p className="text-[18px] font-bold text-text-primary mb-1" style={{ fontFamily: 'var(--font-serif)' }}>
+                  {tojeongHexagram}
+                </p>
+              )}
+              <p className="text-[15px] font-semibold" style={{ color: scoreColor(tojeongScores ? Math.round((tojeongScores.wealth + tojeongScores.love + tojeongScores.health + tojeongScores.career) / 4) : 60) }}>
+                {tojeongGrade}
+              </p>
+            </div>
+          )}
+          {tojeongScores && (
+            <>
+              <p className="text-[14px] font-semibold text-text-secondary mb-3 uppercase tracking-wider text-center">영역별 운세</p>
+              <TojeongRadarBlock scores={tojeongScores} />
+            </>
+          )}
+        </motion.div>
+      )}
+
+      {/* 택일 — 추천 일자 카드 */}
+      {isTaekil && taekilDays && taekilDays.length > 0 && (
+        <motion.div
+          initial={{ opacity: 0, y: 6 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.05 }}
+        >
+          <TaekilRankBlock days={taekilDays} customLabel={taekilCustom} />
         </motion.div>
       )}
 
