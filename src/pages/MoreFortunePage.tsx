@@ -11,7 +11,7 @@
  * 이름 풀이는 name 입력 폼이 추가로 노출됨.
  */
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -116,6 +116,12 @@ export default function MoreFortunePage({ category }: Props) {
   const [result, setResult] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [savedRecordId, setSavedRecordId] = useState<string | null>(null);
+
+  // 학업/자녀/성격: fresh=1 진입 시 소개 페이지 건너뛰고 바로 풀이 시작
+  const autoStartedRef = useRef(false);
+  const freshParam = searchParams?.get('fresh') === '1';
+  const shouldAutoStart = freshParam && !isArchiveMode &&
+    (category === 'study' || category === 'children' || category === 'personality');
 
   // ── 로딩 안전장치: 70초 초과 시 강제 해제 ──
   const [loadingTimedOut] = useLoadingGuard(loading, 70_000);
@@ -330,6 +336,15 @@ export default function MoreFortunePage({ category }: Props) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [category, saju, koreanName, charMeanings, dreamText, isArchiveMode]);
 
+  // auto-start: 모달에서 "새로 풀이 받기" 클릭 후 소개 페이지 건너뛰고 바로 풀이
+  useEffect(() => {
+    if (!shouldAutoStart || autoStartedRef.current) return;
+    if (!canSubmit || loading || result || error) return;
+    autoStartedRef.current = true;
+    handleRead();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [shouldAutoStart, canSubmit, loading, result, error]);
+
   const handleRead = async () => {
     // 꿈 해몽은 saju 없이도 실행 가능
     if (category !== 'dream' && !saju) return;
@@ -455,7 +470,8 @@ export default function MoreFortunePage({ category }: Props) {
   }
 
   // 꿈 해몽은 사주와 무관 — 프로필 없어도 진입 가능.
-  if (!isArchiveMode && category !== 'dream' && !targetProfile) {
+  // shouldAutoStart 일 때는 로딩 화면을 바로 보여주므로 이 가드를 건너뜀
+  if (!isArchiveMode && category !== 'dream' && !targetProfile && !shouldAutoStart) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center px-6 text-center">
         <p className="text-text-secondary mb-4">{cfg.title}을 보려면 대표 프로필이 필요해요.</p>
@@ -464,12 +480,13 @@ export default function MoreFortunePage({ category }: Props) {
     );
   }
 
-  if (!isArchiveMode && category !== 'dream' && !saju) {
+  if (!isArchiveMode && category !== 'dream' && !saju && !shouldAutoStart) {
     return <div className={styles.loading}>사주 계산 중...</div>;
   }
 
   // 로딩 풀스크린 — 보관함 재생 모드는 짧은 DB 조회라 AI 로딩 연출 대신 간단한 표시
-  if (loading && !isArchiveMode) {
+  // shouldAutoStart: 모달→바로 풀이 시 saju 로드 전부터 로딩 화면 표시
+  if (!isArchiveMode && (loading || (shouldAutoStart && !result && !error))) {
     return (
       <AILoadingBar
         label={`${cfg.title} 분석 중`}
