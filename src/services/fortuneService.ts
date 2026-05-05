@@ -1076,17 +1076,60 @@ export function parseTodayV3FlowScores(raw: string): TodayV3FlowScores | undefin
   };
 }
 
-/** 10 본문 섹션 파싱 — [key] 마커 기준 */
+/**
+ * 10 본문 섹션 파싱 — [key] 마커 기준
+ *
+ * 강화점:
+ * - 줄 처음 단독이 아니어도 잡히게 (multiline 미강제)
+ * - 키 안 밑줄 누락(`[todayhobbymethod]`), 콜론·불릿 등 변형 모두 잡기
+ * - 마크다운 wrap(`**[key]**`) 도 stripping 후 재인식
+ * - 본문에 잔여 마커가 살아남는 일이 없도록 마지막에 본문에서도 [...] 형태 모두 제거
+ */
 export function parseTodayV3Sections(raw: string): Partial<Record<TodayV3SectionKey, string>> {
   const out: Partial<Record<TodayV3SectionKey, string>> = {};
-  const keysPattern = TODAY_V3_SECTION_KEYS.join('|');
-  const parts = raw.split(new RegExp(`^\\s*\\[(${keysPattern})\\]\\s*$`, 'm'));
+
+  // ── 1차 정리: 마크다운 wrapping/장식 제거
+  const cleaned = raw
+    .replace(/\*\*?\s*\[/g, '[')          // **[key] → [key]
+    .replace(/\]\s*\*\*?/g, ']')           // [key]** → [key]
+    .replace(/^\s*[-•▶]\s*\[/gm, '[');     // - [key] / ▶ [key] → [key]
+
+  // ── 키 변형 허용 패턴 — 밑줄 0~1개, 키 사이 공백·하이픈도 매치
+  const variantsFor = (k: string) => k.split('_').join('[_\\s-]?');
+  const altPattern = TODAY_V3_SECTION_KEYS.map(variantsFor).join('|');
+
+  // ── 줄 처음 강제 안 함 + 마커 뒤 콜론·공백 허용
+  const splitter = new RegExp(`\\[(${altPattern})\\]\\s*:?`, 'gi');
+  const parts = cleaned.split(splitter);
+
+  // 키 정규화: 변형 키 → 표준 키
+  const normalize = (k: string): TodayV3SectionKey | null => {
+    const stripped = k.toLowerCase().replace(/[^a-z]/g, '');
+    return (TODAY_V3_SECTION_KEYS.find(s => s.replace(/_/g, '') === stripped) ?? null) as TodayV3SectionKey | null;
+  };
+
   for (let i = 1; i < parts.length; i += 2) {
-    const key = parts[i] as TodayV3SectionKey;
-    const body = (parts[i + 1] || '').trim();
+    const key = normalize(parts[i]);
+    if (!key) continue;
+    const body = stripStrayMarkers((parts[i + 1] || '').trim());
     if (body) out[key] = body;
   }
   return out;
+}
+
+/** 본문 안에 절대 남으면 안 되는 마커·태그 일괄 제거 (safety net) */
+export function stripStrayMarkers(text: string): string {
+  return text
+    // [today_xxx], [todayxxx], [today-xxx] 등 모든 today 마커 흔적 제거
+    .replace(/\[\s*today[_\s-]?[a-z_]+\s*\]\s*:?/gi, '')
+    // 점수 마커 잔여
+    .replace(/\[\s*today[_\s-]?(scores|flow)\s*\][^\n]*\n?/gi, '')
+    // 마크다운 헤더·강조
+    .replace(/^#{1,6}\s+/gm, '')
+    .replace(/\*\*(.+?)\*\*/g, '$1')
+    // 연속 빈 줄 정리
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
 }
 
 export const getTodayFortuneV3Report = async (
@@ -1099,8 +1142,9 @@ export const getTodayFortuneV3Report = async (
     const date = isoDate ?? new Date().toISOString().slice(0, 10);
     const todayGz = calcTodayGanZhi(result, date);
     const prompt = generateTodayFortuneV3Prompt(result, todayGz, date, ctx);
-    // 13 섹션 + 점수 2줄 + 흐름 — 약 1500~2000자 → 4500 토큰 여유
-    const content = await callGPT(prompt, 4500, undefined, { allowTruncated: true, timeoutMs: 60_000 });
+    // 만세력 풍부화 + 분량 하한 상향 → 토큰·타임아웃 모두 확장
+    // 13 섹션 합산 2200자+ 목표 → 7500 토큰 여유 / 90초 timeout
+    const content = await callGPT(prompt, 7500, undefined, { allowTruncated: true, timeoutMs: 90_000 });
     const domainScores = parseTodayV3DomainScores(content);
     const flowScores = parseTodayV3FlowScores(content);
     const sections = parseTodayV3Sections(content);

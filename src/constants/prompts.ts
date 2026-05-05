@@ -993,7 +993,9 @@ ${METAPHOR_KB}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 오늘의 운세 V3 프롬프트 — 13 섹션 + 9 항목 점수 + 4 시간대 흐름
-//   사용자 입력(취미·직업·연애·시간대 답변)을 반영해 깊이 있는 맞춤 풀이.
+//   - 만세력 전체(4기둥·신살·합충·격국·신강·일주특성)를 모두 주입
+//   - 사용자 입력(취미·직업·연애·시간대 답변)을 모든 섹션에 강제 반영
+//   - 마커 출력 절대 규칙으로 본문에 [todayhobbymethod] 같은 마커 노출 차단
 // ─────────────────────────────────────────────────────────────────────────────
 export const generateTodayFortuneV3Prompt = (
   result: SajuResult,
@@ -1001,21 +1003,66 @@ export const generateTodayFortuneV3Prompt = (
   isoDate: string,
   ctx: TodayUserContext,
 ): string => {
-  const { pillars, elementPercent, yongSinElement, isStrong, daeWoon } = result;
+  const { pillars, elementPercent, yongSinElement, isStrong, daeWoon, dayMaster, dayMasterYinYang, sinSals, interactions, hourUnknown, gender } = result;
 
-  const zeroEls = (Object.entries(elementPercent) as [string, number][])
-    .filter(([, v]) => v === 0).map(([k]) => k);
-  const missingEl = zeroEls.length > 0 ? `결핍: ${zeroEls.join('·')}` : '';
+  // ── 결핍/과다 오행
+  const elementEntries = Object.entries(elementPercent) as [string, number][];
+  const zeroEls = elementEntries.filter(([, v]) => v === 0).map(([k]) => k);
+  const maxEl = elementEntries.reduce((a, b) => a[1] > b[1] ? a : b);
+  const elementNote = `${zeroEls.length > 0 ? `결핍 오행: ${zeroEls.join('·')}` : '결핍 오행: 없음'} / 과다 오행: ${maxEl[0]}(${maxEl[1]}%)`;
 
+  // ── 4기둥 상세 (12운성·지장간·12신살·공망·십성)
+  const PILLAR_LBL = { year: '년주', month: '월주', day: '일주', hour: '시주' } as const;
+  const fmtPillar = (label: string, p: typeof pillars.year, isMissing = false) => {
+    if (isMissing) return `${label}: 미상(삼주추명)`;
+    const kong = p.isKongmang ? '·공망' : '';
+    const hidden = p.hiddenStems.length > 0 ? `지장간(${p.hiddenStems.join(',')})` : '';
+    const sinsal12 = p.sinSal12 ? `12신살(${p.sinSal12})` : '';
+    const ganTenGod = p.tenGodGan === '일주' ? '일간(본인)' : p.tenGodGan;
+    return `${label}: ${p.gan}(${p.ganElement}·${ganTenGod}) / ${p.zhi}(${p.zhiElement}·${p.tenGodZhi}) / 12운성(${p.twelveStage})${kong} / ${hidden} / ${sinsal12}`;
+  };
+  const pillarDetail = [
+    fmtPillar(PILLAR_LBL.year, pillars.year),
+    fmtPillar(PILLAR_LBL.month, pillars.month),
+    fmtPillar(PILLAR_LBL.day, pillars.day),
+    fmtPillar(PILLAR_LBL.hour, pillars.hour, hourUnknown),
+  ].join('\n');
+
+  // ── 일주 60갑자 특성
+  const dayTraits = getDayPillarTraits(pillars.day.gan, pillars.day.zhi);
+  const dayTraitsBlock = dayTraits
+    ? `[일주 60갑자 특성 — DB값]
+일주: ${dayTraits.name}(${dayTraits.hanja}) / 키워드: ${dayTraits.keywords.join(', ')}
+특성: ${dayTraits.traits}
+특수신살: ${dayTraits.sinsal.length > 0 ? dayTraits.sinsal.join(', ') : '없음'}`
+    : '';
+
+  // ── 신강·격국·십성분포
+  const strengthBlock = `신강신약: ${result.strengthStatus}(점수 ${result.strengthScore}) — 득령(${result.deukRyeong ? 'O' : 'X'}) 득지(${result.deukJi ? 'O' : 'X'}) 득세(${result.deukSe ? 'O' : 'X'})`;
+  const gyeokguk = determineGyeokguk(result);
+  const sipseongCounts = computeSipseongCounts(result);
+  const sipseong = formatSipseongCounts(sipseongCounts);
+  const ALL_SIPSEONG = ['비견', '겁재', '식신', '상관', '편재', '정재', '편관', '정관', '편인', '정인'] as const;
+  const missingSipseong = ALL_SIPSEONG.filter(s => (sipseongCounts[s] ?? 0) === 0);
+  const missingSipseongStr = missingSipseong.length > 0 ? missingSipseong.join(', ') : '없음(모두 분포)';
+
+  // ── 신살 분류 (길/흉/중)
+  const sinSalGood = sinSals.filter(s => s.type === 'good').map(s => s.name).join('·') || '없음';
+  const sinSalBad = sinSals.filter(s => s.type === 'bad').map(s => s.name).join('·') || '없음';
+  const sinSalNeutral = sinSals.filter(s => s.type === 'neutral').map(s => s.name).join('·') || '없음';
+  const interStrOrigin = interactions.length > 0 ? interactions.map(i => `${i.type}: ${i.description}`).join(' / ') : '없음';
+
+  // ── 운기 4층
   const [_y, _m, _d] = isoDate.split('-').map(Number);
   const pickedYear = _y;
   const curDW = daeWoon.find(d => d.gan && d.zhi && pickedYear >= d.startAge && pickedYear <= d.endAge);
   const daeWoonStr = curDW
-    ? `${curDW.gan}${curDW.zhi}(${curDW.ganElement}${curDW.zhiElement}·${curDW.tenGod}·${curDW.twelveStage})`
-    : '없음';
+    ? `${curDW.gan}${curDW.zhi}(${curDW.ganElement}${curDW.zhiElement}·${curDW.tenGod}·12운성:${curDW.twelveStage}·12신살:${curDW.sinSal12 || '없음'})`
+    : '없음(대운 시작 전)';
 
   const seWoon = result.seWoon.find(s => s.year === pickedYear) ?? result.currentSeWoon;
-  const interStr = todayGz.interactions.length > 0 ? todayGz.interactions.join(' / ') : '없음';
+  const seWoonStr = `${seWoon.gan}${seWoon.zhi}(${seWoon.ganElement}${seWoon.zhiElement}·${seWoon.tenGod}·12운성:${seWoon.twelveStage}·12신살:${seWoon.sinSal12 || '없음'}·${seWoon.animal}띠해)`;
+
   const monthSolar = Solar.fromYmd(_y, _m, _d);
   const monthLunar = monthSolar.getLunar();
   const monthGzStr = monthLunar.getMonthInGanZhi();
@@ -1026,137 +1073,197 @@ export const generateTodayFortuneV3Prompt = (
   const _mZhiEl = BRANCH_ELEMENT[_mZhi] ?? '';
   const monthRunStr = `${_mGan}${_mZhi}(${_mGanEl}${_mZhiEl}${_mTenGod ? `·${_mTenGod}` : ''})`;
 
+  const interTodayStr = todayGz.interactions.length > 0 ? todayGz.interactions.join(' / ') : '없음';
+  const todayHidden = (todayGz as { hiddenStems?: string[] }).hiddenStems?.join(',') || '';
+
   const dateLabel = (() => {
     const d = new Date(isoDate);
     return d.toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' });
   })();
 
-  // 사용자 입력 정리
-  const hobbiesStr = [...ctx.hobbies, ctx.customHobby].filter(Boolean).join(', ') || '미입력';
+  // ── 사용자 입력
+  const hobbiesAll = [...ctx.hobbies, ctx.customHobby].filter(Boolean) as string[];
+  const hobbiesStr = hobbiesAll.length > 0 ? hobbiesAll.join(', ') : '미입력';
   const primaryHobby = ctx.hobbies[0] || ctx.customHobby || '자기계발';
   const slotLabel = TODAY_TIME_SLOT_LABELS[ctx.timeSlot];
   const [q1, q2] = TODAY_TIME_SLOT_QUESTIONS[ctx.timeSlot];
-  const userInputBlock = `[사용자 현재 상황 — 이 정보를 모든 섹션 풀이에 적극 반영]
-- 진입 시간대: ${slotLabel} (${ctx.timeSlot})
-- 가장 많은 시간을 쏟는 분야: ${hobbiesStr}
+  const q1Filled = ctx.q1Answer?.trim();
+  const q2Filled = ctx.q2Answer?.trim();
+  const userInputBlock = `[사용자 현재 상황 — 모든 섹션 풀이에 강제 반영]
+- 진입 시간대: ${slotLabel} (${ctx.timeSlot} 시간 구간)
+- 가장 많은 시간을 쏟는 분야: ${hobbiesStr}  (5번 섹션의 분야 분기 기준: ${primaryHobby})
 - 직업 상태: ${ctx.jobState}
 - 연애 상태: ${ctx.loveState}
-- 질문 1 ("${q1}"): ${ctx.q1Answer?.trim() || '(미답)'}
-- 질문 2 ("${q2}"): ${ctx.q2Answer?.trim() || '(미답)'}`;
+- 질문 1 ("${q1}"): ${q1Filled || '(미답 — 추정 금지, 답변 인용 없이 일반 풀이)'}
+- 질문 2 ("${q2}"): ${q2Filled || '(미답 — 추정 금지, 답변 인용 없이 일반 풀이)'}`;
 
-  // 5번 섹션의 분야별 가이드
+  // ── 5번 섹션 분야별 가이드 (LLM 사전 주입)
   const hobbyMethodGuide: Record<string, string> = {
-    '공부·시험':   '오늘의 공부 방향(어느 과목·어느 단원에 시간 안배), 추천 공부 방식(암기/문제풀이/개념정리 중 어느 것이 잘 맞는지), 금지해야 할 공부 방식(예: 신규 단원 진입, 장시간 강의 시청 등)을 실전 행동 기준으로 제시.',
-    '업무·일':     '오늘의 업무 우선순위(미루기 좋은 일·먼저 처리할 일), 추천 진행 방식(혼자/협업, 깊은 작업/얕은 처리), 피해야 할 일처리(즉답 회피, 거절할 회의 유형 등) 구체적으로 제시.',
-    '창작·예술':   '오늘 영감이 잘 떠오르는 주제·매체, 작업 방식(아이디어 스케치/마무리 다듬기/완전히 새로운 시작 중 추천), 창작 흐름이 막히는 함정 1가지 제시.',
-    '운동·체력':   '오늘 권장 운동 강도(저강도/중간/고강도), 추천 종목, 피해야 할 동작이나 부위, 운동 시간대 1구간 명시.',
-    '육아·돌봄':   '오늘 아이/돌봄 대상과 잘 통하는 활동, 피하면 좋은 자극(소음·일정 과밀 등), 부모 본인의 컨디션 관리 1가지 제시.',
-    '투자·재테크': '오늘 진입/관망/정리 중 어느 쪽이 유리한지, 주의 신호(충동 매수·소액 분할 등), 정보 검토에 좋은 시간대 1구간 제시.',
-    '인간관계':    '오늘 잘 풀리는 만남 유형, 거리를 둘 만한 관계 패턴, 메시지·연락에 좋은 시점 1가지 제시.',
-    '자기계발':    '오늘 새로운 시도 vs 익숙한 것 정리 중 추천, 인풋(독서·강의)/아웃풋(실행·기록) 중 효과적인 쪽, 피해야 할 자기소비 패턴 1가지 제시.',
-    '휴식·재충전': '오늘 권장 휴식 형태(혼자/관계/자연/실내), 피하면 좋은 자극, 회복에 가장 좋은 시간대 1구간 제시.',
+    '공부·시험':   '오늘의 공부 방향(어느 과목·어느 단원에 시간 안배), 추천 공부 방식(암기/문제풀이/개념정리 중 어느 것이 잘 맞는지)을 일진 십성·12운성 근거와 함께. 금지 학습법(예: 신규 단원 진입, 장시간 강의 시청, 그룹 스터디 등) 1가지 명시.',
+    '업무·일':     '오늘의 업무 우선순위(미루기 좋은 일·먼저 처리할 일), 추천 진행 방식(혼자/협업, 깊은 작업/얕은 처리), 피해야 할 일처리(즉답·거절할 회의 유형) 구체적으로. 일진 십성과 직업 상태(${ctx.jobState}) 결합해서.',
+    '창작·예술':   '오늘 영감이 잘 떠오르는 주제·매체(글·그림·영상·음악 중), 작업 방식(아이디어 스케치/마무리 다듬기/완전히 새로운 시작 중 추천), 창작 흐름이 막히는 함정 1가지. 식상(食傷) 십성 흐름과 연결.',
+    '운동·체력':   '오늘 권장 운동 강도(저강도/중간/고강도), 추천 종목 1~2개, 피해야 할 동작이나 부위(오행 결핍·과다 + 일진 충 근거), 운동 시간대 1구간 명시.',
+    '육아·돌봄':   '오늘 아이/돌봄 대상과 잘 통하는 활동 1가지, 피하면 좋은 자극(소음·일정 과밀 등), 부모 본인 컨디션 관리 1가지. 대인관계 십성과 결합.',
+    '투자·재테크': '오늘 진입/관망/정리 중 어느 쪽이 유리한지, 주의 신호(충동 매수·소액 분할 등), 정보 검토에 좋은 시간대 1구간. 재성(財星)·정관·편관 신호 + 일진 충 여부 근거.',
+    '인간관계':    '오늘 잘 풀리는 만남 유형, 거리를 둘 만한 관계 패턴, 메시지·연락에 좋은 시점 1가지. 일진 십성·합충 근거.',
+    '자기계발':    '오늘 새로운 시도 vs 익숙한 것 정리 중 추천, 인풋(독서·강의)/아웃풋(실행·기록) 중 효과적인 쪽, 피해야 할 자기소비 패턴 1가지. 인성(印星)·식상(食傷) 흐름 근거.',
+    '휴식·재충전': '오늘 권장 휴식 형태(혼자/관계/자연/실내), 피하면 좋은 자극, 회복에 가장 좋은 시간대 1구간. 신강신약(${result.strengthStatus}) + 일진 십이운성 근거.',
   };
   const hobbyGuide = hobbyMethodGuide[primaryHobby] ?? hobbyMethodGuide['자기계발'];
 
-  return `당신은 35년 경력의 사주명리·생활처방 전문가입니다. 아래 사용자의 오늘 하루를 사주 원국·운기 4층(대운·세운·월운·일진) + 입력한 현재 상황에 근거해 풀이해주세요.
+  // ── 멀티 취미 보조 가이드 (2~3개 선택 시 해당 분야들도 본문에 자연스럽게 녹임)
+  const secondaryHobbies = ctx.hobbies.slice(1, 3);
+  const secondaryGuide = secondaryHobbies.length > 0
+    ? `또한 보조 취미(${secondaryHobbies.join(', ')})도 ${primaryHobby} 본문 마지막 1~2문장에 짧게 녹여 다층적으로 풀이.`
+    : '';
 
-[내 원국]
-일간: ${pillars.day.gan}(${pillars.day.ganElement}) / 일주: ${pillars.day.gan}${pillars.day.zhi}
-오행: 목${elementPercent.목}% 화${elementPercent.화}% 토${elementPercent.토}% 금${elementPercent.금}% 수${elementPercent.수}% ${missingEl}
-용신: ${yongSinElement} / ${isStrong ? '신강' : '신약'}
-간여지동: ${formatGanYeojidong(result)} / 병존·삼존: ${formatByeongjOn(result)}
+  return `당신은 35년 경력의 사주명리·생활처방 전문가입니다. 사용자의 오늘 하루를 만세력 전체 데이터(4기둥·신살·합충·격국·신강·일주특성·운기 4층) + 사용자가 입력한 현재 상황에 근거해 깊고 구체적으로 풀이합니다.
 
-[운기 4개 층]
-대운(10년): ${daeWoonStr}
-세운(올해): ${seWoon.gan}${seWoon.zhi}(${seWoon.ganElement}${seWoon.zhiElement}·${seWoon.tenGod})
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+[사주 원국 — 만세력 전체]
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+${pillarDetail}
+
+일간: ${dayMaster}(${pillars.day.ganElement}·${dayMasterYinYang}간)  성별: ${gender === 'male' ? '남성' : '여성'}
+오행 분포: 목${elementPercent.목}% 화${elementPercent.화}% 토${elementPercent.토}% 금${elementPercent.금}% 수${elementPercent.수}%
+${elementNote}
+${strengthBlock}
+용신: ${yongSinElement}(${result.yongSin})  희신: ${result.heeSin}  기신: ${result.giSin}
+격국: ${gyeokguk.name} (${gyeokguk.reason})
+십성 분포: ${sipseong}
+원국에 0개인 십성: ${missingSipseongStr}
+   → "사주에 ~십성이 강하다/있다/약하다"로 서술 금지. "원국에 없는 ~" 또는 "~이(가) 부재한 사주"로만.
+신살(길성): ${sinSalGood}
+신살(흉성): ${sinSalBad}
+신살(중립): ${sinSalNeutral}
+원국 합충형파해: ${interStrOrigin}
+간여지동: ${formatGanYeojidong(result)}
+병존·삼존: ${formatByeongjOn(result)}
+
+${dayTraitsBlock}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+[운기 4개 층 — 본문 모든 섹션에서 활용]
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+대운(현재 10년): ${daeWoonStr}
+세운(올해): ${seWoonStr}
 월운(이번 달): ${monthRunStr}
-일운(오늘 일진): ${todayGz.gan}${todayGz.zhi}(${todayGz.hanja}) — ${todayGz.ganElement}·${todayGz.zhiElement} / 천간 십성 ${todayGz.tenGodGan} / 지지 십성 ${todayGz.tenGodZhi}
-일진×원국 합충: ${interStr}
+일운(오늘 일진): ${todayGz.gan}${todayGz.zhi}(${todayGz.hanja}) — ${todayGz.ganElement}·${todayGz.zhiElement}
+   천간 십성: ${todayGz.tenGodGan} / 지지 십성: ${todayGz.tenGodZhi}${todayHidden ? ` / 일진 지장간: ${todayHidden}` : ''}
+일진×원국 합충: ${interTodayStr}
 
 [오늘 날짜] ${dateLabel}
 
 ${userInputBlock}
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-[작성 규칙 — 절대 준수]
+[작성 규칙 — 절대 준수, 한 줄도 어기지 말 것]
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-1) Markdown 절대 금지(\`#\` \`##\` \`**\` \`>\` 등). 이모지 전부 금지. AI 티 나는 표현 금지.
-2) 입력한 취미(${hobbiesStr})·직업(${ctx.jobState})·연애(${ctx.loveState})·시간대(${slotLabel})·답변을 본문에서 적극 인용·반영. 일반론 금지.
-3) 질문 1·2의 답변이 있으면 해당 답변에 직접 응답하는 톤으로 풀이.
-4) 모든 섹션의 첫 줄은 은유 부제목(자연·우주·계절 이미지 대비 7~16자, 쉼표 연결). 본문 첫 문장에서 이미지 회수.
-5) 단락 사이는 빈 줄 한 줄로 구분. 각 섹션은 [key] 마커 다음 줄에 은유 제목, 바로 본문.
-6) 점수 출력 규칙은 아래 별도 블록 참고. 출력은 [today_scores] [today_flow] 두 마커부터 시작.
-7) 분량 하한을 반드시 지킬 것 (밑돌면 풀이가 빈약해 사용자 불만).
+1) Markdown 절대 금지 (\`#\` \`##\` \`**\` \`>\` \`-\` 헤더 형식 X). 이모지 전부 금지.
+2) AI 자기소개 문구 금지 ("분석 결과", "데이터에 따르면", "AI가 보기에" 등).
+3) 일반론 금지. "운이 좋은 날" "모든 일이 잘 풀립니다" "조심하세요" 같은 두루뭉술한 표현 금지.
+   → 반드시 만세력 데이터(일진 ${todayGz.gan}${todayGz.zhi} / 4층 운기 / 십성 / 신살 / 합충) 중 어느 것에 근거한 것인지 본문에서 짚어줄 것.
+4) 사용자 입력값 인용 강제 — 입력한 취미(${primaryHobby})·직업(${ctx.jobState})·연애(${ctx.loveState})·시간대(${slotLabel})를 본문에서 적어도 한 번씩 명시적으로 언급.
+5) 사용자가 미입력한 정보(질문 답변 등)를 추정으로 시나리오 만들지 말 것. 입력 안 한 항목은 일반 풀이로.
+6) 위에 주어진 모든 만세력 수치(격국·용신·신강·오행%·십성·신살·합충)를 뒤집거나 임의 변경 금지.
+7) 분량 하한 반드시 준수 — 밑돌면 빈약한 풀이로 사용자 불만. 13섹션 합산 2200자 이상 목표.
+8) 단정적 어투. "~일 수 있습니다" 흐린 표현은 전체 답변에서 3회 이하.
 
-[점수 출력 규칙 — 본문 가장 먼저 두 줄 출력]
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+[★★★ 마커 출력 절대 규칙 ★★★]
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+- 본문 텍스트 안에 [today_xxx] 형태의 어떤 마커도 노출되면 안 됩니다 (사용자에게 그대로 보임 = 사고).
+- 사용 가능한 마커는 정확히 아래 12개. 다른 어떤 변형도 사용 금지:
+  [today_scores] [today_flow] [today_basis] [today_hobby_method] [today_timeflow]
+  [today_sleep] [today_meal] [today_exercise] [today_relationship] [today_caution]
+  [today_strength] [today_oneliner]
+- 마커는 반드시 줄 처음에 단독으로 위치 (앞뒤 \`**\`, \`#\`, \`-\`, \`>\`, 콜론 \`:\` 모두 금지).
+- 마커 형식 변형 금지: \`[todayhobbymethod]\` (밑줄 누락), \`[today hobby method]\` (공백), \`[today-hobby-method]\` (하이픈), \`【today_hobby_method】\` (전각괄호) 모두 사고로 간주.
+- 마커는 한 번씩만 등장 (각 섹션당 1회). 본문 안에 같은 마커를 다시 인용하지 말 것.
+- 섹션 헤더("운용법", "수면 루틴" 등) 텍스트는 본문에 쓰지 말 것 — UI에서 자동 표시됩니다.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+[점수 출력 — 본문 가장 먼저 두 줄, 정확히 이 형식]
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 첫 줄(반드시):
 [today_scores] 종합:XX 시험:XX 공부:XX 멘탈:XX 대인:XX 이성:XX 금전:XX 운동:XX 회복:XX 횡재:XX
-- 각 점수는 0~100 정수. 사주 원국 + 4층 운기 + 일진 합충을 근거로 산출.
-- 9개 항목 점수의 표준편차가 10 이상. 비슷한 점수 나열 금지.
-- 최고/최저 점수 차이 25 이상.
-- 사용자의 ${ctx.jobState}·${ctx.loveState} 상황에서 의미 있는 항목은 정확하게 반영(예: 학생→시험·공부 가중, 연애 중→이성·대인 강조).
+- 각 점수 0~100 정수. 사주 원국 + 4층 운기 + 일진 합충을 근거로 산출.
+- 9개 항목 중 비-종합 점수의 표준편차 10 이상. 비슷한 점수 나열 금지.
+- 최고/최저 차이 25 이상.
+- 사용자 ${ctx.jobState}·${ctx.loveState}에 의미 있는 항목 가중 (학생→시험·공부, 연애 중→이성·대인, 직장인→금전·멘탈 등).
+- 용신(${yongSinElement})이 일진(${todayGz.gan}${todayGz.zhi})에서 힘 받으면 종합 70+ / 기신(${result.giSin})이 강해지면 종합 50 이하.
 
 둘째 줄(반드시):
 [today_flow] 자정:XX 아침:XX 오후:XX 저녁:XX
-- 각 시간대 0~100. 4개 점수의 표준편차 10 이상이어야 함.
-- 일진·월운·시간 십이지(子丑寅卯辰巳午未申酉戌亥) 흐름을 반영해 자연스러운 곡선이 나오게.
-- 사용자 진입 시간대(${slotLabel})를 의식해 그 구간 점수가 가장 자세한 풀이의 근거가 되도록.
+- 각 시간대 0~100. 4개 점수 표준편차 10 이상.
+- 일진 지지(${todayGz.zhi})·월운·시간 12지 흐름을 반영해 자연스러운 곡선.
+- 사용자 진입 시간대(${slotLabel}) 점수가 본문 풀이의 근거가 되도록.
 
-[은유 부제목 규칙 — 모든 섹션 공통]
+[은유 부제목 규칙 — 모든 본문 섹션 공통]
 ${METAPHOR_KB}
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-이제 아래 10개 섹션을 [key] 마커 + 은유 제목 + 본문 형태로 작성합니다.
-출력은 [today_scores] / [today_flow] / [today_basis] / ... / [today_oneliner] 순서.
+이제 아래 10개 본문 섹션을 [key] 마커 + 줄바꿈 + 은유 제목 + 줄바꿈 + 본문 형태로 작성합니다.
+출력 순서: [today_scores] → [today_flow] → [today_basis] → [today_hobby_method] → [today_timeflow] → [today_sleep] → [today_meal] → [today_exercise] → [today_relationship] → [today_caution] → [today_strength] → [today_oneliner]
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-[today_basis] — 220~300자 (명리적 근거)
+[today_basis] — 240~340자 (명리적 근거)
 첫 줄: 은유 제목.
-본문: 일진(${todayGz.gan}${todayGz.zhi}, ${todayGz.ganElement}·${todayGz.zhiElement}) 천간/지지의 의미를 1문장으로 풀고, 그것이 내 일간(${pillars.day.gan})·용신(${yongSinElement})과 어떻게 만나는지 단정. 4층 운기 중 오늘 가장 강하게 작용하는 층 1개 지목해 그 이유까지. 합충(${interStr})이 있다면 어떻게 영향을 주는지 1문장.
+본문: 일진(${todayGz.gan}${todayGz.zhi}, ${todayGz.ganElement}·${todayGz.zhiElement}) 천간/지지의 의미를 1문장으로 풀고, 그것이 내 일간(${dayMaster}·${pillars.day.ganElement})·용신(${yongSinElement})·기신(${result.giSin})과 어떻게 만나는지 단정. 4층 운기(대운·세운·월운·일진) 중 오늘 가장 강하게 작용하는 층 1개 지목 + 그 이유. 일진×원국 합충(${interTodayStr})이 있다면 어떻게 오늘 영향을 주는지 1문장. 신강신약(${result.strengthStatus}) 관점에서 오늘이 일간에 유리/불리한지 짧게.
 
-[today_hobby_method] — 280~360자 (취미·역할 운용법: ${primaryHobby} 분야)
+[today_hobby_method] — 320~420자 (취미·역할 운용법: ${primaryHobby})
 첫 줄: 은유 제목.
 본문: ${hobbyGuide}
-사용자가 입력한 시간대 답변(있으면)을 본문에 인용해 더 구체적으로 맞춤화. 마지막은 오늘 한 가지 실천 행동을 단정 문장으로.
+${secondaryGuide}
+${q1Filled || q2Filled ? `사용자가 답한 시간대 질문(${q1Filled ? `Q1 "${q1Filled}"` : ''}${q1Filled && q2Filled ? ' / ' : ''}${q2Filled ? `Q2 "${q2Filled}"` : ''})에 직접 응답하는 톤으로 본문에 인용해 더 구체적으로 맞춤화.` : '시간대 질문 답변이 없으므로, 입력하지 않은 부분을 추정해 만들지 말고 일반 가이드로.'}
+마지막 1문장은 오늘 한 가지 실천 행동을 단정 명령형 문장으로 마무리.
 
-[today_timeflow] — 280~360자 (시간대별 흐름)
+[today_timeflow] — 320~420자 (시간대별 흐름)
 첫 줄: 은유 제목.
-본문: 자정·아침·오후·저녁 4구간 각각 1문장씩 핵심 흐름 묘사([today_flow] 점수와 일관). 사용자 진입 시간(${slotLabel})에 더 자세히, 어떤 행동을 하면 좋고 어떤 것을 하면 손해인지 1~2가지 실전 조언. 가장 집중이 잘 되거나 운이 강한 1구간 명시.
+본문: 자정·아침·오후·저녁 4구간 각각 1~2문장씩 핵심 흐름 묘사 ([today_flow] 점수와 일관). 사용자 진입 시간(${slotLabel})에 더 자세히 — 어떤 행동을 하면 좋고 어떤 것을 하면 손해인지 1~2가지 실전 조언. 가장 집중이 잘 되거나 운이 강한 1구간 명시 + 이유 (일진 지지 ${todayGz.zhi} 와의 12지 관계 근거).
 
-[today_sleep] — 160~220자 (수면 루틴)
+[today_sleep] — 180~240자 (수면 루틴)
 첫 줄: 은유 제목.
-본문: 다음날 컨디션을 고려한 권장 취침 시각(예: 23:30~24:00)과 기상 시각 구체적으로. 잠들기 전 피해야 할 자극, 잠들기 좋은 의식 1가지(따뜻한 차·짧은 산책·종이책 등 사주에 맞춰).
+본문: 다음날 컨디션을 고려한 권장 취침/기상 시각 구체적으로 (예: 23:30~24:00 취침, 06:30~07:00 기상). 잠들기 전 피해야 할 자극 1가지, 잠들기 좋은 의식 1가지 (따뜻한 차·짧은 산책·종이책 등 — 용신 ${yongSinElement} 또는 결핍 오행에 맞춰).
 
-[today_meal] — 180~240자 (식사 가이드)
+[today_meal] — 200~260자 (식사 가이드)
 첫 줄: 은유 제목.
-본문: 용신(${yongSinElement})·결핍 오행을 보강하는 추천 음식 2가지(맛·색·재료 구체적으로), 피해야 할 음식 1가지(이유 포함). 식사 시간대도 1가지 권고.
+본문: 용신(${yongSinElement})·결핍 오행(${zeroEls.length > 0 ? zeroEls.join('·') : '없음'})을 보강하는 추천 음식 2가지 (맛·색·재료 구체적으로), 피해야 할 음식 1가지(이유 포함). 식사 시간대 1가지 권고.
 
-[today_exercise] — 160~220자 (운동)
+[today_exercise] — 180~240자 (운동)
 첫 줄: 은유 제목.
-본문: 오늘 운동 가능 여부·강도, 추천 종목 1~2가지, 피해야 할 동작이나 시간대 1가지. ${ctx.jobState} 상황과 무리 없이 어울리도록.
+본문: 오늘 운동 가능 여부·강도, 추천 종목 1~2가지, 피해야 할 동작이나 시간대 1가지. ${ctx.jobState} 상황과 무리 없이 어울리도록. 일진 ${todayGz.zhiElement} 오행이 신체 어느 부위(간·심·비·폐·신)와 연결되는지 1문장 짚기.
 
-[today_relationship] — 220~300자 (대인·이성)
+[today_relationship] — 240~320자 (대인·이성)
 첫 줄: 은유 제목.
-본문: 오늘 일진 십성(${todayGz.tenGodGan}) 기준 잘 통하는 관계 유형과 마찰 유형. 연애 상태(${ctx.loveState})에 맞춰: 싱글이면 인연 들어오기 쉬운 상황·장소, 연애/기혼이면 파트너와의 흐름과 권장 행동 1개. 대인관계에서 조심할 말투·상황 1개.
+본문: 오늘 일진 십성(${todayGz.tenGodGan}) 기준 잘 통하는 관계 유형 + 마찰 유형. 연애 상태(${ctx.loveState})에 맞춰 톤 분기:
+${ctx.loveState === '싱글' ? '  · 인연 들어오기 쉬운 상황·장소 1가지 (구체적으로).' : ''}
+${ctx.loveState === '호감 있는 상대 있음' ? '  · 호감 표현·연락 타이밍 1가지 + 조심할 말투.' : ''}
+${ctx.loveState === '연애 중' ? '  · 파트너와의 흐름 1문장 + 권장 행동 1개.' : ''}
+${ctx.loveState === '기혼' ? '  · 배우자·가족과의 흐름 1문장 + 권장 행동 1개.' : ''}
+${ctx.loveState === '공개 안 함' ? '  · 일반적인 인간관계 흐름 + 가까운 사람과의 권장 행동 1개.' : ''}
+대인관계에서 오늘 조심할 말투·상황 1개 명시.
 
-[today_caution] — 180~240자 (주의할 점)
+[today_caution] — 200~260자 (주의할 점)
 첫 줄: 은유 제목.
-본문: 오늘 합충(${interStr})에서 생기는 실수 유발 상황 1가지를 구체적 장면으로. 멘탈 붕괴 포인트 1가지(어떤 상황·말·생각이 무너뜨리는지). 대처 방법 1문장.
+본문: 오늘 합충(${interTodayStr})에서 생기는 실수 유발 상황 1가지를 구체적 장면으로 (시간·장소·대상·말). 멘탈이 흔들리기 쉬운 포인트 1가지 (어떤 상황·말·생각이 무너뜨리는지). 신살(흉성: ${sinSalBad}) 중 1개라도 오늘 일진과 연결되면 그 영향까지. 대처 방법 1문장.
 
-[today_strength] — 160~220자 (좋은 포인트)
+[today_strength] — 180~240자 (좋은 포인트)
 첫 줄: 은유 제목.
-본문: 오늘의 운을 가장 잘 쓰는 행동 1~2가지를 구체 장면으로(시간·장소·대상). 사용자 취미(${primaryHobby})·시간대(${slotLabel})와 연결.
+본문: 오늘의 운을 가장 잘 쓰는 행동 1~2가지를 구체 장면으로 (시간·장소·대상). 사용자 취미(${primaryHobby})·시간대(${slotLabel})와 자연스럽게 연결. 신살(길성: ${sinSalGood}) 중 오늘 활용 가능한 것이 있으면 짧게 짚기.
 
-[today_oneliner] — 50~90자 (한줄 결론)
-첫 줄(=본문): 은유 없이 직설적으로, 오늘 하루를 관통하는 핵심 한 문장. 사용자 상황을 손에 잡힐 듯 짚어주는 어조.
+[today_oneliner] — 60~110자 (한줄 결론)
+은유 제목 없이 본문만. 직설적으로, 오늘 하루를 관통하는 핵심 한 문장. 사용자 상황(${primaryHobby}·${ctx.jobState}·${ctx.loveState})을 손에 잡힐 듯 짚어주는 어조.
 
-[금지]
-- 사용자가 입력하지 않은 정보를 추정해서 시나리오 만들지 말 것.
-- "운이 좋은 날" "모든 일이 잘 풀립니다" 같은 일반론 금지.
-- 점수 마커([today_scores], [today_flow])는 반드시 첫 두 줄에, 정확한 형식으로.
-- 분량 하한 미만으로 작성 금지.
+[금지 — 한 번 더 강조]
+- 본문 안에 [today_xxx] 마커 노출 (사고).
+- 마커 형식 변형 ([todayhobbymethod] / [today-hobby-method] 등) 사용.
+- 입력하지 않은 정보 추정으로 시나리오 만들기.
+- 일반론·격언 풀이.
+- 분량 하한 미만.
+- 같은 표현·문장 반복.
 
-출력 시작 — [today_scores] 마커부터.`;
+출력 시작 — [today_scores] 마커부터, 정확히 위 형식대로.`;
 };
 // 차별 포인트: 오늘운세는 "오늘 흐름 점검", 지정일은 "이 날을 어떻게 보낼지/돌아볼지"의 의도 중심.
 // 7섹션 구조 — 핵심 / 시간대 흐름 / 시도하면 좋은 일 / 피하면 좋은 일 / 인연·환경 / 처방 / 마무리

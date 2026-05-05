@@ -28,6 +28,7 @@ import {
   parseTodayV3Sections,
   parseTodayV3DomainScores,
   parseTodayV3FlowScores,
+  stripStrayMarkers,
   type TodayFortuneV3AIResult,
 } from '../services/fortuneService';
 import { sajuDB } from '../services/supabase';
@@ -403,8 +404,8 @@ export default function TodayFortunePage() {
   chargeRef.current = chargeForContent;
   const apiCalledKeyRef = useRef<string | null>(null);
 
-  // 로딩 안전장치 — 100s. callGPT 자체 60s + 여유.
-  const [reportTimedOut] = useLoadingGuard(reportLoading, 100_000);
+  // 로딩 안전장치 — 130s. callGPT 자체 90s + 여유.
+  const [reportTimedOut] = useLoadingGuard(reportLoading, 130_000);
   useEffect(() => {
     if (reportTimedOut) {
       setReportLoading(false);
@@ -793,7 +794,7 @@ export default function TodayFortunePage() {
       {report?.rawText && (
         <div className="rounded-2xl p-4 mb-3 bg-[rgba(20,12,38,0.55)] border border-[var(--border-subtle)]">
           <p className="text-[15px] text-text-secondary leading-relaxed whitespace-pre-line">
-            {report.rawText.replace(/^\s*\[today_(scores|flow)\][^\n]*\n?/gm, '')}
+            {stripStrayMarkers(report.rawText)}
           </p>
         </div>
       )}
@@ -805,12 +806,14 @@ export default function TodayFortunePage() {
             const text = report.sections?.[key];
             if (!text) return null;
 
+            // 마지막 safety: 본문에 마커 잔여물이 새어나오지 않게 한 번 더 정화
+            const safe = stripStrayMarkers(text);
             // 첫 줄 = 은유 제목, 나머지 = 본문 (정통사주 패턴)
-            const lines = text.trim().split('\n');
+            const lines = safe.split('\n');
             const firstLine = lines[0]?.trim() ?? '';
             const hasMetaphor = lines.length > 1 && firstLine.length > 0 && firstLine.length <= 40 && !firstLine.endsWith('.');
             const metaphorTitle = hasMetaphor ? firstLine : '';
-            const bodyText = hasMetaphor ? lines.slice(1).join('\n').trim() : text;
+            const bodyText = hasMetaphor ? lines.slice(1).join('\n').trim() : safe;
 
             // 5번 운용법 헤더는 사용자 취미에 맞춰 동적
             const headerLabel = (() => {
