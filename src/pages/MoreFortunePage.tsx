@@ -62,9 +62,9 @@ const LOADING_MESSAGES: Record<MoreFortuneId, string[]> = {
   // career:      ['격국과 관성·식상을 분석 중입니다', '적합한 직군을 도출하는 중입니다', '올해 커리어 시기 살피는 중입니다'],
   // health:      ['약한 오행과 취약 장부를 보는 중입니다', '충·형 구조를 확인하는 중입니다', '올해 주의할 달을 짚는 중입니다'],
   // people:      ['천을귀인과 인성을 살피는 중입니다', '비겁 배치로 관계 스타일 분석 중입니다', '올해 도움될 사람 유형 도출 중입니다'],
-  study:       ['인성·문창귀인 확인 중입니다', '식상으로 표현력 분석 중입니다', '유리한 시험 시기 찾는 중입니다'],
-  children:    ['자녀성과 자녀궁을 확인 중입니다', '식상·관성 흐름 분석 중입니다', '출산 유리한 시기 짚는 중입니다'],
-  personality: ['일주 60갑자 특성 확인 중입니다', '격국·신강신약 종합 중입니다', '간여지동과 신살 분석 중입니다'],
+  study:       ['인성·문창귀인 확인 중입니다', '격국과 십성 분포 분석 중입니다', '대운·세운으로 유리한 시험 시기 도출 중입니다', '공부 전략을 정리하는 중입니다'],
+  children:    ['자녀성과 자녀궁을 확인 중입니다', '시주 지장간과 12운성 분석 중입니다', '대운·세운으로 출산 유리 시기 도출 중입니다', '양육 조언을 정리하는 중입니다'],
+  personality: ['일주 60갑자 특성 확인 중입니다', '격국·성패와 십성 에너지 종합 중입니다', '간여지동·병존과 신살 분석 중입니다', '12운성 라이프사이클 판독 중입니다', '대운 흐름으로 성격 변화 궤적 도출 중입니다'],
   name:        ['초성 오행을 계산 중입니다', '사주 용신과 이름 오행 비교 중입니다', '이름이 주는 기운을 분석 중입니다'],
   dream:       ['전통 해몽 사전을 펼치는 중입니다', '꿈속 상징의 길흉을 가늠하는 중입니다', '맥락과 감정으로 의미를 다듬는 중입니다'],
 };
@@ -118,9 +118,11 @@ export default function MoreFortunePage({ category }: Props) {
   const [savedRecordId, setSavedRecordId] = useState<string | null>(null);
 
   // 학업/자녀/성격: fresh=1 진입 시 소개 페이지 건너뛰고 바로 풀이 시작
+  // manualMode: "다시 풀이 받기" 클릭 시 true → 소개+CTA 페이지로 복귀
   const autoStartedRef = useRef(false);
+  const [manualMode, setManualMode] = useState(false);
   const freshParam = searchParams?.get('fresh') === '1';
-  const shouldAutoStart = freshParam && !isArchiveMode &&
+  const shouldAutoStart = freshParam && !isArchiveMode && !manualMode &&
     (category === 'study' || category === 'children' || category === 'personality');
 
   // ── 로딩 안전장치: 70초 초과 시 강제 해제 ──
@@ -490,9 +492,9 @@ export default function MoreFortunePage({ category }: Props) {
     return (
       <AILoadingBar
         label={`${cfg.title} 분석 중`}
-        minLabel="5초"
-        maxLabel="20초"
-        estimatedSeconds={12}
+        minLabel="10초"
+        maxLabel="40초"
+        estimatedSeconds={25}
         messages={LOADING_MESSAGES[category as MoreFortuneId]}
         topContent={
           <motion.div
@@ -635,6 +637,7 @@ export default function MoreFortunePage({ category }: Props) {
               onReset={() => {
                 setResult(null);
                 setError(null);
+                setManualMode(true);
                 if (category === 'name') {
                   setKoreanName('');
                   setCharMeanings([]);
