@@ -32,6 +32,8 @@ const TOJEONG_MESSAGES = [
   '괘의 상징을 풀어 쓰는 중입니다',
   '12개월의 흐름을 정리하는 중입니다',
   '총운의 방향을 잡는 중입니다',
+  '깊이 있는 풀이를 위해 한 번 더 다듬는 중입니다',
+  '거의 다 됐어요 — 한 해의 결을 정리 중입니다',
 ];
 
 // 한자 간지 → 한글 간지 (예: "丙午" → "병오")
@@ -166,9 +168,11 @@ export default function TojeongResultPage() {
   const [aiLoading, setAiLoading] = useState(!isArchiveMode && !needsProfileSelect);
   const [aiError, setAiError] = useState<string | null>(null);
 
-  // ── 로딩 안전장치: 100초 초과 시 강제 해제 (에러 표시 없음) ──
-  // 백엔드 race 마감 90s + 자동 재시도 5s 까지 충분히 포함하도록 여유 잡음.
-  const [aiTimedOut] = useLoadingGuard(aiLoading, 100_000);
+  // ── 로딩 안전장치: 180초 초과 시 강제 해제 (에러 표시 없음) ──
+  // 백엔드 race 마감 150s + 자동 재시도 사이의 여유까지 모두 포함.
+  // 길어 보이지만, 실패 시에도 무료 결정론적 풀이가 결과로 노출되므로
+  // 사용자는 "결과를 못 받는" 상황이 발생하지 않음.
+  const [aiTimedOut] = useLoadingGuard(aiLoading, 180_000);
   useEffect(() => {
     if (aiTimedOut) setAiLoading(false);
   }, [aiTimedOut]);
@@ -275,6 +279,11 @@ export default function TojeongResultPage() {
 
     const isFresh = searchParams?.get('fresh') === '1';
 
+    // 페이지 사이드 자동 재시도 — 백엔드 4단 폴백이 모두 실패해 빈 결과를 받았을 때
+    // 4초 대기 후 한 번 더 호출. 사용자 입장에서는 길어진 단일 로딩 안에서 처리됨.
+    // 2회 모두 실패해도 무료 결정론적 풀이가 페이지의 결과로 노출되므로 화면은 절대 비지 않음.
+    const MAX_PAGE_ATTEMPTS = 2;
+
     const fetchOnce = async (attemptIdx: number): Promise<void> => {
       try {
         const r = await getTojeongReading(tojeong, sourceBirth, targetProfile?.id);
@@ -292,25 +301,24 @@ export default function TojeongResultPage() {
           setAiLoading(false);
           return;
         }
-        // 빈 응답 — 첫 시도라면 5s 후 자동 재시도 (사용자에겐 로딩 유지)
-        if (attemptIdx === 0) {
-          aiAttemptCountRef.current = 1;
+        if (attemptIdx + 1 < MAX_PAGE_ATTEMPTS) {
+          aiAttemptCountRef.current = attemptIdx + 1;
           setTimeout(() => {
             if (cancelled) return;
-            void fetchOnce(1);
-          }, 5_000);
+            void fetchOnce(attemptIdx + 1);
+          }, 4_000);
           return;
         }
-        // 두 번째 시도도 실패 — 로딩 종료, 사용자에게 부드러운 재시도 카드 노출
+        // 모든 시도 실패 — 로딩만 종료. 무료 결정론적 풀이가 페이지 결과로 노출.
         setAiLoading(false);
       } catch {
         if (cancelled) return;
-        if (attemptIdx === 0) {
-          aiAttemptCountRef.current = 1;
+        if (attemptIdx + 1 < MAX_PAGE_ATTEMPTS) {
+          aiAttemptCountRef.current = attemptIdx + 1;
           setTimeout(() => {
             if (cancelled) return;
-            void fetchOnce(1);
-          }, 5_000);
+            void fetchOnce(attemptIdx + 1);
+          }, 4_000);
           return;
         }
         setAiLoading(false);
@@ -640,27 +648,9 @@ export default function TojeongResultPage() {
 
       {/* 심층 풀이 — 섹션별 카드 렌더링 */}
 
-      {/* 심층 풀이 실패 시 — 무료 풀이는 위에 이미 보이므로, 부드러운 재시도 안내만 표시.
-          크레딧 차감 안 됨을 명시적으로 안내해 사용자 신뢰 보호. */}
-      {!aiLoading && !aiContent && (!aiSections || Object.keys(aiSections).length === 0) && !isArchiveMode && aiStartedRef.current && (
-        <section className="mt-3 rounded-2xl p-4 bg-[rgba(20,12,38,0.55)] border border-[var(--border-subtle)]">
-          <div className="text-center py-3">
-            <p className="text-[14px] text-text-secondary mb-1.5">
-              심층 풀이가 잠시 지연되고 있어요.
-            </p>
-            <p className="text-[12px] text-text-tertiary mb-3">
-              크레딧은 차감되지 않았습니다 — 다시 받기를 눌러주세요.
-            </p>
-            <button
-              onClick={retryAI}
-              className="px-5 py-2 rounded-xl text-cta text-[14px] font-semibold"
-              style={{ backgroundColor: 'rgba(124,92,252,0.15)' }}
-            >
-              다시 받기
-            </button>
-          </div>
-        </section>
-      )}
+      {/* 심층 풀이 실패 카드는 노출하지 않음 — 무료 결정론적 풀이가 위에 항상 보이므로
+          사용자는 항상 결과를 받을 수 있고, 별도 에러 UI 가 필요 없음.
+          (실패 시 크레딧 차감도 일어나지 않음 — chargeForContent 는 r.content 가 있을 때만 호출) */}
 
       {/* 영역별 점수 시각화 */}
       {aiDomainScores && (

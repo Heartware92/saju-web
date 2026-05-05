@@ -429,15 +429,16 @@ export const getTojeongReading = async (
     archiveSaju({ profileId, sourceBirth, category: 'tojeong', engineResult: tj as unknown as Record<string, unknown>, interpretation: content, isDetailed: true });
   };
 
-  // 전체 90초 제한 — 2-pass(35+25) + 폴백 단일 호출(30) 합산 여유로 커버.
-  // 어떤 상황에서도 90초 안에 결과 반환(빈 문자열일 수 있음). 페이지가 graceful 처리.
+  // 전체 150초 제한 — 4단 폴백을 모두 시도할 수 있는 마진.
+  //   2-pass(35+25=60) + single(35) + compact(25) + minimal(20) = 140s
+  //   어떤 상황에서도 150초 안에 결과 반환(빈 문자열일 수 있음). 페이지가 graceful 처리.
   return Promise.race([
     tojeongAllAttempts(tj, archive),
     new Promise<TojeongAIResult>(resolve =>
       setTimeout(() => {
-        console.warn('[tojeong] 90s overall deadline — returning empty');
+        console.warn('[tojeong] 150s overall deadline — returning empty');
         resolve({ success: true, content: '' });
-      }, 90_000),
+      }, 150_000),
     ),
   ]);
 };
@@ -446,7 +447,7 @@ async function tojeongAllAttempts(
   tj: TojeongResult,
   archive: (content: string) => void,
 ): Promise<TojeongAIResult> {
-  // ── 시도 1: 2-pass (풍부한 결과, 개별 35s/25s 타임아웃) ──
+  // ── 시도 1: 2-pass (풍부한 결과, pass1 35s + pass2 25s) ──
   // pass2 가 실패해도 pass1 결과만으로 반환. pass1 자체가 실패하면 시도 2로.
   try {
     const result = await tojeong2Pass(tj);
@@ -455,33 +456,44 @@ async function tojeongAllAttempts(
       return result;
     }
   } catch (e: any) {
-    console.warn('[tojeong] 2-pass failed, trying single-pass:', e.message);
+    console.warn('[tojeong] try1 (2-pass) failed:', e.message);
   }
 
-  // ── 시도 2: 레거시 단일 호출 (30s 타임아웃, 4000 토큰) ──
+  // ── 시도 2: 레거시 단일 호출 (35s 타임아웃, 4000 토큰) ──
   try {
-    const content = await callGPT(generateTojeongPrompt(tj), 4000, undefined, { allowTruncated: true, timeoutMs: 30_000 });
+    const content = await callGPT(generateTojeongPrompt(tj), 4000, undefined, { allowTruncated: true, timeoutMs: 35_000 });
     if (content) {
       archive(content);
       return { success: true, content };
     }
   } catch (e: any) {
-    console.warn('[tojeong] single-pass failed, trying compact-pass:', e.message);
+    console.warn('[tojeong] try2 (single 4000) failed:', e.message);
   }
 
-  // ── 시도 3: 컴팩트 단일 호출 (20s 타임아웃, 짧은 분량) ──
-  // 마지막 안전망 — 길이를 줄여 빠르게라도 결과 확보.
+  // ── 시도 3: 컴팩트 단일 호출 (25s 타임아웃, 2400 토큰) ──
   try {
-    const content = await callGPT(generateTojeongPrompt(tj), 2400, undefined, { allowTruncated: true, timeoutMs: 20_000 });
+    const content = await callGPT(generateTojeongPrompt(tj), 2400, undefined, { allowTruncated: true, timeoutMs: 25_000 });
     if (content) {
       archive(content);
       return { success: true, content };
     }
   } catch (e: any) {
-    console.warn('[tojeong] compact-pass also failed:', e.message);
+    console.warn('[tojeong] try3 (compact 2400) failed:', e.message);
   }
 
-  // 모든 시도 실패 — 에러 대신 빈 결과 (페이지가 graceful 처리)
+  // ── 시도 4: 미니멀 단일 호출 (20s 타임아웃, 1500 토큰) ──
+  // 마지막 안전망 — 분량은 줄지만 사용자에게 뭐라도 보이도록 보장.
+  try {
+    const content = await callGPT(generateTojeongPrompt(tj), 1500, undefined, { allowTruncated: true, timeoutMs: 20_000 });
+    if (content) {
+      archive(content);
+      return { success: true, content };
+    }
+  } catch (e: any) {
+    console.warn('[tojeong] try4 (minimal 1500) failed:', e.message);
+  }
+
+  // 4단 폴백 모두 실패 — 에러 대신 빈 결과. 페이지의 무료 결정론적 풀이가 결과로 노출됨.
   return { success: true, content: '' };
 }
 
