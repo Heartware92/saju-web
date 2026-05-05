@@ -34,6 +34,20 @@ const TOJEONG_MESSAGES = [
   '총운의 방향을 잡는 중입니다',
 ];
 
+// 한자 간지 → 한글 간지 (예: "丙午" → "병오")
+const HANJA_TO_KOR: Record<string, string> = {
+  '甲': '갑', '乙': '을', '丙': '병', '丁': '정', '戊': '무',
+  '己': '기', '庚': '경', '辛': '신', '壬': '임', '癸': '계',
+  '子': '자', '丑': '축', '寅': '인', '卯': '묘', '辰': '진',
+  '巳': '사', '午': '오', '未': '미', '申': '신', '酉': '유',
+  '戌': '술', '亥': '해',
+};
+
+function ganZhiToKor(ganZhi: string): string {
+  if (!ganZhi) return '';
+  return Array.from(ganZhi).map((c) => HANJA_TO_KOR[c] ?? c).join('');
+}
+
 const GRADE_COLOR: Record<GwaeGrade, string> = {
   '대길': '#34D399',
   '길': '#86EFAC',
@@ -451,7 +465,7 @@ export default function TojeongResultPage() {
       </div>
 
       <p className="text-center text-[14px] text-text-tertiary mb-3">
-        세는 나이 {tojeong.age}세 · {tojeong.yearGanZhi.ganZhi}년
+        {ganZhiToKor(tojeong.yearGanZhi.ganZhi)}년 ({tojeong.yearGanZhi.ganZhi}年)
       </p>
 
       {/* 토정비결 소개 (직원 피드백: 홈 설명 부족 → 결과 진입 시 안내) */}
