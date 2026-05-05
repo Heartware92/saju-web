@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { Lunar } from 'lunar-javascript';
@@ -75,9 +75,13 @@ export default function SajuResultPage() {
   const handleRefetch = () => {
     if (cacheGate) useReportCacheStore.getState().invalidate(cacheGate.kind, cacheGate.key);
     setCacheGate(null);
+    apiCalledKeyRef.current = null;
     setRefetchNonce(n => n + 1);
   };
   const chargeForContent = useCreditStore(s => s.chargeForContent);
+  const chargeRef = useRef(chargeForContent);
+  chargeRef.current = chargeForContent;
+  const apiCalledKeyRef = useRef<string | null>(null);
 
   useEffect(() => { fetchProfiles(); }, [fetchProfiles]);
 
@@ -175,9 +179,13 @@ export default function SajuResultPage() {
     if (isArchiveMode) return;
     if (!result) return;
 
-    let cancelled = false;
-
     const isFresh = searchParams?.get('fresh') === '1';
+
+    // 중복 호출 방지 (탭 복귀·프로필 hydration 방어)
+    const effectKey = sajuKey(result);
+    if (!isFresh && refetchNonce === 0 && apiCalledKeyRef.current === effectKey) return;
+
+    let cancelled = false;
 
     if (isFresh) {
       setReport(null);
@@ -231,6 +239,7 @@ export default function SajuResultPage() {
         }
       }
 
+      apiCalledKeyRef.current = effectKey;
       setReportLoading(true);
       getJungtongsajuReport(result, (partial) => {
         if (cancelled) return;
@@ -244,7 +253,7 @@ export default function SajuResultPage() {
             cache.setReport('jungtong', cacheKey, r);
             if (!cache.isCharged('jungtong', cacheKey)) {
               cache.markCharged('jungtong', cacheKey);
-              chargeForContent('sun', SUN_COST_BIG, CHARGE_REASONS.traditional).catch(() => {});
+              chargeRef.current('sun', SUN_COST_BIG, CHARGE_REASONS.traditional).catch(() => {});
             }
           } else if (r.error) {
             cache.setError('jungtong', cacheKey, r.error);

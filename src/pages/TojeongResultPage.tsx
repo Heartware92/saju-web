@@ -156,6 +156,8 @@ export default function TojeongResultPage() {
     return profiles.find(p => p.is_primary) ?? null;
   }, [profiles, profileId, needsProfileSelect]);
   const chargeForContent = useCreditStore(s => s.chargeForContent);
+  const chargeRef = useRef(chargeForContent);
+  chargeRef.current = chargeForContent;
 
   // AI 내러티브 — 진입 즉시 자동 호출
   const [aiContent, setAiContent] = useState<string | null>(null);
@@ -285,7 +287,7 @@ export default function TojeongResultPage() {
           cache.setReport('tojeong', cacheKey, r.content);
           if (!cache.isCharged('tojeong', cacheKey)) {
             cache.markCharged('tojeong', cacheKey);
-            chargeForContent('sun', SUN_COST_BIG, CHARGE_REASONS.tojeong).catch(() => {});
+            chargeRef.current('sun', SUN_COST_BIG, CHARGE_REASONS.tojeong).catch(() => {});
           }
           setAiLoading(false);
           return;
@@ -392,7 +394,7 @@ export default function TojeongResultPage() {
           cache.setReport('tojeong', cacheKey, r.content);
           if (!cache.isCharged('tojeong', cacheKey)) {
             cache.markCharged('tojeong', cacheKey);
-            chargeForContent('sun', SUN_COST_BIG, CHARGE_REASONS.tojeong).catch(() => {});
+            chargeRef.current('sun', SUN_COST_BIG, CHARGE_REASONS.tojeong).catch(() => {});
           }
         }
         setAiLoading(false);

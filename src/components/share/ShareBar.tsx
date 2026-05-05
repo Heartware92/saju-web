@@ -157,7 +157,7 @@ function Toast({ message }: { message: string | null }) {
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: 10 }}
-          className="fixed bottom-8 left-1/2 -translate-x-1/2 z-50 px-5 py-2.5 rounded-full bg-space-elevated border border-[var(--border-subtle)] shadow-lg"
+          className="fixed bottom-24 left-1/2 -translate-x-1/2 z-50 px-5 py-2.5 rounded-full bg-space-elevated border border-[var(--border-subtle)] shadow-lg"
         >
           <span className="text-sm text-text-primary font-medium">{message}</span>
         </motion.div>

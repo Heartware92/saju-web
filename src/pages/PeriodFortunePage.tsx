@@ -256,6 +256,7 @@ export default function PeriodFortunePage({ scope }: { scope: FortuneScope | 'da
   const handleRefetch = () => {
     if (cacheGate) useReportCacheStore.getState().invalidate(cacheGate.kind, cacheGate.key);
     setCacheGate(null);
+    apiCalledKeyRef.current = null;
     setRefetchNonce(n => n + 1);
   };
 

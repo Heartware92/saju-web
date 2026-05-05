@@ -201,6 +201,10 @@ export default function TodayFortunePage({ mode = 'today' }: { mode?: 'today' | 
     if (isArchiveMode) return;
     if (!result || !confirmedDate) return;
 
+    // 중복 호출 방지: 동일 키에 대해 이미 호출이 시작되었으면 skip (탭 복귀·프로필 hydration 방어)
+    const effectKey = `${sajuKey(result)}:${confirmedDate}`;
+    if (refetchNonce === 0 && apiCalledKeyRef.current === effectKey) return;
+
     let cancelled = false;
 
     const isFresh = searchParams?.get('fresh') === '1';
@@ -247,6 +251,7 @@ export default function TodayFortunePage({ mode = 'today' }: { mode?: 'today' | 
         return;
       }
 
+      apiCalledKeyRef.current = effectKey;
       setReport(null);
       setReportLoading(true);
       getTodayFortuneReport(result, confirmedDate, targetProfile?.id)
@@ -258,7 +263,7 @@ export default function TodayFortunePage({ mode = 'today' }: { mode?: 'today' | 
             cache.setReport('today', cacheKey, r);
             if (!cache.isCharged('today', cacheKey)) {
               cache.markCharged('today', cacheKey);
-              chargeForContent('sun', SUN_COST_BIG, CHARGE_REASONS.today).catch(() => {});
+              chargeRef.current('sun', SUN_COST_BIG, CHARGE_REASONS.today).catch(() => {});
             }
           } else if (r.error) {
             cache.setError('today', cacheKey, r.error);
@@ -274,7 +279,7 @@ export default function TodayFortunePage({ mode = 'today' }: { mode?: 'today' | 
     run();
     return () => { cancelled = true; };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [result, confirmedDate, chargeForContent, isArchiveMode, refetchNonce]);
+  }, [result, confirmedDate, isArchiveMode, refetchNonce]);
 
   // ── 프로필 선택 가드 ───────────────────────────────────────
   if (needsProfileSelect) {

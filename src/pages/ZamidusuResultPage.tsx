@@ -123,6 +123,8 @@ export default function ZamidusuResultPage() {
     }
   }, [aiTimedOut, aiResult]);
   const chargeForContent = useCreditStore(s => s.chargeForContent);
+  const chargeRef = useRef(chargeForContent);
+  chargeRef.current = chargeForContent;
 
   const [savedRecordId, setSavedRecordId] = useState<string | null>(null);
   const [cacheGate, setCacheGate] = useState<{ kind: ReportKind; key: string; restore: () => void } | null>(null);
@@ -343,7 +345,7 @@ export default function ZamidusuResultPage() {
             cache.setReport('zamidusu', cacheKey, r);
             if (!cache.isCharged('zamidusu', cacheKey)) {
               cache.markCharged('zamidusu', cacheKey);
-              chargeForContent('sun', SUN_COST_BIG, CHARGE_REASONS.zamidusu).catch(() => {});
+              chargeRef.current('sun', SUN_COST_BIG, CHARGE_REASONS.zamidusu).catch(() => {});
             }
           } else if (r.error) {
             cache.setError('zamidusu', cacheKey, r.error);
