@@ -46,13 +46,15 @@ function loadKakaoSDK(): Promise<void> {
     const script = document.createElement('script');
     script.id = 'kakao-sdk';
     script.src = 'https://t1.kakaocdn.net/kakao_js_sdk/2.7.4/kakao.min.js';
-    script.integrity = 'sha384-DKYJZ8NLiK8MN4/C5P2dtSmLQ4KwPaoqAfyA/DfmEc1VDxu4lqqLbptI3YR8w2V';
     script.crossOrigin = 'anonymous';
     script.onload = () => {
       sdkLoaded = true;
       resolve();
     };
-    script.onerror = () => reject(new Error('Kakao SDK 로드 실패'));
+    script.onerror = (e) => {
+      console.error('[Kakao] SDK 스크립트 로드 실패', e);
+      reject(new Error('Kakao SDK 로드 실패'));
+    };
     document.head.appendChild(script);
   });
 }
@@ -73,8 +75,11 @@ function initKakao(): boolean {
 export async function ensureKakaoReady(): Promise<boolean> {
   try {
     await loadKakaoSDK();
-    return initKakao();
-  } catch {
+    const result = initKakao();
+    if (!result) console.warn('[Kakao] initKakao 실패 — key:', !!process.env.NEXT_PUBLIC_KAKAO_JS_KEY, 'Kakao:', !!window.Kakao);
+    return result;
+  } catch (e) {
+    console.error('[Kakao] ensureKakaoReady 실패', e);
     return false;
   }
 }
