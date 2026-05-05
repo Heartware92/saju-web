@@ -14,7 +14,8 @@ export const SAJU_CATEGORY_LABEL: Record<string, string> = {
   traditional: '정통사주',
   newyear: '신년운세',
   today: '오늘의 운세',
-  date: '지정일 운세',
+  period: '지정일 운세',  // archiveService 저장 키
+  date: '지정일 운세',     // 레거시 호환
   gunghap: '궁합',
   taekil: '택일',
   tojeong: '토정비결',
@@ -35,9 +36,9 @@ export const SAJU_CATEGORY_LABEL: Record<string, string> = {
   relation: '인간관계',
 };
 
-/** 큰 8 꼭지 (해 1 차감) */
+/** 큰 8 꼭지 (해 1 차감) — DB 저장 키와 일치 */
 export const SAJU_BIG_CATEGORIES = [
-  'traditional', 'newyear', 'today', 'date', 'gunghap', 'taekil', 'tojeong', 'zamidusu',
+  'traditional', 'newyear', 'today', 'period', 'gunghap', 'taekil', 'tojeong', 'zamidusu',
 ] as const;
 
 /** 더 많은 운세 10종 (달 1 차감) */
@@ -70,7 +71,8 @@ export const CREDIT_REASON_LABEL: Record<string, string> = {
   newyear: '신년운세',
   today: '오늘의 운세',
   gunghap: '궁합',
-  date: '지정일 운세',
+  period: '지정일 운세',
+  date: '지정일 운세',  // 레거시 호환
   taekil: '택일',
   tojeong: '토정비결',
   zamidusu: '자미두수',
