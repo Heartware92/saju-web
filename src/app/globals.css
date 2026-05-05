@@ -455,19 +455,21 @@ p, li, span, div, button, a {
   --border-fill: 0;
 }
 
-.service-card:hover {
-  transform: translateY(-2px) scale(1.02);
-  box-shadow: 0 6px 18px rgba(124, 92, 252, 0.15), 0 0 0 1px rgba(124, 92, 252, 0.2);
+@media (hover: hover) {
+  .service-card:hover {
+    transform: translateY(-2px) scale(1.02);
+    box-shadow: 0 6px 18px rgba(124, 92, 252, 0.15), 0 0 0 1px rgba(124, 92, 252, 0.2);
+  }
+
+  .service-card:hover::before {
+    opacity: 1;
+    animation: fill-border 0.5s ease-out forwards, thicken-border 0.15s ease 0.5s forwards;
+  }
 }
 
 .service-card:active {
   transform: scale(0.97);
   box-shadow: 0 2px 8px rgba(124, 92, 252, 0.12);
-}
-
-.service-card:hover::before {
-  opacity: 1;
-  animation: fill-border 0.5s ease-out forwards, thicken-border 0.15s ease 0.5s forwards;
 }
 
 .service-card:active::before {

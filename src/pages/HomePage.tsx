@@ -185,7 +185,7 @@ export default function HomePage() {
     return { pillars: result.pillars, element, character, unknownTime: result.hourUnknown };
   }, [primary]);
 
-  const handleServiceClick = useCallback((e: React.PointerEvent | React.MouseEvent, targetPath: string) => {
+  const handleServiceClick = useCallback((e: React.MouseEvent, targetPath: string) => {
     e.preventDefault();
     if (!user) {
       router.push(`/login?from=${targetPath}`);
@@ -432,7 +432,7 @@ export default function HomePage() {
         >
           {MAIN_SERVICES.map((svc) => (
             <motion.div key={svc.id} variants={fadeUp}>
-              <button type="button" onPointerDown={(e) => handleServiceClick(e, svc.direct)} className="w-full text-left">
+              <button type="button" onClick={(e) => handleServiceClick(e, svc.direct)} className="w-full text-left">
                 <div className={`
                   service-card
                   relative rounded-xl p-3 h-[88px]
@@ -460,7 +460,7 @@ export default function HomePage() {
         >
           {SECONDARY_SERVICES.map((svc) => (
             <motion.div key={svc.id} variants={fadeUp}>
-              <button type="button" onPointerDown={(e) => handleServiceClick(e, svc.direct)} className="w-full text-left">
+              <button type="button" onClick={(e) => handleServiceClick(e, svc.direct)} className="w-full text-left">
                 <div className={`
                   service-card
                   relative rounded-xl p-3 h-[88px]
@@ -492,7 +492,7 @@ export default function HomePage() {
         >
           {SUB_SERVICES.map((svc) => (
             <motion.div key={svc.id} variants={fadeUp}>
-              <button type="button" onPointerDown={(e) => handleServiceClick(e, svc.href)} className="w-full">
+              <button type="button" onClick={(e) => handleServiceClick(e, svc.href)} className="w-full">
                 <div className="service-card flex flex-col items-center justify-center h-[80px] p-2.5 rounded-xl bg-space-surface/60 border border-[var(--border-subtle)]">
                   <span className="text-[17px] font-bold text-text-primary text-center leading-tight mb-1 whitespace-nowrap">{svc.title}</span>
                   <span className="text-[14px] text-text-tertiary text-center leading-tight line-clamp-1 whitespace-nowrap">{svc.desc}</span>
