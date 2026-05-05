@@ -21,6 +21,14 @@ import {
 import { parseGunghapHeader } from '@/lib/gunghap';
 import { GunghapResultBlock } from '@/components/gunghap/GunghapResultBlock';
 import { RadarChart } from '@/components/charts/RadarChart';
+import { SajuTraditionalResultBlock } from '@/components/share/blocks/SajuTraditionalResultBlock';
+import { TodayResultBlock } from '@/components/share/blocks/TodayResultBlock';
+import { TojeongResultBlock } from '@/components/share/blocks/TojeongResultBlock';
+import { PeriodResultBlock } from '@/components/share/blocks/PeriodResultBlock';
+import { TaekilResultBlock } from '@/components/share/blocks/TaekilResultBlock';
+import { MoreResultBlock } from '@/components/share/blocks/MoreResultBlock';
+import { MORE_FORTUNE_ORDER } from '@/constants/moreFortunes';
+import { ZamidusuResultBlock } from '@/components/share/blocks/ZamidusuResultBlock';
 
 interface Props {
   type: 'saju' | 'tarot';
@@ -237,6 +245,19 @@ export default function SharePageClient({ type, record }: Props) {
   const taekilDays = isTaekil ? (record.engine_result as any)?.bestDays as TaekilDayLite[] | undefined : undefined;
   const taekilCustom = isTaekil ? (record.engine_result as any)?.customLabel as string | undefined : undefined;
 
+  // 정통사주 — 결과 페이지와 동일한 풀 컴포넌트 사용
+  const isTraditional = type === 'saju' && category === 'traditional';
+
+  // 신년운세 / 지정일 운세 — PeriodResultBlock 으로 위임
+  const isNewyear = type === 'saju' && category === 'newyear';
+  const isPeriod = type === 'saju' && category === 'period';
+
+  // 더많은운세 10종
+  const isMore = type === 'saju' && (MORE_FORTUNE_ORDER as readonly string[]).includes(category);
+
+  // 자미두수
+  const isZamidusu = type === 'saju' && category === 'zamidusu';
+
   const config = SECTION_MAP[category];
   const useUniversal = !config;
   const universalResult = useUniversal ? universalSectionParser(bodyForSections) : null;
@@ -307,63 +328,39 @@ export default function SharePageClient({ type, record }: Props) {
         </motion.div>
       )}
 
-      {/* 오늘의 운세 — 9도메인 점수·시간대 흐름 */}
-      {isToday && todayDomainScores && (
-        <motion.div
-          initial={{ opacity: 0, y: 6 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.05 }}
-          className="rounded-2xl mb-4 p-5 bg-[rgba(124,92,252,0.08)] border border-[rgba(124,92,252,0.25)]"
-        >
-          <p className="text-[14px] font-semibold text-text-secondary mb-3 uppercase tracking-wider">오늘의 점수</p>
-          <TodayDomainBars scores={todayDomainScores as unknown as Record<string, number>} />
-          {todayFlowScores && (
-            <div className="mt-5 pt-4 border-t border-white/10">
-              <p className="text-[14px] font-semibold text-text-secondary mb-3 uppercase tracking-wider">시간대 흐름</p>
-              <TodayFlowChart flow={todayFlowScores} />
-            </div>
-          )}
-        </motion.div>
+      {/* 오늘의 운세 — 결과 페이지 풀 시각 (일진·종합·9도메인·시간대·10섹션) */}
+      {isToday && (
+        <TodayResultBlock record={record} />
       )}
 
-      {/* 토정비결 — 괘 등급 + 4영역 레이더 */}
-      {isTojeong && (tojeongScores || tojeongGrade) && (
-        <motion.div
-          initial={{ opacity: 0, y: 6 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.05 }}
-          className="rounded-2xl mb-4 p-5 bg-[rgba(20,12,38,0.55)] border border-[var(--border-subtle)]"
-        >
-          {tojeongGrade && (
-            <div className="text-center mb-4">
-              {tojeongHexagram && (
-                <p className="text-[18px] font-bold text-text-primary mb-1" style={{ fontFamily: 'var(--font-serif)' }}>
-                  {tojeongHexagram}
-                </p>
-              )}
-              <p className="text-[15px] font-semibold" style={{ color: scoreColor(tojeongScores ? Math.round((tojeongScores.wealth + tojeongScores.love + tojeongScores.health + tojeongScores.career) / 4) : 60) }}>
-                {tojeongGrade}
-              </p>
-            </div>
-          )}
-          {tojeongScores && (
-            <>
-              <p className="text-[14px] font-semibold text-text-secondary mb-3 uppercase tracking-wider text-center">영역별 운세</p>
-              <TojeongRadarBlock scores={tojeongScores} />
-            </>
-          )}
-        </motion.div>
+      {/* 토정비결 — 결과 페이지 풀 시각 (괘·괘사·총평·월별·조언·AI 영역점수·6섹션) */}
+      {isTojeong && (
+        <TojeongResultBlock record={record} />
       )}
 
-      {/* 택일 — 추천 일자 카드 */}
-      {isTaekil && taekilDays && taekilDays.length > 0 && (
-        <motion.div
-          initial={{ opacity: 0, y: 6 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.05 }}
-        >
-          <TaekilRankBlock days={taekilDays} customLabel={taekilCustom} />
-        </motion.div>
+      {/* 택일 — 결과 페이지 풀 시각 (포디움·점수바·날짜별 상세·피해야 할 날) */}
+      {isTaekil && (
+        <TaekilResultBlock record={record} />
+      )}
+
+      {/* 정통사주 — 핵심요약 + 만세력 보드 + 9섹션 카드 (결과 페이지 풀 시각) */}
+      {isTraditional && (
+        <SajuTraditionalResultBlock record={record} />
+      )}
+
+      {/* 신년운세 / 지정일 운세 — 점수링·레이더·월별흐름·6or7섹션 (결과 페이지 풀 시각) */}
+      {(isNewyear || isPeriod) && (
+        <PeriodResultBlock record={record} />
+      )}
+
+      {/* 더많은운세 10종 — 결과 페이지 풀 시각 (이름·꿈 입력 + 카드) */}
+      {isMore && (
+        <MoreResultBlock record={record} />
+      )}
+
+      {/* 자미두수 — 결과 페이지 풀 시각 (명반 12궁·6궁 레이더·사화·대한·7섹션) */}
+      {isZamidusu && (
+        <ZamidusuResultBlock record={record} />
       )}
 
       {/* 타로 질문 */}
@@ -379,8 +376,8 @@ export default function SharePageClient({ type, record }: Props) {
         </motion.div>
       )}
 
-      {/* 섹션 카드 — 전용 파서가 있는 카테고리 */}
-      {!useUniversal && (
+      {/* 섹션 카드 — 전용 파서가 있는 카테고리 (자체 블록이 처리하는 카테고리는 제외) */}
+      {!useUniversal && !isTraditional && !isToday && !isTojeong && !isNewyear && !isPeriod && !isZamidusu && (
         <div className="space-y-2">
           {(sectionKeys as readonly string[]).map((key, idx) => {
             const text = sections[key as string];
@@ -394,8 +391,8 @@ export default function SharePageClient({ type, record }: Props) {
         </div>
       )}
 
-      {/* 섹션 카드 — 범용 파서 (궁합·택일·기간운세 등) */}
-      {useUniversal && universalResult && (
+      {/* 섹션 카드 — 범용 파서 (자체 블록이 처리하는 카테고리는 제외) */}
+      {useUniversal && universalResult && !isGunghap && !isTaekil && !isMore && (
         <div className="space-y-2">
           {universalResult.sections.map((sec, idx) => (
             <SectionCard key={idx} label={sec.title} text={sec.body} idx={idx} />
