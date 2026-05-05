@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { useProfileStore } from '../store/useProfileStore';
@@ -117,16 +117,20 @@ export default function TodayFortunePage({ mode = 'today' }: { mode?: 'today' | 
   const handleRefetch = () => {
     if (cacheGate) useReportCacheStore.getState().invalidate(cacheGate.kind, cacheGate.key);
     setCacheGate(null);
+    apiCalledKeyRef.current = null;
     setRefetchNonce(n => n + 1);
   };
   const chargeForContent = useCreditStore(s => s.chargeForContent);
+  const chargeRef = useRef(chargeForContent);
+  chargeRef.current = chargeForContent;
+  const apiCalledKeyRef = useRef<string | null>(null);
 
   // ── 로딩 안전장치: 70초 초과 시 강제 해제 ──
   const [reportTimedOut] = useLoadingGuard(reportLoading, 70_000);
   useEffect(() => {
     if (reportTimedOut) {
       setReportLoading(false);
-      if (!report) setReport({ success: false, error: 'AI 응답이 너무 오래 걸려요. 새로고침 후 다시 시도해주세요.' });
+      if (!report) setReport({ success: false, error: '응답이 너무 오래 걸려요. 새로고침 후 다시 시도해주세요.' });
     }
   }, [reportTimedOut, report]);
 
@@ -525,8 +529,7 @@ export default function TodayFortunePage({ mode = 'today' }: { mode?: 'today' | 
             // 은유 제목 감지: 첫 줄이 짧고(≤60자) 문장 부호(「」·:·() 제외)가 상대적으로 적을 때
             const hasMetaphor = lines.length > 1
               && firstLine.length > 0
-              && firstLine.length <= 60
-              && !firstLine.startsWith('-')
+              && firstLine.length <= 40
               && !firstLine.endsWith('.');
             const metaphorTitle = hasMetaphor ? firstLine : '';
             const bodyText = hasMetaphor ? lines.slice(1).join('\n').trim() : text;

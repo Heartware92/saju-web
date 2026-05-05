@@ -122,7 +122,7 @@ export default function MoreFortunePage({ category }: Props) {
   useEffect(() => {
     if (loadingTimedOut) {
       setLoading(false);
-      if (!result) setError('AI 응답이 너무 오래 걸려요. 새로고침 후 다시 시도해주세요.');
+      if (!result) setError('응답이 너무 오래 걸려요. 새로고침 후 다시 시도해주세요.');
     }
   }, [loadingTimedOut, result]);
 

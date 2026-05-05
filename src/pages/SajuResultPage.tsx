@@ -165,7 +165,7 @@ export default function SajuResultPage() {
   useEffect(() => {
     if (reportTimedOut) {
       setReportLoading(false);
-      if (!report) setReport({ success: false, error: 'AI 응답이 너무 오래 걸려요. 새로고침 후 다시 시도해주세요.' });
+      if (!report) setReport({ success: false, error: '응답이 너무 오래 걸려요. 새로고침 후 다시 시도해주세요.' });
     }
   }, [reportTimedOut, report]);
 

@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
 
-const TIMEOUT_ERROR = 'AI 응답이 너무 오래 걸려요. 새로고침 후 다시 시도해주세요.';
+const TIMEOUT_ERROR = '응답이 너무 오래 걸려요. 새로고침 후 다시 시도해주세요.';
 
 /**
- * AI 로딩이 maxMs 이상 지속되면 강제 해제하고 에러 표시.
+ * 풀이 로딩이 maxMs 이상 지속되면 강제 해제하고 에러 표시.
  * callGPT의 55초 AbortController와 별개로, 페이지 레벨의 최종 안전망.
  *
  * @returns [timedOut, timeoutError] — timedOut이 true가 되면 호출자가

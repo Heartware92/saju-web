@@ -10,7 +10,7 @@
  * 사주 원국은 URL query 또는 대표 프로필에서 가져와 계산한다.
  */
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { useProfileStore } from '../store/useProfileStore';
@@ -260,6 +260,11 @@ export default function PeriodFortunePage({ scope }: { scope: FortuneScope | 'da
   };
 
   const chargeForContent = useCreditStore(s => s.chargeForContent);
+  const chargeRef = useRef(chargeForContent);
+  chargeRef.current = chargeForContent;
+
+  // ref guard: 동일한 호출 키에 대해 중복 API 호출 방지 (탭 전환·백그라운드 복귀 시 보호)
+  const apiCalledKeyRef = useRef<string | null>(null);
 
   // ── 보관함 재생 모드 — recordId 가 있으면 DB에서 풀이 복원, AI 호출 skip ──
   // (scope='year'·newyear / scope='date'·period 가 archive 저장됨)
@@ -310,13 +315,13 @@ export default function PeriodFortunePage({ scope }: { scope: FortuneScope | 'da
   useEffect(() => {
     if (yearTimedOut) {
       setNewyearReportLoading(false);
-      setNewyearReport({ success: false, error: 'AI 응답이 너무 오래 걸려요. 새로고침 후 다시 시도해주세요.' });
+      setNewyearReport({ success: false, error: '응답이 너무 오래 걸려요. 새로고침 후 다시 시도해주세요.' });
     }
   }, [yearTimedOut]);
   useEffect(() => {
     if (dateTimedOut) {
       setPickedDateReportLoading(false);
-      setPickedDateReport({ success: false, error: 'AI 응답이 너무 오래 걸려요. 새로고침 후 다시 시도해주세요.' });
+      setPickedDateReport({ success: false, error: '응답이 너무 오래 걸려요. 새로고침 후 다시 시도해주세요.' });
     }
   }, [dateTimedOut]);
   useEffect(() => {
@@ -328,6 +333,10 @@ export default function PeriodFortunePage({ scope }: { scope: FortuneScope | 'da
   useEffect(() => {
     if (isArchiveMode) return;
     if (!saju || !fortune) return;
+
+    // 중복 호출 방지: 이미 동일 키로 호출이 시작되었으면 skip (탭 복귀·프로필 hydration 방어)
+    const effectKey = `${sajuKey(saju)}:${scope}:${scope === 'year' ? targetYear : scope === 'date' ? pickedDate : today}`;
+    if (refetchNonce === 0 && apiCalledKeyRef.current === effectKey) return;
 
     let cancelled = false;
 
@@ -379,6 +388,7 @@ export default function PeriodFortunePage({ scope }: { scope: FortuneScope | 'da
       }
 
       const sk = sajuKey(saju);
+      apiCalledKeyRef.current = effectKey;
 
     // scope=year: 신년운세 종합 리포트 호출 (도메인 상세는 패스)
     // 정상 응답 캐시 X (홈 진입 = 새 풀이). 실패만 1분 negative cache.
@@ -408,7 +418,7 @@ export default function PeriodFortunePage({ scope }: { scope: FortuneScope | 'da
             cache.setReport('newyear', cacheKey, r);
             if (!cache.isCharged('newyear', cacheKey)) {
               cache.markCharged('newyear', cacheKey);
-              chargeForContent('sun', SUN_COST_BIG, CHARGE_REASONS.newyear).catch(() => {});
+              chargeRef.current('sun', SUN_COST_BIG, CHARGE_REASONS.newyear).catch(() => {});
             }
           } else if (r.error) {
             cache.setError('newyear', cacheKey, r.error);
@@ -448,7 +458,7 @@ export default function PeriodFortunePage({ scope }: { scope: FortuneScope | 'da
             cache.setReport('period_date', cacheKey, r);
             if (!cache.isCharged('period_date', cacheKey)) {
               cache.markCharged('period_date', cacheKey);
-              chargeForContent('sun', SUN_COST_BIG, CHARGE_REASONS.date).catch(() => {});
+              chargeRef.current('sun', SUN_COST_BIG, CHARGE_REASONS.date).catch(() => {});
             }
           } else if (r.error) {
             cache.setError('period_date', cacheKey, r.error);
@@ -508,7 +518,7 @@ export default function PeriodFortunePage({ scope }: { scope: FortuneScope | 'da
           cache.setReport(kind, cacheKey, r.descriptions);
           if (!cache.isCharged(kind, cacheKey)) {
             cache.markCharged(kind, cacheKey);
-            chargeForContent('sun', SUN_COST_BIG, CHARGE_REASONS.today).catch(() => {});
+            chargeRef.current('sun', SUN_COST_BIG, CHARGE_REASONS.today).catch(() => {});
           }
         } else if (r.error) {
           cache.setError(kind, cacheKey, r.error);
@@ -526,7 +536,7 @@ export default function PeriodFortunePage({ scope }: { scope: FortuneScope | 'da
     runWithArchiveCheck();
     return () => { cancelled = true; };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [saju, fortune, scope, pickedDate, targetYear, today, chargeForContent, isArchiveMode, dateConfirmed, refetchNonce]);
+  }, [saju, fortune, scope, pickedDate, targetYear, today, isArchiveMode, dateConfirmed, refetchNonce]);
 
   if (needsProfileSelect) {
     const CURRENT_YEAR = new Date().getFullYear();

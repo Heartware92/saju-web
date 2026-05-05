@@ -164,8 +164,9 @@ export default function TojeongResultPage() {
   const [aiLoading, setAiLoading] = useState(!isArchiveMode && !needsProfileSelect);
   const [aiError, setAiError] = useState<string | null>(null);
 
-  // ── 로딩 안전장치: 50초 초과 시 강제 해제 (에러 표시 없음) ──
-  const [aiTimedOut] = useLoadingGuard(aiLoading, 50_000);
+  // ── 로딩 안전장치: 100초 초과 시 강제 해제 (에러 표시 없음) ──
+  // 백엔드 race 마감 90s + 자동 재시도 5s 까지 충분히 포함하도록 여유 잡음.
+  const [aiTimedOut] = useLoadingGuard(aiLoading, 100_000);
   useEffect(() => {
     if (aiTimedOut) setAiLoading(false);
   }, [aiTimedOut]);
@@ -259,9 +260,11 @@ export default function TojeongResultPage() {
     return undefined;
   }, [searchParams, targetProfile]);
 
-  // ── 보관함 DB 확인 → AI 호출 (순차 실행) ──
-  // 보관함 체크를 먼저 완료한 뒤, 기존 풀이가 없을 때만 AI 호출
+  // ── 보관함 DB 확인 → 심층 풀이 호출 (순차 실행) ──
+  // 보관함 체크를 먼저 완료한 뒤, 기존 풀이가 없을 때만 호출.
+  // 첫 시도가 빈 응답이면 백그라운드에서 1회 자동 재시도(5s 후) → 사용자에게 에러 노출 최소화.
   const aiStartedRef = useRef(false);
+  const aiAttemptCountRef = useRef(0);
   useEffect(() => {
     if (isArchiveMode) return;
     if (!tojeong || !cacheKey) return;
@@ -269,6 +272,48 @@ export default function TojeongResultPage() {
     let cancelled = false;
 
     const isFresh = searchParams?.get('fresh') === '1';
+
+    const fetchOnce = async (attemptIdx: number): Promise<void> => {
+      try {
+        const r = await getTojeongReading(tojeong, sourceBirth, targetProfile?.id);
+        if (cancelled) return;
+        if (r.content) {
+          setAiContent(r.content);
+          if (r.sections) setAiSections(r.sections);
+          if (r.domainScores) setAiDomainScores(r.domainScores);
+          const cache = useReportCacheStore.getState();
+          cache.setReport('tojeong', cacheKey, r.content);
+          if (!cache.isCharged('tojeong', cacheKey)) {
+            cache.markCharged('tojeong', cacheKey);
+            chargeForContent('sun', SUN_COST_BIG, CHARGE_REASONS.tojeong).catch(() => {});
+          }
+          setAiLoading(false);
+          return;
+        }
+        // 빈 응답 — 첫 시도라면 5s 후 자동 재시도 (사용자에겐 로딩 유지)
+        if (attemptIdx === 0) {
+          aiAttemptCountRef.current = 1;
+          setTimeout(() => {
+            if (cancelled) return;
+            void fetchOnce(1);
+          }, 5_000);
+          return;
+        }
+        // 두 번째 시도도 실패 — 로딩 종료, 사용자에게 부드러운 재시도 카드 노출
+        setAiLoading(false);
+      } catch {
+        if (cancelled) return;
+        if (attemptIdx === 0) {
+          aiAttemptCountRef.current = 1;
+          setTimeout(() => {
+            if (cancelled) return;
+            void fetchOnce(1);
+          }, 5_000);
+          return;
+        }
+        setAiLoading(false);
+      }
+    };
 
     const run = async () => {
       if (refetchNonce === 0 && sourceBirth && !isFresh) {
@@ -317,30 +362,10 @@ export default function TojeongResultPage() {
 
       if (aiStartedRef.current) return;
       aiStartedRef.current = true;
+      aiAttemptCountRef.current = 0;
 
       setAiLoading(true);
-
-      getTojeongReading(tojeong, sourceBirth, targetProfile?.id)
-        .then((r: TojeongAIResult) => {
-          if (cancelled) return;
-          if (r.content) {
-            setAiContent(r.content);
-            if (r.sections) setAiSections(r.sections);
-            if (r.domainScores) setAiDomainScores(r.domainScores);
-            const cache = useReportCacheStore.getState();
-            cache.setReport('tojeong', cacheKey, r.content);
-            if (!cache.isCharged('tojeong', cacheKey)) {
-              cache.markCharged('tojeong', cacheKey);
-              chargeForContent('sun', SUN_COST_BIG, CHARGE_REASONS.tojeong).catch(() => {});
-            }
-          }
-          // 빈 결과여도 에러 표시 없음 — 페이지가 graceful 처리
-          setAiLoading(false);
-        })
-        .catch(() => {
-          if (cancelled) return;
-          setAiLoading(false);
-        });
+      void fetchOnce(0);
     };
 
     run();
@@ -613,19 +638,23 @@ export default function TojeongResultPage() {
 
       {/* 심층 풀이 — 섹션별 카드 렌더링 */}
 
-      {/* AI 실패 시 — 에러 대신 부드러운 재시도 */}
+      {/* 심층 풀이 실패 시 — 무료 풀이는 위에 이미 보이므로, 부드러운 재시도 안내만 표시.
+          크레딧 차감 안 됨을 명시적으로 안내해 사용자 신뢰 보호. */}
       {!aiLoading && !aiContent && (!aiSections || Object.keys(aiSections).length === 0) && !isArchiveMode && aiStartedRef.current && (
         <section className="mt-3 rounded-2xl p-4 bg-[rgba(20,12,38,0.55)] border border-[var(--border-subtle)]">
           <div className="text-center py-3">
-            <p className="text-[14px] text-text-tertiary mb-3">
-              AI 심층 풀이를 불러오지 못했어요
+            <p className="text-[14px] text-text-secondary mb-1.5">
+              심층 풀이가 잠시 지연되고 있어요.
+            </p>
+            <p className="text-[12px] text-text-tertiary mb-3">
+              크레딧은 차감되지 않았습니다 — 다시 받기를 눌러주세요.
             </p>
             <button
               onClick={retryAI}
               className="px-5 py-2 rounded-xl text-cta text-[14px] font-semibold"
               style={{ backgroundColor: 'rgba(124,92,252,0.15)' }}
             >
-              다시 시도
+              다시 받기
             </button>
           </div>
         </section>

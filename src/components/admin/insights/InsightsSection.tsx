@@ -147,7 +147,7 @@ export function InsightsSection({
 
       {/* ── AI 품질 대리 지표 ── */}
       <div className="bg-white/5 border border-white/10 rounded-xl p-4">
-        <h3 className="text-[14px] font-semibold text-text-primary mb-3">AI 풀이 품질 대리 지표 (최근 7일)</h3>
+        <h3 className="text-[14px] font-semibold text-text-primary mb-3">풀이 품질 대리 지표 (최근 7일)</h3>
         <p className="text-[12px] text-text-tertiary mb-3">
           credit_used=0은 실패/타임아웃 의심. 평균 크레딧이 기대값 아래면 제대로 소비되지 않은 것일 수 있음.
         </p>

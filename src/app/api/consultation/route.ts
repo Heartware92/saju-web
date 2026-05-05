@@ -116,7 +116,7 @@ export async function POST(request: NextRequest) {
   if (!geminiRes.ok || !geminiRes.body) {
     const errorData = await geminiRes.json().catch(() => ({}));
     return new Response(
-      JSON.stringify({ error: `AI 응답 오류: ${geminiRes.status} - ${errorData?.error?.message || ''}` }),
+      JSON.stringify({ error: `응답 오류: ${geminiRes.status} - ${errorData?.error?.message || ''}` }),
       { status: geminiRes.status, headers: { 'Content-Type': 'application/json' } },
     );
   }
@@ -161,7 +161,7 @@ export async function POST(request: NextRequest) {
         }
 
         if (!emittedAny) {
-          controller.enqueue(encodeSSE({ error: 'AI 응답이 비어 있습니다.' }));
+          controller.enqueue(encodeSSE({ error: '응답이 비어 있어요.' }));
         } else {
           controller.enqueue(encodeSSE({ done: true }));
         }

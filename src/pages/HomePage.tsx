@@ -202,14 +202,12 @@ export default function HomePage() {
   return (
     <div className="min-h-screen">
       {/* 달 — 우상단 고정, 스크롤 시 자연스럽게 올라감 */}
-      <div className="absolute top-14 right-4 w-[76px] h-[76px] pointer-events-none opacity-70 z-[1]">
-        <div
-          className="absolute inset-[-30px] rounded-full"
-          style={{
-            background: 'radial-gradient(circle, rgba(255,240,200,0.10) 0%, rgba(255,220,180,0.05) 35%, transparent 70%)',
-            filter: 'blur(4px)',
-          }}
-        />
+      <div
+        className="absolute top-14 right-4 w-[76px] h-[76px] pointer-events-none opacity-70 z-[1] rounded-full"
+        style={{
+          boxShadow: '0 0 30px 10px rgba(255,240,200,0.10), 0 0 60px 20px rgba(255,220,180,0.05)',
+        }}
+      >
         <MoonPhase size={76} />
       </div>
 

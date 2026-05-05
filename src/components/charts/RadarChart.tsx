@@ -38,10 +38,13 @@ export function RadarChart({
   const n = domains.length;
   if (n < 3) return null;
 
-  const cx = size / 2;
-  const cy = size / 2;
+  const pad = 35;
+  const cx = pad + size / 2;
+  const cy = pad + size / 2;
   const maxR = size * 0.36;
   const labelR = size * 0.46;
+  const vbW = size + pad * 2;
+  const vbH = size + pad * 2;
   const gridLevels = [20, 40, 60, 80, 100];
 
   const dataPoints = domains.map((d, i) => {
@@ -52,7 +55,7 @@ export function RadarChart({
 
   return (
     <div className={`flex justify-center ${className}`}>
-      <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
+      <svg width={vbW} height={vbH} viewBox={`0 0 ${vbW} ${vbH}`}>
         {/* Grid */}
         {gridLevels.map(pct => (
           <polygon

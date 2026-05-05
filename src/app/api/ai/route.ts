@@ -149,7 +149,7 @@ export async function POST(request: NextRequest) {
 
     if (!process.env.GEMINI_API_KEY && !process.env.OPENAI_API_KEY) {
       return NextResponse.json(
-        { error: 'AI 서비스가 설정되어 있지 않아요. 관리자에게 문의해주세요.' },
+        { error: '서비스가 설정되어 있지 않아요. 관리자에게 문의해주세요.' },
         { status: 500 },
       );
     }
@@ -181,7 +181,7 @@ export async function POST(request: NextRequest) {
       } catch (openaiErr: any) {
         console.error('[AI] OpenAI 폴백도 실패:', openaiErr.message);
         return NextResponse.json(
-          { error: '두 AI 서비스 모두 일시적으로 응답이 없어요. 1~2분 후 다시 시도해주세요. (재시도 시 재차감 없음)' },
+          { error: '서비스가 일시적으로 응답이 없어요. 1~2분 후 다시 시도해주세요. (재시도 시 재차감 없음)' },
           { status: 503 },
         );
       }
@@ -189,7 +189,7 @@ export async function POST(request: NextRequest) {
 
     // GEMINI_API_KEY 만 있고 모든 재시도 실패 — OpenAI 키 없음
     return NextResponse.json(
-      { error: 'AI 서비스가 일시적으로 응답하지 않아요. 잠시 후 다시 시도해주세요. (재시도 시 재차감 없음)' },
+      { error: '서비스가 일시적으로 응답하지 않아요. 잠시 후 다시 시도해주세요. (재시도 시 재차감 없음)' },
       { status: 503 },
     );
   } catch (error: any) {

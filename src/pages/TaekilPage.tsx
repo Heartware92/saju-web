@@ -155,7 +155,7 @@ export default function TaekilPage() {
   useEffect(() => {
     if (aiTimedOut) {
       setAiLoading(false);
-      if (!aiAdvice) setAiError('AI 응답이 너무 오래 걸려요. 새로고침 후 다시 시도해주세요.');
+      if (!aiAdvice) setAiError('응답이 너무 오래 걸려요. 새로고침 후 다시 시도해주세요.');
     }
   }, [aiTimedOut, aiAdvice]);
 

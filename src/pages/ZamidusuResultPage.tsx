@@ -119,7 +119,7 @@ export default function ZamidusuResultPage() {
   useEffect(() => {
     if (aiTimedOut) {
       setAiLoading(false);
-      if (!aiResult) setAiResult({ success: false, error: 'AI 응답이 너무 오래 걸려요. 새로고침 후 다시 시도해주세요.' });
+      if (!aiResult) setAiResult({ success: false, error: '응답이 너무 오래 걸려요. 새로고침 후 다시 시도해주세요.' });
     }
   }, [aiTimedOut, aiResult]);
   const chargeForContent = useCreditStore(s => s.chargeForContent);
@@ -352,7 +352,7 @@ export default function ZamidusuResultPage() {
         .catch(err => {
           if (cancelled) return;
           clearTimeout(timeoutId);
-          const msg = err?.message || 'AI 풀이 실패';
+          const msg = err?.message || '풀이를 불러오지 못했어요';
           setAiResult({ success: false, error: msg });
           setAiLoading(false);
           useReportCacheStore.getState().setError('zamidusu', cacheKey, msg);
@@ -518,7 +518,7 @@ export default function ZamidusuResultPage() {
         setAiLoading(false);
       })
       .catch(err => {
-        setAiResult({ success: false, error: err?.message || 'AI 풀이 실패' });
+        setAiResult({ success: false, error: err?.message || '풀이를 불러오지 못했어요' });
         setAiLoading(false);
       });
   };

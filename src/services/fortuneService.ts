@@ -180,7 +180,7 @@ const callGPT = async (
       throw new Error(data.error || '분석을 가져오는데 실패했습니다.');
     }
     if (!data.content || typeof data.content !== 'string') {
-      throw new Error('AI 응답이 비어 있습니다. 잠시 후 다시 시도해주세요.');
+      throw new Error('응답이 비어 있어요. 잠시 후 다시 시도해주세요.');
     }
     if (data.truncated === true) {
       console.warn('[AI] truncated response — bump maxTokens', { len: data.content.length, maxTokens });
@@ -429,14 +429,15 @@ export const getTojeongReading = async (
     archiveSaju({ profileId, sourceBirth, category: 'tojeong', engineResult: tj as unknown as Record<string, unknown>, interpretation: content, isDetailed: true });
   };
 
-  // 전체 45초 제한 — 어떤 상황에서도 45초 안에 결과 반환. 에러 절대 없음.
+  // 전체 90초 제한 — 2-pass(35+25) + 폴백 단일 호출(30) 합산 여유로 커버.
+  // 어떤 상황에서도 90초 안에 결과 반환(빈 문자열일 수 있음). 페이지가 graceful 처리.
   return Promise.race([
     tojeongAllAttempts(tj, archive),
     new Promise<TojeongAIResult>(resolve =>
       setTimeout(() => {
-        console.warn('[tojeong] 45s overall deadline — returning empty');
+        console.warn('[tojeong] 90s overall deadline — returning empty');
         resolve({ success: true, content: '' });
-      }, 45_000),
+      }, 90_000),
     ),
   ]);
 };
@@ -445,7 +446,8 @@ async function tojeongAllAttempts(
   tj: TojeongResult,
   archive: (content: string) => void,
 ): Promise<TojeongAIResult> {
-  // ── 시도 1: 2-pass (풍부한 결과, 개별 25s/20s 타임아웃) ──
+  // ── 시도 1: 2-pass (풍부한 결과, 개별 35s/25s 타임아웃) ──
+  // pass2 가 실패해도 pass1 결과만으로 반환. pass1 자체가 실패하면 시도 2로.
   try {
     const result = await tojeong2Pass(tj);
     if (result.content) {
@@ -456,13 +458,27 @@ async function tojeongAllAttempts(
     console.warn('[tojeong] 2-pass failed, trying single-pass:', e.message);
   }
 
-  // ── 시도 2: 레거시 단일 호출 (30s 타임아웃) ──
+  // ── 시도 2: 레거시 단일 호출 (30s 타임아웃, 4000 토큰) ──
   try {
     const content = await callGPT(generateTojeongPrompt(tj), 4000, undefined, { allowTruncated: true, timeoutMs: 30_000 });
-    archive(content);
-    return { success: true, content };
+    if (content) {
+      archive(content);
+      return { success: true, content };
+    }
   } catch (e: any) {
-    console.warn('[tojeong] single-pass also failed:', e.message);
+    console.warn('[tojeong] single-pass failed, trying compact-pass:', e.message);
+  }
+
+  // ── 시도 3: 컴팩트 단일 호출 (20s 타임아웃, 짧은 분량) ──
+  // 마지막 안전망 — 길이를 줄여 빠르게라도 결과 확보.
+  try {
+    const content = await callGPT(generateTojeongPrompt(tj), 2400, undefined, { allowTruncated: true, timeoutMs: 20_000 });
+    if (content) {
+      archive(content);
+      return { success: true, content };
+    }
+  } catch (e: any) {
+    console.warn('[tojeong] compact-pass also failed:', e.message);
   }
 
   // 모든 시도 실패 — 에러 대신 빈 결과 (페이지가 graceful 처리)
@@ -471,7 +487,7 @@ async function tojeongAllAttempts(
 
 async function tojeong2Pass(tj: TojeongResult): Promise<TojeongAIResult> {
   const pass1Prompt = generateTojeongPass1Prompt(tj);
-  const pass1Content = await callGPT(pass1Prompt, 6000, undefined, { allowTruncated: true, timeoutMs: 25_000 });
+  const pass1Content = await callGPT(pass1Prompt, 6000, undefined, { allowTruncated: true, timeoutMs: 35_000 });
   const pass1Sections = parseTojeongSections(pass1Content);
   const domainScores = parseTojeongScores(pass1Content) ?? undefined;
 
@@ -479,7 +495,7 @@ async function tojeong2Pass(tj: TojeongResult): Promise<TojeongAIResult> {
   let pass2Sections: Partial<Record<TojeongSectionKey, string>> = {};
   try {
     const pass2Prompt = generateTojeongPass2Prompt(tj, pass1Content);
-    pass2Content = await callGPT(pass2Prompt, 5500, undefined, { allowTruncated: true, timeoutMs: 20_000 });
+    pass2Content = await callGPT(pass2Prompt, 5500, undefined, { allowTruncated: true, timeoutMs: 25_000 });
     pass2Sections = parseTojeongSections(pass2Content);
   } catch {
     // pass2 실패해도 pass1 결과는 반환

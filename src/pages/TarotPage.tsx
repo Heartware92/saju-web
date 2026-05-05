@@ -391,7 +391,7 @@ export default function TarotPage() {
   useEffect(() => {
     if (aiTimedOut) {
       setAiLoading(false);
-      if (!aiContent) setAiError('AI 응답이 너무 오래 걸려요. 새로고침 후 다시 시도해주세요.');
+      if (!aiContent) setAiError('응답이 너무 오래 걸려요. 새로고침 후 다시 시도해주세요.');
     }
   }, [aiTimedOut, aiContent]);
 

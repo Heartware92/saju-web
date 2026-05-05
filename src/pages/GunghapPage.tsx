@@ -343,7 +343,7 @@ async function callGunghapGPT(prompt: string): Promise<string> {
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || '분석 실패');
     if (!data.content || typeof data.content !== 'string') {
-      throw new Error('AI 응답이 비어 있습니다. 잠시 후 다시 시도해주세요.');
+      throw new Error('응답이 비어 있어요. 잠시 후 다시 시도해주세요.');
     }
     if (data.truncated === true) {
       console.warn('[Gunghap] truncated response — bump maxTokens', { len: data.content.length });
@@ -419,7 +419,7 @@ export default function GunghapPage() {
   useEffect(() => {
     if (loadingTimedOut) {
       setLoading(false);
-      if (!result) setError('AI 응답이 너무 오래 걸려요. 새로고침 후 다시 시도해주세요.');
+      if (!result) setError('응답이 너무 오래 걸려요. 새로고침 후 다시 시도해주세요.');
     }
   }, [loadingTimedOut, result]);
 
@@ -1570,12 +1570,8 @@ export default function GunghapPage() {
                     const firstLine = bodyLines[0]?.trim() ?? '';
                     const hasMetaphor = bodyLines.length > 1
                       && firstLine.length > 0
-                      && firstLine.length <= 60
-                      && !firstLine.startsWith('-')
-                      && !firstLine.endsWith('.')
-                      && !firstLine.startsWith('두 ')
-                      && !firstLine.includes('%')
-                      && !/^\d/.test(firstLine);
+                      && firstLine.length <= 40
+                      && !firstLine.endsWith('.');
                     const metaphorTitle = hasMetaphor ? firstLine : '';
                     const bodyText = hasMetaphor ? bodyLines.slice(1).join('\n').trim() : sec.body;
 
