@@ -151,10 +151,10 @@ export function AdviceCard({ yongSinElement, meta }: AdviceCardProps) {
         </p>
       )}
 
-      {/* 이번 달 실천 */}
+      {/* 평생 실천 */}
       {meta.actions.length > 0 && (
         <div className="rounded-xl p-3 bg-white/5 border border-white/10">
-          <div className="text-[13px] text-text-tertiary mb-2">이번 달 실천</div>
+          <div className="text-[13px] text-text-tertiary mb-2">평생 실천</div>
           <ul className="flex flex-col gap-1.5">
             {meta.actions.map((action, i) => (
               <li key={i} className="flex items-start gap-2 text-[15px] text-text-secondary">

@@ -686,7 +686,7 @@ export function parseAdviceMeta(text: string): AdviceMeta {
       continue;
     }
 
-    if (line === '이번 달 실천:' || line.startsWith('이번 달 실천')) {
+    if (line === '이번 달 실천:' || line.startsWith('이번 달 실천') || line === '평생 실천:' || line.startsWith('평생 실천')) {
       inActions = true;
       continue;
     }
