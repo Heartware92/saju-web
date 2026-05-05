@@ -638,6 +638,10 @@ export default function MoreFortunePage({ category }: Props) {
                 setResult(null);
                 setError(null);
                 setManualMode(true);
+                // 캐시 무효화 — 다시 풀이 시 이전 결과가 복원되지 않도록
+                if (category) {
+                  useReportCacheStore.getState().invalidate(`more:${category}` as const);
+                }
                 if (category === 'name') {
                   setKoreanName('');
                   setCharMeanings([]);
