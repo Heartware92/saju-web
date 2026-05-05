@@ -8,10 +8,11 @@ import {
   TODAY_SECTION_KEYS, TODAY_SECTION_LABELS,
   PICKED_DATE_SECTION_KEYS, PICKED_DATE_SECTION_LABELS,
   ZAMIDUSU_SECTION_KEYS, ZAMIDUSU_SECTION_LABELS,
+  TOJEONG_SECTION_KEYS, TOJEONG_SECTION_LABELS,
 } from '@/constants/prompts';
 import {
   parseJungtongsaju, parseNewyearReport, parseTodayFortune,
-  parsePickedDateReport, parseZamidusuSections,
+  parsePickedDateReport, parseZamidusuSections, parseTojeongSections,
 } from '@/services/fortuneService';
 
 interface Props {
@@ -31,10 +32,43 @@ const SECTION_MAP: Record<string, SectionConfig> = {
   today:       { keys: TODAY_SECTION_KEYS,         labels: TODAY_SECTION_LABELS,         parser: parseTodayFortune },
   date:        { keys: PICKED_DATE_SECTION_KEYS,   labels: PICKED_DATE_SECTION_LABELS,  parser: parsePickedDateReport },
   zamidusu:    { keys: ZAMIDUSU_SECTION_KEYS,      labels: ZAMIDUSU_SECTION_LABELS,      parser: parseZamidusuSections },
+  tojeong:     { keys: TOJEONG_SECTION_KEYS,       labels: TOJEONG_SECTION_LABELS,       parser: parseTojeongSections as (raw: string) => Partial<Record<string, string>> },
 };
 
-function genericParser(raw: string): Partial<Record<string, string>> {
-  return { _full: raw };
+/**
+ * ▶ 섹션 마커 기반 범용 파서 — 궁합·택일·기간운세·더많은운세 등
+ * [tag] 블록을 제거하고 ▶ 마커로 섹션을 분리합니다.
+ */
+function universalSectionParser(raw: string): { sections: { title: string; body: string }[] } {
+  let cleaned = raw
+    .replace(/\[gunghap_header\][\s\S]*?\[\/gunghap_header\]/g, '')
+    .replace(/\[gunghap_scores\][\s\S]*?\[\/gunghap_scores\]/g, '')
+    .replace(/\[tojeong_scores\][\s\S]*?\[\/tojeong_scores\]/g, '')
+    .replace(/\[.*?\]/g, '')
+    .trim();
+
+  const parts: { title: string; body: string }[] = [];
+  const lines = cleaned.split('\n');
+  let currentTitle = '';
+  let currentBody: string[] = [];
+
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (trimmed.startsWith('▶')) {
+      if (currentTitle || currentBody.length > 0) {
+        parts.push({ title: currentTitle, body: currentBody.join('\n').trim() });
+      }
+      currentTitle = trimmed.replace(/^▶\s*/, '').replace(/\s*\(.*?\)\s*$/, '');
+      currentBody = [];
+    } else {
+      currentBody.push(line);
+    }
+  }
+  if (currentTitle || currentBody.length > 0) {
+    parts.push({ title: currentTitle, body: currentBody.join('\n').trim() });
+  }
+
+  return { sections: parts.filter(p => p.body.length > 0) };
 }
 
 export default function SharePageClient({ type, record }: Props) {
@@ -46,9 +80,12 @@ export default function SharePageClient({ type, record }: Props) {
   const content = record.interpretation_detailed || record.interpretation_basic || record.interpretation || '';
 
   const config = SECTION_MAP[category];
-  const sections = config ? config.parser(content) : genericParser(content);
-  const sectionKeys = config ? config.keys : ['_full'];
-  const sectionLabels = config ? config.labels : { _full: label };
+  const useUniversal = !config;
+  const universalResult = useUniversal ? universalSectionParser(content) : null;
+
+  const sections = config ? config.parser(content) : {};
+  const sectionKeys = config ? config.keys : [];
+  const sectionLabels = config ? config.labels : {};
 
   const profileName = record.profile_name;
   const birthDate = record.birth_date;
@@ -110,61 +147,29 @@ export default function SharePageClient({ type, record }: Props) {
         </motion.div>
       )}
 
-      {/* 섹션 카드 */}
-      <div className="space-y-2">
-        {sectionKeys.map((key, idx) => {
-          const text = sections[key as string];
-          if (!text) return null;
+      {/* 섹션 카드 — 전용 파서가 있는 카테고리 */}
+      {!useUniversal && (
+        <div className="space-y-2">
+          {(sectionKeys as readonly string[]).map((key, idx) => {
+            const text = sections[key as string];
+            if (!text) return null;
 
-          const sLabel = (sectionLabels as Record<string, string>)[key as string] ?? '';
+            const sLabel = (sectionLabels as Record<string, string>)[key as string] ?? '';
+            return (
+              <SectionCard key={key} label={sLabel} text={text} idx={idx} />
+            );
+          })}
+        </div>
+      )}
 
-          const lines = text.trim().split('\n');
-          const firstLine = lines[0]?.trim() ?? '';
-          const hasMetaphor =
-            lines.length > 1 &&
-            firstLine.length > 0 &&
-            firstLine.length <= 60 &&
-            !firstLine.startsWith('-') &&
-            !firstLine.endsWith('.');
-          const metaphorTitle = hasMetaphor ? firstLine : '';
-          const bodyText = hasMetaphor ? lines.slice(1).join('\n').trim() : text;
-
-          return (
-            <motion.div
-              key={key}
-              initial={{ opacity: 0, y: 6 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.07 * idx }}
-              className="rounded-2xl p-5 bg-[rgba(20,12,38,0.55)] border border-[var(--border-subtle)]"
-            >
-              {sLabel && key !== '_full' && (
-                <div className="flex items-center gap-2 mb-2">
-                  <span className="inline-block w-1 h-5 rounded-full bg-cta" />
-                  <div
-                    className="text-[17px] font-bold text-text-primary tracking-tight"
-                    style={{ fontFamily: 'var(--font-serif)' }}
-                  >
-                    {sLabel}
-                  </div>
-                </div>
-              )}
-
-              {metaphorTitle && (
-                <div
-                  className="text-[15px] font-medium leading-snug text-cta/90 mb-4 pl-3"
-                  style={{ fontFamily: 'var(--font-serif)' }}
-                >
-                  {metaphorTitle}
-                </div>
-              )}
-
-              <p className="text-[15px] text-text-secondary leading-[1.85] whitespace-pre-line tracking-[-0.005em]">
-                {bodyText}
-              </p>
-            </motion.div>
-          );
-        })}
-      </div>
+      {/* 섹션 카드 — 범용 파서 (궁합·택일·기간운세 등) */}
+      {useUniversal && universalResult && (
+        <div className="space-y-2">
+          {universalResult.sections.map((sec, idx) => (
+            <SectionCard key={idx} label={sec.title} text={sec.body} idx={idx} />
+          ))}
+        </div>
+      )}
 
       {/* CTA 배너 */}
       <motion.div
@@ -184,5 +189,51 @@ export default function SharePageClient({ type, record }: Props) {
         </p>
       </motion.div>
     </div>
+  );
+}
+
+function SectionCard({ label, text, idx }: { label: string; text: string; idx: number }) {
+  const lines = text.trim().split('\n');
+  const firstLine = lines[0]?.trim() ?? '';
+  const hasMetaphor =
+    lines.length > 1 &&
+    firstLine.length > 0 &&
+    firstLine.length <= 40 &&
+    !firstLine.endsWith('.');
+  const metaphorTitle = hasMetaphor ? firstLine : '';
+  const bodyText = hasMetaphor ? lines.slice(1).join('\n').trim() : text;
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 6 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: 0.07 * idx }}
+      className="rounded-2xl p-5 bg-[rgba(20,12,38,0.55)] border border-[var(--border-subtle)]"
+    >
+      {label && (
+        <div className="flex items-center gap-2 mb-2">
+          <span className="inline-block w-1 h-5 rounded-full bg-cta" />
+          <div
+            className="text-[17px] font-bold text-text-primary tracking-tight"
+            style={{ fontFamily: 'var(--font-serif)' }}
+          >
+            {label}
+          </div>
+        </div>
+      )}
+
+      {metaphorTitle && (
+        <div
+          className="text-[15px] font-medium leading-snug text-cta/90 mb-4 pl-3"
+          style={{ fontFamily: 'var(--font-serif)' }}
+        >
+          {metaphorTitle}
+        </div>
+      )}
+
+      <p className="text-[15px] text-text-secondary leading-[1.85] whitespace-pre-line tracking-[-0.005em]">
+        {bodyText}
+      </p>
+    </motion.div>
   );
 }

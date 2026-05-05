@@ -2,8 +2,8 @@
 
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { createShareLink, triggerShare, type ShareRecordType } from '@/services/shareService';
-import { SAJU_CATEGORY_LABEL } from '@/constants/adminLabels';
+// import { triggerShare } from '@/services/shareService'; // 공유하기 일시 비활성 — 공유 페이지 렌더링 완성 후 복귀
+import type { ShareRecordType } from '@/services/shareService';
 import { supabase } from '@/services/supabase';
 
 interface ShareBarProps {
@@ -17,17 +17,11 @@ interface ShareBarProps {
 export function ShareBar({
   recordId,
   type = 'saju',
-  category,
   className = '',
   compact = false,
 }: ShareBarProps) {
   const [loading, setLoading] = useState(false);
-  const [toast, setToast] = useState<string | null>(null);
-
-  const showToast = (msg: string) => {
-    setToast(msg);
-    setTimeout(() => setToast(null), 2500);
-  };
+  const [modal, setModal] = useState<{ message: string; success: boolean } | null>(null);
 
   const getShareLink = async (): Promise<string | null> => {
     setLoading(true);
@@ -45,26 +39,26 @@ export function ShareBar({
       });
       const json = await res.json();
       if (json?.success && json?.shareUrl) return json.shareUrl;
-      showToast('공유 링크 생성에 실패했어요');
+      setModal({ message: '공유 링크 생성에 실패했어요', success: false });
       return null;
     } catch {
-      showToast('오류가 발생했어요');
+      setModal({ message: '오류가 발생했어요', success: false });
       return null;
     } finally {
       setLoading(false);
     }
   };
 
+  /* ── 공유하기 (시스템 공유) — 공유 페이지 렌더링 완성 후 복귀 예정 ──
   const handleShare = async () => {
     const url = await getShareLink();
     if (!url) return;
-
     const label = category ? (SAJU_CATEGORY_LABEL[category] ?? '사주 풀이') : '운세 풀이';
     const result = await triggerShare(url, `${label} — 이천점`, `${label} 결과를 확인해보세요!`);
-
-    if (result === 'copied') showToast('링크가 복사되었어요');
-    else if (result === 'failed') showToast('공유에 실패했어요');
+    if (result === 'copied') setModal({ message: '링크가 복사되었어요', success: true });
+    else if (result === 'failed') setModal({ message: '공유에 실패했어요', success: false });
   };
+  */
 
   const handleCopyLink = async () => {
     const url = await getShareLink();
@@ -72,9 +66,9 @@ export function ShareBar({
 
     try {
       await navigator.clipboard.writeText(url);
-      showToast('링크가 복사되었어요');
+      setModal({ message: '링크가 복사되었어요', success: true });
     } catch {
-      showToast('복사에 실패했어요');
+      setModal({ message: '복사에 실패했어요', success: false });
     }
   };
 
@@ -82,18 +76,18 @@ export function ShareBar({
     return (
       <div className={`relative ${className}`}>
         <button
-          onClick={handleShare}
+          onClick={handleCopyLink}
           disabled={loading}
           className="w-8 h-8 flex items-center justify-center rounded-lg text-text-tertiary hover:text-cta hover:bg-white/5 transition-colors disabled:opacity-50"
-          aria-label="공유"
+          aria-label="링크 복사"
         >
           {loading ? (
             <div className="w-4 h-4 border-2 border-cta border-t-transparent rounded-full animate-spin" />
           ) : (
-            <ShareIcon size={16} />
+            <LinkIcon size={16} />
           )}
         </button>
-        <Toast message={toast} />
+        <CopyModal modal={modal} onClose={() => setModal(null)} />
       </div>
     );
   }
@@ -101,7 +95,7 @@ export function ShareBar({
   return (
     <div className={`relative ${className}`}>
       <div className="flex items-center gap-2">
-        {/* 공유하기 (시스템 / 카톡) */}
+        {/* ── 공유하기 버튼 — 공유 페이지 렌더링 완성 후 복귀 예정 ──
         <button
           onClick={handleShare}
           disabled={loading}
@@ -114,18 +108,23 @@ export function ShareBar({
           )}
           <span className="text-sm font-medium">공유하기</span>
         </button>
+        */}
 
         {/* 링크 복사 */}
         <button
           onClick={handleCopyLink}
           disabled={loading}
-          className="flex items-center justify-center gap-2 px-5 py-3 rounded-2xl bg-[rgba(20,12,38,0.55)] border border-[var(--border-subtle)] text-text-secondary hover:text-cta hover:border-cta/30 transition-all disabled:opacity-50"
+          className="flex-1 flex items-center justify-center gap-2 py-3 rounded-2xl bg-[rgba(20,12,38,0.55)] border border-[var(--border-subtle)] text-text-secondary hover:text-cta hover:border-cta/30 transition-all disabled:opacity-50"
         >
-          <LinkIcon size={18} />
+          {loading ? (
+            <div className="w-4 h-4 border-2 border-cta border-t-transparent rounded-full animate-spin" />
+          ) : (
+            <LinkIcon size={18} />
+          )}
           <span className="text-sm font-medium">링크 복사</span>
         </button>
       </div>
-      <Toast message={toast} />
+      <CopyModal modal={modal} onClose={() => setModal(null)} />
     </div>
   );
 }
@@ -149,17 +148,37 @@ function LinkIcon({ size = 20 }: { size?: number }) {
   );
 }
 
-function Toast({ message }: { message: string | null }) {
+function CopyModal({ modal, onClose }: { modal: { message: string; success: boolean } | null; onClose: () => void }) {
   return (
     <AnimatePresence>
-      {message && (
+      {modal && (
         <motion.div
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: 10 }}
-          className="fixed bottom-24 left-1/2 -translate-x-1/2 z-50 px-5 py-2.5 rounded-full bg-space-elevated border border-[var(--border-subtle)] shadow-lg"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm"
+          onClick={onClose}
         >
-          <span className="text-sm text-text-primary font-medium">{message}</span>
+          <motion.div
+            initial={{ scale: 0.9, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            exit={{ scale: 0.9, opacity: 0 }}
+            onClick={(e) => e.stopPropagation()}
+            className="mx-6 w-full max-w-[300px] rounded-2xl bg-space-elevated border border-[var(--border-subtle)] p-6 text-center shadow-2xl"
+          >
+            <div className={`text-3xl mb-3 ${modal.success ? '' : ''}`}>
+              {modal.success ? '✓' : '✕'}
+            </div>
+            <p className="text-[16px] font-medium text-text-primary mb-5">
+              {modal.message}
+            </p>
+            <button
+              onClick={onClose}
+              className="w-full py-2.5 rounded-xl bg-cta/20 border border-cta/40 text-cta font-bold text-[15px] active:scale-[0.98] transition-all"
+            >
+              확인
+            </button>
+          </motion.div>
         </motion.div>
       )}
     </AnimatePresence>
