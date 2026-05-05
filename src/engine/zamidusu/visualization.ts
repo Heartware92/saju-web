@@ -258,9 +258,10 @@ export function calcDaehanTimeline(chart: ZamidusuResult, currentAge: number): D
   const segments: DaehanSegment[] = [];
 
   chart.palaces.forEach((p) => {
-    if (!p.ages || p.ages.length === 0) return;
-    const startAge = Math.min(...p.ages);
-    const endAge = Math.max(...p.ages);
+    // 대한(大限)은 decadal 필드 사용 — 10년 단위 실제 대운 구간
+    // (ages는 소한(小限)으로 12년 주기 연간 순환이라 min/max하면 1~109세가 됨)
+    if (!p.decadal) return;
+    const { startAge, endAge } = p.decadal;
     const score = scorePalace(p);
     const isCurrent = currentAge >= startAge && currentAge <= endAge;
     segments.push({

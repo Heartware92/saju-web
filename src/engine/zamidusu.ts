@@ -30,8 +30,9 @@ export interface ZamidusuPalace {
   majorStars: ZamidusuStar[];
   minorStars: ZamidusuStar[];
   adjectiveStars: ZamidusuStar[];
-  ages: number[];
+  ages: number[];        // 소한(小限) — 12년 주기 연간 순환 나이 목록
   decadalRange?: string;
+  decadal?: { startAge: number; endAge: number }; // 대한(大限) — 10년 단위 대운 구간
 }
 
 export interface ZamidusuResult {
@@ -113,6 +114,7 @@ export function calculateZamidusu(
     })),
     ages: p.ages || [],
     decadalRange: p.decadal ? `${p.decadal.range?.[0] ?? ''}~${p.decadal.range?.[1] ?? ''}세` : undefined,
+    decadal: p.decadal?.range ? { startAge: p.decadal.range[0], endAge: p.decadal.range[1] } : undefined,
   }));
 
   return {
