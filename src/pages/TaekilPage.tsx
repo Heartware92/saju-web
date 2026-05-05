@@ -23,6 +23,7 @@ import { BackButton } from '../components/ui/BackButton';
 import {
   calculateTaekil,
   TAEKIL_CATEGORIES,
+  migrateLegacyCategory,
   type TaekilCategory,
   type TaekilGrade,
   type TaekilDay,
@@ -129,6 +130,8 @@ export default function TaekilPage() {
 
   // ── Step 상태 ──
   const [category, setCategory] = useState<TaekilCategory | null>(null);
+  /** category='custom' 일 때만 사용 — 사용자가 직접 입력한 행사 이름 (예: "전시회 오픈") */
+  const [customLabel, setCustomLabel] = useState('');
 
   const today = new Date();
   const todayYear = today.getFullYear();
@@ -164,11 +167,13 @@ export default function TaekilPage() {
   const [showArchiveList, setShowArchiveList] = useState(false);
   const [refetchNonce, setRefetchNonce] = useState(0);
 
-  // 캐시 키
+  // 캐시 키 — custom 일 때 customLabel 도 키에 포함 (다른 행사면 다른 풀이)
   const taekilCacheKey = useMemo(() => {
     if (!saju || !category || pickedDates.length === 0) return null;
-    return `${sajuKey(saju)}:${category}:${[...pickedDates].sort().join(',')}`;
-  }, [saju, category, pickedDates]);
+    if (category === 'custom' && !customLabel.trim()) return null;
+    const customSeg = category === 'custom' ? `:${customLabel.trim().slice(0, 30)}` : '';
+    return `${sajuKey(saju)}:${category}${customSeg}:${[...pickedDates].sort().join(',')}`;
+  }, [saju, category, pickedDates, customLabel]);
 
   // 카테고리/연월 변경시 엔진 재계산 (보관함 모드에서는 스킵)
   const compute = useCallback(() => {
@@ -177,9 +182,9 @@ export default function TaekilPage() {
     const start = `${viewYear}-${String(viewMonth).padStart(2, '0')}-01`;
     const lastDay = daysInMonth(viewYear, viewMonth);
     const end = `${viewYear}-${String(viewMonth).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
-    const r = calculateTaekil(saju, category, start, end);
+    const r = calculateTaekil(saju, category, start, end, category === 'custom' ? customLabel : undefined);
     setResult(r);
-  }, [saju, viewYear, viewMonth, category, isArchiveMode]);
+  }, [saju, viewYear, viewMonth, category, isArchiveMode, customLabel]);
 
   useEffect(() => {
     compute();
@@ -193,6 +198,8 @@ export default function TaekilPage() {
     setParsedAdvice(null);
     setAiError(null);
     setShowResult(false);
+    // 카테고리가 custom 이 아니면 customLabel 초기화
+    if (category !== 'custom') setCustomLabel('');
   }, [category, isArchiveMode]);
 
   // 연/월 변경시에도 선택 초기화 (보관함 모드에서는 스킵)
@@ -214,8 +221,11 @@ export default function TaekilPage() {
         if (cancelled || !record) return;
         const engine = record.engine_result as unknown as TaekilResult | null;
         if (engine) {
-          setCategory(engine.category);
-          setResult(engine);
+          // legacy id (marriage/moving/business/contract/travel/surgery) → 신 묶음으로 변환
+          const migrated = migrateLegacyCategory(engine.category as string) ?? engine.category;
+          setCategory(migrated);
+          if (engine.customLabel) setCustomLabel(engine.customLabel);
+          setResult({ ...engine, category: migrated });
           setPickedDates(engine.days.map(d => d.date));
         }
         const content = record.interpretation_detailed ?? record.interpretation_basic ?? '';
@@ -281,6 +291,11 @@ export default function TaekilPage() {
   // ── AI 호출 ──
   const handleRequestAI = async () => {
     if (!saju || !result || aiLoading || !taekilCacheKey || pickedDays.length === 0) return;
+    // 기타 카테고리는 사용자 입력이 필수 (engine·prompt 모두 필요)
+    if (category === 'custom' && !customLabel.trim()) {
+      setAiError('어떤 행사인지 입력해 주세요. (예: 전시회 오픈, 발표회)');
+      return;
+    }
 
     const cached = useReportCacheStore.getState().getReport<string>('taekil', taekilCacheKey);
     if (cached?.error) {
@@ -453,11 +468,42 @@ export default function TaekilPage() {
                 </button>
               ))}
             </div>
+
+            {/* 기타 선택 시 직접 입력 — 사주·일진 데이터에 사용자 텍스트가 결합되어 풀이됨 */}
+            {category === 'custom' && (
+              <div style={{ marginTop: 14 }}>
+                <label style={{
+                  display: 'block', fontSize: 12, fontWeight: 700,
+                  color: 'var(--text-secondary)', marginBottom: 6,
+                }}>
+                  어떤 행사인가요?
+                </label>
+                <input
+                  type="text"
+                  value={customLabel}
+                  onChange={(e) => setCustomLabel(e.target.value.slice(0, 30))}
+                  placeholder="예: 전시회 오픈, 발표회, 첫 데이트, 부동산 청약…"
+                  style={{
+                    width: '100%',
+                    padding: '12px 14px',
+                    borderRadius: 10,
+                    border: '1px solid var(--border-subtle)',
+                    background: 'rgba(20,12,38,0.55)',
+                    color: 'var(--text-primary)',
+                    fontSize: 14,
+                    outline: 'none',
+                  }}
+                />
+                <p style={{ fontSize: 11, color: 'var(--text-tertiary)', marginTop: 6, lineHeight: 1.5 }}>
+                  입력한 행사 이름과 사주 원국·일진을 함께 분석해 풀이해드려요. 30자 이내로 짧고 명확하게 적어주세요.
+                </p>
+              </div>
+            )}
           </div>}
 
-          {/* ═══ STEP 2: 캘린더에서 날짜 선택 (카테고리 선택 후 노출) ═══ */}
+          {/* ═══ STEP 2: 캘린더에서 날짜 선택 (카테고리 선택 + custom 라벨 입력 후 노출) ═══ */}
           <AnimatePresence>
-            {category && (
+            {category && (category !== 'custom' || customLabel.trim().length > 0) && (
               <motion.div
                 initial={{ opacity: 0, height: 0 }}
                 animate={{ opacity: 1, height: 'auto' }}

@@ -24,24 +24,49 @@ import {
 // 타입
 // ============================================
 
+/**
+ * 인생 변곡점 6묶음 + 기타(직접 입력) — 다른 앱과 차별화된 묶음 카테고리.
+ * 단순 행사 나열이 아니라 명리적 에너지 결이 비슷한 상황을 한 묶음으로.
+ */
 export type TaekilCategory =
-  | 'marriage'   // 결혼·혼례
-  | 'moving'     // 이사·입택
-  | 'business'   // 개업·창업
-  | 'contract'   // 계약·거래·차량 구매
-  | 'travel'     // 여행·출행
-  | 'surgery'    // 수술
-  | 'birth';     // 출산 택일 (제왕절개)
+  | 'settle'     // 터를 잡다 — 이사·입주·창업·개업·신축
+  | 'bond'       // 마음을 묶다 — 혼례·약혼·상견례·고백·재회
+  | 'decision'   // 획을 긋다 — 큰 계약·매매·차량·이별·퇴사·관계 정리
+  | 'journey'    // 길을 나서다 — 여행·해외 출장·이주·유학·면접·시험
+  | 'heal'       // 몸을 보살피다 — 수술·시술·치유
+  | 'birth'      // 새 생명을 맞다 — 출산·제왕절개
+  | 'custom';    // 기타 — 사용자 직접 입력
 
 export const TAEKIL_CATEGORIES: { id: TaekilCategory; label: string; desc: string }[] = [
-  { id: 'marriage', label: '결혼·혼례', desc: '결혼식, 약혼, 상견례' },
-  { id: 'moving', label: '이사·입택', desc: '이사, 새집 입주' },
-  { id: 'business', label: '개업·창업', desc: '가게 오픈, 사업 시작' },
-  { id: 'contract', label: '계약·거래', desc: '부동산, 큰 계약, 차량 구매' },
-  { id: 'travel', label: '여행·출행', desc: '해외여행, 장거리 이동' },
-  { id: 'surgery', label: '수술', desc: '수술, 시술 일정' },
-  { id: 'birth', label: '출산 택일', desc: '제왕절개, 출산 날짜 선정' },
+  { id: 'settle',   label: '터를 잡다',      desc: '이사 · 입주 · 창업 · 개업 · 신축' },
+  { id: 'bond',     label: '마음을 묶다',    desc: '혼례 · 약혼 · 상견례 · 고백 · 재회' },
+  { id: 'decision', label: '획을 긋다',      desc: '큰 계약 · 매매 · 차량 · 이별 · 퇴사 · 관계 정리' },
+  { id: 'journey',  label: '길을 나서다',    desc: '여행 · 해외 출장 · 이주 · 유학 · 면접 · 시험' },
+  { id: 'heal',     label: '몸을 보살피다',  desc: '수술 · 시술 · 치유' },
+  { id: 'birth',    label: '새 생명을 맞다', desc: '출산 · 제왕절개' },
+  { id: 'custom',   label: '기타',           desc: '직접 입력 — 위 묶음에 없는 행사' },
 ];
+
+/**
+ * 구버전 → 신버전 카테고리 매핑.
+ * 보관함의 archive record가 옛 id 로 저장되어 있을 때 신 id 로 변환해 재생.
+ */
+export const LEGACY_CATEGORY_MIGRATION: Record<string, TaekilCategory> = {
+  marriage: 'bond',
+  moving:   'settle',
+  business: 'settle',
+  contract: 'decision',
+  travel:   'journey',
+  surgery:  'heal',
+  birth:    'birth',
+};
+
+export function migrateLegacyCategory(raw: string | undefined | null): TaekilCategory | null {
+  if (!raw) return null;
+  // 신 id 가 그대로면 통과
+  if (TAEKIL_CATEGORIES.some(c => c.id === raw)) return raw as TaekilCategory;
+  return LEGACY_CATEGORY_MIGRATION[raw] ?? null;
+}
 
 export type TaekilGrade = '대길' | '길' | '평' | '흉';
 
@@ -70,6 +95,8 @@ export interface TaekilDay {
 export interface TaekilResult {
   category: TaekilCategory;
   categoryLabel: string;
+  /** category='custom' 일 때 사용자가 직접 입력한 행사 이름. (예: "전시회 오픈", "리허설"). 다른 묶음에선 undefined. */
+  customLabel?: string;
   startDate: string;
   endDate: string;
   days: TaekilDay[];
@@ -85,15 +112,28 @@ const TEN_GOD_SCORE: Record<string, number> = {
   '편인': 2, '겁재': -3, '비견': 0, '상관': -4, '편관': -2,
 };
 
+/**
+ * 묶음별 십성 가중치.
+ * - 묶음 안의 다양한 상황(예: settle = 이사+창업)을 함께 다루므로 보수적으로 합집합.
+ * - 정재/편재(재성), 정관(공인 절차), 식신(생명·풍요), 정인(보호·문서)을 양수로,
+ *   상관(관 극)·겁재(재성 극)·편관(압박)을 음수로.
+ * - custom 은 균형(0) — 일반 길흉 점수만 사용. 사용자 입력 텍스트는 prompt 단계에서 활용.
+ */
 const CATEGORY_BOOST: Record<TaekilCategory, Record<string, number>> = {
-  marriage: { '정재': 15, '정관': 12, '식신': 8, '편재': 6, '상관': -10, '편관': -8, '겁재': -6 },
-  moving:   { '정인': 14, '식신': 10, '정재': 8, '편인': 4, '편관': -8, '상관': -6 },
-  business: { '편재': 15, '정재': 12, '식신': 10, '상관': 6, '겁재': -10, '편관': -6 },
-  contract: { '정재': 14, '정관': 12, '정인': 8, '편관': -8, '겁재': -10 },
-  travel:   { '식신': 12, '정인': 10, '편재': 6, '편관': -10, '겁재': -4 },
-  surgery:  { '정인': 14, '식신': 10, '편인': 6, '편관': -12, '상관': -10 },
-  // 출산 택일: 식신(子息 에너지) 최우선, 정인(보호·양육), 편인 극식신으로 강하게 감점
-  birth:    { '식신': 18, '정인': 14, '정재': 6, '편인': -14, '편관': -16, '상관': -12, '겁재': -6 },
+  // 터를 잡다: 정인(터·뿌리) + 편재(자금) + 식신(풍요) + 정재(안정)
+  settle:   { '정인': 14, '편재': 12, '식신': 10, '정재': 10, '상관':  4, '겁재': -10, '편관': -8 },
+  // 마음을 묶다: 정재(배우자·남) + 정관(배우자·여, 공식 인연) + 식신(가정 풍요) + 편재(외향 인연)
+  bond:     { '정재': 14, '정관': 12, '식신':  8, '편재':  6, '상관': -10, '편관': -8, '겁재': -6 },
+  // 획을 긋다: 정재(거래) + 정관(법적 보호) + 정인(문서) — 정리·결단도 같은 결
+  decision: { '정재': 14, '정관': 12, '정인':  8, '식신':  4, '편관': -10, '겁재': -10, '상관': -8 },
+  // 길을 나서다: 식신(이동·즐거움) + 정인(학습·안전) + 편재(현지 활동) + 정관(시험·면접 공식 절차)
+  journey:  { '식신': 12, '정인': 10, '정관':  8, '편재':  6, '편관': -10, '겁재': -4, '상관': -2 },
+  // 몸을 보살피다: 정인(보호·회복) + 식신(생명력) — 편인 극식신, 편관·상관 강한 감점
+  heal:     { '정인': 14, '식신': 10, '편인':  4, '편관': -12, '상관': -10, '겁재': -4 },
+  // 새 생명: 식신 최우선(子息), 정인(양육), 편인은 도식(倒食)으로 강한 감점
+  birth:    { '식신': 18, '정인': 14, '정재':  6, '편인': -14, '편관': -16, '상관': -12, '겁재': -6 },
+  // 기타: boost 없음 — 일반 길흉 + AI 가 사용자 입력 텍스트로 결을 잡음
+  custom:   {},
 };
 
 // 육충
@@ -147,8 +187,8 @@ const SAMHAP: [string, string, string, string][] = [
   ['해', '묘', '미', '목'],
 ];
 
-// 시작 행사 카테고리 (공망 감점이 큰 카테고리)
-const START_CATEGORIES: TaekilCategory[] = ['marriage', 'moving', 'business', 'contract', 'birth'];
+// 시작 행사 카테고리 (공망 감점이 큰 카테고리 — '시작'의 무게가 큰 묶음)
+const START_CATEGORIES: TaekilCategory[] = ['settle', 'bond', 'decision', 'birth'];
 
 // ============================================
 // 헬퍼 함수
@@ -488,6 +528,7 @@ export function calculateTaekil(
   category: TaekilCategory,
   startDate: string,
   endDate: string,
+  customLabel?: string,
 ): TaekilResult {
   const start = new Date(startDate);
   const end = new Date(endDate);
@@ -505,10 +546,15 @@ export function calculateTaekil(
     .sort((a, b) => b.score - a.score);
 
   const cat = TAEKIL_CATEGORIES.find(c => c.id === category)!;
+  const trimmedCustom = (customLabel ?? '').trim().slice(0, 30);
+  const finalLabel = category === 'custom' && trimmedCustom
+    ? `기타 — ${trimmedCustom}`
+    : cat.label;
 
   return {
     category,
-    categoryLabel: cat.label,
+    categoryLabel: finalLabel,
+    customLabel: category === 'custom' ? trimmedCustom : undefined,
     startDate,
     endDate,
     days,
