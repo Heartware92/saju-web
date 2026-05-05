@@ -638,7 +638,6 @@ export default function TaekilPage() {
                     </div>
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                       {pickedDates.map((date) => {
-                        const d = result?.days.find(dy => dy.date === date);
                         const dayNum = parseInt(date.split('-')[2]);
                         const mon = parseInt(date.split('-')[1]);
                         const dow = WEEKDAYS[new Date(date).getDay()];
@@ -653,14 +652,7 @@ export default function TaekilPage() {
                             <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)' }}>
                               {mon}/{dayNum}({dow})
                             </span>
-                            {d && (
-                              <span style={{
-                                fontSize: 10, fontWeight: 700,
-                                color: GRADE_COLOR[d.grade],
-                              }}>
-                                {d.grade}
-                              </span>
-                            )}
+                            {/* 등급(평·길)은 풀이 결과 영역에서만 노출 — 후보 단계에선 날짜만 */}
                             {!showResult && (
                               <button
                                 onClick={() => removePick(date)}
