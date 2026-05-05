@@ -196,6 +196,22 @@ export default function SajuResultPage() {
     }
 
     const run = async () => {
+      const cacheKey = sajuKey(result);
+
+      // ★ cache 우선 — 메모리 unload→reload 시에도 모달 없이 즉시 복원
+      // archive 체크보다 먼저 검사: 캐시가 곧 사용자가 마지막에 본 화면이므로 그대로 표시.
+      if (!isFresh && refetchNonce === 0) {
+        const cached = useReportCacheStore.getState().getReport<JungtongsajuAIResult>('jungtong', cacheKey);
+        if (cached?.error) {
+          setReport({ success: false, error: cached.error });
+          return;
+        }
+        if (cached?.data) {
+          setReport(cached.data);
+          return;
+        }
+      }
+
       if (refetchNonce === 0 && targetProfile && !isFresh) {
         try {
           const found = await findRecentArchive({
@@ -224,20 +240,6 @@ export default function SajuResultPage() {
       }
 
       if (report || reportLoading) return;
-      const cacheKey = sajuKey(result);
-
-      // fresh=1 일 때 메모리 캐시 무시 — 새 AI 호출 강제
-      if (!isFresh) {
-        const cached = useReportCacheStore.getState().getReport<JungtongsajuAIResult>('jungtong', cacheKey);
-        if (cached?.error) {
-          setReport({ success: false, error: cached.error });
-          return;
-        }
-        if (cached?.data) {
-          setReport(cached.data);
-          return;
-        }
-      }
 
       apiCalledKeyRef.current = effectKey;
       setReportLoading(true);

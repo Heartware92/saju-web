@@ -343,7 +343,29 @@ export default function PeriodFortunePage({ scope }: { scope: FortuneScope | 'da
 
     const isFresh = searchParams?.get('fresh') === '1';
 
+    // ★ cache 우선 — 메모리 unload→reload 후에도 archive 모달 없이 즉시 복원
+    // scope 별 캐시 키가 있으면 archive 모달 분기 자체를 skip.
+    const peekCache = (): boolean => {
+      if (isFresh || refetchNonce > 0) return false;
+      const sk = sajuKey(saju);
+      if (scope === 'year') {
+        const cached = useReportCacheStore.getState().getReport<NewyearReportAIResult>('newyear', `${sk}:${targetYear}`);
+        if (cached?.error) { setNewyearReport({ success: false, error: cached.error }); setNewyearReportLoading(false); return true; }
+        if (cached?.data) { setNewyearReport(cached.data); setNewyearReportLoading(false); return true; }
+      } else if (scope === 'date' && dateConfirmed) {
+        const cached = useReportCacheStore.getState().getReport<PickedDateReportAIResult>('period_date', `${sk}:${pickedDate}`);
+        if (cached?.error) { setPickedDateReport({ success: false, error: cached.error }); setPickedDateReportLoading(false); return true; }
+        if (cached?.data) { setPickedDateReport(cached.data); setPickedDateReportLoading(false); return true; }
+      } else if (scope === 'day') {
+        const cached = useReportCacheStore.getState().getReport<Partial<Record<'wealth' | 'career' | 'love' | 'health' | 'study', string>>>('period_day', `${sk}:${today}`);
+        if (cached?.data) { setDomainAI(cached.data); setDomainAILoading(false); return true; }
+      }
+      return false;
+    };
+
     const runWithArchiveCheck = async () => {
+      if (peekCache()) return;
+
       if (refetchNonce === 0 && targetProfile && !isFresh) {
         let category: 'newyear' | 'period' | 'today' | undefined;
         let context: { key: string; value: string } | undefined;

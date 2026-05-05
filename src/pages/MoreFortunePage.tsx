@@ -201,10 +201,24 @@ export default function MoreFortunePage({ category }: Props) {
   }, [recordId]);
 
   // ── 보관함 DB 확인 — 이전에 본 풀이가 있으면 모달 표시 ──
+  // ★ 메모리 캐시(localStorage) 가 살아있으면 모달 띄우지 않음.
+  //   reload 후에도 사용자는 자기가 마지막에 본 결과를 그대로 봄.
   useEffect(() => {
     if (isArchiveMode || !targetProfile || !category) return;
     if (isLegacy) return;
     if (searchParams?.get('fresh') === '1') return;
+
+    // 카테고리가 saju 의존인 경우만 캐시 검사 (dream 은 텍스트 기반이라 별도)
+    if (saju && category !== 'dream') {
+      const sk = sajuKey(saju);
+      // name 등 입력 의존 카테고리는 입력값 미정 시 단순 sk 만으로도 시도
+      const guessKey = category === 'name' ? null : sk;
+      if (guessKey) {
+        const cached = useReportCacheStore.getState().getReport<string>(`more:${category}` as const, guessKey);
+        if (cached?.data) return; // silent — useEffect 303 가 setResult 처리
+      }
+    }
+
     let cancelled = false;
     findRecentArchive({
       category: category as ArchiveCategory,
@@ -225,7 +239,7 @@ export default function MoreFortunePage({ category }: Props) {
       });
     }).catch(() => {});
     return () => { cancelled = true; };
-  }, [category, targetProfile, isArchiveMode, isLegacy, router]);
+  }, [category, targetProfile, isArchiveMode, isLegacy, router, saju]);
 
   // [B안] cfg 가 없는데 legacy + archive 모드면 보관함 재생 전용 fallback 화면 렌더.
   // 그 외 (legacy + 정상 진입 / 잘못된 카테고리) 는 위 useEffect 가 홈으로 redirect.

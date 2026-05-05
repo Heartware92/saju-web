@@ -490,6 +490,21 @@ export default function TodayFortunePage() {
     const isFresh = searchParams?.get('fresh') === '1';
 
     const run = async () => {
+      const cacheKey = effectKey;
+
+      // ★ cache 우선 — 메모리 unload→reload 후에도 archive 모달 없이 즉시 복원
+      if (!isFresh) {
+        const cached = useReportCacheStore.getState().getReport<TodayFortuneV3AIResult>('today', cacheKey);
+        if (cached?.error) {
+          setReport({ success: false, error: cached.error });
+          return;
+        }
+        if (cached?.data) {
+          setReport(cached.data);
+          return;
+        }
+      }
+
       // 보관함 — 같은 사주·같은 날짜로 이미 받은 풀이 있으면 모달 권유
       if (targetProfile && !isFresh) {
         try {
@@ -517,17 +532,6 @@ export default function TodayFortunePage() {
           }
         } catch { /* ignore */ }
         if (cancelled) return;
-      }
-
-      const cacheKey = effectKey;
-      const cached = useReportCacheStore.getState().getReport<TodayFortuneV3AIResult>('today', cacheKey);
-      if (cached?.error) {
-        setReport({ success: false, error: cached.error });
-        return;
-      }
-      if (cached?.data) {
-        setReport(cached.data);
-        return;
       }
 
       apiCalledKeyRef.current = effectKey;

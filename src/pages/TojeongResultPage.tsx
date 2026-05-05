@@ -326,6 +326,24 @@ export default function TojeongResultPage() {
     };
 
     const run = async () => {
+      // ★ cache 우선 — 메모리 unload→reload 후에도 archive 모달 없이 즉시 복원
+      if (!isFresh && refetchNonce === 0) {
+        const cached = useReportCacheStore.getState().getReport<string>('tojeong', cacheKey);
+        // 캐시된 에러는 무시하고 새로 시도 (일시적 장애 후 복구 보장)
+        if (cached?.data) {
+          setAiContent(cached.data);
+          const sections = parseTojeongSections(cached.data);
+          if (Object.keys(sections).length > 0) setAiSections(sections);
+          const scores = parseTojeongScores(cached.data);
+          if (scores) setAiDomainScores(scores);
+          setAiLoading(false);
+          aiStartedRef.current = true;
+          return;
+        }
+      } else if (isFresh) {
+        useReportCacheStore.getState().invalidate('tojeong', cacheKey);
+      }
+
       if (refetchNonce === 0 && sourceBirth && !isFresh) {
         try {
           const found = await findRecentArchive({
@@ -351,23 +369,6 @@ export default function TojeongResultPage() {
           }
         } catch { /* ignore */ }
         if (cancelled) return;
-      }
-
-      if (!isFresh) {
-        const cached = useReportCacheStore.getState().getReport<string>('tojeong', cacheKey);
-        // 캐시된 에러는 무시하고 새로 시도 (일시적 장애 후 복구 보장)
-        if (cached?.data) {
-          setAiContent(cached.data);
-          const sections = parseTojeongSections(cached.data);
-          if (Object.keys(sections).length > 0) setAiSections(sections);
-          const scores = parseTojeongScores(cached.data);
-          if (scores) setAiDomainScores(scores);
-          setAiLoading(false);
-          aiStartedRef.current = true;
-          return;
-        }
-      } else {
-        useReportCacheStore.getState().invalidate('tojeong', cacheKey);
       }
 
       if (aiStartedRef.current) return;

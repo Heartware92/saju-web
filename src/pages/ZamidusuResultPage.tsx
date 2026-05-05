@@ -278,6 +278,24 @@ export default function ZamidusuResultPage() {
     const isFresh = searchParams?.get('fresh') === '1';
 
     const run = async () => {
+      // ★ cache 우선 — 메모리 unload→reload 후에도 archive 모달 없이 즉시 복원
+      if (!isFresh && refetchNonce === 0) {
+        const cached = useReportCacheStore.getState().getReport<ZamidusuAIResult>('zamidusu', cacheKey);
+        if (cached?.error) {
+          setAiResult({ success: false, error: cached.error });
+          setAiLoading(false);
+          return;
+        }
+        if (cached?.data) {
+          setAiResult(cached.data);
+          setAiLoading(false);
+          aiStartedRef.current = true;
+          return;
+        }
+      } else if (isFresh) {
+        useReportCacheStore.getState().invalidate('zamidusu', cacheKey);
+      }
+
       if (refetchNonce === 0 && sourceBirth && !isFresh) {
         try {
           const found = await findRecentArchive({
@@ -303,23 +321,6 @@ export default function ZamidusuResultPage() {
           }
         } catch { /* ignore */ }
         if (cancelled) return;
-      }
-
-      if (!isFresh) {
-        const cached = useReportCacheStore.getState().getReport<ZamidusuAIResult>('zamidusu', cacheKey);
-        if (cached?.error) {
-          setAiResult({ success: false, error: cached.error });
-          setAiLoading(false);
-          return;
-        }
-        if (cached?.data) {
-          setAiResult(cached.data);
-          setAiLoading(false);
-          aiStartedRef.current = true;
-          return;
-        }
-      } else {
-        useReportCacheStore.getState().invalidate('zamidusu', cacheKey);
       }
 
       if (aiStartedRef.current) return;
