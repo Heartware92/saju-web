@@ -44,68 +44,12 @@ import type { SajuResult } from '../utils/sajuCalculator';
 import { STEM_TO_HANJA, ZHI_TO_HANJA, STEM_TO_ELEMENT, ELEMENT_CELL_COLORS, type Element } from '../lib/character';
 import { ShareBar } from '@/components/share/ShareBar';
 import { RadarChart, type RadarDomain } from '../components/charts/RadarChart';
-import type { FortuneGrade } from '../engine/periodFortune';
-
-const GRADE_COLOR: Record<FortuneGrade, string> = {
-  '대길': '#34D399',
-  '길': '#86EFAC',
-  '중길': '#FBBF24',
-  '평': '#CBD5E1',
-  '중흉': '#FB923C',
-  '흉': '#F87171',
-};
-
-function scoreToGrade(s: number): FortuneGrade {
-  if (s >= 90) return '대길';
-  if (s >= 75) return '길';
-  if (s >= 60) return '중길';
-  if (s >= 45) return '평';
-  if (s >= 30) return '중흉';
-  return '흉';
-}
-
-function ScoreRing({ score, grade, size = 120 }: { score: number; grade: FortuneGrade; size?: number }) {
-  const c = GRADE_COLOR[grade];
-  const r = size * 0.4;
-  const C = 2 * Math.PI * r;
-  const offset = C * (1 - score / 100);
-  return (
-    <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
-      <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth={size * 0.083} />
-      <circle
-        cx={size / 2} cy={size / 2} r={r} fill="none"
-        stroke={c} strokeWidth={size * 0.083} strokeLinecap="round"
-        strokeDasharray={C}
-        strokeDashoffset={offset}
-        transform={`rotate(-90 ${size / 2} ${size / 2})`}
-        style={{ transition: 'stroke-dashoffset 0.8s ease-out' }}
-      />
-      <text x={size / 2} y={size / 2} textAnchor="middle" dominantBaseline="middle"
-            fontSize={size * 0.23} fontWeight="bold" fill="white">{score}</text>
-      <text x={size / 2} y={size / 2 + size * 0.18} textAnchor="middle" dominantBaseline="middle"
-            fontSize={size * 0.09} fill="rgba(255,255,255,0.6)">점 · {grade}</text>
-    </svg>
-  );
-}
-
-function DomainBar({ label, score, grade }: { label: string; score: number; grade: FortuneGrade }) {
-  const c = GRADE_COLOR[grade];
-  return (
-    <div className="flex items-center gap-2">
-      <div className="w-20 shrink-0 text-[14px] font-semibold text-text-secondary whitespace-nowrap">{label}</div>
-      <div className="flex-1 h-2 rounded-full bg-white/5 overflow-hidden">
-        <motion.div
-          className="h-full rounded-full"
-          style={{ backgroundColor: c }}
-          initial={{ width: 0 }}
-          animate={{ width: `${score}%` }}
-          transition={{ duration: 0.6, ease: 'easeOut' }}
-        />
-      </div>
-      <div className="w-8 text-right text-[14px] font-bold" style={{ color: c }}>{score}</div>
-    </div>
-  );
-}
+import {
+  GRADE_COLOR, GUNGHAP_DOMAINS as SHARED_GUNGHAP_DOMAINS,
+  scoreToGrade, parseGunghapHeader,
+  type GunghapDomainKey, type GunghapDomainScores,
+} from '@/lib/gunghap';
+import { ScoreRing, DomainBar } from '@/components/gunghap/GunghapResultBlock';
 
 // ──────────────────────────────────────────────
 // 카테고리 그룹 정의
@@ -247,17 +191,8 @@ const AUTO_ROLES: Record<string, [string, string]> = {
   custom: ['나', '상대'],
 };
 
-// 궁합 영역별 점수 5개 도메인
-const GUNGHAP_DOMAINS = [
-  { key: 'emotion', label: '정서적 교감' },
-  { key: 'communication', label: '소통과 이해' },
-  { key: 'values', label: '가치관 조화' },
-  { key: 'growth', label: '성장 가능성' },
-  { key: 'conflict', label: '갈등 해소력' },
-] as const;
-
-type GunghapDomainKey = typeof GUNGHAP_DOMAINS[number]['key'];
-type GunghapDomainScores = Partial<Record<GunghapDomainKey, number>>;
+// 궁합 영역별 점수 5개 도메인 — 공유 모듈 alias
+const GUNGHAP_DOMAINS = SHARED_GUNGHAP_DOMAINS;
 
 // 프롬프트에 은유 제목+점수+영역별 점수 요청 래퍼 추가
 function wrapWithTitleScore(prompt: string): string {
@@ -282,47 +217,6 @@ function wrapWithTitleScore(prompt: string): string {
 - 영역별 점수 5개도 각각 0~100 정수로 산출 (두 사주 관계를 명리적으로 평가)
 - 이 두 줄 다음부터 본문 시작
 `;
-}
-
-function parseGunghapHeader(text: string): {
-  title: string;
-  score: number | null;
-  domainScores: GunghapDomainScores;
-  body: string;
-} {
-  let title = '';
-  let score: number | null = null;
-  const domainScores: GunghapDomainScores = {};
-  let body = text;
-
-  const headerMatch = text.match(/\[gunghap[_\s]?header\]\s*(.+?)\s*\|\s*(\d{1,3})\s*\[\/gunghap[_\s]?header\]/);
-  if (headerMatch) {
-    title = headerMatch[1].trim();
-    score = Math.min(100, Math.max(0, parseInt(headerMatch[2], 10)));
-    body = body.replace(/\[gunghap[_\s]?header\].*?\[\/gunghap[_\s]?header\]\s*\n?/, '').trim();
-  }
-
-  const scoresMatch = body.match(/\[gunghap[_\s]?scores\]\s*(.+?)\s*\[\/gunghap[_\s]?scores\]/);
-  if (scoresMatch) {
-    const pairs = scoresMatch[1].split('|').map(s => s.trim());
-    const keyMap: Record<string, GunghapDomainKey> = {
-      '정서교감': 'emotion',
-      '소통이해': 'communication',
-      '가치관': 'values',
-      '성장발전': 'growth',
-      '갈등해소': 'conflict',
-    };
-    for (const pair of pairs) {
-      const [k, v] = pair.split(':').map(s => s.trim());
-      const domainKey = keyMap[k];
-      if (domainKey && v) {
-        domainScores[domainKey] = Math.min(100, Math.max(0, parseInt(v, 10)));
-      }
-    }
-    body = body.replace(/\[gunghap[_\s]?scores\].*?\[\/gunghap[_\s]?scores\]\s*\n?/, '').trim();
-  }
-
-  return { title, score, domainScores, body };
 }
 
 // ──────────────────────────────────────────────

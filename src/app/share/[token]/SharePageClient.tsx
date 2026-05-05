@@ -14,6 +14,8 @@ import {
   parseJungtongsaju, parseNewyearReport, parseTodayFortune,
   parsePickedDateReport, parseZamidusuSections, parseTojeongSections,
 } from '@/services/fortuneService';
+import { parseGunghapHeader } from '@/lib/gunghap';
+import { GunghapResultBlock } from '@/components/gunghap/GunghapResultBlock';
 
 interface Props {
   type: 'saju' | 'tarot';
@@ -79,11 +81,17 @@ export default function SharePageClient({ type, record }: Props) {
 
   const content = record.interpretation_detailed || record.interpretation_basic || record.interpretation || '';
 
+  // 궁합: 점수 원·레이더 차트·점수 바를 본문 위에 그대로 렌더 (결과 페이지와 동일)
+  const isGunghap = type === 'saju' && category === 'gunghap';
+  const gunghapHeader = isGunghap ? parseGunghapHeader(content) : null;
+  // 궁합 본문은 헤더/스코어 블록을 제거한 body 만 섹션 파서에 넘긴다
+  const bodyForSections = gunghapHeader ? gunghapHeader.body : content;
+
   const config = SECTION_MAP[category];
   const useUniversal = !config;
-  const universalResult = useUniversal ? universalSectionParser(content) : null;
+  const universalResult = useUniversal ? universalSectionParser(bodyForSections) : null;
 
-  const sections = config ? config.parser(content) : {};
+  const sections = config ? config.parser(bodyForSections) : {};
   const sectionKeys = config ? config.keys : [];
   const sectionLabels = config ? config.labels : {};
 
@@ -133,6 +141,21 @@ export default function SharePageClient({ type, record }: Props) {
           </div>
         )}
       </motion.div>
+
+      {/* 궁합 점수·레이더 차트 — 결과 페이지와 동일한 시각 블록 */}
+      {isGunghap && gunghapHeader && gunghapHeader.score != null && (
+        <motion.div
+          initial={{ opacity: 0, y: 6 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.05 }}
+        >
+          <GunghapResultBlock
+            title={gunghapHeader.title}
+            score={gunghapHeader.score}
+            domainScores={gunghapHeader.domainScores}
+          />
+        </motion.div>
+      )}
 
       {/* 타로 질문 */}
       {type === 'tarot' && record.question && (
@@ -231,9 +254,11 @@ function SectionCard({ label, text, idx }: { label: string; text: string; idx: n
         </div>
       )}
 
-      <p className="text-[15px] text-text-secondary leading-[1.85] whitespace-pre-line tracking-[-0.005em]">
-        {bodyText}
-      </p>
+      <div className="text-[15px] text-text-secondary leading-[1.85] tracking-[-0.005em] space-y-3">
+        {bodyText.split(/\n\n+/).map((para, pi) => (
+          <p key={pi} className="whitespace-pre-line">{para.trim()}</p>
+        ))}
+      </div>
     </motion.div>
   );
 }
