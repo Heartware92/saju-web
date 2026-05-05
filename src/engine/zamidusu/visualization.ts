@@ -73,7 +73,14 @@ export function scorePalace(palace: ZamidusuPalace): number {
   }
   palace.minorStars.forEach((s) => { raw += scoreOfMinor(s); });
   if (palace.isOriginalPalace) raw += 3;
-  return Math.max(8, Math.min(96, Math.round(raw)));
+  const clamped = Math.max(8, Math.min(96, Math.round(raw)));
+  return liftScore(clamped);
+}
+
+function liftScore(raw: number): number {
+  const t = (raw - 8) / 88;
+  const curved = Math.pow(t, 0.72);
+  return Math.round(30 + curved * 66);
 }
 
 // ============================================

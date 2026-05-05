@@ -20,6 +20,7 @@ async function callGeminiOnce(
   prompt: string,
   maxTokens: number,
   systemPrompt: string,
+  temperature: number = 0.4,
 ): Promise<{ ok: true; data: AIResult } | { ok: false; status: number | null; msg: string; retryable: boolean }> {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) return { ok: false, status: null, msg: 'NO_GEMINI_KEY', retryable: false };
@@ -32,9 +33,8 @@ async function callGeminiOnce(
         systemInstruction: { parts: [{ text: systemPrompt }] },
         contents: [{ role: 'user', parts: [{ text: prompt }] }],
         generationConfig: {
-          temperature: 0.7,
+          temperature,
           maxOutputTokens: maxTokens,
-          // Gemini 2.5-flash 기본 thinking 비활성 — 장문 응답에서 TTFB·총 latency 과대
           thinkingConfig: { thinkingBudget: 0 },
         },
       }),
@@ -71,13 +71,14 @@ async function callGeminiWithRetry(
   prompt: string,
   maxTokens: number,
   systemPrompt: string,
+  temperature: number = 0.4,
 ): Promise<{ ok: true; data: AIResult } | { ok: false; status: number | null; msg: string }> {
-  const backoffsMs = [200, 800, 1600]; // 3회 재시도 (총 4회 호출)
+  const backoffsMs = [200, 800, 1600];
   let lastStatus: number | null = null;
   let lastMsg = '';
 
   for (let attempt = 0; attempt <= backoffsMs.length; attempt++) {
-    const r = await callGeminiOnce(prompt, maxTokens, systemPrompt);
+    const r = await callGeminiOnce(prompt, maxTokens, systemPrompt, temperature);
     if (r.ok) return r;
 
     lastStatus = r.status;
@@ -102,6 +103,7 @@ async function callOpenAI(
   prompt: string,
   maxTokens: number,
   systemPrompt: string,
+  temperature: number = 0.4,
 ): Promise<AIResult> {
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) throw new Error('NO_OPENAI_KEY');
@@ -118,7 +120,7 @@ async function callOpenAI(
         { role: 'system', content: systemPrompt },
         { role: 'user', content: prompt },
       ],
-      temperature: 0.7,
+      temperature,
       max_tokens: maxTokens,
     }),
   });
@@ -140,7 +142,7 @@ async function callOpenAI(
 // ── 메인 핸들러 ────────────────────────────────────────────────────────────
 export async function POST(request: NextRequest) {
   try {
-    const { prompt, maxTokens = 1000, systemPrompt } = await request.json();
+    const { prompt, maxTokens = 1000, systemPrompt, temperature = 0.4 } = await request.json();
     const sys =
       systemPrompt ||
       '당신은 정통 사주명리 전문가입니다. 핵심만 간결하게, 실용적으로 답변하세요. 한국어로 작성하며 이모지는 최소화하세요.';
@@ -154,7 +156,7 @@ export async function POST(request: NextRequest) {
 
     // ── 1순위: Gemini (재시도 3회 포함) ──
     if (process.env.GEMINI_API_KEY) {
-      const geminiResult = await callGeminiWithRetry(prompt, maxTokens, sys);
+      const geminiResult = await callGeminiWithRetry(prompt, maxTokens, sys, temperature);
       if (geminiResult.ok) {
         return NextResponse.json({
           content: geminiResult.data.content,
@@ -170,7 +172,7 @@ export async function POST(request: NextRequest) {
     if (process.env.OPENAI_API_KEY) {
       try {
         console.warn('[AI] OpenAI gpt-4o-mini 폴백 시도');
-        const r = await callOpenAI(prompt, maxTokens, sys);
+        const r = await callOpenAI(prompt, maxTokens, sys, temperature);
         return NextResponse.json({
           content: r.content,
           truncated: r.truncated,
