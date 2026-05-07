@@ -180,9 +180,14 @@ export default function Layout({ children }: LayoutProps) {
                     오픈소스 라이선스
                   </Link>
                 </div>
-                <p className="text-[11px] text-text-tertiary">
-                  &copy; 2026 이천점
-                </p>
+                <div className="flex flex-col items-center gap-0.5 mt-1">
+                  <p className="text-[11px] text-text-tertiary">
+                    (주)하트웨어 · 사업자등록번호 136-88-03376
+                  </p>
+                  <p className="text-[11px] text-text-tertiary">
+                    &copy; 2026 이천점
+                  </p>
+                </div>
               </div>
             </div>
           </>

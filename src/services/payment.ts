@@ -60,13 +60,26 @@ export const processPayment = async (
     }
 
     // 1. 로그인 확인
-    const user = await auth.getCurrentUser();
+    let user = await auth.getCurrentUser();
     if (!user) {
-      return {
-        success: false,
-        error: 'LOGIN_REQUIRED',
-        message: '로그인이 필요합니다',
-      };
+      // 게스트 결제 허용 (테스트용) — Supabase 콘솔에서 Anonymous Sign-Ins 활성화 필요
+      if (process.env.NEXT_PUBLIC_PAYMENT_ALLOW_GUEST === 'true') {
+        const { data, error } = await supabase.auth.signInAnonymously();
+        if (error || !data.user) {
+          return {
+            success: false,
+            error: 'GUEST_SIGNIN_FAILED',
+            message: '게스트 결제 준비 중 오류가 발생했어요. 잠시 후 다시 시도해 주세요.',
+          };
+        }
+        user = data.user;
+      } else {
+        return {
+          success: false,
+          error: 'LOGIN_REQUIRED',
+          message: '로그인이 필요합니다',
+        };
+      }
     }
 
     // 2. 패키지 조회
