@@ -91,7 +91,8 @@ export const processPayment = async (
     };
 
     const order = await orderDB.createOrder(orderData);
-    const paymentId = `${order.id}-${Date.now()}`;
+    // KCP V2 는 paymentId 최대 40자 제한 → 하이픈 제거한 UUID 32자만 사용
+    const paymentId = order.id.replace(/-/g, '');
 
     // 4. PortOne 결제창 호출
     const response = await PortOne.requestPayment({
