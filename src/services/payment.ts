@@ -159,10 +159,12 @@ export const processPayment = async (
     };
   } catch (error: any) {
     console.error('Payment error:', error);
+    // 임시 디버그: 실제 에러 메시지 노출 (KCP 심사 통과 후 generic 메시지로 복원)
+    const detail = error?.message || error?.code || '알 수 없는 오류';
     return {
       success: false,
       error: 'PAYMENT_ERROR',
-      message: '결제 처리 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.',
+      message: `[디버그] ${detail}`,
     };
   }
 };
