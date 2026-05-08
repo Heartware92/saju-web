@@ -1488,34 +1488,23 @@ export default function GunghapPage() {
                 parts.push({ title: matches[i].title, body: cleanedText.slice(bodyStart, bodyEnd).trim() });
               }
 
-              // 은유 부제목 판별 — 자연/우주 은유 이미지가 포함된 짧은 명사구만 통과
-              const isLikelyMetaphor = (line: string): boolean => {
-                const t = line.trim();
-                // 길이: 프롬프트 기준 7~20자, 여유 두고 4~28자
-                if (!t || t.length < 4 || t.length > 28) return false;
-                // 문장 종결 패턴 → 본문
-                if (/[.?!。,]$/.test(t)) return false;
-                if (/[다요니까습됩세죠네라며]$/.test(t)) return false;
-                // 숫자/괄호 → 본문
-                if (/\d/.test(t)) return false;
-                if (/[()（）\[\]]/.test(t)) return false;
-                // 명리 용어 → 본문
-                if (/오행|천간|지지|용신|기신|인성|비겁|식상|재성|관성|상생|상극|사주|명리|신강|신약/.test(t)) return false;
-                // 분석/관계 용어 → 본문
-                if (/관계|구조|에너지|소통|갈등|충돌|보완|역할|분석|패턴|전략|시너지|핵심|균형|배우자|결핍|처방|경쟁|성장|발전|가능성|방향|특징|위험|신호|가치|원칙|조건|이유|원인|문제|해결|방법|주의|장점|단점|강점|약점|선물|과제|비결|비법|목표|현실|미래|과거|노력|책임|의무|역량|태도|습관|마음가짐/.test(t)) return false;
-                // "~의 ~"로 시작하는 이름+조사 패턴 → 본문 (단, 자연 이미지 포함 시 제외)
-                if (/^[가-힣]{2,4}[의와과은는이가에]/.test(t) && !/달빛|별빛|바람|하늘|바다|호수|나무|꽃|그림자|파도|바위|등불|안개|서리|눈|빛|별|숲|물|불|뿌리|보름달|초승달|반달|모닥불|톱니바퀴|무지개|이슬|샘물|폭포|여울|옹달샘|등대|촛불|횃불|나침반|돛|닻/.test(t)) return false;
-                return true;
+              // 은유 부제목 추출 — "[은유]" 마커 기반 결정적 파싱
+              const extractMetaphor = (textLines: string[]): { metaphor: string; bodyLines: string[] } => {
+                for (let i = 0; i < Math.min(textLines.length, 3); i++) {
+                  const m = textLines[i]?.trim().match(/^\[은유\]\s*(.+)/);
+                  if (m) {
+                    return { metaphor: m[1].trim(), bodyLines: [...textLines.slice(0, i), ...textLines.slice(i + 1)] };
+                  }
+                }
+                return { metaphor: '', bodyLines: textLines };
               };
 
               return (
                 <div className="space-y-2">
                   {preamble && (() => {
                     const pLines = preamble.trim().split('\n');
-                    const firstLine = pLines[0]?.trim() ?? '';
-                    const hasMeta = isLikelyMetaphor(firstLine);
-                    const pMeta = hasMeta ? firstLine : '';
-                    const pBody = hasMeta ? pLines.slice(1).join('\n').trim() : preamble.trim();
+                    const { metaphor: pMeta, bodyLines: pBodyLines } = extractMetaphor(pLines);
+                    const pBody = pBodyLines.join('\n').trim();
                     return (
                       <div className="rounded-2xl p-5 bg-[rgba(20,12,38,0.55)] border border-[var(--border-subtle)]">
                         {pMeta && (
@@ -1535,10 +1524,8 @@ export default function GunghapPage() {
                   })()}
                   {parts.map((sec, idx) => {
                     const lines = sec.body.trim().split('\n');
-                    const firstLine = lines[0]?.trim() ?? '';
-                    const hasMeta = isLikelyMetaphor(firstLine);
-                    const metaphorTitle = hasMeta ? firstLine : '';
-                    const bodyText = hasMeta ? lines.slice(1).join('\n').trim() : sec.body.trim();
+                    const { metaphor: metaphorTitle, bodyLines } = extractMetaphor(lines);
+                    const bodyText = bodyLines.join('\n').trim();
 
                     return (
                       <motion.div
