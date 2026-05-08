@@ -432,17 +432,17 @@ export default function TaekilPage() {
               }}>1</span>
               <h2 style={{ margin: 0, fontSize: 16 }}>어떤 목적의 택일인가요?</h2>
             </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
               {TAEKIL_CATEGORIES.map(cat => (
                 <button
                   key={cat.id}
                   onClick={() => setCategory(cat.id)}
                   style={{
                     display: 'flex',
-                    alignItems: 'center',
-                    gap: '12px',
-                    padding: '14px 16px',
-                    borderRadius: '12px',
+                    flexDirection: 'column',
+                    gap: '4px',
+                    padding: '16px 18px',
+                    borderRadius: '14px',
                     border: category === cat.id
                       ? '2px solid var(--cta-primary)'
                       : '1px solid var(--border-subtle)',
@@ -455,18 +455,17 @@ export default function TaekilPage() {
                   }}
                 >
                   <div style={{
-                    fontSize: '15px',
+                    fontSize: '17px',
                     fontWeight: 700,
                     color: category === cat.id ? 'var(--cta-primary)' : 'var(--text-primary)',
-                    whiteSpace: 'nowrap',
-                    flexShrink: 0,
                   }}>
                     {cat.label}
                   </div>
                   <div style={{
-                    fontSize: '13px',
-                    color: category === cat.id ? 'var(--cta-primary)' : 'var(--text-tertiary)',
-                    opacity: category === cat.id ? 0.8 : 1,
+                    fontSize: '14px',
+                    color: category === cat.id ? 'var(--cta-primary)' : 'var(--text-secondary)',
+                    opacity: category === cat.id ? 0.85 : 1,
+                    letterSpacing: '0.02em',
                   }}>
                     {cat.desc}
                   </div>
