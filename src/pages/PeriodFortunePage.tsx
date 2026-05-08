@@ -28,7 +28,7 @@ import { SUN_COST_BIG, CHARGE_REASONS } from '../constants/creditCosts';
 import { computeSajuFromProfile } from '../utils/profileSaju';
 import { calculateSaju } from '../utils/sajuCalculator';
 import { calculatePeriodFortune, type FortuneScope, type FortuneGrade, type PeriodFortune } from '../engine/periodFortune';
-import { getPeriodDomainsDescription, getNewyearReport, getPickedDateReport, parsePickedDateReport, stripAllSectionTags, type NewyearReportAIResult, type PickedDateReportAIResult } from '../services/fortuneService';
+import { getPeriodDomainsDescription, getNewyearReport, getPickedDateReport, parsePickedDateReport, parseDateFlowScores, stripAllSectionTags, DATE_TIME_SLOT_LABELS, type NewyearReportAIResult, type PickedDateReportAIResult, type DateTimeSlot, type DateFlowScores } from '../services/fortuneService';
 import { NEWYEAR_SECTION_KEYS, NEWYEAR_SECTION_LABELS, PICKED_DATE_SECTION_KEYS, PICKED_DATE_SECTION_LABELS } from '../constants/prompts';
 import { AILoadingBar } from '../components/AILoadingBar';
 import { LuckyVisualCard, ELEMENT_LUCKY } from '../components/saju/LuckyVisualCard';
@@ -93,6 +93,85 @@ function DomainBar({ label, score, grade }: { label: string; score: number; grad
         />
       </div>
       <div className="w-8 text-right text-[14px] font-bold" style={{ color: c }}>{score}</div>
+    </div>
+  );
+}
+
+function DateFlowChart({ flow }: { flow: DateFlowScores }) {
+  const slots: DateTimeSlot[] = ['morning', 'afternoon', 'evening', 'night'];
+  const points = slots.map((s, i) => ({ x: 30 + i * 80, y: 110 - (flow[s] ?? 50) * 0.85, slot: s, score: flow[s] ?? 50 }));
+  const path = points.map((p, i) => `${i === 0 ? 'M' : 'L'}${p.x},${p.y}`).join(' ');
+  const bestSlot = slots.reduce((a, b) => (flow[a] >= flow[b] ? a : b));
+  return (
+    <div className="w-full">
+      <svg viewBox="0 0 290 140" className="w-full">
+        <line x1="20" y1="110" x2="270" y2="110" stroke="rgba(255,255,255,0.08)" strokeWidth="1" />
+        <line x1="20" y1="68" x2="270" y2="68" stroke="rgba(255,255,255,0.05)" strokeDasharray="2 4" />
+        <line x1="20" y1="25" x2="270" y2="25" stroke="rgba(255,255,255,0.05)" strokeDasharray="2 4" />
+        <path d={path} fill="none" stroke="#A78BFA" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+        <path
+          d={`${path} L${points[points.length - 1].x},110 L${points[0].x},110 Z`}
+          fill="url(#dateFlowGrad)"
+          opacity="0.35"
+        />
+        <defs>
+          <linearGradient id="dateFlowGrad" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="#A78BFA" stopOpacity="0.5" />
+            <stop offset="100%" stopColor="#A78BFA" stopOpacity="0" />
+          </linearGradient>
+        </defs>
+        {points.map((p, i) => (
+          <g key={i}>
+            <circle cx={p.x} cy={p.y} r={p.slot === bestSlot ? 6 : 4} fill="#A78BFA" stroke="#1C1033" strokeWidth="2" />
+            <text x={p.x} y={p.y - 12} textAnchor="middle" fontSize="10" fontWeight="bold" fill="#A78BFA">{p.score}</text>
+            <text x={p.x} y={128} textAnchor="middle" fontSize="11" fill="rgba(255,255,255,0.7)">
+              {DATE_TIME_SLOT_LABELS[p.slot]}
+            </text>
+          </g>
+        ))}
+      </svg>
+    </div>
+  );
+}
+
+const REMEDY_ICONS: Record<string, string> = {
+  '음식': '🍵', '향기': '🌿', '행동': '🧘', '마음': '💫',
+};
+
+function RemedyCardGrid({ bodyText }: { bodyText: string }) {
+  const paragraphs = bodyText.split(/\n\n+/).map(p => p.trim()).filter(Boolean);
+  const remedyKeys = ['음식', '향기', '행동', '마음'];
+  const cards = paragraphs.map((para, i) => {
+    const matchedKey = remedyKeys.find(k => para.includes(k));
+    const label = matchedKey || remedyKeys[i] || '처방';
+    return { label, icon: REMEDY_ICONS[label] || '✨', text: para };
+  });
+
+  if (cards.length < 2) {
+    return (
+      <div className="text-[15px] text-text-secondary leading-relaxed break-keep space-y-3">
+        {paragraphs.map((para, pi) => (
+          <p key={pi} className="whitespace-pre-line">{para}</p>
+        ))}
+      </div>
+    );
+  }
+
+  return (
+    <div className="grid grid-cols-2 gap-2.5">
+      {cards.map((card, i) => (
+        <motion.div
+          key={i}
+          initial={{ opacity: 0, y: 6 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.05 * i }}
+          className="rounded-xl p-3.5 bg-[rgba(139,92,246,0.08)] border border-[rgba(139,92,246,0.15)]"
+        >
+          <div className="text-[22px] mb-1.5">{card.icon}</div>
+          <div className="text-[13px] font-bold text-cta/90 mb-1">{card.label}</div>
+          <div className="text-[13px] text-text-secondary leading-relaxed break-keep">{card.text}</div>
+        </motion.div>
+      ))}
     </div>
   );
 }
@@ -293,10 +372,11 @@ export default function PeriodFortunePage({ scope }: { scope: FortuneScope | 'da
           );
         } else {
           const sections = parsePickedDateReport(content);
+          const flow = parseDateFlowScores(content);
           setPickedDateReport(
             Object.keys(sections).length > 0
-              ? { success: true, sections }
-              : { success: true, rawText: content },
+              ? { success: true, sections, flow }
+              : { success: true, rawText: content, flow },
           );
         }
       })
@@ -1066,12 +1146,29 @@ export default function PeriodFortunePage({ scope }: { scope: FortuneScope | 'da
           )}
           {pickedDateReport.sections && (
             <div className="space-y-3">
+              {/* FlowChart — date_timeflow 섹션 위에 시간대별 에너지 그래프 */}
+              {pickedDateReport.flow && (
+                <motion.div
+                  initial={{ opacity: 0, y: 6 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="rounded-2xl p-4 bg-[rgba(20,12,38,0.55)] border border-[var(--border-subtle)]"
+                >
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="inline-block w-1 h-5 rounded-full bg-cta" />
+                    <div className="text-[15px] font-bold text-text-primary tracking-tight">시간대별 에너지 흐름</div>
+                  </div>
+                  <DateFlowChart flow={pickedDateReport.flow} />
+                </motion.div>
+              )}
               {PICKED_DATE_SECTION_KEYS.map((key, idx) => {
                 const text = pickedDateReport.sections?.[key];
                 if (!text) return null;
                 const lines = text.trim().split('\n');
                 const metaphorTitle = lines[0]?.trim() ?? '';
                 const bodyText = lines.slice(1).join('\n').trim();
+                const isYes = key === 'date_yes';
+                const isNo = key === 'date_no';
+                const isRemedy = key === 'date_remedy';
                 return (
                   <motion.div
                     key={key}
@@ -1081,7 +1178,7 @@ export default function PeriodFortunePage({ scope }: { scope: FortuneScope | 'da
                     className="rounded-2xl p-5 bg-[rgba(20,12,38,0.55)] border border-[var(--border-subtle)]"
                   >
                     <div className="flex items-center gap-2 mb-2">
-                      <span className="inline-block w-1 h-5 rounded-full bg-cta" />
+                      <span className={`inline-block w-1 h-5 rounded-full ${isYes ? 'bg-emerald-400' : isNo ? 'bg-red-400' : 'bg-cta'}`} />
                       <div
                         className="text-[17px] font-bold text-text-primary tracking-tight break-keep"
                         style={{ fontFamily: 'var(--font-serif)' }}
@@ -1095,11 +1192,26 @@ export default function PeriodFortunePage({ scope }: { scope: FortuneScope | 'da
                     >
                       {metaphorTitle}
                     </div>
-                    <div className="text-[15px] text-text-secondary leading-relaxed break-keep space-y-3">
-                      {bodyText.split(/\n\n+/).map((para, pi) => (
-                        <p key={pi} className="whitespace-pre-line">{para.trim()}</p>
-                      ))}
-                    </div>
+                    {isRemedy ? (
+                      <RemedyCardGrid bodyText={bodyText} />
+                    ) : (isYes || isNo) ? (
+                      <div className="space-y-2.5">
+                        {bodyText.split(/\n\n+/).map((para, pi) => (
+                          <div key={pi} className="flex gap-2.5 items-start">
+                            <span className={`shrink-0 mt-0.5 text-[16px] ${isYes ? 'text-emerald-400' : 'text-red-400'}`}>
+                              {isYes ? '●' : '▲'}
+                            </span>
+                            <p className="text-[15px] text-text-secondary leading-relaxed break-keep whitespace-pre-line">{para.trim()}</p>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="text-[15px] text-text-secondary leading-relaxed break-keep space-y-3">
+                        {bodyText.split(/\n\n+/).map((para, pi) => (
+                          <p key={pi} className="whitespace-pre-line">{para.trim()}</p>
+                        ))}
+                      </div>
+                    )}
                   </motion.div>
                 );
               })}

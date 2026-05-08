@@ -1201,9 +1201,24 @@ export const getNewyearReport = async (
 // 지정일 운세 — 사용자가 직접 고른 날짜의 7섹션 종합 풀이
 // ─────────────────────────────────────────────
 
+export type DateTimeSlot = 'morning' | 'afternoon' | 'evening' | 'night';
+export type DateFlowScores = Record<DateTimeSlot, number>;
+
+export const DATE_TIME_SLOT_LABELS: Record<DateTimeSlot, string> = {
+  morning: '아침', afternoon: '낮', evening: '저녁', night: '밤',
+};
+
+export function parseDateFlowScores(raw: string): DateFlowScores | undefined {
+  const m = raw.match(/\[date_flow\]\s*아침:(\d+)\s*낮:(\d+)\s*저녁:(\d+)\s*밤:(\d+)/);
+  if (!m) return undefined;
+  const clamp = (s: string) => Math.min(100, Math.max(0, Number(s)));
+  return { morning: clamp(m[1]), afternoon: clamp(m[2]), evening: clamp(m[3]), night: clamp(m[4]) };
+}
+
 export interface PickedDateReportAIResult {
   success: boolean;
   sections?: Partial<Record<PickedDateSectionKey, string>>;
+  flow?: DateFlowScores;
   rawText?: string;
   error?: string;
 }
@@ -1230,6 +1245,7 @@ export const getPickedDateReport = async (
     const prompt = generatePickedDateFortunePrompt(result, todayGz, isoDate);
     const content = await callGPT(prompt, 6000);
     const sections = parsePickedDateReport(content);
+    const flow = parseDateFlowScores(content);
     archiveSaju({
       profileId,
       sourceBirth: sourceBirthFromSaju(result),
@@ -1241,9 +1257,9 @@ export const getPickedDateReport = async (
       isDetailed: true,
     });
     if (Object.keys(sections).length === 0) {
-      return { success: true, rawText: content };
+      return { success: true, rawText: content, flow };
     }
-    return { success: true, sections };
+    return { success: true, sections, flow };
   } catch (error: any) {
     return { success: false, error: error.message };
   }
