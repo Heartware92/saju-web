@@ -29,6 +29,7 @@ import { findRecentArchive } from '../services/archiveService';
 import {
   getZamidusuReading,
   parseZamidusuSections,
+  stripAllSectionTags,
   type ZamidusuAIResult,
 } from '../services/fortuneService';
 import { sajuDB } from '../services/supabase';
@@ -1025,7 +1026,7 @@ export default function ZamidusuResultPage() {
         {aiResult?.content && Object.keys(sections).length === 0 && (
           <div className={styles.section}>
             <p style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.75, whiteSpace: 'pre-line', margin: 0 }}>
-              {aiResult.content}
+              {stripAllSectionTags(aiResult.content)}
             </p>
           </div>
         )}

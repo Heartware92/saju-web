@@ -16,7 +16,7 @@ import { useCreditStore } from '../store/useCreditStore';
 import { useReportCacheStore, type ReportKind } from '../store/useReportCacheStore';
 import { RestoreReportModal } from '../components/RestoreReportModal';
 import { QuickFortuneGate } from '../components/QuickFortuneGate';
-import { getTojeongReading, parseTojeongSections, parseTojeongScores, type TojeongAIResult } from '../services/fortuneService';
+import { getTojeongReading, parseTojeongSections, parseTojeongScores, stripAllSectionTags, type TojeongAIResult } from '../services/fortuneService';
 import { sajuDB } from '../services/supabase';
 import { findRecentArchive } from '../services/archiveService';
 import { AILoadingBar } from '../components/AILoadingBar';
@@ -795,7 +795,7 @@ export default function TojeongResultPage() {
             </div>
           </div>
           <p className="text-[15px] text-text-secondary leading-[1.85] whitespace-pre-line tracking-[-0.005em]">
-            {aiContent.replace(/^\s*\[(chongun|gwae|monthly|wealth|love|health|career|advice|tojeong_scores)\].*$/gm, '').replace(/\[\/tojeong_scores\]/g, '').trim()}
+            {stripAllSectionTags(aiContent)}
           </p>
         </section>
       )}

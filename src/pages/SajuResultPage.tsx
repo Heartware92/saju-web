@@ -9,6 +9,7 @@ import {
   getJungtongsajuReport,
   parseJungtongsaju,
   parseAdviceMeta,
+  stripAllSectionTags,
   type JungtongsajuAIResult,
 } from '../services/fortuneService';
 import { sajuDB } from '../services/supabase';
@@ -469,7 +470,7 @@ export default function SajuResultPage() {
       {report?.rawText && (
         <div className="rounded-2xl p-4 mb-3 bg-[rgba(20,12,38,0.55)] border border-[var(--border-subtle)]">
           <p className="text-[15px] text-text-secondary leading-relaxed whitespace-pre-line">
-            {report.rawText}
+            {stripAllSectionTags(report.rawText)}
           </p>
         </div>
       )}

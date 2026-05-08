@@ -28,7 +28,7 @@ import { SUN_COST_BIG, CHARGE_REASONS } from '../constants/creditCosts';
 import { computeSajuFromProfile } from '../utils/profileSaju';
 import { calculateSaju } from '../utils/sajuCalculator';
 import { calculatePeriodFortune, type FortuneScope, type FortuneGrade, type PeriodFortune } from '../engine/periodFortune';
-import { getPeriodDomainsDescription, getNewyearReport, getPickedDateReport, parsePickedDateReport, type NewyearReportAIResult, type PickedDateReportAIResult } from '../services/fortuneService';
+import { getPeriodDomainsDescription, getNewyearReport, getPickedDateReport, parsePickedDateReport, stripAllSectionTags, type NewyearReportAIResult, type PickedDateReportAIResult } from '../services/fortuneService';
 import { NEWYEAR_SECTION_KEYS, NEWYEAR_SECTION_LABELS, PICKED_DATE_SECTION_KEYS, PICKED_DATE_SECTION_LABELS } from '../constants/prompts';
 import { AILoadingBar } from '../components/AILoadingBar';
 import { LuckyVisualCard, ELEMENT_LUCKY } from '../components/saju/LuckyVisualCard';
@@ -963,7 +963,7 @@ export default function PeriodFortunePage({ scope }: { scope: FortuneScope | 'da
           {newyearReport.rawText && (
             <div className="rounded-2xl p-4 bg-[rgba(20,12,38,0.55)] border border-[var(--border-subtle)]">
               <p className="text-[15px] text-text-secondary leading-relaxed whitespace-pre-line">
-                {newyearReport.rawText}
+                {stripAllSectionTags(newyearReport.rawText)}
               </p>
             </div>
           )}
@@ -1060,7 +1060,7 @@ export default function PeriodFortunePage({ scope }: { scope: FortuneScope | 'da
           {pickedDateReport.rawText && !pickedDateReport.sections && (
             <div className="p-4 rounded-xl bg-[rgba(20,12,38,0.55)] border border-[var(--border-subtle)]">
               <p className="text-[15px] text-text-secondary leading-relaxed whitespace-pre-line break-keep">
-                {pickedDateReport.rawText}
+                {stripAllSectionTags(pickedDateReport.rawText)}
               </p>
             </div>
           )}
