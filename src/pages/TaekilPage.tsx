@@ -547,9 +547,11 @@ export default function TaekilPage() {
             )}
           </div>}
 
-          {/* ═══ STEP 2: 캘린더에서 날짜 선택 (카테고리 선택 + custom 라벨 입력 후 노출) ═══ */}
+          {/* ═══ STEP 2: 캘린더에서 날짜 선택 (하위항목 선택 or custom 입력 후 노출) ═══ */}
           <AnimatePresence>
-            {category && (category !== 'custom' || customLabel.trim().length > 0) && (
+            {category && (
+              category === 'custom' ? customLabel.trim().length > 0 : !!subItem
+            ) && (
               <motion.div
                 initial={{ opacity: 0, height: 0 }}
                 animate={{ opacity: 1, height: 'auto' }}
