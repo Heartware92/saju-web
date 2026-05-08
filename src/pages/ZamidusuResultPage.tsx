@@ -48,6 +48,7 @@ import {
   calcOverallScore,
 } from '../engine/zamidusu/visualization';
 import { useLoadingGuard } from '../hooks/useLoadingGuard';
+import { useScrollToTopOnLoad } from '../hooks/useScrollToTopOnLoad';
 import { ShareBar } from '@/components/share/ShareBar';
 
 const LOADING_MESSAGES = [
@@ -113,6 +114,9 @@ export default function ZamidusuResultPage() {
   const [aiResult, setAiResult] = useState<ZamidusuAIResult | null>(null);
   const [aiLoading, setAiLoading] = useState(!isArchiveMode && !needsProfileSelect);
   const [introOpen, setIntroOpen] = useState(false);
+
+  // 결과 준비 완료 시 스크롤 최상단
+  useScrollToTopOnLoad(!!chart && !aiLoading);
 
   // ── 로딩 안전장치: 70초 초과 시 강제 해제 ──
   const [aiTimedOut] = useLoadingGuard(aiLoading, 70_000);

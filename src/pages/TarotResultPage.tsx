@@ -16,6 +16,7 @@ import { tarotDB } from '../services/supabase';
 import { TAROT_DECK, ELEMENT_COLORS, getCardImg, type TarotCard } from '../engine/tarot/deck';
 import { TAROT_SPREAD_LABEL } from '../constants/adminLabels';
 import { BackButton } from '../components/ui/BackButton';
+import { useScrollToTopOnLoad } from '../hooks/useScrollToTopOnLoad';
 import { ShareBar } from '@/components/share/ShareBar';
 
 interface SavedCard {
@@ -87,6 +88,9 @@ export default function TarotResultPage() {
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // 결과 준비 완료 시 스크롤 최상단
+  useScrollToTopOnLoad(!loading && !error);
   const [spreadType, setSpreadType] = useState<string>('');
   const [question, setQuestion] = useState<string>('');
   const [cards, setCards] = useState<SavedCard[]>([]);

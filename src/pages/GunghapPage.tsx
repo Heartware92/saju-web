@@ -50,6 +50,7 @@ import {
   type GunghapDomainKey, type GunghapDomainScores,
 } from '@/lib/gunghap';
 import { ScoreRing, DomainBar } from '@/components/gunghap/GunghapResultBlock';
+import { useScrollToTopOnLoad } from '../hooks/useScrollToTopOnLoad';
 
 // ──────────────────────────────────────────────
 // 카테고리 그룹 정의
@@ -287,6 +288,9 @@ export default function GunghapPage() {
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<string>('');
   const [error, setError] = useState<string>('');
+
+  // 결과 준비 완료 시 스크롤 최상단
+  useScrollToTopOnLoad(!!result && !loading);
   const [mySajuResult, setMySajuResult] = useState<SajuResult | null>(null);
   const [otherSajuResult, setOtherSajuResult] = useState<SajuResult | null>(null);
   const [gunghapTitle, setGunghapTitle] = useState('');

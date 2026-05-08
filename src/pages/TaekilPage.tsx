@@ -32,6 +32,7 @@ import {
 } from '../engine/taekil';
 import { getTaekilAdvice } from '../services/fortuneService';
 import { useLoadingGuard } from '../hooks/useLoadingGuard';
+import { useScrollToTopOnLoad } from '../hooks/useScrollToTopOnLoad';
 import styles from './SajuResultPage.module.css';
 import { ShareBar } from '@/components/share/ShareBar';
 
@@ -154,6 +155,9 @@ export default function TaekilPage() {
   const [aiLoading, setAiLoading] = useState(false);
   const [aiError, setAiError] = useState<string | null>(null);
   const [showResult, setShowResult] = useState(false);
+
+  // 결과 페이지 진입 시 스크롤 최상단
+  useScrollToTopOnLoad(showResult && !aiLoading);
 
   const [aiTimedOut] = useLoadingGuard(aiLoading, 70_000);
   useEffect(() => {

@@ -37,6 +37,7 @@ import { useLoadingGuard } from '../hooks/useLoadingGuard';
 import { ShareBar } from '@/components/share/ShareBar';
 import { RadarChart } from '../components/charts/RadarChart';
 import { MonthlyTrendChart } from '../components/charts/MonthlyTrendChart';
+import { useScrollToTopOnLoad } from '../hooks/useScrollToTopOnLoad';
 
 const NEWYEAR_MESSAGES = [
   '세운과 원국의 합충을 분석하는 중입니다',
@@ -245,6 +246,12 @@ export default function PeriodFortunePage({ scope }: { scope: FortuneScope | 'da
   const [pickedDateReportLoading, setPickedDateReportLoading] = useState(false);
 
   const [savedRecordId, setSavedRecordId] = useState<string | null>(null);
+
+  // 결과 준비 완료 시 스크롤 최상단 (newyear 또는 picked-date 어느 것이든 ready 시점)
+  useScrollToTopOnLoad(
+    (!!newyearReport && !newyearReportLoading) ||
+    (!!pickedDateReport && !pickedDateReportLoading)
+  );
 
   // ── 캐시 게이트 ─ 캐시 hit 시 silent restore 대신 모달 띄움. 사용자가 [기존 보기] / [새로 풀이] 선택. ──
   const [cacheGate, setCacheGate] = useState<{ kind: ReportKind; key: string; restore: () => void } | null>(null);

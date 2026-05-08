@@ -47,6 +47,7 @@ import { AILoadingBar } from '../components/AILoadingBar';
 import { DreamInputPanel } from '../components/dream/DreamInputPanel';
 import { BackButton } from '../components/ui/BackButton';
 import { useLoadingGuard } from '../hooks/useLoadingGuard';
+import { useScrollToTopOnLoad } from '../hooks/useScrollToTopOnLoad';
 import styles from './SajuResultPage.module.css';
 import { ShareBar } from '@/components/share/ShareBar';
 
@@ -116,6 +117,9 @@ export default function MoreFortunePage({ category }: Props) {
   const [result, setResult] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [savedRecordId, setSavedRecordId] = useState<string | null>(null);
+
+  // 결과 준비 완료 시 스크롤 최상단
+  useScrollToTopOnLoad(!!result && !loading);
 
   // 학업/자녀/성격: fresh=1 진입 시 소개 페이지 건너뛰고 바로 풀이 시작
   // manualMode: "다시 풀이 받기" 클릭 시 true → 소개+CTA 페이지로 복귀

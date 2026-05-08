@@ -28,6 +28,7 @@ import SajuReport from '../components/saju/SajuReport';
 import { AILoadingBar } from '../components/AILoadingBar';
 import { BackButton } from '../components/ui/BackButton';
 import { useLoadingGuard } from '../hooks/useLoadingGuard';
+import { useScrollToTopOnLoad } from '../hooks/useScrollToTopOnLoad';
 import { ShareBar } from '@/components/share/ShareBar';
 
 // 정통사주 = AI 풀이 가치, 만세력 = 무료 데이터.
@@ -67,6 +68,9 @@ export default function SajuResultPage() {
   const [result, setResult] = useState<SajuResult | null>(null);
   const [report, setReport] = useState<JungtongsajuAIResult | null>(null);
   const [reportLoading, setReportLoading] = useState(!isArchiveMode && !needsProfileSelect);
+
+  // 결과 준비 완료 시 스크롤 최상단
+  useScrollToTopOnLoad(!!report && !reportLoading);
   const [savedRecordId, setSavedRecordId] = useState<string | null>(null);
 
   const [cacheGate, setCacheGate] = useState<{ kind: ReportKind; key: string; restore: () => void } | null>(null);

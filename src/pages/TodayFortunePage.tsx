@@ -53,6 +53,7 @@ import {
 } from '../constants/prompts';
 import { AILoadingBar } from '../components/AILoadingBar';
 import { useLoadingGuard } from '../hooks/useLoadingGuard';
+import { useScrollToTopOnLoad } from '../hooks/useScrollToTopOnLoad';
 import { ShareBar } from '@/components/share/ShareBar';
 
 const TODAY_MESSAGES = [
@@ -428,6 +429,9 @@ export default function TodayFortunePage() {
   const [reportLoading, setReportLoading] = useState(false);
   const [archivedAt, setArchivedAt] = useState<string | null>(null);
   const [savedRecordId, setSavedRecordId] = useState<string | null>(null);
+
+  // 결과가 준비되면 스크롤 최상단으로
+  useScrollToTopOnLoad(!!report && !reportLoading);
 
   const [cacheGate, setCacheGate] = useState<{ kind: ReportKind; key: string; restore: () => void } | null>(null);
   const handleUseCached = () => { cacheGate?.restore(); setCacheGate(null); };

@@ -23,6 +23,7 @@ import { AILoadingBar } from '../components/AILoadingBar';
 import { SUN_COST_BIG, CHARGE_REASONS } from '../constants/creditCosts';
 import { BackButton } from '../components/ui/BackButton';
 import { useLoadingGuard } from '../hooks/useLoadingGuard';
+import { useScrollToTopOnLoad } from '../hooks/useScrollToTopOnLoad';
 import { ShareBar } from '@/components/share/ShareBar';
 import { RadarChart } from '../components/charts/RadarChart';
 import { TOJEONG_SECTION_KEYS, TOJEONG_SECTION_LABELS, type TojeongSectionKey } from '../constants/prompts';
@@ -166,6 +167,9 @@ export default function TojeongResultPage() {
   const [aiSections, setAiSections] = useState<Partial<Record<TojeongSectionKey, string>> | null>(null);
   const [aiDomainScores, setAiDomainScores] = useState<{ wealth: number; love: number; health: number; career: number } | null>(null);
   const [aiLoading, setAiLoading] = useState(!isArchiveMode && !needsProfileSelect);
+
+  // 결과 준비 완료 시 스크롤 최상단
+  useScrollToTopOnLoad(!!aiSections && !aiLoading);
   const [aiError, setAiError] = useState<string | null>(null);
 
   // ── 로딩 안전장치: 180초 초과 시 강제 해제 (에러 표시 없음) ──
