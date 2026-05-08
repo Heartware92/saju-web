@@ -423,14 +423,8 @@ export default function SharePageClient({ type, record }: Props) {
 
 function SectionCard({ label, text, idx }: { label: string; text: string; idx: number }) {
   const lines = text.trim().split('\n');
-  const firstLine = lines[0]?.trim() ?? '';
-  const hasMetaphor =
-    lines.length > 1 &&
-    firstLine.length > 0 &&
-    firstLine.length <= 40 &&
-    !firstLine.endsWith('.');
-  const metaphorTitle = hasMetaphor ? firstLine : '';
-  const bodyText = hasMetaphor ? lines.slice(1).join('\n').trim() : text;
+  const metaphorTitle = lines[0]?.trim() ?? '';
+  const bodyText = lines.slice(1).join('\n').trim();
 
   return (
     <motion.div
@@ -451,16 +445,14 @@ function SectionCard({ label, text, idx }: { label: string; text: string; idx: n
         </div>
       )}
 
-      {metaphorTitle && (
-        <div
-          className="text-[15px] font-medium leading-snug text-cta/90 mb-4 pl-3"
-          style={{ fontFamily: 'var(--font-serif)' }}
-        >
-          {metaphorTitle}
-        </div>
-      )}
+      <div
+        className="text-[17px] font-medium leading-snug text-cta/90 mb-4 pl-3"
+        style={{ fontFamily: 'var(--font-serif)' }}
+      >
+        {metaphorTitle}
+      </div>
 
-      <div className="text-[15px] text-text-secondary leading-[1.85] tracking-[-0.005em] space-y-3">
+      <div className="text-[17px] text-text-secondary leading-[1.85] tracking-[-0.005em] space-y-3">
         {bodyText.split(/\n\n+/).map((para, pi) => (
           <p key={pi} className="whitespace-pre-line">{para.trim()}</p>
         ))}

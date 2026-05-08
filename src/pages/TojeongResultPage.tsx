@@ -741,10 +741,9 @@ export default function TojeongResultPage() {
               }
             }
 
-            const lines = body.split('\n').filter(l => l.trim());
-            const headline = lines[0]?.trim() || '';
-            const hasHeadline = lines.length > 1 && headline.length > 0 && headline.length <= 80;
-            const bodyText = hasHeadline ? lines.slice(1).join('\n').trim() : body;
+            const lines = body.trim().split('\n');
+            const metaphorTitle = lines[0]?.trim() ?? '';
+            const bodyText = lines.slice(1).join('\n').trim();
             return (
               <motion.section
                 key={key}
@@ -753,20 +752,20 @@ export default function TojeongResultPage() {
                 transition={{ delay: 0.15 + idx * 0.05 }}
                 className="rounded-2xl p-5 bg-[rgba(20,12,38,0.55)] border border-[var(--border-subtle)]"
               >
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-                  <span style={{ display: 'inline-block', width: 4, height: 20, borderRadius: 2, background: 'var(--cta-primary)' }} />
-                  <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--text-primary)', fontFamily: 'var(--font-serif)', letterSpacing: '-0.01em' }}>
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="inline-block w-1 h-5 rounded-full bg-cta" />
+                  <div className="text-[17px] font-bold text-text-primary tracking-tight" style={{ fontFamily: 'var(--font-serif)' }}>
                     {TOJEONG_SECTION_LABELS[key]}
                   </div>
                 </div>
-                {hasHeadline && (
-                  <div style={{ fontSize: 16, fontWeight: 500, color: 'var(--cta-primary)', opacity: 0.9, lineHeight: 1.5, marginBottom: 14, paddingLeft: 12, fontFamily: 'var(--font-serif)' }}>
-                    {headline}
-                  </div>
-                )}
-                <p style={{ fontSize: 15, color: 'var(--text-secondary)', lineHeight: 1.85, letterSpacing: '-0.005em', whiteSpace: 'pre-line', margin: 0 }}>
-                  {bodyText}
-                </p>
+                <div className="text-[17px] font-medium leading-snug text-cta/90 mb-4 pl-3" style={{ fontFamily: 'var(--font-serif)' }}>
+                  {metaphorTitle}
+                </div>
+                <div className="text-[17px] text-text-secondary leading-[1.85] tracking-[-0.005em] space-y-3">
+                  {bodyText.split(/\n\n+/).map((para, pi) => (
+                    <p key={pi} className="whitespace-pre-line">{para.trim()}</p>
+                  ))}
+                </div>
               </motion.section>
             );
           })}

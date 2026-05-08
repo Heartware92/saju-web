@@ -418,13 +418,13 @@ export default function PeriodFortunePage({ scope }: { scope: FortuneScope | 'da
     if (scope === 'year') {
       const cacheKey = `${sk}:${targetYear}`;
       const cached = useReportCacheStore.getState().getReport<NewyearReportAIResult>('newyear', cacheKey);
-      if (cached?.error) {
+      if (!(isFresh || refetchNonce > 0) && cached?.error) {
         setNewyearReport({ success: false, error: cached.error });
         setNewyearReportLoading(false);
         return;
       }
       // 캐시 silent restore (같은 디바이스 빠른 재진입). 보관함 모달은 별도 useEffect 에서 처리.
-      if (cached?.data) {
+      if (!(isFresh || refetchNonce > 0) && cached?.data) {
         setNewyearReport(cached.data);
         setNewyearReportLoading(false);
         return;
@@ -460,12 +460,12 @@ export default function PeriodFortunePage({ scope }: { scope: FortuneScope | 'da
       if (!dateConfirmed) return;
       const cacheKey = `${sk}:${pickedDate}`;
       const cached = useReportCacheStore.getState().getReport<PickedDateReportAIResult>('period_date', cacheKey);
-      if (cached?.error) {
+      if (!(isFresh || refetchNonce > 0) && cached?.error) {
         setPickedDateReport({ success: false, error: cached.error });
         setPickedDateReportLoading(false);
         return;
       }
-      if (cached?.data) {
+      if (!(isFresh || refetchNonce > 0) && cached?.data) {
         setPickedDateReport(cached.data);
         setPickedDateReportLoading(false);
         return;

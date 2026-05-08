@@ -1463,14 +1463,9 @@ export default function GunghapPage() {
                     </div>
                   )}
                   {parts.map((sec, idx) => {
-                    const bodyLines = sec.body.split('\n');
-                    const firstLine = bodyLines[0]?.trim() ?? '';
-                    const hasMetaphor = bodyLines.length > 1
-                      && firstLine.length > 0
-                      && firstLine.length <= 40
-                      && !firstLine.endsWith('.');
-                    const metaphorTitle = hasMetaphor ? firstLine : '';
-                    const bodyText = hasMetaphor ? bodyLines.slice(1).join('\n').trim() : sec.body;
+                    const lines = sec.body.trim().split('\n');
+                    const metaphorTitle = lines[0]?.trim() ?? '';
+                    const bodyText = lines.slice(1).join('\n').trim();
 
                     return (
                       <motion.div
@@ -1486,14 +1481,14 @@ export default function GunghapPage() {
                             {sec.title}
                           </div>
                         </div>
-                        {metaphorTitle && (
-                          <div className="text-[15px] font-medium leading-snug text-cta/90 mb-4 pl-3" style={{ fontFamily: 'var(--font-serif)' }}>
-                            {metaphorTitle}
-                          </div>
-                        )}
-                        <p className="text-[15px] text-text-secondary leading-[1.85] whitespace-pre-line tracking-[-0.005em]">
-                          {bodyText}
-                        </p>
+                        <div className="text-[17px] font-medium leading-snug text-cta/90 mb-4 pl-3" style={{ fontFamily: 'var(--font-serif)' }}>
+                          {metaphorTitle}
+                        </div>
+                        <div className="text-[17px] text-text-secondary leading-[1.85] tracking-[-0.005em] space-y-3">
+                          {bodyText.split(/\n\n+/).map((para, pi) => (
+                            <p key={pi} className="whitespace-pre-line">{para.trim()}</p>
+                          ))}
+                        </div>
                       </motion.div>
                     );
                   })}

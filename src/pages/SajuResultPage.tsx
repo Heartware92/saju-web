@@ -516,9 +516,11 @@ export default function SajuResultPage() {
                     meta={report.adviceMeta}
                   />
                 ) : (
-                  <p className="text-[17px] text-text-secondary leading-[1.85] whitespace-pre-line tracking-[-0.005em]">
-                    {bodyText}
-                  </p>
+                  <div className="text-[17px] text-text-secondary leading-[1.85] tracking-[-0.005em] space-y-3">
+                    {bodyText.split(/\n\n+/).map((para, pi) => (
+                      <p key={pi} className="whitespace-pre-line">{para.trim()}</p>
+                    ))}
+                  </div>
                 )}
               </motion.div>
             );

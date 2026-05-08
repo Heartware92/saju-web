@@ -226,9 +226,11 @@ export default function TarotResultPage() {
               풀이
             </div>
           </div>
-          <p className="text-[15px] text-text-secondary leading-[1.85] whitespace-pre-line tracking-[-0.005em]">
-            {interpretation}
-          </p>
+          <div className="text-[17px] text-text-secondary leading-[1.85] tracking-[-0.005em] space-y-3">
+            {interpretation.split(/\n\n+/).map((para, pi) => (
+              <p key={pi} className="whitespace-pre-line">{para.trim()}</p>
+            ))}
+          </div>
         </section>
       )}
 
