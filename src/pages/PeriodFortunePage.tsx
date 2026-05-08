@@ -134,22 +134,18 @@ function DateFlowChart({ flow }: { flow: DateFlowScores }) {
   );
 }
 
-const REMEDY_ICONS: Record<string, string> = {
-  '음식': '🍵', '향기': '🌿', '행동': '🧘', '마음': '💫',
-};
+const REMEDY_LABELS = ['음식', '향기', '행동', '마음'];
 
 function RemedyCardGrid({ bodyText }: { bodyText: string }) {
   const paragraphs = bodyText.split(/\n\n+/).map(p => p.trim()).filter(Boolean);
-  const remedyKeys = ['음식', '향기', '행동', '마음'];
   const cards = paragraphs.map((para, i) => {
-    const matchedKey = remedyKeys.find(k => para.includes(k));
-    const label = matchedKey || remedyKeys[i] || '처방';
-    return { label, icon: REMEDY_ICONS[label] || '✨', text: para };
+    const matchedKey = REMEDY_LABELS.find(k => para.includes(k));
+    return { label: matchedKey || REMEDY_LABELS[i] || '처방', text: para };
   });
 
   if (cards.length < 2) {
     return (
-      <div className="text-[15px] text-text-secondary leading-relaxed break-keep space-y-3">
+      <div className="text-[15px] text-text-secondary leading-[1.85] space-y-3">
         {paragraphs.map((para, pi) => (
           <p key={pi} className="whitespace-pre-line">{para}</p>
         ))}
@@ -158,18 +154,17 @@ function RemedyCardGrid({ bodyText }: { bodyText: string }) {
   }
 
   return (
-    <div className="grid grid-cols-2 gap-2.5">
+    <div className="space-y-2">
       {cards.map((card, i) => (
         <motion.div
           key={i}
-          initial={{ opacity: 0, y: 6 }}
+          initial={{ opacity: 0, y: 4 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.05 * i }}
-          className="rounded-xl p-3.5 bg-[rgba(139,92,246,0.08)] border border-[rgba(139,92,246,0.15)]"
+          className="flex items-start gap-3 rounded-xl px-4 py-3 bg-[rgba(139,92,246,0.08)] border border-[rgba(139,92,246,0.15)]"
         >
-          <div className="text-[22px] mb-1.5">{card.icon}</div>
-          <div className="text-[13px] font-bold text-cta/90 mb-1">{card.label}</div>
-          <div className="text-[13px] text-text-secondary leading-relaxed break-keep">{card.text}</div>
+          <span className="shrink-0 text-[13px] font-bold text-cta/90 mt-0.5 w-8">{card.label}</span>
+          <p className="text-[14px] text-text-secondary leading-[1.85]">{card.text}</p>
         </motion.div>
       ))}
     </div>
@@ -776,7 +771,7 @@ export default function PeriodFortunePage({ scope }: { scope: FortuneScope | 'da
         <div className="mb-4 space-y-3">
           <div className="rounded-xl p-4 bg-gradient-to-br from-[rgba(124,92,252,0.18)] to-[rgba(201,166,255,0.06)] border border-cta/25">
             <p className="text-[15px] font-bold text-text-primary mb-1">풀이를 보고 싶은 날짜를 선택해주세요</p>
-            <p className="text-[13px] text-text-secondary leading-relaxed break-keep">
+            <p className="text-[13px] text-text-secondary leading-[1.85]">
               과거·미래 어떤 날짜든 가능합니다. 일진·세운·월운·대운 4개 층을 함께 풀어 그 날의 핵심·시간대 흐름·시도하면 좋은 일·피할 일·인연·처방까지 7가지 관점으로 알려드려요.
             </p>
           </div>
@@ -822,7 +817,7 @@ export default function PeriodFortunePage({ scope }: { scope: FortuneScope | 'da
           <ScoreRing score={fortune.overallScore} grade={fortune.overallGrade} />
           <div className="flex-1 min-w-0">
             <div className="text-[14px] text-text-tertiary mb-1">{fortune.lunarLabel}</div>
-            <div className="text-[16px] font-bold text-text-primary leading-snug mb-1.5 break-keep">
+            <div className="text-[16px] font-bold text-text-primary leading-snug mb-1.5">
               {fortune.headline}
             </div>
             <div className="flex items-center gap-1.5 flex-wrap">
@@ -832,7 +827,7 @@ export default function PeriodFortunePage({ scope }: { scope: FortuneScope | 'da
             </div>
           </div>
         </div>
-        <p className="text-[15px] text-text-secondary mt-3 leading-relaxed break-keep">
+        <p className="text-[15px] text-text-secondary mt-3 leading-[1.85]">
           {fortune.summary}
         </p>
       </motion.section>
@@ -1082,7 +1077,7 @@ export default function PeriodFortunePage({ scope }: { scope: FortuneScope | 'da
                     <div className="flex items-center gap-2 mb-2">
                       <span className="inline-block w-1 h-5 rounded-full bg-cta" />
                       <div
-                        className="text-[17px] font-bold text-text-primary tracking-tight break-keep"
+                        className="text-[17px] font-bold text-text-primary tracking-tight"
                         style={{ fontFamily: 'var(--font-serif)' }}
                       >
                         {NEWYEAR_SECTION_LABELS[key]}
@@ -1091,7 +1086,7 @@ export default function PeriodFortunePage({ scope }: { scope: FortuneScope | 'da
 
                     {/* 은유 제목 — 라벨 아래, 서브 톤 */}
                     <div
-                      className="text-[17px] font-medium leading-snug text-cta/90 mb-4 pl-3 break-keep"
+                      className="text-[17px] font-medium leading-snug text-cta/90 mb-4 pl-3"
                       style={{ fontFamily: 'var(--font-serif)' }}
                     >
                       {metaphorTitle}
@@ -1155,7 +1150,7 @@ export default function PeriodFortunePage({ scope }: { scope: FortuneScope | 'da
 
           {pickedDateReport.rawText && !pickedDateReport.sections && (
             <div className="p-4 rounded-xl bg-[rgba(20,12,38,0.55)] border border-[var(--border-subtle)]">
-              <p className="text-[15px] text-text-secondary leading-relaxed whitespace-pre-line break-keep">
+              <p className="text-[15px] text-text-secondary leading-[1.85] whitespace-pre-line">
                 {stripAllSectionTags(pickedDateReport.rawText)
                   .replace(/아침\s*[:：]\s*\d+\s*낮\s*[:：]\s*\d+\s*저녁\s*[:：]\s*\d+\s*밤\s*[:：]\s*\d+/, '')
                   .trim()}
@@ -1184,14 +1179,14 @@ export default function PeriodFortunePage({ scope }: { scope: FortuneScope | 'da
                     <div className="flex items-center gap-2 mb-2">
                       <span className={`inline-block w-1 h-5 rounded-full ${isYes ? 'bg-emerald-400' : isNo ? 'bg-red-400' : 'bg-cta'}`} />
                       <div
-                        className="text-[17px] font-bold text-text-primary tracking-tight break-keep"
+                        className="text-[17px] font-bold text-text-primary tracking-tight"
                         style={{ fontFamily: 'var(--font-serif)' }}
                       >
                         {PICKED_DATE_SECTION_LABELS[key]}
                       </div>
                     </div>
                     <div
-                      className="text-[17px] font-medium leading-snug text-cta/90 mb-4 pl-3 break-keep"
+                      className="text-[17px] font-medium leading-snug text-cta/90 mb-4 pl-3"
                       style={{ fontFamily: 'var(--font-serif)' }}
                     >
                       {metaphorTitle}
@@ -1205,12 +1200,12 @@ export default function PeriodFortunePage({ scope }: { scope: FortuneScope | 'da
                             <span className={`shrink-0 mt-0.5 text-[16px] ${isYes ? 'text-emerald-400' : 'text-red-400'}`}>
                               {isYes ? '●' : '▲'}
                             </span>
-                            <p className="text-[15px] text-text-secondary leading-relaxed break-keep whitespace-pre-line">{para.trim()}</p>
+                            <p className="text-[15px] text-text-secondary leading-[1.85] whitespace-pre-line">{para.trim()}</p>
                           </div>
                         ))}
                       </div>
                     ) : (
-                      <div className="text-[15px] text-text-secondary leading-relaxed break-keep space-y-3">
+                      <div className="text-[15px] text-text-secondary leading-[1.85] space-y-3">
                         {bodyText.split(/\n\n+/).map((para, pi) => (
                           <p key={pi} className="whitespace-pre-line">{para.trim()}</p>
                         ))}
