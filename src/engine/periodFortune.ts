@@ -74,6 +74,8 @@ export interface PeriodFortune {
   luckyNumbers: number[];
   luckyDirection: string;
   luckyTime: string;
+  luckyGem?: string;
+  luckyActivity?: string;
   cautions: string[];
   monthlyFlow?: { month: number; grade: FortuneGrade; keyword: string }[]; // year scope only
 }
@@ -113,6 +115,60 @@ const ELEMENT_TIMES: Record<string, string> = {
   '금': '오후 3시~7시 (신·유시)',
   '수': '밤 11시~새벽 3시 (자·축시)',
 };
+
+const BRANCH_DIRECTION: Record<string, string> = {
+  '자': '북쪽', '축': '북쪽', '인': '동쪽', '묘': '동쪽',
+  '진': '동쪽', '사': '남쪽', '오': '남쪽', '미': '남쪽',
+  '신': '서쪽', '유': '서쪽', '술': '서쪽', '해': '북쪽',
+};
+
+const BRANCH_LUCKY_TIME: Record<string, string> = {
+  '자': '밤 11시~새벽 1시 (자시)', '축': '새벽 1~3시 (축시)',
+  '인': '새벽 3~5시 (인시)', '묘': '오전 5~7시 (묘시)',
+  '진': '오전 7~9시 (진시)', '사': '오전 9~11시 (사시)',
+  '오': '오전 11시~오후 1시 (오시)', '미': '오후 1~3시 (미시)',
+  '신': '오후 3~5시 (신시)', '유': '오후 5~7시 (유시)',
+  '술': '오후 7~9시 (술시)', '해': '밤 9~11시 (해시)',
+};
+
+const ELEMENT_GEMS: Record<string, string> = {
+  '목': '에메랄드·옥', '화': '루비·석류석', '토': '황수정·호박',
+  '금': '다이아몬드·백수정', '수': '사파이어·청금석',
+};
+
+const ELEMENT_ACTIVITIES: Record<string, string> = {
+  '목': '숲 산책·독서·글쓰기', '화': '사교 모임·발표·운동',
+  '토': '정원 가꾸기·요리·명상', '금': '악기 연주·정리정돈',
+  '수': '수영·명상·물 가까운 환경',
+};
+
+function calcDailyLucky(saju: SajuResult, target: TargetGanZhi) {
+  const yongEl = saju.yongSinElement || '목';
+  const dayEl = target.ganElement;
+  const dayZhi = target.zhi;
+
+  const yukhapZhi = YUKHAP.find(([a, b]) => a === dayZhi || b === dayZhi);
+  const bestZhi = yukhapZhi ? (yukhapZhi[0] === dayZhi ? yukhapZhi[1] : yukhapZhi[0]) : dayZhi;
+  const bestTime = BRANCH_LUCKY_TIME[bestZhi] || ELEMENT_TIMES[yongEl] || '오전';
+
+  const direction = BRANCH_DIRECTION[dayZhi] || ELEMENT_DIRECTIONS[yongEl] || '동쪽';
+
+  const primaryEl = dayEl;
+  const secondaryEl = yongEl;
+  const colors = [
+    ...(ELEMENT_COLORS[primaryEl] ?? []).slice(0, 1),
+    ...(primaryEl !== secondaryEl ? (ELEMENT_COLORS[secondaryEl] ?? []).slice(0, 1) : (ELEMENT_COLORS[primaryEl] ?? []).slice(1, 2)),
+  ];
+
+  const dayNum = (ELEMENT_NUMBERS[primaryEl] ?? [3, 8])[0];
+  const yongNum = (ELEMENT_NUMBERS[secondaryEl] ?? [3, 8])[1];
+  const numbers = dayNum !== yongNum ? [dayNum, yongNum] : ELEMENT_NUMBERS[primaryEl] ?? [3, 8];
+
+  const gem = ELEMENT_GEMS[secondaryEl] || ELEMENT_GEMS['목'];
+  const activity = ELEMENT_ACTIVITIES[primaryEl] || ELEMENT_ACTIVITIES['목'];
+
+  return { colors, numbers, direction, time: bestTime, gem, activity };
+}
 
 const TEN_GOD_SCORE: Record<string, number> = {
   '정관': 12, '정인': 10, '정재': 10, '식신': 9, '편재': 7,
@@ -699,6 +755,9 @@ export function calculatePeriodFortune(
       ? `${target.ganZhi}의 기운은 일간 ${dayGan}과 큰 굴곡 없이 흐릅니다. 작은 기회를 놓치지 말고 꾸준함을 유지하세요.`
       : `${target.ganZhi}의 기운이 일간 ${dayGan}과 부딪히는 부분이 있어 무리한 행동은 피해야 합니다. 내실을 다지는 시기로 활용하세요.`;
 
+  const isDaily = opts.scope === 'day';
+  const daily = isDaily ? calcDailyLucky(saju, target) : null;
+
   return {
     scope: opts.scope,
     targetLabel,
@@ -711,10 +770,12 @@ export function calculatePeriodFortune(
     summary,
     domains: domainList,
     interactions,
-    luckyColors: ELEMENT_COLORS[luckyEl] ?? ELEMENT_COLORS['목'],
-    luckyNumbers: ELEMENT_NUMBERS[luckyEl] ?? [3, 8],
-    luckyDirection: ELEMENT_DIRECTIONS[luckyEl] ?? '동쪽',
-    luckyTime: ELEMENT_TIMES[luckyEl] ?? '오전',
+    luckyColors: daily?.colors ?? ELEMENT_COLORS[luckyEl] ?? ELEMENT_COLORS['목'],
+    luckyNumbers: daily?.numbers ?? ELEMENT_NUMBERS[luckyEl] ?? [3, 8],
+    luckyDirection: daily?.direction ?? ELEMENT_DIRECTIONS[luckyEl] ?? '동쪽',
+    luckyTime: daily?.time ?? ELEMENT_TIMES[luckyEl] ?? '오전',
+    luckyGem: daily?.gem,
+    luckyActivity: daily?.activity,
     cautions: buildCautions(saju, target, interactions),
     monthlyFlow,
   };

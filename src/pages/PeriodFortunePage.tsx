@@ -917,7 +917,7 @@ export default function PeriodFortunePage({ scope }: { scope: FortuneScope | 'da
         className="rounded-2xl p-4 mb-3 bg-[rgba(20,12,38,0.55)] border border-[var(--border-subtle)]"
       >
         <div className="text-[15px] font-semibold text-text-secondary mb-3 px-1 uppercase tracking-wider">
-          {scope === 'year' ? '연간 행운 처방' : '오늘의 행운'}
+          {scope === 'year' ? '연간 행운 처방' : scope === 'date' ? '이 날의 행운' : '오늘의 행운'}
         </div>
         {(() => {
           const luckyEl = saju.yongSinElement ?? '목';
@@ -929,8 +929,8 @@ export default function PeriodFortunePage({ scope }: { scope: FortuneScope | 'da
               numbers={fortune.luckyNumbers.length > 0 ? fortune.luckyNumbers : el.numbers}
               direction={fortune.luckyDirection || el.direction}
               timeSlot={fortune.luckyTime || el.timeSlot}
-              gem={el.gem}
-              activity={el.activity}
+              gem={fortune.luckyGem || el.gem}
+              activity={fortune.luckyActivity || el.activity}
             />
           );
         })()}
