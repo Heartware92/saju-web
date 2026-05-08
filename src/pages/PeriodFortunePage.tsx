@@ -134,13 +134,28 @@ function DateFlowChart({ flow }: { flow: DateFlowScores }) {
   );
 }
 
-const REMEDY_LABELS = ['음식', '향기', '행동', '마음'];
+const REMEDY_PATTERNS: [RegExp, string][] = [
+  [/^음식|^먹|음료/,  '음식'],
+  [/^향기|^아로마|향을/,  '향기'],
+  [/^미니|^행동|^5분|^10분/, '행동'],
+  [/^마음|^태도|가짐/,  '마음'],
+];
 
 function RemedyCardGrid({ bodyText }: { bodyText: string }) {
   const paragraphs = bodyText.split(/\n\n+/).map(p => p.trim()).filter(Boolean);
+  const usedLabels = new Set<string>();
   const cards = paragraphs.map((para, i) => {
-    const matchedKey = REMEDY_LABELS.find(k => para.includes(k));
-    return { label: matchedKey || REMEDY_LABELS[i] || '처방', text: para };
+    const first30 = para.slice(0, 30);
+    let label = '';
+    for (const [re, lbl] of REMEDY_PATTERNS) {
+      if (re.test(first30) && !usedLabels.has(lbl)) { label = lbl; break; }
+    }
+    if (!label) {
+      const fallbacks = ['음식', '향기', '행동', '마음'];
+      label = fallbacks.find(l => !usedLabels.has(l)) || '처방';
+    }
+    usedLabels.add(label);
+    return { label, text: para };
   });
 
   if (cards.length < 2) {
@@ -154,16 +169,16 @@ function RemedyCardGrid({ bodyText }: { bodyText: string }) {
   }
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-2.5">
       {cards.map((card, i) => (
         <motion.div
           key={i}
           initial={{ opacity: 0, y: 4 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.05 * i }}
-          className="flex items-start gap-3 rounded-xl px-4 py-3 bg-[rgba(139,92,246,0.08)] border border-[rgba(139,92,246,0.15)]"
+          className="rounded-xl px-4 py-3 bg-[rgba(139,92,246,0.08)] border border-[rgba(139,92,246,0.15)]"
         >
-          <span className="shrink-0 text-[13px] font-bold text-cta/90 mt-0.5 w-8">{card.label}</span>
+          <div className="text-[13px] font-bold text-cta/90 mb-1.5">{card.label}</div>
           <p className="text-[14px] text-text-secondary leading-[1.85]">{card.text}</p>
         </motion.div>
       ))}
