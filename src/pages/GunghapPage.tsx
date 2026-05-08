@@ -291,7 +291,7 @@ export default function GunghapPage() {
   const searchParams = useSearchParams();
   const urlRecordId = searchParams?.get('recordId') ?? null;
   const { user } = useUserStore();
-  const { profiles } = useProfileStore();
+  const { profiles, addProfile } = useProfileStore();
 
   // 내부 recordId — URL 파라미터 또는 랜딩에서 클릭한 결과
   const [activeRecordId, setActiveRecordId] = useState<string | null>(urlRecordId);
@@ -771,6 +771,24 @@ export default function GunghapPage() {
         creditType: 'sun',
         creditUsed: SUN_COST_BIG,
       }).catch(() => {});
+
+      // 직접 입력 모드일 때 상대방 정보를 추가 프로필로 자동 저장
+      if (otherMode === 'manual' && other.name.trim()) {
+        const isDuplicate = profiles.some(
+          p => p.name === other.name.trim() && p.birth_date === other.birth_date,
+        );
+        if (!isDuplicate) {
+          addProfile({
+            name: other.name.trim(),
+            birth_date: other.birth_date,
+            birth_time: other.birth_time || undefined,
+            birth_place: 'seoul',
+            gender: other.gender,
+            calendar_type: other.calendar_type,
+            is_primary: false,
+          }).catch(() => {});
+        }
+      }
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : '분석 중 오류가 발생했습니다.';
       setError(msg);
