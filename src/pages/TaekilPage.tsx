@@ -432,17 +432,17 @@ export default function TaekilPage() {
               }}>1</span>
               <h2 style={{ margin: 0, fontSize: 16 }}>어떤 목적의 택일인가요?</h2>
             </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
               {TAEKIL_CATEGORIES.map(cat => (
                 <button
                   key={cat.id}
                   onClick={() => setCategory(cat.id)}
                   style={{
                     display: 'flex',
-                    flexDirection: 'column',
-                    gap: '4px',
-                    padding: '16px 18px',
-                    borderRadius: '14px',
+                    alignItems: 'baseline',
+                    gap: '10px',
+                    padding: '13px 16px',
+                    borderRadius: '12px',
                     border: category === cat.id
                       ? '2px solid var(--cta-primary)'
                       : '1px solid var(--border-subtle)',
@@ -455,17 +455,19 @@ export default function TaekilPage() {
                   }}
                 >
                   <div style={{
-                    fontSize: '17px',
-                    fontWeight: 700,
+                    fontSize: '18px',
+                    fontWeight: 800,
                     color: category === cat.id ? 'var(--cta-primary)' : 'var(--text-primary)',
+                    whiteSpace: 'nowrap',
+                    flexShrink: 0,
                   }}>
                     {cat.label}
                   </div>
                   <div style={{
-                    fontSize: '14px',
+                    fontSize: '15px',
+                    fontWeight: 500,
                     color: category === cat.id ? 'var(--cta-primary)' : 'var(--text-secondary)',
                     opacity: category === cat.id ? 0.85 : 1,
-                    letterSpacing: '0.02em',
                   }}>
                     {cat.desc}
                   </div>
