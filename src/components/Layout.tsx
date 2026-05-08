@@ -154,7 +154,7 @@ export default function Layout({ children }: LayoutProps) {
                   </Link>
                 ))}
               </nav>
-              <div className="absolute bottom-8 left-6 right-6 flex flex-col items-center gap-2">
+              <div className="mt-8 flex flex-col items-center gap-3">
                 <div className="flex items-center gap-2 flex-wrap justify-center">
                   <Link
                     href="/terms"
@@ -180,13 +180,13 @@ export default function Layout({ children }: LayoutProps) {
                     오픈소스 라이선스
                   </Link>
                 </div>
-                <div className="flex flex-col items-center gap-0.5 mt-1">
-                  <p className="text-[11px] text-text-tertiary">
-                    (주)하트웨어 · 사업자등록번호 136-88-03376
-                  </p>
-                  <p className="text-[11px] text-text-tertiary">
-                    &copy; 2026 이천점
-                  </p>
+                <div className="flex flex-col items-center gap-1 text-[11px] leading-snug text-text-tertiary text-center px-2">
+                  <p>(주)하트웨어 · 대표자 허진우</p>
+                  <p>사업자등록번호 136-88-03376</p>
+                  <p>통신판매업 신고번호 준비 중</p>
+                  <p>대구광역시 북구 동북로 117</p>
+                  <p>고객센터 010-5960-0920</p>
+                  <p className="mt-1">&copy; 2026 이천점</p>
                 </div>
               </div>
             </div>
