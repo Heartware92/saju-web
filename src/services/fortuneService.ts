@@ -131,7 +131,11 @@ export const sanitizeAIOutput = (raw: string): string => {
   // 7) 이모지·장식 기호 제거
   text = text.replace(STRIP_EMOJI_REGEX, '');
 
-  // 8) AI 자기소개 문구 제거
+  // 8) 구조적 파싱 태그 제거 — AI가 출력한 닫는 태그·섹션 태그 잔해 정리
+  //    [은유]는 보존 (렌더링 시 extractMetaphor에서 사용)
+  text = text.replace(/\[\/(monthly|chongun|gwae|wealth|love|health|career|advice|tojeong_scores|gunghap_header|gunghap_scores)\]/gi, '');
+
+  // 9) AI 자기소개 문구 제거
   text = text.replace(/^\s*(?:AI로서|인공지능으로서|챗봇으로서|저는 AI)[^\n]*\n?/gm, '');
   text = text.replace(/제공된 (?:데이터|정보)에 (?:따르면|근거하여)[^,.\n]*[,.]?/g, '');
 

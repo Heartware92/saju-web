@@ -124,7 +124,8 @@ function DomainBar({ label, score, grade }: { label: string; score: number; grad
 
 function parseMonthlyEntries(raw: string): { month: number; keyword: string; text: string }[] {
   const entries: { month: number; keyword: string; text: string }[] = [];
-  const parts = raw.split(/(?=\d{1,2}월\s*[—\-–]\s*)/);
+  const cleaned = raw.replace(/\[\/?[a-zA-Z_]+\]/g, '').trim();
+  const parts = cleaned.split(/(?=\d{1,2}월\s*[—\-–]\s*)/);
   for (const part of parts) {
     const m = part.match(/^(\d{1,2})월\s*[—\-–]\s*(.+?)[\n\r]/);
     if (!m) continue;
