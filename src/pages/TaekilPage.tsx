@@ -443,17 +443,14 @@ export default function TaekilPage() {
                     style={{
                       padding: '14px 16px',
                       borderRadius: '14px',
-                      border: isActive
-                        ? '2px solid var(--cta-primary)'
-                        : '1px solid var(--border-subtle)',
+                      border: `2px solid ${isActive ? 'var(--cta-primary)' : 'var(--border-subtle)'}`,
                       background: isActive
                         ? 'rgba(124,92,252,0.08)'
                         : 'var(--space-elevated)',
-                      transition: 'all 0.15s',
                     }}
                   >
                     <div style={{
-                      fontSize: '18px',
+                      fontSize: '17px',
                       fontWeight: 800,
                       color: isActive ? 'var(--cta-primary)' : 'var(--text-primary)',
                       marginBottom: '10px',
@@ -467,23 +464,20 @@ export default function TaekilPage() {
                           <button
                             key={item}
                             onClick={() => {
-                              if (category !== cat.id) setCategory(cat.id);
+                              setCategory(cat.id);
                               setSubItem(selected ? null : item);
                             }}
                             style={{
-                              padding: '8px 16px',
+                              padding: '8px 18px',
                               borderRadius: '10px',
-                              border: selected
-                                ? '2px solid var(--cta-primary)'
-                                : '1px solid rgba(255,255,255,0.12)',
+                              border: `2px solid ${selected ? 'var(--cta-primary)' : 'transparent'}`,
                               background: selected
                                 ? 'rgba(124,92,252,0.25)'
-                                : 'rgba(255,255,255,0.05)',
+                                : 'rgba(255,255,255,0.06)',
                               fontSize: '15px',
                               fontWeight: selected ? 700 : 500,
                               color: selected ? '#fff' : 'var(--text-secondary)',
                               cursor: 'pointer',
-                              transition: 'all 0.15s',
                             }}
                           >
                             {item}
@@ -500,17 +494,14 @@ export default function TaekilPage() {
                 style={{
                   padding: '14px 16px',
                   borderRadius: '14px',
-                  border: category === 'custom'
-                    ? '2px solid var(--cta-primary)'
-                    : '1px solid var(--border-subtle)',
+                  border: `2px solid ${category === 'custom' ? 'var(--cta-primary)' : 'var(--border-subtle)'}`,
                   background: category === 'custom'
                     ? 'rgba(124,92,252,0.08)'
                     : 'var(--space-elevated)',
-                  transition: 'all 0.15s',
                 }}
               >
                 <div style={{
-                  fontSize: '18px',
+                  fontSize: '17px',
                   fontWeight: 800,
                   color: category === 'custom' ? 'var(--cta-primary)' : 'var(--text-primary)',
                   marginBottom: '10px',
@@ -520,19 +511,16 @@ export default function TaekilPage() {
                 <button
                   onClick={() => { setCategory('custom'); setSubItem(null); }}
                   style={{
-                    padding: '8px 16px',
+                    padding: '8px 18px',
                     borderRadius: '10px',
-                    border: category === 'custom'
-                      ? '2px solid var(--cta-primary)'
-                      : '1px solid rgba(255,255,255,0.12)',
+                    border: `2px solid ${category === 'custom' ? 'var(--cta-primary)' : 'transparent'}`,
                     background: category === 'custom'
                       ? 'rgba(124,92,252,0.25)'
-                      : 'rgba(255,255,255,0.05)',
+                      : 'rgba(255,255,255,0.06)',
                     fontSize: '15px',
                     fontWeight: category === 'custom' ? 700 : 500,
                     color: category === 'custom' ? '#fff' : 'var(--text-secondary)',
                     cursor: 'pointer',
-                    transition: 'all 0.15s',
                   }}
                 >
                   직접 입력
