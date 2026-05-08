@@ -5,7 +5,6 @@ import { SAJU_CATEGORY_LABEL } from '@/constants/adminLabels';
 import {
   JUNGTONGSAJU_SECTION_KEYS, JUNGTONGSAJU_SECTION_LABELS,
   NEWYEAR_SECTION_KEYS, NEWYEAR_SECTION_LABELS,
-  TODAY_SECTION_KEYS, TODAY_SECTION_LABELS,
   PICKED_DATE_SECTION_KEYS, PICKED_DATE_SECTION_LABELS,
   ZAMIDUSU_SECTION_KEYS, ZAMIDUSU_SECTION_LABELS,
   TOJEONG_SECTION_KEYS, TOJEONG_SECTION_LABELS,
@@ -14,7 +13,7 @@ import {
   type TodayTimeSlot,
 } from '@/constants/prompts';
 import {
-  parseJungtongsaju, parseNewyearReport, parseTodayFortune,
+  parseJungtongsaju, parseNewyearReport,
   parsePickedDateReport, parseZamidusuSections, parseTojeongSections,
   parseTodayV3DomainScores, parseTodayV3FlowScores, parseTojeongScores,
 } from '@/services/fortuneService';
@@ -44,7 +43,7 @@ type SectionConfig = {
 const SECTION_MAP: Record<string, SectionConfig> = {
   traditional: { keys: JUNGTONGSAJU_SECTION_KEYS, labels: JUNGTONGSAJU_SECTION_LABELS, parser: parseJungtongsaju },
   newyear:     { keys: NEWYEAR_SECTION_KEYS,      labels: NEWYEAR_SECTION_LABELS,      parser: parseNewyearReport },
-  today:       { keys: TODAY_SECTION_KEYS,         labels: TODAY_SECTION_LABELS,         parser: parseTodayFortune },
+  // today 카테고리는 TodayResultBlock 으로 직접 렌더링하므로 SECTION_MAP 항목 불필요
   date:        { keys: PICKED_DATE_SECTION_KEYS,   labels: PICKED_DATE_SECTION_LABELS,  parser: parsePickedDateReport },
   zamidusu:    { keys: ZAMIDUSU_SECTION_KEYS,      labels: ZAMIDUSU_SECTION_LABELS,      parser: parseZamidusuSections },
   tojeong:     { keys: TOJEONG_SECTION_KEYS,       labels: TOJEONG_SECTION_LABELS,       parser: parseTojeongSections as (raw: string) => Partial<Record<string, string>> },

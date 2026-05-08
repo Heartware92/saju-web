@@ -8,7 +8,6 @@ import {
   SYSTEM_PROMPT,
   generateBasicPrompt,
   generateDetailedPrompt,
-  generateTodayFortunePrompt,
   generateTodayFortuneV3Prompt,
   TODAY_V3_SECTION_KEYS,
   type TodayV3SectionKey,
@@ -49,11 +48,9 @@ import {
   type PickedDateSectionKey,
   NEWYEAR_SECTION_KEYS,
   JUNGTONGSAJU_SECTION_KEYS,
-  TODAY_SECTION_KEYS,
   type PeriodDomainBrief,
   type NewyearSectionKey,
   type JungtongsajuSectionKey,
-  type TodaySectionKey,
   type TodayGanZhi,
 } from '../constants/prompts';
 import type { TaekilResult } from '../engine/taekil';
@@ -131,9 +128,9 @@ export const sanitizeAIOutput = (raw: string): string => {
   // 7) 이모지·장식 기호 제거
   text = text.replace(STRIP_EMOJI_REGEX, '');
 
-  // 8) 구조적 파싱 태그 제거 — AI가 출력한 닫는 태그·섹션 태그 잔해 정리
-  //    [은유]는 보존 (렌더링 시 extractMetaphor에서 사용)
-  text = text.replace(/\[\/(monthly|chongun|gwae|wealth|love|health|career|advice|tojeong_scores|gunghap_header|gunghap_scores)\]/gi, '');
+  // 8) 구조적 파싱 닫는 태그 제거 — [/xxx] 형식 모두 제거 (AI가 자의적으로 닫는 태그 출력 방지)
+  //    [은유]는 여는 태그이므로 이 패턴에 매칭되지 않음 → 자동 보존
+  text = text.replace(/\[\/[a-zA-Z_]+\]/g, '');
 
   // 9) AI 자기소개 문구 제거
   text = text.replace(/^\s*(?:AI로서|인공지능으로서|챗봇으로서|저는 AI)[^\n]*\n?/gm, '');
@@ -146,6 +143,13 @@ export const sanitizeAIOutput = (raw: string): string => {
 
   return text.trim();
 };
+
+/**
+ * rawText 폴백 렌더링용 — 섹션 파싱 실패 시 모든 구조적 태그를 제거하여 깨끗한 텍스트 반환.
+ * 여는 태그 [key]와 닫는 태그 [/key] 모두 제거. [은유]도 제거 (폴백 시 마커 불필요).
+ */
+export const stripAllSectionTags = (text: string): string =>
+  text.replace(/\[\/?[a-zA-Z_]+\]/g, '').replace(/\n{3,}/g, '\n\n').trim();
 
 /**
  * GPT API 호출 헬퍼 (서버 API Route 경유)
@@ -260,25 +264,6 @@ export const getDetailedInterpretation = async (
     // 2800~3500자 본문 → 넉넉히 5500 토큰
     const content = await callGPT(prompt, 5500);
     archiveSaju({ profileId, sourceBirth: sourceBirthFromSaju(result), category: 'traditional', resultData: result as unknown as Record<string, unknown>, interpretation: content, creditType: 'sun', isDetailed: true });
-    return { success: true, content };
-  } catch (error: any) {
-    return { success: false, error: error.message };
-  }
-};
-
-/**
- * 오늘의 운세 (전체 무료 — 추후 크레딧 정책 결정 시 재도입)
- */
-export const getTodayFortune = async (
-  result: SajuResult,
-  profileId?: string,
-): Promise<FortuneResponse> => {
-  try {
-    const isoDate = new Date().toISOString().slice(0, 10);
-    const todayGz = calcTodayGanZhi(result, isoDate);
-    const prompt = generateTodayFortunePrompt(result, todayGz, isoDate);
-    const content = await callGPT(prompt, 3500);
-    archiveSaju({ profileId, sourceBirth: sourceBirthFromSaju(result), category: 'today', resultData: result as unknown as Record<string, unknown>, interpretation: content, creditType: 'moon', isDetailed: false });
     return { success: true, content };
   } catch (error: any) {
     return { success: false, error: error.message };
@@ -897,25 +882,7 @@ export const getJungtongsajuReport = async (
   }
 };
 
-// ── 오늘의 운세 ──────────────────────────────────────────────
-
-export interface TodayScores {
-  overall: number;
-  wealth: number;
-  work: number;
-  love: number;
-  health: number;
-}
-
-export interface TodayFortuneAIResult {
-  success: boolean;
-  sections?: Partial<Record<TodaySectionKey, string>>;
-  scores?: TodayScores;
-  rawText?: string;
-  error?: string;
-  todayGz?: TodayGanZhi;
-  isoDate?: string;
-}
+// ── 오늘의 운세 — V3 만 사용 (V1 함수·인터페이스는 데드코드로 제거) ──
 
 /** 한자 매핑 */
 const GAN_HANJA: Record<string, string> = {
@@ -979,55 +946,8 @@ function calcTodayGanZhi(result: SajuResult, isoDate: string): TodayGanZhi {
   };
 }
 
-export function parseTodayScores(raw: string): TodayScores | undefined {
-  const m = raw.match(/\[today_scores\]\s*종합:(\d+)\s*재물:(\d+)\s*업무:(\d+)\s*관계:(\d+)\s*건강:(\d+)/);
-  if (!m) return undefined;
-  return {
-    overall: Math.min(100, Math.max(0, Number(m[1]))),
-    wealth:  Math.min(100, Math.max(0, Number(m[2]))),
-    work:    Math.min(100, Math.max(0, Number(m[3]))),
-    love:    Math.min(100, Math.max(0, Number(m[4]))),
-    health:  Math.min(100, Math.max(0, Number(m[5]))),
-  };
-}
-
-export const parseTodayFortune = (raw: string): Partial<Record<TodaySectionKey, string>> => {
-  const out: Partial<Record<TodaySectionKey, string>> = {};
-  const keysPattern = TODAY_SECTION_KEYS.join('|');
-  const parts = raw.split(new RegExp(`^\\s*\\[(${keysPattern})\\]\\s*$`, 'm'));
-  for (let i = 1; i < parts.length; i += 2) {
-    const key = parts[i] as TodaySectionKey;
-    const body = (parts[i + 1] || '').trim();
-    if (body) out[key] = body;
-  }
-  return out;
-};
-
-export const getTodayFortuneReport = async (
-  result: SajuResult,
-  isoDate?: string,
-  profileId?: string,
-): Promise<TodayFortuneAIResult> => {
-  try {
-    const date = isoDate ?? new Date().toISOString().slice(0, 10);
-    const todayGz = calcTodayGanZhi(result, date);
-    const prompt = generateTodayFortunePrompt(result, todayGz, date);
-    const content = await callGPT(prompt, 3500);
-    const scores = parseTodayScores(content);
-    const sections = parseTodayFortune(content);
-    archiveSaju({ profileId, sourceBirth: sourceBirthFromSaju(result), category: 'today', resultData: result as unknown as Record<string, unknown>, engineResult: { todayGz, isoDate: date }, interpretation: content });
-
-    if (Object.keys(sections).length === 0) {
-      return { success: true, rawText: content, scores, todayGz, isoDate: date };
-    }
-    return { success: true, sections, scores, todayGz, isoDate: date };
-  } catch (error: any) {
-    return { success: false, error: error.message };
-  }
-};
-
 // ─────────────────────────────────────────────────────────────────────────────
-// 오늘의 운세 V3 — 13 섹션 + 9 항목 점수 + 4 시간대 흐름 + 사용자 입력 반영
+// 오늘의 운세 V3 — 14 섹션 + 9 항목 점수 + 4 시간대 흐름 + 사용자 입력 반영
 // ─────────────────────────────────────────────────────────────────────────────
 
 /** 9 항목 점수 (0~100) */
