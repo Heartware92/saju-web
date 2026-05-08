@@ -1209,7 +1209,7 @@ export const DATE_TIME_SLOT_LABELS: Record<DateTimeSlot, string> = {
 };
 
 export function parseDateFlowScores(raw: string): DateFlowScores | undefined {
-  const m = raw.match(/\[date_flow\]\s*아침:(\d+)\s*낮:(\d+)\s*저녁:(\d+)\s*밤:(\d+)/);
+  const m = raw.match(/(?:\[date_flow\]\s*)?아침\s*[:：]\s*(\d+)\s*낮\s*[:：]\s*(\d+)\s*저녁\s*[:：]\s*(\d+)\s*밤\s*[:：]\s*(\d+)/);
   if (!m) return undefined;
   const clamp = (s: string) => Math.min(100, Math.max(0, Number(s)));
   return { morning: clamp(m[1]), afternoon: clamp(m[2]), evening: clamp(m[3]), night: clamp(m[4]) };
@@ -1225,11 +1225,26 @@ export interface PickedDateReportAIResult {
 
 export const parsePickedDateReport = (raw: string): Partial<Record<PickedDateSectionKey, string>> => {
   const out: Partial<Record<PickedDateSectionKey, string>> = {};
-  const keysPattern = PICKED_DATE_SECTION_KEYS.join('|');
-  const parts = raw.split(new RegExp(`^\\s*\\[(${keysPattern})\\]\\s*$`, 'm'));
+
+  const cleaned = raw
+    .replace(/\*\*?\s*\[/g, '[')
+    .replace(/\]\s*\*\*?/g, ']')
+    .replace(/^\s*[-•▶]\s*\[/gm, '[');
+
+  const variantsFor = (k: string) => k.split('_').join('[_\\s-]?');
+  const altPattern = PICKED_DATE_SECTION_KEYS.map(variantsFor).join('|');
+  const splitter = new RegExp(`\\[(${altPattern})\\]\\s*:?`, 'gi');
+  const parts = cleaned.split(splitter);
+
+  const normalize = (k: string): PickedDateSectionKey | null => {
+    const stripped = k.toLowerCase().replace(/[^a-z]/g, '');
+    return (PICKED_DATE_SECTION_KEYS.find(s => s.replace(/_/g, '') === stripped) ?? null) as PickedDateSectionKey | null;
+  };
+
   for (let i = 1; i < parts.length; i += 2) {
-    const key = parts[i] as PickedDateSectionKey;
-    const body = (parts[i + 1] || '').trim();
+    const key = normalize(parts[i]);
+    if (!key) continue;
+    const body = (parts[i + 1] || '').replace(/\[\/?[a-zA-Z_]+\]/g, '').trim();
     if (body) out[key] = body;
   }
   return out;
@@ -1259,7 +1274,7 @@ export const getPickedDateReport = async (
     if (Object.keys(sections).length === 0) {
       return { success: true, rawText: content, flow };
     }
-    return { success: true, sections, flow };
+    return { success: true, sections, rawText: content, flow };
   } catch (error: any) {
     return { success: false, error: error.message };
   }

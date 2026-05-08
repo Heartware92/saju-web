@@ -375,7 +375,7 @@ export default function PeriodFortunePage({ scope }: { scope: FortuneScope | 'da
           const flow = parseDateFlowScores(content);
           setPickedDateReport(
             Object.keys(sections).length > 0
-              ? { success: true, sections, flow }
+              ? { success: true, sections, rawText: content, flow }
               : { success: true, rawText: content, flow },
           );
         }
@@ -1137,29 +1137,33 @@ export default function PeriodFortunePage({ scope }: { scope: FortuneScope | 'da
               <p className="text-[14px] text-red-400">{pickedDateReport.error}</p>
             </div>
           )}
+
+          {/* FlowChart — 섹션 파싱 여부 무관하게 flow 데이터 있으면 항상 표시 */}
+          {pickedDateReport.flow && (
+            <motion.div
+              initial={{ opacity: 0, y: 6 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="rounded-2xl p-4 mb-3 bg-[rgba(20,12,38,0.55)] border border-[var(--border-subtle)]"
+            >
+              <div className="flex items-center gap-2 mb-2">
+                <span className="inline-block w-1 h-5 rounded-full bg-cta" />
+                <div className="text-[15px] font-bold text-text-primary tracking-tight">시간대별 에너지 흐름</div>
+              </div>
+              <DateFlowChart flow={pickedDateReport.flow} />
+            </motion.div>
+          )}
+
           {pickedDateReport.rawText && !pickedDateReport.sections && (
             <div className="p-4 rounded-xl bg-[rgba(20,12,38,0.55)] border border-[var(--border-subtle)]">
               <p className="text-[15px] text-text-secondary leading-relaxed whitespace-pre-line break-keep">
-                {stripAllSectionTags(pickedDateReport.rawText)}
+                {stripAllSectionTags(pickedDateReport.rawText)
+                  .replace(/아침\s*[:：]\s*\d+\s*낮\s*[:：]\s*\d+\s*저녁\s*[:：]\s*\d+\s*밤\s*[:：]\s*\d+/, '')
+                  .trim()}
               </p>
             </div>
           )}
           {pickedDateReport.sections && (
             <div className="space-y-3">
-              {/* FlowChart — date_timeflow 섹션 위에 시간대별 에너지 그래프 */}
-              {pickedDateReport.flow && (
-                <motion.div
-                  initial={{ opacity: 0, y: 6 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="rounded-2xl p-4 bg-[rgba(20,12,38,0.55)] border border-[var(--border-subtle)]"
-                >
-                  <div className="flex items-center gap-2 mb-2">
-                    <span className="inline-block w-1 h-5 rounded-full bg-cta" />
-                    <div className="text-[15px] font-bold text-text-primary tracking-tight">시간대별 에너지 흐름</div>
-                  </div>
-                  <DateFlowChart flow={pickedDateReport.flow} />
-                </motion.div>
-              )}
               {PICKED_DATE_SECTION_KEYS.map((key, idx) => {
                 const text = pickedDateReport.sections?.[key];
                 if (!text) return null;
