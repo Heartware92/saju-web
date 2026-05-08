@@ -1394,38 +1394,50 @@ export default function GunghapPage() {
             {(() => {
               const cleanedText = result.replace(/\[\/?\s*gunghap[_\s]?(?:header|scores)\s*\][^\n]*/gi, '').trim();
 
-              // Known section titles from gunghap prompts
+              // Known section titles from gunghap prompts (프롬프트와 정확히 일치)
               const SECTION_TITLES = [
+                // 연인
                 '핵심 요약', '공명과 끌림', '오행 상보 관계', '갈등·마찰 포인트',
                 '연애 방식과 역학', '서로의 속마음', '개운법·처방',
+                // 친구
                 '이 우정의 에너지 구조', '서로에게 어떤 친구인가', '갈등과 마찰 포인트',
                 '함께 성장하는 방법', '오래가는 우정을 위한 처방',
+                // 가족
                 '이 가족 관계의 명리 구조', '각자의 역할과 에너지', '갈등과 오해 패턴',
                 '서로에게 주는 선물', '관계를 더 깊게 하는 처방',
+                // 직장동료
                 '업무 에너지 구조', '각자의 업무 스타일과 시너지', '협업 극대화 전략', '직장 관계 처방',
+                // 범용
                 '이 관계의 에너지 구조', '서로가 주고받는 것', '마찰과 주의 포인트',
                 '이 관계를 더 좋게 만드는 처방',
+                // 썸
                 '이 설렘의 정체', '상대방이 나를 보는 시선', '연애로 발전할 가능성',
                 '썸 단계의 주의사항', '고백 타이밍과 개운법',
+                // 배우자
                 '공명과 유대', '가정 역할과 생활 방식', '경제·자산 궁합',
-                '자녀와 가족 관계', '부부 개운법·처방',
-                '이별의 명리적 구조', '아직 남아있는 에너지', '재회 가능성 진단',
-                '상처와 회복의 방향', '앞으로의 처방',
-                '공동 비전과 시너지', '역할 분담과 의사결정', '금전 궁합과 리스크',
-                '위기 관리와 갈등 해소', '파트너십 처방',
-                '마음의 진짜 방향', '상대의 마음 읽기', '고백 전략과 타이밍',
-                '포기해야 할 신호', '짝사랑 처방',
-                '영혼의 공명 구조', '보이지 않는 연결', '함께 있을 때 일어나는 변화',
-                '이 관계의 어두운 면', '소울메이트 처방',
-                '경쟁의 에너지 구조', '서로의 강점과 약점', '이기는 전략 vs 성장 전략',
-                '감정적 마찰과 자존심', '라이벌 처방',
-                '이 성장 관계의 명리 구조', '가르침과 배움의 방향', '성장 시너지와 갈등',
-                '역할 전환의 가능성', '멘토·멘티 처방',
-                '상생과 끌림', '서로 채워주는 것', '갈등 포인트',
+                '자녀와 가족 관계',
+                // 전 연인/전 배우자
+                '왜 헤어졌는가', '그때 서로에게 어떤 존재였나', '재결합 가능성',
+                '이 관계에서 배운 것', '감정 정리와 개운법',
+                // 사업 파트너
+                '파트너십의 에너지 구조', '최대 시너지 영역', '파트너십의 위험 신호',
+                '금전과 신뢰', '사업 파트너십 처방',
+                // 짝사랑
+                '왜 이 사람에게 끌리는가', '상대방 눈에 나는 어떻게 보이는가', '마음이 이어질 가능성',
+                '이런 행동은 멀어지게 한다', '고백 타이밍과 처방',
+                // 소울메이트
+                '이 인연의 명리적 정체', '영혼의 공명 — 왜 통하는가', '서로가 서로를 완성하는 구조',
+                '소울메이트도 겪는 갈등', '이 인연에서 각자가 성장하는 것', '이 인연을 지키는 처방',
+                // 라이벌
+                '이 라이벌 관계의 정체', '서로가 서로에게 주는 자극', '라이벌 관계의 그림자',
+                '라이벌을 활용해 성장하는 전략', '이 경쟁의 최종 가치',
+                // 멘토·멘티
+                '이 성장 관계의 명리 구조', '배움의 방식과 시너지', '멘토십의 그림자',
+                '각자에게 주는 성장', '멘토십을 오래 지속하는 처방',
               ];
 
-              // Build regex: match lines that start with ▶ or match known section titles
-              const titlePattern = SECTION_TITLES.map(t => t.replace(/[·()]/g, s => `\\${s}`)).join('|');
+              // Build regex: ▶ 로 시작하는 줄 또는 알려진 섹션 제목과 매치
+              const titlePattern = SECTION_TITLES.map(t => t.replace(/[·()—]/g, s => `\\${s}`)).join('|');
               const sectionRegex = new RegExp(`^\\s*(?:▶\\s*)?(?:${titlePattern})(?:\\s*\\(.+?\\))?\\s*$`, 'gm');
 
               const parts: { title: string; body: string }[] = [];
@@ -1440,10 +1452,27 @@ export default function GunghapPage() {
                 });
               }
 
+              // ▶ 기반 fallback: SECTION_TITLES에 없어도 ▶로 시작하는 줄을 섹션 구분자로 사용
+              if (matches.length === 0) {
+                const fallbackRegex = /^\s*▶\s*(.+?)\s*$/gm;
+                let fm: RegExpExecArray | null;
+                while ((fm = fallbackRegex.exec(cleanedText)) !== null) {
+                  matches.push({
+                    title: fm[1].replace(/\s*\(.+?\)\s*$/, '').trim(),
+                    index: fm.index,
+                    end: fm.index + fm[0].length,
+                  });
+                }
+              }
+
               if (matches.length === 0) {
                 return (
                   <div className="p-5 rounded-2xl bg-[rgba(20,12,38,0.55)] border border-[var(--border-subtle)]">
-                    <p className="text-[15px] text-text-secondary leading-[1.85] whitespace-pre-line">{cleanedText}</p>
+                    <div className="text-[17px] text-text-secondary leading-[1.85] tracking-[-0.005em] space-y-3">
+                      {cleanedText.split(/\n\n+/).map((para, pi) => (
+                        <p key={pi} className="whitespace-pre-line">{para.trim()}</p>
+                      ))}
+                    </div>
                   </div>
                 );
               }
@@ -1457,11 +1486,31 @@ export default function GunghapPage() {
 
               return (
                 <div className="space-y-2">
-                  {preamble && (
-                    <div className="p-4 rounded-2xl bg-[rgba(20,12,38,0.55)] border border-[var(--border-subtle)]">
-                      <p className="text-[15px] text-text-secondary leading-[1.85] whitespace-pre-line">{preamble}</p>
-                    </div>
-                  )}
+                  {preamble && (() => {
+                    const pLines = preamble.split('\n');
+                    const pFirst = pLines[0]?.trim() ?? '';
+                    const pHasMeta = pLines.length > 1
+                      && pFirst.length > 0
+                      && pFirst.length <= 40
+                      && !pFirst.endsWith('.')
+                      && !/[다요니까습]$/.test(pFirst);
+                    const pMeta = pHasMeta ? pFirst : '';
+                    const pBody = pHasMeta ? pLines.slice(1).join('\n').trim() : preamble;
+                    return (
+                      <div className="rounded-2xl p-5 bg-[rgba(20,12,38,0.55)] border border-[var(--border-subtle)]">
+                        {pMeta && (
+                          <div className="text-[17px] font-medium leading-snug text-cta/90 mb-4" style={{ fontFamily: 'var(--font-serif)' }}>
+                            {pMeta}
+                          </div>
+                        )}
+                        <div className="text-[17px] text-text-secondary leading-[1.85] tracking-[-0.005em] space-y-3">
+                          {pBody.split(/\n\n+/).map((para, pi) => (
+                            <p key={pi} className="whitespace-pre-line">{para.trim()}</p>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  })()}
                   {parts.map((sec, idx) => {
                     const bodyLines = sec.body.trim().split('\n');
                     const firstLine = bodyLines[0]?.trim() ?? '';
