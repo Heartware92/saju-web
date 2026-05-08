@@ -18,7 +18,7 @@ import {
   CONTEXT_RULES,
   EMOTION_RULES,
 } from './dreamSymbols';
-import { SAJU_KB_BLOCK, WRITING_RULES_BLOCK, classifyAnswer, ANSWER_GROUP_LABEL, SECTION_BRANCH_RULES_BLOCK } from './sajuKnowledgeBase';
+import { SAJU_KB_BLOCK, WRITING_RULES_BLOCK, classifyAnswer, ANSWER_GROUP_LABEL, SECTION_BRANCH_RULES_BLOCK, JOB_STATE_BRANCH_BLOCK, normalizeHobbyToCategory } from './sajuKnowledgeBase';
 
 // ── 오행 상생/상극 (프롬프트 유틸용)
 const EL_GEN: Record<string, string> = { '목':'화', '화':'토', '토':'금', '금':'수', '수':'목' };
@@ -1223,7 +1223,16 @@ export const generateTodayFortuneV3Prompt = (
   // ── 사용자 입력
   const hobbiesAll = [...ctx.hobbies, ctx.customHobby].filter(Boolean) as string[];
   const hobbiesStr = hobbiesAll.length > 0 ? hobbiesAll.join(', ') : '미입력';
-  const primaryHobby = ctx.hobbies[0] || ctx.customHobby || '자기계발';
+  // customHobby 가 9분야 외 자유 텍스트면 가장 가까운 분야로 정규화 (예: "공부" → "공부·시험")
+  const customHobbyRaw = ctx.customHobby?.trim();
+  const customHobbyMapped = customHobbyRaw ? normalizeHobbyToCategory(customHobbyRaw) : null;
+  const primaryHobby = ctx.hobbies[0] || customHobbyMapped || '자기계발';
+  // 정규화된 경우만 LLM에 알림 (사용자가 "공부"라 썼는데 시스템이 "공부·시험"으로 매핑한 사실을 LLM이 알도록)
+  const customHobbyNote = customHobbyRaw && customHobbyMapped && customHobbyMapped !== customHobbyRaw
+    ? `\n  · 사용자 직접 입력 "${customHobbyRaw}" → 분야 "${customHobbyMapped}"로 매핑 (본문에서는 사용자 원본 표현 "${customHobbyRaw}" 자연스럽게 인용)`
+    : (customHobbyRaw && !customHobbyMapped
+        ? `\n  · 사용자 직접 입력 "${customHobbyRaw}" → 9분야 매핑 실패. LLM 자율로 가장 가까운 분야 선택 후 본문 작성 (사용자 원본 표현은 본문에 인용).`
+        : '');
   const slotLabel = TODAY_TIME_SLOT_LABELS[ctx.timeSlot];
   const q1 = ctx.q1Text || '';
   const q2 = ctx.q2Text || '';
@@ -1240,28 +1249,18 @@ export const generateTodayFortuneV3Prompt = (
   const allGroupsCode = allGroups.length > 0 ? allGroups.join(', ') : 'other';
   const userInputBlock = `[사용자 현재 상황 — 모든 섹션 풀이에 강제 반영]
 - 진입 시간대: ${slotLabel} (${ctx.timeSlot} 시간 구간)
-- 가장 많은 시간을 쏟는 분야: ${hobbiesStr}  (5번 섹션의 분야 분기 기준: ${primaryHobby})
+- 가장 많은 시간을 쏟는 분야: ${hobbiesStr}  (5번 섹션의 분야 분기 기준: ${primaryHobby})${customHobbyNote}
 - 직업 상태: ${ctx.jobState}
 - 연애 상태: ${ctx.loveState}
 - 질문 1 ("${q1}"): ${q1Filled || '(미답 — 추정 금지, 답변 인용 없이 일반 풀이)'}
 - 질문 2 ("${q2}"): ${q2Filled || '(미답 — 추정 금지, 답변 인용 없이 일반 풀이)'}
 
-[답변 자동 분류 결과 — 아래 [섹션별 비중·강조점 분기 가이드]에 따라 8개 본문 섹션 풀이 강제 변형]
+[답변 자동 분류 결과 — 위 [섹션별 비중·강조점 분기 가이드] 블록의 분기 규칙을 그대로 적용]
 · 질문 1 답변 → 분류 그룹: ${q1GroupsLabel}
 · 질문 2 답변 → 분류 그룹: ${q2GroupsLabel}
 · 종합 분류 그룹(누적 적용 대상): ${allGroupsLabel} [코드: ${allGroupsCode}]
-
-[질문 답변 활용 원칙 — 반드시 따를 것]
-· 답변은 사용자가 칩으로 고른 정형 키워드(예: "많이 피곤", "약속·만남", "후회") 또는 짧은 직접 입력값입니다.
-· 그 키워드의 자구 그대로를 본문에 넣고 끝내지 말고, 만세력 데이터(일진 ${todayGz.gan}${todayGz.zhi} / 십성 / 합충 / 용신 ${yongSinElement} / 신강신약)와 연결해 "왜 그런 상태인지 / 오늘 어떻게 다뤄야 하는지"를 짚어줄 것.
-· 답변 의미별로 가장 관련 깊은 섹션에 녹입니다. 추천 매핑:
-  - 사람·관계 키워드(가족·친구·연인·약속·만남·연락 등) → today_relationship 본문에 만세력 근거 + 답변 결합 인용.
-  - 컨디션·피로·휴식 키워드(매우 좋음·조금 피곤·많이 피곤·푹 쉬는·휴식 등) → today_sleep + today_exercise + today_flow 흐름에 반영.
-  - 부정 감정·우려 키워드(후회·불안·답답한·걱정거리·고민·어떤 결정 등) → today_caution 본문에 합충·신살과 결합 인용.
-  - 긍정 감정·기대 키워드(기대되는 일·뿌듯함·평온함·즐거운·보람찬 등) → today_strength 본문에 길성 신살·용신 흐름과 결합 인용.
-  - 업무·공부·마감 키워드(회의·미팅·업무·마감·시험·발표·과제 처리 등) → today_hobby_method 본문에 일진 십성과 결합 인용.
-  - 어디에 녹여도 어색하면 today_oneliner 한 줄에 최소 1회 자연스럽게 짚을 것.
-· 답변이 점수에도 영향: "많이 피곤"·"답답한" 등은 회복·멘탈 점수 ↓, "매우 좋음"·"기대되는 일" 등은 멘탈·금전·횡재 ↑로 반영(상세는 점수 규칙 참조).`;
+· 'other'로 분류된 답변(자유 입력 등)은 [자유 입력 답변 처리] 가이드의 자율 분류 기준대로 LLM이 의미 분류해 가장 가까운 그룹의 분기 적용.
+· 답변 키워드는 본문에 1회 자연스럽게 인용하되, 만세력 데이터(일진 ${todayGz.gan}${todayGz.zhi}·십성·합충·용신 ${yongSinElement}·신강신약 ${result.strengthStatus})와 결합해 의미를 풀이.`;
 
   // ── 5번 섹션 분야별 가이드 (LLM 사전 주입)
   const hobbyMethodGuide: Record<string, string> = {
@@ -1288,12 +1287,14 @@ export const generateTodayFortuneV3Prompt = (
 [사고 흐름 — 본문 작성 전 머릿속에서 반드시 거칠 것]
 1) 일진(${todayGz.gan}${todayGz.zhi})의 천간·지지·십성·합충을 [명리 의미 KB]에서 의미로 옮긴다.
 2) 4층 운기(대운·세운·월운·일진)가 오늘 어떻게 겹쳐 작용하는지 1줄로 정리한다.
-3) 사용자 답변(있다면)을 [질문 답변 활용 원칙]대로 분류 — 어느 섹션에 녹일지 결정한다.
+3) 사용자 답변(있다면)의 [답변 자동 분류 결과]를 본 후 [섹션별 비중·강조점 분기 가이드] 적용 + jobState 분기 + 'other' 케이스는 [자유 입력 답변 처리] 자율 분류.
 4) 각 섹션을 [데이터 인용 → 일상 인과 → 구체 장면 → 행동 권고] 4단 구조로 작성한다.
 
 ${SAJU_KB_BLOCK}
 
 ${SECTION_BRANCH_RULES_BLOCK}
+
+${JOB_STATE_BRANCH_BLOCK}
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 [사주 원국 — 만세력 전체]
@@ -1340,6 +1341,7 @@ ${WRITING_RULES_BLOCK.replace('${todayGz_label}', `${todayGz.gan}${todayGz.zhi}`
 · 사용자 입력값 인용 강제: 취미(${primaryHobby})·직업(${ctx.jobState})·연애(${ctx.loveState})·시간대(${slotLabel})를 본문에서 각각 한 번씩 명시 언급.
 · 만세력 수치(격국·용신·신강·오행%·십성·신살·합충)는 임의로 뒤집거나 변경 금지.
 · ★★ 동적 분기 강제: [답변 자동 분류 결과](${allGroupsCode})에 매칭되는 그룹의 [섹션별 비중·강조점 분기 가이드]를 8개 본문 섹션(today_basis ~ today_oneliner)에 모두 적용. 그룹이 여럿이면 누적 적용. 같은 사주라도 답변이 다르면 풀이가 확연히 달라야 한다. 분기 미적용 = 사고로 간주.
+· ★★ 직업 상태 분기 강제: [직업 상태별 본문 톤·장면 분기 가이드]의 jobState=${ctx.jobState} 항목대로 본문 등장 장면을 그 직업 일상으로 맞춤. 답변 칩이 직업과 안 맞으면 jobState 우선으로 톤 변형 (예: 주부 + "회의·미팅" → "가족 모임 자리"로).
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 [★★★ 마커 출력 절대 규칙 ★★★]
