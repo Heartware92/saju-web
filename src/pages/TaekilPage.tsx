@@ -192,9 +192,9 @@ export default function TaekilPage() {
   }, [compute]);
 
   // 카테고리 변경시 선택/결과 초기화 (보관함 모드에서는 스킵)
+  // subItem은 여기서 초기화하지 않음 — 칩 onClick에서 동시에 관리
   useEffect(() => {
     if (isArchiveMode) return;
-    setSubItem(null);
     setPickedDates([]);
     setAiAdvice(null);
     setParsedAdvice(null);
