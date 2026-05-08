@@ -478,10 +478,15 @@ export default function SajuResultPage() {
             if (!text) return null;
             const isAdvice = key === 'advice';
 
-            // 첫 줄 = 은유 제목, 나머지 = 본문
             const lines = text.trim().split('\n');
-            const metaphorTitle = lines[0].trim();
-            const bodyText = lines.slice(1).join('\n').trim();
+            const firstLine = lines[0]?.trim() ?? '';
+            const hasMetaphor = lines.length > 1
+              && firstLine.length > 0
+              && firstLine.length <= 40
+              && !firstLine.endsWith('.')
+              && !/[다요니까습]$/.test(firstLine);
+            const metaphorTitle = hasMetaphor ? firstLine : '';
+            const bodyText = hasMetaphor ? lines.slice(1).join('\n').trim() : text.trim();
 
             return (
               <motion.div
@@ -502,13 +507,14 @@ export default function SajuResultPage() {
                   </div>
                 </div>
 
-                {/* 은유 제목 — 레이블 아래, 서브 톤 */}
-                <div
-                  className="text-[17px] font-medium leading-snug text-cta/90 mb-4 pl-3"
-                  style={{ fontFamily: 'var(--font-serif)' }}
-                >
-                  {metaphorTitle}
-                </div>
+                {metaphorTitle && (
+                  <div
+                    className="text-[17px] font-medium leading-snug text-cta/90 mb-4 pl-3"
+                    style={{ fontFamily: 'var(--font-serif)' }}
+                  >
+                    {metaphorTitle}
+                  </div>
+                )}
 
                 {isAdvice && report.adviceMeta ? (
                   <AdviceCard

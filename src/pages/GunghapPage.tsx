@@ -1463,9 +1463,15 @@ export default function GunghapPage() {
                     </div>
                   )}
                   {parts.map((sec, idx) => {
-                    const lines = sec.body.trim().split('\n');
-                    const metaphorTitle = lines[0]?.trim() ?? '';
-                    const bodyText = lines.slice(1).join('\n').trim();
+                    const bodyLines = sec.body.trim().split('\n');
+                    const firstLine = bodyLines[0]?.trim() ?? '';
+                    const hasMetaphor = bodyLines.length > 1
+                      && firstLine.length > 0
+                      && firstLine.length <= 40
+                      && !firstLine.endsWith('.')
+                      && !/[다요니까습]$/.test(firstLine);
+                    const metaphorTitle = hasMetaphor ? firstLine : '';
+                    const bodyText = hasMetaphor ? bodyLines.slice(1).join('\n').trim() : sec.body.trim();
 
                     return (
                       <motion.div
@@ -1481,9 +1487,11 @@ export default function GunghapPage() {
                             {sec.title}
                           </div>
                         </div>
-                        <div className="text-[17px] font-medium leading-snug text-cta/90 mb-4 pl-3" style={{ fontFamily: 'var(--font-serif)' }}>
-                          {metaphorTitle}
-                        </div>
+                        {metaphorTitle && (
+                          <div className="text-[17px] font-medium leading-snug text-cta/90 mb-4 pl-3" style={{ fontFamily: 'var(--font-serif)' }}>
+                            {metaphorTitle}
+                          </div>
+                        )}
                         <div className="text-[17px] text-text-secondary leading-[1.85] tracking-[-0.005em] space-y-3">
                           {bodyText.split(/\n\n+/).map((para, pi) => (
                             <p key={pi} className="whitespace-pre-line">{para.trim()}</p>

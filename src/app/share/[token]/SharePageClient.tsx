@@ -423,8 +423,14 @@ export default function SharePageClient({ type, record }: Props) {
 
 function SectionCard({ label, text, idx }: { label: string; text: string; idx: number }) {
   const lines = text.trim().split('\n');
-  const metaphorTitle = lines[0]?.trim() ?? '';
-  const bodyText = lines.slice(1).join('\n').trim();
+  const firstLine = lines[0]?.trim() ?? '';
+  const hasMetaphor = lines.length > 1
+    && firstLine.length > 0
+    && firstLine.length <= 40
+    && !firstLine.endsWith('.')
+    && !/[다요니까습]$/.test(firstLine);
+  const metaphorTitle = hasMetaphor ? firstLine : '';
+  const bodyText = hasMetaphor ? lines.slice(1).join('\n').trim() : text.trim();
 
   return (
     <motion.div
@@ -445,12 +451,14 @@ function SectionCard({ label, text, idx }: { label: string; text: string; idx: n
         </div>
       )}
 
-      <div
-        className="text-[17px] font-medium leading-snug text-cta/90 mb-4 pl-3"
-        style={{ fontFamily: 'var(--font-serif)' }}
-      >
-        {metaphorTitle}
-      </div>
+      {metaphorTitle && (
+        <div
+          className="text-[17px] font-medium leading-snug text-cta/90 mb-4 pl-3"
+          style={{ fontFamily: 'var(--font-serif)' }}
+        >
+          {metaphorTitle}
+        </div>
+      )}
 
       <div className="text-[17px] text-text-secondary leading-[1.85] tracking-[-0.005em] space-y-3">
         {bodyText.split(/\n\n+/).map((para, pi) => (
