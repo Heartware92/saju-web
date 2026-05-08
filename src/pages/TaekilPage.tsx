@@ -130,6 +130,7 @@ export default function TaekilPage() {
 
   // ── Step 상태 ──
   const [category, setCategory] = useState<TaekilCategory | null>(null);
+  const [subItem, setSubItem] = useState<string | null>(null);
   /** category='custom' 일 때만 사용 — 사용자가 직접 입력한 행사 이름 (예: "전시회 오픈") */
   const [customLabel, setCustomLabel] = useState('');
 
@@ -167,13 +168,13 @@ export default function TaekilPage() {
   const [showArchiveList, setShowArchiveList] = useState(false);
   const [refetchNonce, setRefetchNonce] = useState(0);
 
-  // 캐시 키 — custom 일 때 customLabel 도 키에 포함 (다른 행사면 다른 풀이)
   const taekilCacheKey = useMemo(() => {
     if (!saju || !category || pickedDates.length === 0) return null;
     if (category === 'custom' && !customLabel.trim()) return null;
+    const subSeg = subItem ? `:${subItem}` : '';
     const customSeg = category === 'custom' ? `:${customLabel.trim().slice(0, 30)}` : '';
-    return `${sajuKey(saju)}:${category}${customSeg}:${[...pickedDates].sort().join(',')}`;
-  }, [saju, category, pickedDates, customLabel]);
+    return `${sajuKey(saju)}:${category}${subSeg}${customSeg}:${[...pickedDates].sort().join(',')}`;
+  }, [saju, category, subItem, pickedDates, customLabel]);
 
   // 카테고리/연월 변경시 엔진 재계산 (보관함 모드에서는 스킵)
   const compute = useCallback(() => {
@@ -182,9 +183,9 @@ export default function TaekilPage() {
     const start = `${viewYear}-${String(viewMonth).padStart(2, '0')}-01`;
     const lastDay = daysInMonth(viewYear, viewMonth);
     const end = `${viewYear}-${String(viewMonth).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
-    const r = calculateTaekil(saju, category, start, end, category === 'custom' ? customLabel : undefined);
+    const r = calculateTaekil(saju, category, start, end, category === 'custom' ? customLabel : undefined, subItem ?? undefined);
     setResult(r);
-  }, [saju, viewYear, viewMonth, category, isArchiveMode, customLabel]);
+  }, [saju, viewYear, viewMonth, category, subItem, isArchiveMode, customLabel]);
 
   useEffect(() => {
     compute();
@@ -193,12 +194,12 @@ export default function TaekilPage() {
   // 카테고리 변경시 선택/결과 초기화 (보관함 모드에서는 스킵)
   useEffect(() => {
     if (isArchiveMode) return;
+    setSubItem(null);
     setPickedDates([]);
     setAiAdvice(null);
     setParsedAdvice(null);
     setAiError(null);
     setShowResult(false);
-    // 카테고리가 custom 이 아니면 customLabel 초기화
     if (category !== 'custom') setCustomLabel('');
   }, [category, isArchiveMode]);
 
@@ -224,6 +225,7 @@ export default function TaekilPage() {
           // legacy id (marriage/moving/business/contract/travel/surgery) → 신 묶음으로 변환
           const migrated = migrateLegacyCategory(engine.category as string) ?? engine.category;
           setCategory(migrated);
+          if (engine.subItem) setSubItem(engine.subItem);
           if (engine.customLabel) setCustomLabel(engine.customLabel);
           setResult({ ...engine, category: migrated });
           setPickedDates(engine.days.map(d => d.date));
@@ -474,6 +476,44 @@ export default function TaekilPage() {
                 </button>
               ))}
             </div>
+
+            {/* 하위항목 선택 */}
+            {category && category !== 'custom' && (() => {
+              const cat = TAEKIL_CATEGORIES.find(c => c.id === category);
+              if (!cat || cat.subItems.length === 0) return null;
+              return (
+                <div style={{ marginTop: 14 }}>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-secondary)', marginBottom: 8 }}>
+                    구체적인 행사를 선택해주세요
+                  </div>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                    {cat.subItems.map(item => (
+                      <button
+                        key={item}
+                        onClick={() => setSubItem(subItem === item ? null : item)}
+                        style={{
+                          padding: '8px 16px',
+                          borderRadius: '20px',
+                          border: subItem === item
+                            ? '2px solid var(--cta-primary)'
+                            : '1px solid var(--border-subtle)',
+                          background: subItem === item
+                            ? 'rgba(124,92,252,0.2)'
+                            : 'var(--space-elevated)',
+                          fontSize: '15px',
+                          fontWeight: subItem === item ? 700 : 500,
+                          color: subItem === item ? 'var(--cta-primary)' : 'var(--text-primary)',
+                          cursor: 'pointer',
+                          transition: 'all 0.15s',
+                        }}
+                      >
+                        {item}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              );
+            })()}
 
             {/* 기타 선택 시 직접 입력 — 사주·일진 데이터에 사용자 텍스트가 결합되어 풀이됨 */}
             {category === 'custom' && (

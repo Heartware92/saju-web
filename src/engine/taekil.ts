@@ -37,14 +37,14 @@ export type TaekilCategory =
   | 'birth'      // 새 생명을 맞다 — 출산·제왕절개
   | 'custom';    // 기타 — 사용자 직접 입력
 
-export const TAEKIL_CATEGORIES: { id: TaekilCategory; label: string; desc: string }[] = [
-  { id: 'settle',   label: '터를 잡다',      desc: '이사 · 입주 · 창업 · 개업 · 신축' },
-  { id: 'bond',     label: '마음을 묶다',    desc: '혼례 · 약혼 · 상견례 · 고백 · 재회' },
-  { id: 'decision', label: '획을 긋다',      desc: '큰 계약 · 매매 · 차량 · 이별 · 퇴사 · 관계 정리' },
-  { id: 'journey',  label: '길을 나서다',    desc: '여행 · 해외 출장 · 이주 · 유학 · 면접 · 시험' },
-  { id: 'heal',     label: '몸을 보살피다',  desc: '수술 · 시술 · 치유' },
-  { id: 'birth',    label: '새 생명을 맞다', desc: '출산 · 제왕절개' },
-  { id: 'custom',   label: '기타',           desc: '직접 입력 — 위 묶음에 없는 행사' },
+export const TAEKIL_CATEGORIES: { id: TaekilCategory; label: string; desc: string; subItems: string[] }[] = [
+  { id: 'settle',   label: '터를 잡다',      desc: '이사 · 입주 · 창업 · 개업 · 신축', subItems: ['이사', '입주', '창업', '개업', '신축'] },
+  { id: 'bond',     label: '마음을 묶다',    desc: '혼례 · 약혼 · 상견례 · 고백 · 재회', subItems: ['혼례', '약혼', '상견례', '고백', '재회'] },
+  { id: 'decision', label: '획을 긋다',      desc: '큰 계약 · 매매 · 차량 · 이별 · 퇴사 · 관계 정리', subItems: ['큰 계약', '매매', '차량 구매', '이별', '퇴사', '관계 정리'] },
+  { id: 'journey',  label: '길을 나서다',    desc: '여행 · 해외 출장 · 이주 · 유학 · 면접 · 시험', subItems: ['여행', '해외 출장', '이주', '유학', '면접', '시험'] },
+  { id: 'heal',     label: '몸을 보살피다',  desc: '수술 · 시술 · 치유', subItems: ['수술', '시술', '치유'] },
+  { id: 'birth',    label: '새 생명을 맞다', desc: '출산 · 제왕절개', subItems: ['출산', '제왕절개'] },
+  { id: 'custom',   label: '기타',           desc: '직접 입력 — 위 묶음에 없는 행사', subItems: [] },
 ];
 
 /**
@@ -95,6 +95,8 @@ export interface TaekilDay {
 export interface TaekilResult {
   category: TaekilCategory;
   categoryLabel: string;
+  /** 대분류 내 선택된 구체적 행사 (예: "이사", "창업"). custom일 때는 undefined. */
+  subItem?: string;
   /** category='custom' 일 때 사용자가 직접 입력한 행사 이름. (예: "전시회 오픈", "리허설"). 다른 묶음에선 undefined. */
   customLabel?: string;
   startDate: string;
@@ -529,6 +531,7 @@ export function calculateTaekil(
   startDate: string,
   endDate: string,
   customLabel?: string,
+  subItem?: string,
 ): TaekilResult {
   const start = new Date(startDate);
   const end = new Date(endDate);
@@ -554,6 +557,7 @@ export function calculateTaekil(
   return {
     category,
     categoryLabel: finalLabel,
+    subItem: category !== 'custom' ? subItem : undefined,
     customLabel: category === 'custom' ? trimmedCustom : undefined,
     startDate,
     endDate,
