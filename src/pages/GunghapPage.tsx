@@ -786,7 +786,7 @@ export default function GunghapPage() {
             gender: other.gender,
             calendar_type: other.calendar_type,
             is_primary: false,
-          }).catch(() => {});
+          }).catch((err) => console.warn('[Gunghap] auto-save profile failed:', err));
         }
       }
     } catch (e: unknown) {
@@ -1228,43 +1228,60 @@ export default function GunghapPage() {
                   </div>
 
                   <div>
-                    <label className="text-[13px] font-medium text-text-tertiary mb-1.5 block">생년월일</label>
+                    <label className="text-[13px] font-medium text-text-tertiary mb-1.5 block">생년월일 (YYYYMMDD)</label>
                     <input
-                      type="date"
-                      value={other.birth_date}
-                      onChange={e => setOther(o => ({ ...o, birth_date: e.target.value }))}
-                      className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-text-primary text-[16px] focus:border-cta/50 focus:outline-none transition"
+                      type="text"
+                      inputMode="numeric"
+                      maxLength={8}
+                      placeholder="YYYYMMDD (숫자 8자리)"
+                      value={other.birth_date.replace(/-/g, '')}
+                      onChange={e => {
+                        const digits = e.target.value.replace(/\D/g, '').slice(0, 8);
+                        const formatted = digits.length === 8
+                          ? `${digits.slice(0, 4)}-${digits.slice(4, 6)}-${digits.slice(6, 8)}`
+                          : digits;
+                        setOther(o => ({ ...o, birth_date: formatted }));
+                      }}
+                      className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-text-primary text-[16px] placeholder-text-tertiary focus:border-cta/50 focus:outline-none transition"
                     />
                   </div>
 
                   <div>
                     <div className="flex items-center justify-between mb-1.5">
                       <label className="text-[13px] font-medium text-text-tertiary block">
-                        출생시간
+                        출생 시간 (HHMM)
                       </label>
                       <label className="text-[13px] flex items-center gap-1 text-text-secondary cursor-pointer">
                         <input
                           type="checkbox"
                           checked={!other.birth_time}
                           onChange={(e) => {
-                            // 모름 체크 → birth_time 비움 / 해제 시 정오로 임시 채워줌
                             setOther(o => ({ ...o, birth_time: e.target.checked ? '' : '12:00' }));
                           }}
                           className="accent-cta"
                         />
-                        시간 모름
+                        모름
                       </label>
                     </div>
                     <input
-                      type="time"
-                      value={other.birth_time}
-                      onChange={e => setOther(o => ({ ...o, birth_time: e.target.value }))}
+                      type="text"
+                      inputMode="numeric"
+                      maxLength={4}
+                      placeholder="HHMM (숫자 4자리, 24시 표기)"
+                      value={other.birth_time.replace(':', '')}
+                      onChange={e => {
+                        const digits = e.target.value.replace(/\D/g, '').slice(0, 4);
+                        const formatted = digits.length >= 3
+                          ? `${digits.slice(0, 2)}:${digits.slice(2)}`
+                          : digits;
+                        setOther(o => ({ ...o, birth_time: formatted }));
+                      }}
                       disabled={!other.birth_time && other.birth_time === ''}
-                      className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-text-primary text-[16px] focus:border-cta/50 focus:outline-none transition disabled:opacity-40"
+                      className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-text-primary text-[16px] placeholder-text-tertiary focus:border-cta/50 focus:outline-none transition disabled:opacity-40"
                     />
                     {!other.birth_time && (
                       <p className="text-[12px] text-text-tertiary mt-1">
-                        시간을 모르면 시주(時柱)가 없는 삼주추명으로 분석되어, 자녀·말년 영역 해석은 제한적입니다.
+                        시간을 모르면 시주(時柱)가 없는 삼주추명으로 분석됩니다.
                       </p>
                     )}
                   </div>
