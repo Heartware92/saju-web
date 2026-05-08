@@ -813,6 +813,7 @@ export default function GunghapPage() {
     setOtherRole('');
     setRoleSwapped(false);
     setCustomLabel('');
+    window.scrollTo({ top: 0 });
   };
 
   // 궁합 분석 로딩 전체화면
