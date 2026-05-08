@@ -1436,31 +1436,31 @@ export default function GunghapPage() {
                 '각자에게 주는 성장', '멘토십을 오래 지속하는 처방',
               ];
 
-              // Build regex: ▶ 로 시작하는 줄 또는 알려진 섹션 제목과 매치
-              const titlePattern = SECTION_TITLES.map(t => t.replace(/[·()—]/g, s => `\\${s}`)).join('|');
-              const sectionRegex = new RegExp(`^\\s*(?:▶\\s*)?(?:${titlePattern})(?:\\s*\\(.+?\\))?\\s*$`, 'gm');
-
+              // ▶ 기반 파싱 (항상 우선): 모든 궁합 프롬프트가 "▶ 제목" 형식 강제
               const parts: { title: string; body: string }[] = [];
               let preamble = '';
               const matches: { title: string; index: number; end: number }[] = [];
-              let m: RegExpExecArray | null;
-              while ((m = sectionRegex.exec(cleanedText)) !== null) {
+
+              const markerRegex = /^\s*▶\s*(.+?)\s*$/gm;
+              let fm: RegExpExecArray | null;
+              while ((fm = markerRegex.exec(cleanedText)) !== null) {
                 matches.push({
-                  title: m[0].replace(/^[\s▶]+/, '').replace(/\s*\(.+?\)\s*$/, '').trim(),
-                  index: m.index,
-                  end: m.index + m[0].length,
+                  title: fm[1].replace(/\s*\(.+?\)\s*$/, '').trim(),
+                  index: fm.index,
+                  end: fm.index + fm[0].length,
                 });
               }
 
-              // ▶ 기반 fallback: SECTION_TITLES에 없어도 ▶로 시작하는 줄을 섹션 구분자로 사용
+              // fallback: ▶ 마커 없으면 알려진 섹션 제목으로 매칭
               if (matches.length === 0) {
-                const fallbackRegex = /^\s*▶\s*(.+?)\s*$/gm;
-                let fm: RegExpExecArray | null;
-                while ((fm = fallbackRegex.exec(cleanedText)) !== null) {
+                const titlePattern = SECTION_TITLES.map(t => t.replace(/[·()—]/g, s => `\\${s}`)).join('|');
+                const sectionRegex = new RegExp(`^\\s*(?:${titlePattern})(?:\\s*\\(.+?\\))?\\s*$`, 'gm');
+                let m: RegExpExecArray | null;
+                while ((m = sectionRegex.exec(cleanedText)) !== null) {
                   matches.push({
-                    title: fm[1].replace(/\s*\(.+?\)\s*$/, '').trim(),
-                    index: fm.index,
-                    end: fm.index + fm[0].length,
+                    title: m[0].replace(/\s*\(.+?\)\s*$/, '').trim(),
+                    index: m.index,
+                    end: m.index + m[0].length,
                   });
                 }
               }
@@ -1484,17 +1484,41 @@ export default function GunghapPage() {
                 parts.push({ title: matches[i].title, body: cleanedText.slice(bodyStart, bodyEnd).trim() });
               }
 
+              // 은유 부제목 판별 — 자연/우주 은유 이미지가 포함된 짧은 명사구만 통과
+              const isLikelyMetaphor = (line: string): boolean => {
+                const t = line.trim();
+                // 길이: 프롬프트 기준 7~20자, 여유 두고 4~28자
+                if (!t || t.length < 4 || t.length > 28) return false;
+                // 문장 종결 패턴 → 본문
+                if (/[.?!。,]$/.test(t)) return false;
+                if (/[다요니까습됩세죠네라며]$/.test(t)) return false;
+                // 숫자/괄호 → 본문
+                if (/\d/.test(t)) return false;
+                if (/[()（）\[\]]/.test(t)) return false;
+                // 명리 용어 → 본문
+                if (/오행|천간|지지|용신|기신|인성|비겁|식상|재성|관성|상생|상극|사주|명리|신강|신약/.test(t)) return false;
+                // 분석/관계 용어 → 본문
+                if (/관계|구조|에너지|소통|갈등|충돌|보완|역할|분석|패턴|전략|시너지|핵심|균형|배우자|결핍|처방|경쟁|성장|발전|가능성|방향|특징|위험|신호|가치|원칙|조건|이유|원인|문제|해결|방법|주의|장점|단점|강점|약점|선물|과제|비결|비법|목표|현실|미래|과거|노력|책임|의무|역량|태도|습관|마음가짐/.test(t)) return false;
+                // "~의 ~"로 시작하는 이름+조사 패턴 → 본문 (단, 자연 이미지 포함 시 제외)
+                if (/^[가-힣]{2,4}[의와과은는이가에]/.test(t) && !/달빛|별빛|바람|하늘|바다|호수|나무|꽃|그림자|파도|바위|등불|안개|서리|눈|빛|별|숲|물|불|뿌리|보름달|초승달|반달|모닥불|톱니바퀴|무지개|이슬|샘물|폭포|여울|옹달샘|등대|촛불|횃불|나침반|돛|닻/.test(t)) return false;
+                return true;
+              };
+
               return (
                 <div className="space-y-2">
                   {preamble && (() => {
                     const pLines = preamble.trim().split('\n');
-                    const pMeta = pLines[0]?.trim() ?? '';
-                    const pBody = pLines.slice(1).join('\n').trim();
+                    const firstLine = pLines[0]?.trim() ?? '';
+                    const hasMeta = isLikelyMetaphor(firstLine);
+                    const pMeta = hasMeta ? firstLine : '';
+                    const pBody = hasMeta ? pLines.slice(1).join('\n').trim() : preamble.trim();
                     return (
                       <div className="rounded-2xl p-5 bg-[rgba(20,12,38,0.55)] border border-[var(--border-subtle)]">
-                        <div className="text-[17px] font-medium leading-snug text-cta/90 mb-4" style={{ fontFamily: 'var(--font-serif)' }}>
-                          {pMeta}
-                        </div>
+                        {pMeta && (
+                          <div className="text-[17px] font-medium leading-snug text-cta/90 mb-4" style={{ fontFamily: 'var(--font-serif)' }}>
+                            {pMeta}
+                          </div>
+                        )}
                         {pBody && (
                           <div className="text-[17px] text-text-secondary leading-[1.85] tracking-[-0.005em] space-y-3">
                             {pBody.split(/\n\n+/).map((para, pi) => (
@@ -1507,8 +1531,10 @@ export default function GunghapPage() {
                   })()}
                   {parts.map((sec, idx) => {
                     const lines = sec.body.trim().split('\n');
-                    const metaphorTitle = lines[0]?.trim() ?? '';
-                    const bodyText = lines.slice(1).join('\n').trim();
+                    const firstLine = lines[0]?.trim() ?? '';
+                    const hasMeta = isLikelyMetaphor(firstLine);
+                    const metaphorTitle = hasMeta ? firstLine : '';
+                    const bodyText = hasMeta ? lines.slice(1).join('\n').trim() : sec.body.trim();
 
                     return (
                       <motion.div
@@ -1524,9 +1550,11 @@ export default function GunghapPage() {
                             {sec.title}
                           </div>
                         </div>
-                        <div className="text-[17px] font-medium leading-snug text-cta/90 mb-4 pl-3" style={{ fontFamily: 'var(--font-serif)' }}>
-                          {metaphorTitle}
-                        </div>
+                        {metaphorTitle && (
+                          <div className="text-[17px] font-medium leading-snug text-cta/90 mb-4 pl-3" style={{ fontFamily: 'var(--font-serif)' }}>
+                            {metaphorTitle}
+                          </div>
+                        )}
                         <div className="text-[17px] text-text-secondary leading-[1.85] tracking-[-0.005em] space-y-3">
                           {bodyText.split(/\n\n+/).map((para, pi) => (
                             <p key={pi} className="whitespace-pre-line">{para.trim()}</p>
@@ -1541,18 +1569,12 @@ export default function GunghapPage() {
 
             {/* 액션 버튼 — 보관함 모드에서는 상단 뒤로가기로 충분하므로 숨김 */}
             {!isArchiveMode && (
-              <div className="flex gap-2 mt-5">
+              <div className="mt-5">
                 <button
                   onClick={reset}
-                  className="flex-1 py-3.5 rounded-2xl border border-white/15 text-text-secondary font-medium text-[16px] active:scale-[0.98] transition-all"
+                  className="w-full py-3.5 rounded-2xl border border-white/15 text-text-secondary font-medium text-[16px] active:scale-[0.98] transition-all"
                 >
                   처음으로
-                </button>
-                <button
-                  onClick={() => { setStep('input'); setResult(''); setError(''); }}
-                  className="flex-1 py-3.5 rounded-2xl bg-cta/20 border border-cta/40 text-cta font-bold text-[16px] active:scale-[0.98] transition-all"
-                >
-                  다른 상대 분석
                 </button>
               </div>
             )}

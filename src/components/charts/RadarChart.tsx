@@ -38,11 +38,11 @@ export function RadarChart({
   const n = domains.length;
   if (n < 3) return null;
 
-  const pad = 35;
+  const pad = 42;
   const cx = pad + size / 2;
   const cy = pad + size / 2;
-  const maxR = size * 0.36;
-  const labelR = size * 0.46;
+  const maxR = size * 0.34;
+  const labelR = size * 0.47;
   const vbW = size + pad * 2;
   const vbH = size + pad * 2;
   const gridLevels = [20, 40, 60, 80, 100];
@@ -117,16 +117,16 @@ export function RadarChart({
               <text
                 x={x} y={y + dy}
                 textAnchor={anchor}
-                fontSize={11}
+                fontSize={13}
                 fontWeight={600}
-                fill="rgba(255,255,255,0.7)"
+                fill="rgba(255,255,255,0.8)"
               >
                 {d.label}
               </text>
               <text
-                x={x} y={y + dy + 14}
+                x={x} y={y + dy + 16}
                 textAnchor={anchor}
-                fontSize={11}
+                fontSize={14}
                 fontWeight={700}
                 fill={d.color || strokeColor}
               >

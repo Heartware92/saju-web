@@ -421,14 +421,23 @@ export default function SharePageClient({ type, record }: Props) {
   );
 }
 
+function isLikelyMetaphor(line: string): boolean {
+  const t = line.trim();
+  if (!t || t.length < 4 || t.length > 28) return false;
+  if (/[.?!。,]$/.test(t)) return false;
+  if (/[다요니까습됩세죠네라며]$/.test(t)) return false;
+  if (/\d/.test(t)) return false;
+  if (/[()（）\[\]]/.test(t)) return false;
+  if (/오행|천간|지지|용신|기신|인성|비겁|식상|재성|관성|상생|상극|사주|명리|신강|신약/.test(t)) return false;
+  if (/관계|구조|에너지|소통|갈등|충돌|보완|역할|분석|패턴|전략|시너지|핵심|균형|배우자|결핍|처방|경쟁|성장|발전|가능성|방향|특징|위험|신호|가치|원칙|조건|이유|원인|문제|해결|방법|주의|장점|단점|강점|약점|선물|과제|비결|비법|목표|현실|미래|과거|노력|책임|의무|역량|태도|습관|마음가짐/.test(t)) return false;
+  if (/^[가-힣]{2,4}[의와과은는이가에]/.test(t) && !/달빛|별빛|바람|하늘|바다|호수|나무|꽃|그림자|파도|바위|등불|안개|서리|눈|빛|별|숲|물|불|뿌리|보름달|초승달|반달|모닥불|톱니바퀴|무지개|이슬|샘물|폭포|여울|옹달샘|등대|촛불|횃불|나침반|돛|닻/.test(t)) return false;
+  return true;
+}
+
 function SectionCard({ label, text, idx }: { label: string; text: string; idx: number }) {
   const lines = text.trim().split('\n');
   const firstLine = lines[0]?.trim() ?? '';
-  const hasMetaphor = lines.length > 1
-    && firstLine.length > 0
-    && firstLine.length <= 40
-    && !firstLine.endsWith('.')
-    && !/[다요니까습]$/.test(firstLine);
+  const hasMetaphor = lines.length > 1 && isLikelyMetaphor(firstLine);
   const metaphorTitle = hasMetaphor ? firstLine : '';
   const bodyText = hasMetaphor ? lines.slice(1).join('\n').trim() : text.trim();
 
