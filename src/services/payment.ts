@@ -105,6 +105,7 @@ export const processPayment = async (
       redirectUrl: `${BASE_URL}/payment/callback`,
       customer: {
         email: user.email || undefined,
+        phoneNumber: user.user_metadata?.phone || undefined,
       },
       customData: {
         orderId: order.id,
