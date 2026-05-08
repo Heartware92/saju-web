@@ -434,16 +434,29 @@ export default function TaekilPage() {
               }}>1</span>
               <h2 style={{ margin: 0, fontSize: 16 }}>어떤 목적의 택일인가요?</h2>
             </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
               {TAEKIL_CATEGORIES.filter(c => c.id !== 'custom').map(cat => {
                 const isActive = category === cat.id;
                 return (
-                  <div key={cat.id}>
+                  <div
+                    key={cat.id}
+                    style={{
+                      padding: '14px 16px',
+                      borderRadius: '14px',
+                      border: isActive
+                        ? '2px solid var(--cta-primary)'
+                        : '1px solid var(--border-subtle)',
+                      background: isActive
+                        ? 'rgba(124,92,252,0.08)'
+                        : 'var(--space-elevated)',
+                      transition: 'all 0.15s',
+                    }}
+                  >
                     <div style={{
-                      fontSize: '16px',
-                      fontWeight: 700,
+                      fontSize: '18px',
+                      fontWeight: 800,
                       color: isActive ? 'var(--cta-primary)' : 'var(--text-primary)',
-                      marginBottom: '8px',
+                      marginBottom: '10px',
                     }}>
                       {cat.label}
                     </div>
@@ -458,17 +471,17 @@ export default function TaekilPage() {
                               setSubItem(selected ? null : item);
                             }}
                             style={{
-                              padding: '9px 18px',
-                              borderRadius: '20px',
+                              padding: '8px 16px',
+                              borderRadius: '10px',
                               border: selected
                                 ? '2px solid var(--cta-primary)'
-                                : '1px solid var(--border-subtle)',
+                                : '1px solid rgba(255,255,255,0.12)',
                               background: selected
-                                ? 'rgba(124,92,252,0.2)'
-                                : 'var(--space-elevated)',
+                                ? 'rgba(124,92,252,0.25)'
+                                : 'rgba(255,255,255,0.05)',
                               fontSize: '15px',
                               fontWeight: selected ? 700 : 500,
-                              color: selected ? 'var(--cta-primary)' : 'var(--text-secondary)',
+                              color: selected ? '#fff' : 'var(--text-secondary)',
                               cursor: 'pointer',
                               transition: 'all 0.15s',
                             }}
@@ -483,41 +496,48 @@ export default function TaekilPage() {
               })}
 
               {/* 기타 */}
-              {(() => {
-                const customCat = TAEKIL_CATEGORIES.find(c => c.id === 'custom')!;
-                return (
-                  <div>
-                    <div style={{
-                      fontSize: '16px',
-                      fontWeight: 700,
-                      color: category === 'custom' ? 'var(--cta-primary)' : 'var(--text-primary)',
-                      marginBottom: '8px',
-                    }}>
-                      {customCat.label}
-                    </div>
-                    <button
-                      onClick={() => { setCategory('custom'); setSubItem(null); }}
-                      style={{
-                        padding: '9px 18px',
-                        borderRadius: '20px',
-                        border: category === 'custom'
-                          ? '2px solid var(--cta-primary)'
-                          : '1px solid var(--border-subtle)',
-                        background: category === 'custom'
-                          ? 'rgba(124,92,252,0.2)'
-                          : 'var(--space-elevated)',
-                        fontSize: '15px',
-                        fontWeight: category === 'custom' ? 700 : 500,
-                        color: category === 'custom' ? 'var(--cta-primary)' : 'var(--text-secondary)',
-                        cursor: 'pointer',
-                        transition: 'all 0.15s',
-                      }}
-                    >
-                      직접 입력
-                    </button>
-                  </div>
-                );
-              })()}
+              <div
+                style={{
+                  padding: '14px 16px',
+                  borderRadius: '14px',
+                  border: category === 'custom'
+                    ? '2px solid var(--cta-primary)'
+                    : '1px solid var(--border-subtle)',
+                  background: category === 'custom'
+                    ? 'rgba(124,92,252,0.08)'
+                    : 'var(--space-elevated)',
+                  transition: 'all 0.15s',
+                }}
+              >
+                <div style={{
+                  fontSize: '18px',
+                  fontWeight: 800,
+                  color: category === 'custom' ? 'var(--cta-primary)' : 'var(--text-primary)',
+                  marginBottom: '10px',
+                }}>
+                  기타
+                </div>
+                <button
+                  onClick={() => { setCategory('custom'); setSubItem(null); }}
+                  style={{
+                    padding: '8px 16px',
+                    borderRadius: '10px',
+                    border: category === 'custom'
+                      ? '2px solid var(--cta-primary)'
+                      : '1px solid rgba(255,255,255,0.12)',
+                    background: category === 'custom'
+                      ? 'rgba(124,92,252,0.25)'
+                      : 'rgba(255,255,255,0.05)',
+                    fontSize: '15px',
+                    fontWeight: category === 'custom' ? 700 : 500,
+                    color: category === 'custom' ? '#fff' : 'var(--text-secondary)',
+                    cursor: 'pointer',
+                    transition: 'all 0.15s',
+                  }}
+                >
+                  직접 입력
+                </button>
+              </div>
             </div>
 
             {/* 기타 선택 시 직접 입력 */}
