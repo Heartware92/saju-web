@@ -72,7 +72,7 @@ export function QuickFortuneGate({
     }
   }, [initialized, profiles, user, router, onClose]);
 
-  const isListMode = (archiveCategory === 'period' || archiveCategory === 'taekil') && !archiveContext;
+  const isListMode = (archiveCategory === 'period' || archiveCategory === 'taekil' || archiveCategory === 'today') && !archiveContext;
 
   useEffect(() => {
     if (!initialized || !primaryProfile) return;

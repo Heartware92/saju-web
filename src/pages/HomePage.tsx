@@ -120,10 +120,8 @@ const fadeUp = {
 type GateConfig = Omit<QuickFortuneGateProps, 'onClose'>;
 
 function buildGateConfig(path: string): GateConfig | null {
-  const todayIso = new Date().toISOString().slice(0, 10);
-
   const GATE_SERVICES: Record<string, GateConfig> = {
-    '/saju/today': { serviceName: '오늘의 운세', archiveCategory: 'today' as ArchiveCategory, archiveContext: { key: 'isoDate', value: todayIso }, creditType: 'sun', creditCost: SUN_COST_BIG, targetPath: '/saju/today' },
+    '/saju/today': { serviceName: '오늘의 운세', archiveCategory: 'today' as ArchiveCategory, creditType: 'sun', creditCost: SUN_COST_BIG, targetPath: '/saju/today' },
     '/saju/date': { serviceName: '지정일 운세', archiveCategory: 'period' as ArchiveCategory, creditType: 'sun', creditCost: SUN_COST_BIG, targetPath: '/saju/date' },
     '/saju/taekil': { serviceName: '택일 운세', archiveCategory: 'taekil' as ArchiveCategory, creditType: 'sun', creditCost: SUN_COST_BIG, targetPath: '/saju/taekil' },
     '/saju/tojeong': { serviceName: '토정비결', description: '조선 시대 토정 이지함 선생이 만든 연간 신수 풀이예요. 음력 생년월일과 세는 나이로 144괘 중 하나를 뽑아 올해의 총운, 12개월 흐름, 재물·애정·건강·직장운을 살펴봅니다.', archiveCategory: 'tojeong' as ArchiveCategory, creditType: 'sun', creditCost: SUN_COST_BIG, targetPath: '/saju/tojeong' },

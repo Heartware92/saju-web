@@ -608,12 +608,10 @@ export default function TodayFortunePage() {
 
   // ── 프로필 선택 가드 ─────────────────────────────────────────
   if (needsProfileSelect) {
-    const todayIsoCtx = new Date().toISOString().slice(0, 10);
     return (
       <QuickFortuneGate
         serviceName="오늘의 운세"
         archiveCategory="today"
-        archiveContext={{ key: 'isoDate', value: todayIsoCtx }}
         creditType="sun"
         creditCost={SUN_COST_BIG}
       />
