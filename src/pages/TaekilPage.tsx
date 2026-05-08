@@ -454,14 +454,15 @@ export default function TaekilPage() {
                     }}
                   >
                     <div style={{
-                      fontSize: '17px',
+                      fontSize: '20px',
                       fontWeight: 800,
                       color: isActive ? 'var(--cta-primary)' : 'var(--text-primary)',
-                      marginBottom: '10px',
+                      marginBottom: '12px',
+                      textAlign: 'center',
                     }}>
                       {cat.label}
                     </div>
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px' }}>
                       {cat.subItems.map(item => {
                         const selected = category === cat.id && subItem === item;
                         return (
@@ -472,7 +473,7 @@ export default function TaekilPage() {
                               setSubItem(selected ? null : item);
                             }}
                             style={{
-                              padding: '8px 18px',
+                              padding: '12px 6px',
                               borderRadius: '10px',
                               border: `2px solid ${selected ? 'var(--cta-primary)' : 'transparent'}`,
                               background: selected
@@ -482,6 +483,7 @@ export default function TaekilPage() {
                               fontWeight: selected ? 700 : 500,
                               color: selected ? '#fff' : 'var(--text-secondary)',
                               cursor: 'pointer',
+                              textAlign: 'center',
                             }}
                           >
                             {item}
@@ -505,10 +507,11 @@ export default function TaekilPage() {
                 }}
               >
                 <div style={{
-                  fontSize: '17px',
+                  fontSize: '20px',
                   fontWeight: 800,
                   color: category === 'custom' ? 'var(--cta-primary)' : 'var(--text-primary)',
-                  marginBottom: '10px',
+                  marginBottom: '12px',
+                  textAlign: 'center',
                 }}>
                   기타
                 </div>
