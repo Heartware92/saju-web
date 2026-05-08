@@ -434,88 +434,93 @@ export default function TaekilPage() {
               }}>1</span>
               <h2 style={{ margin: 0, fontSize: 16 }}>어떤 목적의 택일인가요?</h2>
             </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              {TAEKIL_CATEGORIES.map(cat => (
-                <button
-                  key={cat.id}
-                  onClick={() => setCategory(cat.id)}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'baseline',
-                    gap: '10px',
-                    padding: '13px 16px',
-                    borderRadius: '12px',
-                    border: category === cat.id
-                      ? '2px solid var(--cta-primary)'
-                      : '1px solid var(--border-subtle)',
-                    background: category === cat.id
-                      ? 'rgba(124,92,252,0.15)'
-                      : 'var(--space-elevated)',
-                    textAlign: 'left',
-                    cursor: 'pointer',
-                    transition: 'all 0.15s',
-                  }}
-                >
-                  <div style={{
-                    fontSize: '18px',
-                    fontWeight: 800,
-                    color: category === cat.id ? 'var(--cta-primary)' : 'var(--text-primary)',
-                    whiteSpace: 'nowrap',
-                    flexShrink: 0,
-                  }}>
-                    {cat.label}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              {TAEKIL_CATEGORIES.filter(c => c.id !== 'custom').map(cat => {
+                const isActive = category === cat.id;
+                return (
+                  <div key={cat.id}>
+                    <div style={{
+                      fontSize: '16px',
+                      fontWeight: 700,
+                      color: isActive ? 'var(--cta-primary)' : 'var(--text-primary)',
+                      marginBottom: '8px',
+                    }}>
+                      {cat.label}
+                    </div>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                      {cat.subItems.map(item => {
+                        const selected = category === cat.id && subItem === item;
+                        return (
+                          <button
+                            key={item}
+                            onClick={() => {
+                              if (category !== cat.id) setCategory(cat.id);
+                              setSubItem(selected ? null : item);
+                            }}
+                            style={{
+                              padding: '9px 18px',
+                              borderRadius: '20px',
+                              border: selected
+                                ? '2px solid var(--cta-primary)'
+                                : '1px solid var(--border-subtle)',
+                              background: selected
+                                ? 'rgba(124,92,252,0.2)'
+                                : 'var(--space-elevated)',
+                              fontSize: '15px',
+                              fontWeight: selected ? 700 : 500,
+                              color: selected ? 'var(--cta-primary)' : 'var(--text-secondary)',
+                              cursor: 'pointer',
+                              transition: 'all 0.15s',
+                            }}
+                          >
+                            {item}
+                          </button>
+                        );
+                      })}
+                    </div>
                   </div>
-                  <div style={{
-                    fontSize: '15px',
-                    fontWeight: 500,
-                    color: category === cat.id ? 'var(--cta-primary)' : 'var(--text-secondary)',
-                    opacity: category === cat.id ? 0.85 : 1,
-                  }}>
-                    {cat.desc}
+                );
+              })}
+
+              {/* 기타 */}
+              {(() => {
+                const customCat = TAEKIL_CATEGORIES.find(c => c.id === 'custom')!;
+                return (
+                  <div>
+                    <div style={{
+                      fontSize: '16px',
+                      fontWeight: 700,
+                      color: category === 'custom' ? 'var(--cta-primary)' : 'var(--text-primary)',
+                      marginBottom: '8px',
+                    }}>
+                      {customCat.label}
+                    </div>
+                    <button
+                      onClick={() => { setCategory('custom'); setSubItem(null); }}
+                      style={{
+                        padding: '9px 18px',
+                        borderRadius: '20px',
+                        border: category === 'custom'
+                          ? '2px solid var(--cta-primary)'
+                          : '1px solid var(--border-subtle)',
+                        background: category === 'custom'
+                          ? 'rgba(124,92,252,0.2)'
+                          : 'var(--space-elevated)',
+                        fontSize: '15px',
+                        fontWeight: category === 'custom' ? 700 : 500,
+                        color: category === 'custom' ? 'var(--cta-primary)' : 'var(--text-secondary)',
+                        cursor: 'pointer',
+                        transition: 'all 0.15s',
+                      }}
+                    >
+                      직접 입력
+                    </button>
                   </div>
-                </button>
-              ))}
+                );
+              })()}
             </div>
 
-            {/* 하위항목 선택 */}
-            {category && category !== 'custom' && (() => {
-              const cat = TAEKIL_CATEGORIES.find(c => c.id === category);
-              if (!cat || cat.subItems.length === 0) return null;
-              return (
-                <div style={{ marginTop: 14 }}>
-                  <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-secondary)', marginBottom: 8 }}>
-                    구체적인 행사를 선택해주세요
-                  </div>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-                    {cat.subItems.map(item => (
-                      <button
-                        key={item}
-                        onClick={() => setSubItem(subItem === item ? null : item)}
-                        style={{
-                          padding: '8px 16px',
-                          borderRadius: '20px',
-                          border: subItem === item
-                            ? '2px solid var(--cta-primary)'
-                            : '1px solid var(--border-subtle)',
-                          background: subItem === item
-                            ? 'rgba(124,92,252,0.2)'
-                            : 'var(--space-elevated)',
-                          fontSize: '15px',
-                          fontWeight: subItem === item ? 700 : 500,
-                          color: subItem === item ? 'var(--cta-primary)' : 'var(--text-primary)',
-                          cursor: 'pointer',
-                          transition: 'all 0.15s',
-                        }}
-                      >
-                        {item}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              );
-            })()}
-
-            {/* 기타 선택 시 직접 입력 — 사주·일진 데이터에 사용자 텍스트가 결합되어 풀이됨 */}
+            {/* 기타 선택 시 직접 입력 */}
             {category === 'custom' && (
               <div style={{ marginTop: 14 }}>
                 <label style={{
