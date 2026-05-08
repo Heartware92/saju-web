@@ -18,7 +18,7 @@ import {
   CONTEXT_RULES,
   EMOTION_RULES,
 } from './dreamSymbols';
-import { SAJU_KB_BLOCK, WRITING_RULES_BLOCK } from './sajuKnowledgeBase';
+import { SAJU_KB_BLOCK, WRITING_RULES_BLOCK, classifyAnswer, ANSWER_GROUP_LABEL, SECTION_BRANCH_RULES_BLOCK } from './sajuKnowledgeBase';
 
 // ── 오행 상생/상극 (프롬프트 유틸용)
 const EL_GEN: Record<string, string> = { '목':'화', '화':'토', '토':'금', '금':'수', '수':'목' };
@@ -1218,6 +1218,15 @@ export const generateTodayFortuneV3Prompt = (
   const q2 = ctx.q2Text || '';
   const q1Filled = ctx.q1Answer?.trim();
   const q2Filled = ctx.q2Answer?.trim();
+
+  // 답변 자동 분류 — 9개 그룹 중 매칭되는 모든 그룹 (다중 매칭 가능)
+  const q1Groups = classifyAnswer(q1Filled);
+  const q2Groups = classifyAnswer(q2Filled);
+  const allGroups = Array.from(new Set([...q1Groups, ...q2Groups]));
+  const q1GroupsLabel = q1Groups.length > 0 ? q1Groups.map((g) => ANSWER_GROUP_LABEL[g]).join(', ') : '미답';
+  const q2GroupsLabel = q2Groups.length > 0 ? q2Groups.map((g) => ANSWER_GROUP_LABEL[g]).join(', ') : '미답';
+  const allGroupsLabel = allGroups.length > 0 ? allGroups.map((g) => ANSWER_GROUP_LABEL[g]).join(', ') : '미답·일반';
+  const allGroupsCode = allGroups.length > 0 ? allGroups.join(', ') : 'other';
   const userInputBlock = `[사용자 현재 상황 — 모든 섹션 풀이에 강제 반영]
 - 진입 시간대: ${slotLabel} (${ctx.timeSlot} 시간 구간)
 - 가장 많은 시간을 쏟는 분야: ${hobbiesStr}  (5번 섹션의 분야 분기 기준: ${primaryHobby})
@@ -1225,6 +1234,11 @@ export const generateTodayFortuneV3Prompt = (
 - 연애 상태: ${ctx.loveState}
 - 질문 1 ("${q1}"): ${q1Filled || '(미답 — 추정 금지, 답변 인용 없이 일반 풀이)'}
 - 질문 2 ("${q2}"): ${q2Filled || '(미답 — 추정 금지, 답변 인용 없이 일반 풀이)'}
+
+[답변 자동 분류 결과 — 아래 [섹션별 비중·강조점 분기 가이드]에 따라 8개 본문 섹션 풀이 강제 변형]
+· 질문 1 답변 → 분류 그룹: ${q1GroupsLabel}
+· 질문 2 답변 → 분류 그룹: ${q2GroupsLabel}
+· 종합 분류 그룹(누적 적용 대상): ${allGroupsLabel} [코드: ${allGroupsCode}]
 
 [질문 답변 활용 원칙 — 반드시 따를 것]
 · 답변은 사용자가 칩으로 고른 정형 키워드(예: "많이 피곤", "약속·만남", "후회") 또는 짧은 직접 입력값입니다.
@@ -1268,6 +1282,8 @@ export const generateTodayFortuneV3Prompt = (
 
 ${SAJU_KB_BLOCK}
 
+${SECTION_BRANCH_RULES_BLOCK}
+
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 [사주 원국 — 만세력 전체]
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -1307,11 +1323,12 @@ ${userInputBlock}
 
 ${WRITING_RULES_BLOCK.replace('${todayGz_label}', `${todayGz.gan}${todayGz.zhi}`)}
 
-[추가 — 분량·문단 룰]
-· 분량 하한: 13섹션 합산 2200자 이상 목표 (밑돌면 빈약한 풀이로 사용자 불만).
+[추가 — 분량·문단·동적 분기 룰]
+· 분량 하한: 13섹션 합산 2400자 이상 목표 (분기 적용으로 일부 섹션 +20~30%이므로 상향).
 · 문단 나누기: 서로 다른 주제·항목·시간대는 반드시 빈 줄(줄바꿈 2회)로 문단을 나눈다.
 · 사용자 입력값 인용 강제: 취미(${primaryHobby})·직업(${ctx.jobState})·연애(${ctx.loveState})·시간대(${slotLabel})를 본문에서 각각 한 번씩 명시 언급.
 · 만세력 수치(격국·용신·신강·오행%·십성·신살·합충)는 임의로 뒤집거나 변경 금지.
+· ★★ 동적 분기 강제: [답변 자동 분류 결과](${allGroupsCode})에 매칭되는 그룹의 [섹션별 비중·강조점 분기 가이드]를 8개 본문 섹션(today_basis ~ today_oneliner)에 모두 적용. 그룹이 여럿이면 누적 적용. 같은 사주라도 답변이 다르면 풀이가 확연히 달라야 한다. 분기 미적용 = 사고로 간주.
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 [★★★ 마커 출력 절대 규칙 ★★★]
@@ -1360,16 +1377,18 @@ ${METAPHOR_KB}
 출력 순서: [today_scores] → [today_flow] → [today_basis] → [today_hobby_method] → [today_timeflow] → [today_sleep] → [today_meal] → [today_exercise] → [today_relationship] → [today_caution] → [today_strength] → [today_oneliner]
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-[today_basis] — 240~340자 (명리적 근거)
+[today_basis] — 분기 분량(아래 ★ 참조)
 첫 줄: 은유 제목.
 본문: 일진(${todayGz.gan}${todayGz.zhi}, ${todayGz.ganElement}·${todayGz.zhiElement}) 천간/지지의 의미를 1문장으로 풀고, 그것이 내 일간(${dayMaster}·${pillars.day.ganElement})·용신(${yongSinElement})·기신(${result.giSin})과 어떻게 만나는지 단정. 4층 운기(대운·세운·월운·일진) 중 오늘 가장 강하게 작용하는 층 1개 지목 + 그 이유. 일진×원국 합충(${interTodayStr})이 있다면 어떻게 오늘 영향을 주는지 1문장. 신강신약(${result.strengthStatus}) 관점에서 오늘이 일간에 유리/불리한지 짧게.
+★ 분기 적용(${allGroupsCode}): [섹션 분기 가이드]의 today_basis 항목대로 강조점·관점 변형. 기본 240~340자, 분기에 따라 ±20%.
 
-[today_hobby_method] — 320~420자 (취미·역할 운용법: ${primaryHobby})
+[today_hobby_method] — 분기 분량(아래 ★ 참조) (취미·역할 운용법: ${primaryHobby})
 첫 줄: 은유 제목.
 본문: ${hobbyGuide}
 ${secondaryGuide}
 ${q1Filled || q2Filled ? `사용자 답변(${q1Filled ? `Q1 "${q1Filled}"` : ''}${q1Filled && q2Filled ? ' / ' : ''}${q2Filled ? `Q2 "${q2Filled}"` : ''}) 중 본 섹션(${primaryHobby} 운용법)과 직접 관련 있는 답변이 있으면, 그 키워드를 본문에 1회 노출하고 일진 ${todayGz.gan}${todayGz.zhi} 십성(${todayGz.tenGodGan}/${todayGz.tenGodZhi})과 어떻게 맞물리는지 1~2문장으로 풀이. 관련성이 약한 답변(예: 사람·관계·컨디션)은 여기서 다루지 말고 해당 매핑 섹션(today_relationship/today_sleep 등)에서 처리.` : '시간대 질문 답변이 없으므로, 입력하지 않은 부분을 추정해 만들지 말고 일반 가이드로.'}
 마지막 1문장은 오늘 한 가지 실천 행동을 단정 명령형 문장으로 마무리.
+★ 분기 적용(${allGroupsCode}): [섹션 분기 가이드]의 today_hobby_method 항목대로 강도·작업 방식 변형. 기본 320~420자, 분기에 따라 ±25%.
 
 [today_timeflow] — 380~500자 (시간대별 흐름)
 첫 줄: 은유 제목.
@@ -1384,18 +1403,22 @@ ${q1Filled || q2Filled ? `사용자 답변(${q1Filled ? `Q1 "${q1Filled}"` : ''}
 저녁(18~24시) — 이 시간대의 기운과 흐름 2~3문장. 퇴근 후·저녁 식사·하루 마무리 장면으로.
 
 사용자 진입 시간(${slotLabel})에 더 자세히 — 어떤 행동을 하면 좋고 어떤 것을 하면 손해인지 1~2가지 실전 조언. 가장 집중이 잘 되거나 운이 강한 1구간 명시 + 이유 (일진 지지 ${todayGz.zhi} 와의 12지 관계 근거).
+★ 분기 적용(${allGroupsCode}): [섹션 분기 가이드]의 today_timeflow 항목대로 권장 활동·집중 시간 변형. 기본 380~500자, 분기에 따라 ±15%.
 
-[today_sleep] — 180~240자 (수면 루틴)
+[today_sleep] — 분기 분량(아래 ★ 참조)
 첫 줄: 은유 제목.
 본문: 다음날 컨디션을 고려한 권장 취침/기상 시각 구체적으로 (예: 23:30~24:00 취침, 06:30~07:00 기상). 잠들기 전 피해야 할 자극 1가지, 잠들기 좋은 의식 1가지 (따뜻한 차·짧은 산책·종이책 등 — 용신 ${yongSinElement} 또는 결핍 오행에 맞춰).
+★ 분기 적용(${allGroupsCode}): [섹션 분기 가이드]의 today_sleep 항목대로 변형. condition_low·concern_health 시 분량 +30% (취침 시각 더 이르게·이완 의식 상세). 기본 180~240자.
 
-[today_meal] — 200~260자 (식사 가이드)
+[today_meal] — 분기 분량(아래 ★ 참조)
 첫 줄: 은유 제목.
 본문: 용신(${yongSinElement})·결핍 오행(${zeroEls.length > 0 ? zeroEls.join('·') : '없음'})을 보강하는 추천 음식 2가지 (맛·색·재료 구체적으로), 피해야 할 음식 1가지(이유 포함). 식사 시간대 1가지 권고.
+★ 분기 적용(${allGroupsCode}): [섹션 분기 가이드]의 today_meal 항목대로 변형. condition_low·concern_health 시 회복 음식 강조 + 자극적 음식 명시 회피, people 시 식사 자리·차 자리 톤 1줄. 기본 200~260자.
 
-[today_exercise] — 180~240자 (운동)
+[today_exercise] — 분기 분량(아래 ★ 참조)
 첫 줄: 은유 제목.
 본문: 오늘 운동 가능 여부·강도, 추천 종목 1~2가지, 피해야 할 동작이나 시간대 1가지. ${ctx.jobState} 상황과 무리 없이 어울리도록. 일진 ${todayGz.zhiElement} 오행이 신체 어느 부위(간·심·비·폐·신)와 연결되는지 1문장 짚기.
+★ 분기 적용(${allGroupsCode}): [섹션 분기 가이드]의 today_exercise 항목대로 강도 변형. condition_low·rest 시 저강도 회복(스트레칭·산책)만, condition_high 시 중강도 권장 가능. 기본 180~240자.
 
 [today_relationship] — 240~320자 (대인·이성)
 첫 줄: 은유 제목.
@@ -1406,17 +1429,21 @@ ${ctx.loveState === '연애 중' ? '  · 파트너와의 흐름 1문장 + 권장
 ${ctx.loveState === '기혼' ? '  · 배우자·가족과의 흐름 1문장 + 권장 행동 1개.' : ''}
 ${ctx.loveState === '공개 안 함' ? '  · 일반적인 인간관계 흐름 + 가까운 사람과의 권장 행동 1개.' : ''}
 대인관계에서 오늘 조심할 말투·상황 1개 명시.
+★ 분기 적용(${allGroupsCode}): [섹션 분기 가이드]의 today_relationship 항목대로 변형. people 그룹이면 분량 +30% + 답변 관계 유형(가족/친구/연인/동료) 명시 인용. 기본 240~320자.
 
-[today_caution] — 200~260자 (주의할 점)
+[today_caution] — 분기 분량(아래 ★ 참조)
 첫 줄: 은유 제목.
 본문: 오늘 합충(${interTodayStr})에서 생기는 실수 유발 상황 1가지를 구체적 장면으로 (시간·장소·대상·말). 멘탈이 흔들리기 쉬운 포인트 1가지 (어떤 상황·말·생각이 무너뜨리는지). 신살(흉성: ${sinSalBad}) 중 1개라도 오늘 일진과 연결되면 그 영향까지. 대처 방법 1문장.
+★ 분기 적용(${allGroupsCode}): [섹션 분기 가이드]의 today_caution 항목대로 변형. emotion_negative·work_pressure·concern_money 시 분량 +20% + 해당 그룹의 구체 함정 명시. 기본 200~260자.
 
-[today_strength] — 180~240자 (좋은 포인트)
+[today_strength] — 분기 분량(아래 ★ 참조)
 첫 줄: 은유 제목.
 본문: 오늘의 운을 가장 잘 쓰는 행동 1~2가지를 구체 장면으로 (시간·장소·대상). 사용자 취미(${primaryHobby})·시간대(${slotLabel})와 자연스럽게 연결. 신살(길성: ${sinSalGood}) 중 오늘 활용 가능한 것이 있으면 짧게 짚기.
+★ 분기 적용(${allGroupsCode}): [섹션 분기 가이드]의 today_strength 항목대로 변형. emotion_positive·condition_high 시 분량 +25% (적극형 행동), condition_low·emotion_negative 시 회복형 행동 1개로 단순화. 기본 180~240자.
 
 [today_oneliner] — 60~110자 (한줄 결론)
 은유 제목 없이 본문만. 직설적으로, 오늘 하루를 관통하는 핵심 한 문장. 사용자 상황(${primaryHobby}·${ctx.jobState}·${ctx.loveState})을 손에 잡힐 듯 짚어주는 어조.
+★ 분기 적용(${allGroupsCode}): emotion_positive·condition_high 시 추진형·긍정 톤("오늘은 ~하라" 단정 명령). emotion_negative 시 단정하되 따뜻한 톤("오늘은 ~해도 괜찮다" 결). rest 시 회복 톤. 분량 그대로 60~110자.
 
 [금지 — 한 번 더 강조]
 - 본문 안에 [today_xxx] 마커 노출 (사고).
