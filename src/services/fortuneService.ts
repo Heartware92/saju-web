@@ -1258,7 +1258,7 @@ export const getPickedDateReport = async (
   try {
     const todayGz = calcTodayGanZhi(result, isoDate);
     const prompt = generatePickedDateFortunePrompt(result, todayGz, isoDate);
-    const content = await callGPT(prompt, 6000);
+    const content = await callGPT(prompt, 7000);
     const sections = parsePickedDateReport(content);
     const flow = parseDateFlowScores(content);
     archiveSaju({
