@@ -302,6 +302,7 @@ export default function GunghapPage() {
   const [customLabel, setCustomLabel] = useState('');
   const [myRole, setMyRole] = useState('');
   const [otherRole, setOtherRole] = useState('');
+  const [roleSwapped, setRoleSwapped] = useState(false);
   const [myProfileId, setMyProfileId] = useState<string>('');
   const [other, setOther] = useState<OtherInput>(defaultOther);
   const [pet, setPet] = useState<PetInput>(defaultPet);
@@ -378,14 +379,21 @@ export default function GunghapPage() {
 
   const isPetCategory = category === 'pet';
 
-  // 카테고리 선택 시 자동 역할 결정
+  const SWAPPABLE_CATEGORIES = ['parent_child', 'mentor', 'idol_fan'];
+
+  // 카테고리 선택 시 자동 역할 결정 (swap 반영)
   useEffect(() => {
     const roles = AUTO_ROLES[category];
     if (roles) {
-      setMyRole(roles[0]);
-      setOtherRole(roles[1]);
+      if (roleSwapped && SWAPPABLE_CATEGORIES.includes(category)) {
+        setMyRole(roles[1]);
+        setOtherRole(roles[0]);
+      } else {
+        setMyRole(roles[0]);
+        setOtherRole(roles[1]);
+      }
     }
-  }, [category]);
+  }, [category, roleSwapped]);
 
   // ── 보관함 재생 모드 — activeRecordId 가 있으면 DB 에서 풀이 텍스트 + 메타 + 사주 복원 ──
   useEffect(() => {
@@ -785,6 +793,7 @@ export default function GunghapPage() {
     setOtherMode('profile');
     setMyRole('');
     setOtherRole('');
+    setRoleSwapped(false);
     setCustomLabel('');
   };
 
@@ -1073,6 +1082,36 @@ export default function GunghapPage() {
                 )}
               </div>
             )}
+
+            {/* 역할 선택 토글 — 부모·자녀 / 멘토·멘티 */}
+            {SWAPPABLE_CATEGORIES.includes(category) && (() => {
+              const roles = AUTO_ROLES[category];
+              if (!roles) return null;
+              const [roleA, roleB] = roles;
+              return (
+                <div className="mb-4 p-3.5 rounded-xl bg-[rgba(20,12,38,0.55)] border border-[var(--border-subtle)]">
+                  <p className="text-[13px] font-semibold text-text-secondary mb-2.5">나는 누구인가요?</p>
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setRoleSwapped(false)}
+                      className={`flex-1 py-2.5 rounded-xl text-[15px] font-semibold transition-all border
+                        ${!roleSwapped ? 'bg-cta/20 border-cta/50 text-cta' : 'bg-white/5 border-white/10 text-text-secondary hover:border-white/20'}`}
+                    >
+                      {roleA}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setRoleSwapped(true)}
+                      className={`flex-1 py-2.5 rounded-xl text-[15px] font-semibold transition-all border
+                        ${roleSwapped ? 'bg-cta/20 border-cta/50 text-cta' : 'bg-white/5 border-white/10 text-text-secondary hover:border-white/20'}`}
+                    >
+                      {roleB}
+                    </button>
+                  </div>
+                </div>
+              );
+            })()}
 
             {/* 상대방 입력 */}
             <div className="p-4 rounded-2xl bg-[rgba(20,12,38,0.55)] border border-[var(--border-subtle)] space-y-4">
