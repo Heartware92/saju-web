@@ -54,6 +54,7 @@ import {
 import { AILoadingBar } from '../components/AILoadingBar';
 import { useLoadingGuard } from '../hooks/useLoadingGuard';
 import { useScrollToTopOnLoad } from '../hooks/useScrollToTopOnLoad';
+import { TODAY_PERSONA_EXTRA_LABEL } from '../constants/sajuKnowledgeBase';
 import { ShareBar } from '@/components/share/ShareBar';
 
 const TODAY_MESSAGES = [
@@ -844,7 +845,7 @@ export default function TodayFortunePage() {
         </div>
       )}
 
-      {/* 본문 10 섹션 */}
+      {/* 본문 11 섹션 (today_persona_extra 포함) */}
       {report?.sections && (
         <div className="space-y-2">
           {TODAY_V3_SECTION_KEYS.map((key, idx) => {
@@ -861,10 +862,14 @@ export default function TodayFortunePage() {
             const bodyText = hasMetaphor ? lines.slice(1).join('\n').trim() : safe;
 
             // 5번 운용법 헤더는 사용자 취미에 맞춰 동적
+            // 13번 맞춤 포인트 헤더는 jobState에 맞춰 동적 (학생→"오늘의 학습 습관 한 가지" 등)
             const headerLabel = (() => {
               if (key === 'today_hobby_method' && report.userContext) {
                 const primary = report.userContext.hobbies[0] ?? report.userContext.customHobby ?? '자기계발';
                 return `${primary} 운용법`;
+              }
+              if (key === 'today_persona_extra' && report.userContext?.jobState) {
+                return TODAY_PERSONA_EXTRA_LABEL[report.userContext.jobState] ?? TODAY_V3_SECTION_LABELS[key];
               }
               return TODAY_V3_SECTION_LABELS[key];
             })();

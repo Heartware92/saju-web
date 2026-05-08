@@ -7,6 +7,7 @@ import {
   TODAY_TIME_SLOT_LABELS,
   type TodayTimeSlot,
 } from '@/constants/prompts';
+import { TODAY_PERSONA_EXTRA_LABEL } from '@/constants/sajuKnowledgeBase';
 import {
   parseTodayV3Sections, parseTodayV3DomainScores, parseTodayV3FlowScores,
   stripStrayMarkers,
@@ -101,7 +102,7 @@ export function TodayResultBlock({ record }: Props) {
 
   const eng = (record.engine_result ?? {}) as any;
   const todayGz = eng.todayGz as { hanja?: string; ganElement?: string; zhiElement?: string; tenGodGan?: string; interactions?: string[] } | undefined;
-  const userContext = eng.userContext as { hobbies?: string[]; customHobby?: string; timeSlot?: TodayTimeSlot } | undefined;
+  const userContext = eng.userContext as { hobbies?: string[]; customHobby?: string; timeSlot?: TodayTimeSlot; jobState?: string; loveState?: string } | undefined;
   const isoDate = eng.isoDate as string | undefined;
 
   const profile: BirthProfile = {
@@ -227,7 +228,7 @@ export function TodayResultBlock({ record }: Props) {
         </motion.div>
       )}
 
-      {/* 5. 본문 10 섹션 */}
+      {/* 5. 본문 11 섹션 (today_persona_extra 포함) */}
       <div className="space-y-2">
         {TODAY_V3_SECTION_KEYS.map((key, idx) => {
           const text = sections[key];
@@ -243,6 +244,9 @@ export function TodayResultBlock({ record }: Props) {
             if (key === 'today_hobby_method' && userContext) {
               const primary = userContext.hobbies?.[0] ?? userContext.customHobby ?? '자기계발';
               return `${primary} 운용법`;
+            }
+            if (key === 'today_persona_extra' && userContext?.jobState) {
+              return TODAY_PERSONA_EXTRA_LABEL[userContext.jobState] ?? TODAY_V3_SECTION_LABELS[key];
             }
             return TODAY_V3_SECTION_LABELS[key];
           })();

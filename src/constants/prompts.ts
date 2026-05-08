@@ -18,7 +18,7 @@ import {
   CONTEXT_RULES,
   EMOTION_RULES,
 } from './dreamSymbols';
-import { SAJU_KB_BLOCK, WRITING_RULES_BLOCK, classifyAnswer, ANSWER_GROUP_LABEL, SECTION_BRANCH_RULES_BLOCK, JOB_STATE_BRANCH_BLOCK, normalizeHobbyToCategory } from './sajuKnowledgeBase';
+import { SAJU_KB_BLOCK, WRITING_RULES_BLOCK, classifyAnswer, ANSWER_GROUP_LABEL, SECTION_BRANCH_RULES_BLOCK, JOB_STATE_BRANCH_BLOCK, PERSONA_EXTRA_BRANCH_BLOCK, normalizeHobbyToCategory } from './sajuKnowledgeBase';
 
 // ── 오행 상생/상극 (프롬프트 유틸용)
 const EL_GEN: Record<string, string> = { '목':'화', '화':'토', '토':'금', '금':'수', '수':'목' };
@@ -954,7 +954,7 @@ export interface TodayUserContext {
   q2Answer?: string;               // 시간대별 질문 2 답변 (선택)
 }
 
-/** V3 결과 13 섹션 — 1·2·3은 카드 위 시각화, 4~13은 본문 */
+/** V3 결과 14 섹션 — 1·2·3은 카드 위 시각화, 4~14는 본문 */
 export const TODAY_V3_SECTION_KEYS = [
   'today_basis',         // 4. 명리적 근거 (일진·오행·내 사주 관계)
   'today_hobby_method',  // 5. 취미 운용법 (공부/업무/창작 등으로 분기)
@@ -965,21 +965,23 @@ export const TODAY_V3_SECTION_KEYS = [
   'today_relationship',  // 10. 대인·이성운
   'today_caution',       // 11. 주의할 점
   'today_strength',      // 12. 좋은 포인트
-  'today_oneliner',      // 13. 한줄 결론
+  'today_persona_extra', // 13. 직업/상황 맞춤 포인트 카드 (jobState 별 라벨·콘텐츠 완전 분기)
+  'today_oneliner',      // 14. 한줄 결론
 ] as const;
 export type TodayV3SectionKey = typeof TODAY_V3_SECTION_KEYS[number];
 
 export const TODAY_V3_SECTION_LABELS: Record<TodayV3SectionKey, string> = {
-  today_basis:        '명리적 근거',
-  today_hobby_method: '운용법',  // 헤더는 카드 렌더 시 취미명을 동적으로 prefix
-  today_timeflow:     '시간대별 흐름',
-  today_sleep:        '수면 루틴',
-  today_meal:         '식사 가이드',
-  today_exercise:     '운동',
-  today_relationship: '대인·이성',
-  today_caution:      '주의할 점',
-  today_strength:     '좋은 포인트',
-  today_oneliner:     '한줄 결론',
+  today_basis:         '명리적 근거',
+  today_hobby_method:  '운용법',  // 헤더는 카드 렌더 시 취미명을 동적으로 prefix
+  today_timeflow:      '시간대별 흐름',
+  today_sleep:         '수면 루틴',
+  today_meal:          '식사 가이드',
+  today_exercise:      '운동',
+  today_relationship:  '대인·이성',
+  today_caution:       '주의할 점',
+  today_strength:      '좋은 포인트',
+  today_persona_extra: '맞춤 포인트',  // jobState 별 동적 라벨 (UI에서 TODAY_PERSONA_EXTRA_LABEL 참조)
+  today_oneliner:      '한줄 결론',
 };
 
 /** 9 항목 점수 — 각각 0~100 */
@@ -1296,6 +1298,8 @@ ${SECTION_BRANCH_RULES_BLOCK}
 
 ${JOB_STATE_BRANCH_BLOCK}
 
+${PERSONA_EXTRA_BRANCH_BLOCK}
+
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 [사주 원국 — 만세력 전체]
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -1336,21 +1340,22 @@ ${userInputBlock}
 ${WRITING_RULES_BLOCK.replace('${todayGz_label}', `${todayGz.gan}${todayGz.zhi}`)}
 
 [추가 — 분량·문단·동적 분기 룰]
-· 분량 하한: 13섹션 합산 2400자 이상 목표 (분기 적용으로 일부 섹션 +20~30%이므로 상향).
+· 분량 하한: 14섹션 합산 2700자 이상 목표 (today_persona_extra 추가 + 분기 적용으로 일부 섹션 +20~30%이므로 상향).
 · 문단 나누기: 서로 다른 주제·항목·시간대는 반드시 빈 줄(줄바꿈 2회)로 문단을 나눈다.
 · 사용자 입력값 인용 강제: 취미(${primaryHobby})·직업(${ctx.jobState})·연애(${ctx.loveState})·시간대(${slotLabel})를 본문에서 각각 한 번씩 명시 언급.
 · 만세력 수치(격국·용신·신강·오행%·십성·신살·합충)는 임의로 뒤집거나 변경 금지.
-· ★★ 동적 분기 강제: [답변 자동 분류 결과](${allGroupsCode})에 매칭되는 그룹의 [섹션별 비중·강조점 분기 가이드]를 8개 본문 섹션(today_basis ~ today_oneliner)에 모두 적용. 그룹이 여럿이면 누적 적용. 같은 사주라도 답변이 다르면 풀이가 확연히 달라야 한다. 분기 미적용 = 사고로 간주.
+· ★★ 동적 분기 강제: [답변 자동 분류 결과](${allGroupsCode})에 매칭되는 그룹의 [섹션별 비중·강조점 분기 가이드]를 9개 본문 섹션(today_basis ~ today_persona_extra ~ today_oneliner)에 모두 적용. 그룹이 여럿이면 누적 적용. 같은 사주라도 답변이 다르면 풀이가 확연히 달라야 한다. 분기 미적용 = 사고로 간주.
+· ★★ 직업 맞춤 카드 강제: [today_persona_extra] 카드는 jobState=${ctx.jobState} 에 해당하는 [today_persona_extra 직업/상황 맞춤 포인트 카드] 가이드를 그대로 따름. 학생/직장인/자영업/구직중/주부/기타 6종 중 jobState 에 따라 카드 라벨·콘텐츠가 완전히 달라야 한다.
 · ★★ 직업 상태 분기 강제: [직업 상태별 본문 톤·장면 분기 가이드]의 jobState=${ctx.jobState} 항목대로 본문 등장 장면을 그 직업 일상으로 맞춤. 답변 칩이 직업과 안 맞으면 jobState 우선으로 톤 변형 (예: 주부 + "회의·미팅" → "가족 모임 자리"로).
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 [★★★ 마커 출력 절대 규칙 ★★★]
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 - 본문 텍스트 안에 [today_xxx] 형태의 어떤 마커도 노출되면 안 됩니다 (사용자에게 그대로 보임 = 사고).
-- 사용 가능한 마커는 정확히 아래 12개. 다른 어떤 변형도 사용 금지:
+- 사용 가능한 마커는 정확히 아래 13개. 다른 어떤 변형도 사용 금지:
   [today_scores] [today_flow] [today_basis] [today_hobby_method] [today_timeflow]
   [today_sleep] [today_meal] [today_exercise] [today_relationship] [today_caution]
-  [today_strength] [today_oneliner]
+  [today_strength] [today_persona_extra] [today_oneliner]
 - 마커는 반드시 줄 처음에 단독으로 위치 (앞뒤 \`**\`, \`#\`, \`-\`, \`>\`, 콜론 \`:\` 모두 금지).
 - 마커 형식 변형 금지: \`[todayhobbymethod]\` (밑줄 누락), \`[today hobby method]\` (공백), \`[today-hobby-method]\` (하이픈), \`【today_hobby_method】\` (전각괄호) 모두 사고로 간주.
 - 마커는 한 번씩만 등장 (각 섹션당 1회). 본문 안에 같은 마커를 다시 인용하지 말 것.
@@ -1386,8 +1391,8 @@ ${WRITING_RULES_BLOCK.replace('${todayGz_label}', `${todayGz.gan}${todayGz.zhi}`
 ${METAPHOR_KB}
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-이제 아래 10개 본문 섹션을 [key] 마커 + 줄바꿈 + 은유 제목 + 줄바꿈 + 본문 형태로 작성합니다.
-출력 순서: [today_scores] → [today_flow] → [today_basis] → [today_hobby_method] → [today_timeflow] → [today_sleep] → [today_meal] → [today_exercise] → [today_relationship] → [today_caution] → [today_strength] → [today_oneliner]
+이제 아래 11개 본문 섹션을 [key] 마커 + 줄바꿈 + 은유 제목 + 줄바꿈 + 본문 형태로 작성합니다.
+출력 순서: [today_scores] → [today_flow] → [today_basis] → [today_hobby_method] → [today_timeflow] → [today_sleep] → [today_meal] → [today_exercise] → [today_relationship] → [today_caution] → [today_strength] → [today_persona_extra] → [today_oneliner]
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 [today_basis] — 분기 분량(아래 ★ 참조)
@@ -1453,6 +1458,12 @@ ${ctx.loveState === '공개 안 함' ? '  · 일반적인 인간관계 흐름 + 
 첫 줄: 은유 제목.
 본문: 오늘의 운을 가장 잘 쓰는 행동 1~2가지를 구체 장면으로 (시간·장소·대상). 사용자 취미(${primaryHobby})·시간대(${slotLabel})와 자연스럽게 연결. 신살(길성: ${sinSalGood}) 중 오늘 활용 가능한 것이 있으면 짧게 짚기.
 ★ 분기 적용(${allGroupsCode}): [섹션 분기 가이드]의 today_strength 항목대로 변형. emotion_positive·condition_high 시 분량 +25% (적극형 행동), condition_low·emotion_negative 시 회복형 행동 1개로 단순화. 기본 180~240자.
+
+[today_persona_extra] — 220~300자 (직업/상황 맞춤 포인트 카드 ★ jobState=${ctx.jobState} 분기 강제)
+첫 줄: jobState=${ctx.jobState} 에 해당하는 [today_persona_extra 직업/상황 맞춤 포인트 카드] 가이드의 카드 첫 줄 라벨을 그대로 또는 한국 자연 결로 짧게 변형해서 1줄 작성. (예: 학생 → "오늘의 학습 습관 한 가지", 주부 → "오늘의 나만의 시간")
+본문: 위 [today_persona_extra] 가이드의 jobState=${ctx.jobState} 항목 콘텐츠 가이드대로 작성. 만세력(일진 ${todayGz.gan}${todayGz.zhi}·십성 ${todayGz.tenGodGan}/${todayGz.tenGodZhi}·합충·용신 ${yongSinElement})과 결합. 다른 섹션과 같은 행동 반복 금지 — 본 카드는 직업·상황 특수 행동 1개에 집중.
+사용자 답변(${q1Filled || '미답'} / ${q2Filled || '미답'})이 있으면 본문에 1회 자연스럽게 인용.
+마지막 1문장은 단정 명령형으로 마무리.
 
 [today_oneliner] — 60~110자 (한줄 결론)
 은유 제목 없이 본문만. 직설적으로, 오늘 하루를 관통하는 핵심 한 문장. 사용자 상황(${primaryHobby}·${ctx.jobState}·${ctx.loveState})을 손에 잡힐 듯 짚어주는 어조.
