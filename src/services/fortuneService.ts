@@ -99,7 +99,7 @@ interface FortuneResponse {
  * - 양 끝 공백·중복 개행 정리
  */
 const STRIP_EMOJI_REGEX =
-  /[\u{1F300}-\u{1FAFF}\u{1F900}-\u{1F9FF}\u{2600}-\u{27BF}\u{2B00}-\u{2BFF}\u{1F000}-\u{1F02F}\u{FE0F}\u{200D}\u{2190}-\u{21FF}\u{2300}-\u{23FF}\u{25A0}-\u{25FF}]/gu;
+  /[\u{1F300}-\u{1FAFF}\u{1F900}-\u{1F9FF}\u{2600}-\u{27BF}\u{2B00}-\u{2BFF}\u{1F000}-\u{1F02F}\u{FE0F}\u{200D}\u{2190}-\u{21FF}\u{2300}-\u{23FF}\u{25A0}-\u{25B5}\u{25B7}-\u{25FF}]/gu;
 
 export const sanitizeAIOutput = (raw: string): string => {
   if (!raw) return '';

@@ -231,7 +231,7 @@ async function callGunghapGPT(prompt: string): Promise<string> {
     const res = await fetch('/api/ai', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ prompt, maxTokens: 4500, systemPrompt: SYSTEM_PROMPT }),
+      body: JSON.stringify({ prompt, maxTokens: 6000, systemPrompt: SYSTEM_PROMPT }),
       signal: controller.signal,
     });
     const data = await res.json();
@@ -1487,40 +1487,28 @@ export default function GunghapPage() {
               return (
                 <div className="space-y-2">
                   {preamble && (() => {
-                    const pLines = preamble.split('\n');
-                    const pFirst = pLines[0]?.trim() ?? '';
-                    const pHasMeta = pLines.length > 1
-                      && pFirst.length > 0
-                      && pFirst.length <= 40
-                      && !pFirst.endsWith('.')
-                      && !/[다요니까습]$/.test(pFirst);
-                    const pMeta = pHasMeta ? pFirst : '';
-                    const pBody = pHasMeta ? pLines.slice(1).join('\n').trim() : preamble;
+                    const pLines = preamble.trim().split('\n');
+                    const pMeta = pLines[0]?.trim() ?? '';
+                    const pBody = pLines.slice(1).join('\n').trim();
                     return (
                       <div className="rounded-2xl p-5 bg-[rgba(20,12,38,0.55)] border border-[var(--border-subtle)]">
-                        {pMeta && (
-                          <div className="text-[17px] font-medium leading-snug text-cta/90 mb-4" style={{ fontFamily: 'var(--font-serif)' }}>
-                            {pMeta}
+                        <div className="text-[17px] font-medium leading-snug text-cta/90 mb-4" style={{ fontFamily: 'var(--font-serif)' }}>
+                          {pMeta}
+                        </div>
+                        {pBody && (
+                          <div className="text-[17px] text-text-secondary leading-[1.85] tracking-[-0.005em] space-y-3">
+                            {pBody.split(/\n\n+/).map((para, pi) => (
+                              <p key={pi} className="whitespace-pre-line">{para.trim()}</p>
+                            ))}
                           </div>
                         )}
-                        <div className="text-[17px] text-text-secondary leading-[1.85] tracking-[-0.005em] space-y-3">
-                          {pBody.split(/\n\n+/).map((para, pi) => (
-                            <p key={pi} className="whitespace-pre-line">{para.trim()}</p>
-                          ))}
-                        </div>
                       </div>
                     );
                   })()}
                   {parts.map((sec, idx) => {
-                    const bodyLines = sec.body.trim().split('\n');
-                    const firstLine = bodyLines[0]?.trim() ?? '';
-                    const hasMetaphor = bodyLines.length > 1
-                      && firstLine.length > 0
-                      && firstLine.length <= 40
-                      && !firstLine.endsWith('.')
-                      && !/[다요니까습]$/.test(firstLine);
-                    const metaphorTitle = hasMetaphor ? firstLine : '';
-                    const bodyText = hasMetaphor ? bodyLines.slice(1).join('\n').trim() : sec.body.trim();
+                    const lines = sec.body.trim().split('\n');
+                    const metaphorTitle = lines[0]?.trim() ?? '';
+                    const bodyText = lines.slice(1).join('\n').trim();
 
                     return (
                       <motion.div
@@ -1536,11 +1524,9 @@ export default function GunghapPage() {
                             {sec.title}
                           </div>
                         </div>
-                        {metaphorTitle && (
-                          <div className="text-[17px] font-medium leading-snug text-cta/90 mb-4 pl-3" style={{ fontFamily: 'var(--font-serif)' }}>
-                            {metaphorTitle}
-                          </div>
-                        )}
+                        <div className="text-[17px] font-medium leading-snug text-cta/90 mb-4 pl-3" style={{ fontFamily: 'var(--font-serif)' }}>
+                          {metaphorTitle}
+                        </div>
                         <div className="text-[17px] text-text-secondary leading-[1.85] tracking-[-0.005em] space-y-3">
                           {bodyText.split(/\n\n+/).map((para, pi) => (
                             <p key={pi} className="whitespace-pre-line">{para.trim()}</p>

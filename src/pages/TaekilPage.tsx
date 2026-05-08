@@ -432,17 +432,16 @@ export default function TaekilPage() {
               }}>1</span>
               <h2 style={{ margin: 0, fontSize: 16 }}>어떤 목적의 택일인가요?</h2>
             </div>
-            <div style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(2, 1fr)',
-              gap: '8px',
-            }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
               {TAEKIL_CATEGORIES.map(cat => (
                 <button
                   key={cat.id}
                   onClick={() => setCategory(cat.id)}
                   style={{
-                    padding: '12px 8px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '12px',
+                    padding: '14px 16px',
                     borderRadius: '12px',
                     border: category === cat.id
                       ? '2px solid var(--cta-primary)'
@@ -450,19 +449,25 @@ export default function TaekilPage() {
                     background: category === cat.id
                       ? 'rgba(124,92,252,0.15)'
                       : 'var(--space-elevated)',
-                    textAlign: 'center',
+                    textAlign: 'left',
                     cursor: 'pointer',
                     transition: 'all 0.15s',
                   }}
                 >
                   <div style={{
-                    fontSize: '14px',
+                    fontSize: '15px',
                     fontWeight: 700,
                     color: category === cat.id ? 'var(--cta-primary)' : 'var(--text-primary)',
+                    whiteSpace: 'nowrap',
+                    flexShrink: 0,
                   }}>
                     {cat.label}
                   </div>
-                  <div style={{ fontSize: '11px', color: 'var(--text-tertiary)', marginTop: '2px' }}>
+                  <div style={{
+                    fontSize: '13px',
+                    color: category === cat.id ? 'var(--cta-primary)' : 'var(--text-tertiary)',
+                    opacity: category === cat.id ? 0.8 : 1,
+                  }}>
                     {cat.desc}
                   </div>
                 </button>

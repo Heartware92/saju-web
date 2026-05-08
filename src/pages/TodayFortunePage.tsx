@@ -177,6 +177,9 @@ function InputForm({
   const [loveState, setLoveState] = useState<TodayLoveState | null>(null);
   const [q1Answer, setQ1Answer] = useState('');
   const [q2Answer, setQ2Answer] = useState('');
+  // '직접 입력'을 골랐을 때만 노출되는 보조 입력값
+  const [q1Custom, setQ1Custom] = useState('');
+  const [q2Custom, setQ2Custom] = useState('');
 
   const [[q1, q2]] = useState(() => pickTwoQuestions(initialSlot));
   const slotLabel = TODAY_TIME_SLOT_LABELS[initialSlot];
@@ -192,16 +195,19 @@ function InputForm({
 
   const submit = () => {
     if (!canSubmit) return;
+    // '직접 입력' 모드면 사용자가 추가로 친 텍스트를, 아니면 선택한 보기 텍스트 그대로 전송
+    const resolvedQ1 = q1Answer === '__custom__' ? q1Custom.trim() : q1Answer.trim();
+    const resolvedQ2 = q2Answer === '__custom__' ? q2Custom.trim() : q2Answer.trim();
     onSubmit({
       hobbies,
       customHobby: customHobby.trim() || undefined,
       jobState: jobState!,
       loveState: loveState!,
       timeSlot: initialSlot,
-      q1Text: q1,
-      q2Text: q2,
-      q1Answer: q1Answer.trim() || undefined,
-      q2Answer: q2Answer.trim() || undefined,
+      q1Text: q1.q,
+      q2Text: q2.q,
+      q1Answer: resolvedQ1 || undefined,
+      q2Answer: resolvedQ2 || undefined,
     });
   };
 
@@ -321,27 +327,56 @@ function InputForm({
           </h3>
         </div>
         <p className="text-[12px] text-text-tertiary mb-3">{slotLabel}에 어울리는 질문 2개 — 답변하지 않아도 풀이는 가능해요.</p>
-        <div className="space-y-3">
-          <div>
-            <label className="block text-[13px] text-text-secondary mb-1.5">{q1}</label>
-            <textarea
-              value={q1Answer}
-              onChange={(e) => setQ1Answer(e.target.value.slice(0, 200))}
-              rows={2}
-              placeholder="(선택) 짧게 적어주세요"
-              className="w-full px-3 py-2.5 rounded-lg bg-[rgba(255,255,255,0.04)] border border-[rgba(255,255,255,0.12)] text-[14px] text-text-primary placeholder-text-tertiary resize-none"
-            />
-          </div>
-          <div>
-            <label className="block text-[13px] text-text-secondary mb-1.5">{q2}</label>
-            <textarea
-              value={q2Answer}
-              onChange={(e) => setQ2Answer(e.target.value.slice(0, 200))}
-              rows={2}
-              placeholder="(선택) 짧게 적어주세요"
-              className="w-full px-3 py-2.5 rounded-lg bg-[rgba(255,255,255,0.04)] border border-[rgba(255,255,255,0.12)] text-[14px] text-text-primary placeholder-text-tertiary resize-none"
-            />
-          </div>
+        <div className="space-y-5">
+          {([
+            { question: q1, value: q1Answer, setValue: setQ1Answer, custom: q1Custom, setCustom: setQ1Custom },
+            { question: q2, value: q2Answer, setValue: setQ2Answer, custom: q2Custom, setCustom: setQ2Custom },
+          ] as const).map(({ question, value, setValue, custom, setCustom }, idx) => (
+            <div key={idx}>
+              <label className="block text-[13px] text-text-secondary mb-2">{question.q}</label>
+              <div className="flex flex-wrap gap-2">
+                {question.options.map((opt) => {
+                  const on = value === opt;
+                  return (
+                    <button
+                      key={opt}
+                      type="button"
+                      onClick={() => setValue(on ? '' : opt)}
+                      className="px-3.5 py-2 rounded-full text-[13px] font-medium"
+                      style={{
+                        border: on ? '1.5px solid var(--cta-primary)' : '1px solid rgba(255,255,255,0.18)',
+                        background: on ? 'rgba(139,92,246,0.20)' : 'rgba(255,255,255,0.04)',
+                        color: on ? '#E9D5FF' : 'var(--text-primary)',
+                      }}
+                    >
+                      {opt}
+                    </button>
+                  );
+                })}
+                <button
+                  type="button"
+                  onClick={() => setValue(value === '__custom__' ? '' : '__custom__')}
+                  className="px-3.5 py-2 rounded-full text-[13px] font-medium"
+                  style={{
+                    border: value === '__custom__' ? '1.5px solid var(--cta-primary)' : '1px solid rgba(255,255,255,0.18)',
+                    background: value === '__custom__' ? 'rgba(139,92,246,0.20)' : 'rgba(255,255,255,0.04)',
+                    color: value === '__custom__' ? '#E9D5FF' : 'var(--text-tertiary)',
+                  }}
+                >
+                  직접 입력
+                </button>
+              </div>
+              {value === '__custom__' && (
+                <input
+                  type="text"
+                  value={custom}
+                  onChange={(e) => setCustom(e.target.value.slice(0, 100))}
+                  placeholder="짧게 적어주세요"
+                  className="mt-2 w-full px-3 py-2.5 rounded-lg bg-[rgba(255,255,255,0.04)] border border-[rgba(255,255,255,0.12)] text-[14px] text-text-primary placeholder-text-tertiary"
+                />
+              )}
+            </div>
+          ))}
         </div>
       </div>
 
