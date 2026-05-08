@@ -172,7 +172,7 @@ function calcDailyLucky(saju: SajuResult, target: TargetGanZhi) {
 
 const TEN_GOD_SCORE: Record<string, number> = {
   '정관': 12, '정인': 10, '정재': 10, '식신': 9, '편재': 7,
-  '편인': 2, '겁재': -3, '비견': 0, '상관': -4, '편관': -2,
+  '편인': 2, '겁재': -1, '비견': 0, '상관': -2, '편관': -1,
 };
 
 // 삼합(三合)
@@ -256,11 +256,11 @@ function checkBranchPair(a: string, b: string): GanZhiInteraction | null {
 }
 
 function gradeFromScore(s: number): FortuneGrade {
-  if (s >= 88) return '대길';
-  if (s >= 76) return '길';
-  if (s >= 64) return '중길';
-  if (s >= 50) return '평';
-  if (s >= 35) return '중흉';
+  if (s >= 90) return '대길';
+  if (s >= 82) return '길';
+  if (s >= 72) return '중길';
+  if (s >= 65) return '평';
+  if (s >= 60) return '중흉';
   return '흉';
 }
 
@@ -301,7 +301,7 @@ function scoreForTarget(saju: SajuResult, target: TargetGanZhi): {
 } {
   const dayGan = saju.dayMaster;
   const rationale: string[] = [];
-  let base = 62;
+  let base = 70;
 
   // 1) 천간 십신 점수
   const ganScore = TEN_GOD_SCORE[target.tenGodGan] ?? 0;
@@ -330,7 +330,7 @@ function scoreForTarget(saju: SajuResult, target: TargetGanZhi): {
     const inter = checkBranchPair(p.zhi, target.zhi);
     if (inter) {
       if (inter.nature === 'good') interactionBonus += 5;
-      else if (inter.nature === 'bad') interactionBonus -= 4;
+      else if (inter.nature === 'bad') interactionBonus -= 2;
     }
   });
   base += interactionBonus;
@@ -338,8 +338,8 @@ function scoreForTarget(saju: SajuResult, target: TargetGanZhi): {
     rationale.push(`지지 상호작용 합산 ${interactionBonus >= 0 ? '+' : ''}${interactionBonus}`);
   }
 
-  // 5) clamp
-  const overall = Math.max(20, Math.min(97, Math.round(base)));
+  // 5) clamp — 상향 평준화 (60~97 범위 보장)
+  const overall = Math.max(60, Math.min(97, Math.round(base)));
 
   // 6) 영역별 점수 — 십신 매핑 기반
   const wealthBoost = ['정재', '편재', '식신'].includes(target.tenGodGan) ? 15
@@ -369,7 +369,7 @@ function scoreForTarget(saju: SajuResult, target: TargetGanZhi): {
     }
   })();
 
-  const clamp = (v: number) => Math.max(20, Math.min(97, Math.round(overall * 0.45 + 32 + v)));
+  const clamp = (v: number) => Math.max(60, Math.min(97, Math.round(overall * 0.45 + 38 + v)));
 
   return {
     overall,
@@ -642,13 +642,13 @@ export function buildMonthlyFlow(saju: SajuResult, year: number): MonthlyFlowIte
     const ganElement = STEM_ELEMENT[mGan];
     const zhiElement = BRANCH_ELEMENT[mZhi] ?? '';
 
-    let score = 62;
+    let score = 70;
     score += TEN_GOD_SCORE[targetGan] ?? 0;
     if (ganElement === saju.yongSinElement) score += 10;
     const inter = checkBranchPair(saju.pillars.day.zhi, mZhi);
-    if (inter?.nature === 'bad') score -= 6;
+    if (inter?.nature === 'bad') score -= 3;
     else if (inter?.nature === 'good') score += 6;
-    const grade = gradeFromScore(Math.max(25, Math.min(95, score)));
+    const grade = gradeFromScore(Math.max(60, Math.min(95, score)));
     const keyword =
       grade === '대길' ? '전진·도약'
       : grade === '길' ? '확장·기회'
