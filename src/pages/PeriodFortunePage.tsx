@@ -3,7 +3,7 @@
 /**
  * 기간 운세 공통 결과 페이지
  * - scope: 'year' | 'day' | 'date'
- *   · year  → /saju/newyear?year=2026
+ *   · year  → /saju/newyear (연도는 자동으로 현재 연도 사용)
  *   · day   → /saju/today
  *   · date  → /saju/date?date=YYYY-MM-DD  (+ 달력 피커)
  *
@@ -937,8 +937,14 @@ export default function PeriodFortunePage({ scope }: { scope: FortuneScope | 'da
           transition={{ delay: 0.4 }}
           className="mb-3"
         >
-          <div className="text-[15px] font-semibold text-text-secondary mb-2 px-1 uppercase tracking-wider">
-            {targetYear}년 종합 리포트
+          <div className="text-center mb-5 mt-2">
+            <div
+              className="text-[26px] font-bold text-text-primary tracking-tight"
+              style={{ fontFamily: 'var(--font-serif)' }}
+            >
+              {targetYear}년 종합 리포트
+            </div>
+            <div className="mt-1.5 mx-auto w-12 h-[2px] rounded-full bg-cta/50" />
           </div>
 
           {newyearReport.error && (
@@ -1005,20 +1011,18 @@ export default function PeriodFortunePage({ scope }: { scope: FortuneScope | 'da
                     </div>
 
                     {key === 'monthly' ? (
-                      // 월별 흐름: 월 단위로 분리해서 시각적 간격 확보
-                      // 신규 포맷: \n\n 빈 줄 구분 / 구 포맷: "N월(" 패턴으로 분리
                       <div className="space-y-3">
                         {(bodyText.includes('\n\n')
                           ? bodyText.split(/\n\n+/)
                           : bodyText.split(/(?=\d{1,2}월\s*\()/)
                         ).filter(Boolean).map((monthBlock, mi) => (
-                          <p key={mi} className="text-[15px] text-text-secondary leading-relaxed break-keep">
+                          <p key={mi} className="text-[15px] text-text-secondary leading-[1.85]">
                             {monthBlock.replace(/\n/g, ' ').trim()}
                           </p>
                         ))}
                       </div>
                     ) : (
-                      <p className="text-[15px] text-text-secondary leading-relaxed whitespace-pre-line break-keep">
+                      <p className="text-[15px] text-text-secondary leading-[1.85] whitespace-pre-line">
                         {bodyText}
                       </p>
                     )}

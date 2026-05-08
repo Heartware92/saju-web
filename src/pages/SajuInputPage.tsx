@@ -13,13 +13,32 @@ import styles from './SajuInputPage.module.css'
 type Gender = 'male' | 'female'
 type CalendarType = 'solar' | 'lunar'
 
+// 연도별 띠 동물
+const ZODIAC_ANIMALS = ['쥐', '소', '호랑이', '토끼', '용', '뱀', '말', '양', '원숭이', '닭', '개', '돼지'] as const;
+const ZODIAC_ICONS = ['🐀', '🐂', '🐅', '🐇', '🐉', '🐍', '🐴', '🐑', '🐵', '🐔', '🐶', '🐷'] as const;
+const STEMS = ['갑', '을', '병', '정', '무', '기', '경', '신', '임', '계'] as const;
+const BRANCHES = ['자', '축', '인', '묘', '진', '사', '오', '미', '신', '유', '술', '해'] as const;
+
+function getYearInfo(year: number) {
+  const stemIdx = (year - 4) % 10;
+  const branchIdx = (year - 4) % 12;
+  return {
+    ganZhi: `${STEMS[stemIdx]}${BRANCHES[branchIdx]}`,
+    animal: ZODIAC_ANIMALS[branchIdx],
+    icon: ZODIAC_ICONS[branchIdx],
+  };
+}
+
+const THIS_YEAR = new Date().getFullYear();
+const YEAR_INFO = getYearInfo(THIS_YEAR);
+
 // 카테고리 정의 (앱과 동일)
 // [B안] love/wealth 입력 카드는 비활성. 외부에서 ?category=love 로 진입 시 traditional 로 fallback.
 const SAJU_CATEGORIES: Record<string, { title: string; icon: string; desc: string }> = {
   'today': { title: '오늘의 운세', icon: '☀️', desc: '하루의 흐름 미리보기' },
   'tomorrow': { title: '내일의 운세', icon: '🌙', desc: '미리 준비하는 내일' },
   'traditional': { title: '정통 사주', icon: '📜', desc: '나의 타고난 명운 분석' },
-  'newyear': { title: '2026 신년운세', icon: '🐍', desc: '병오년 청뱀띠 총운' },
+  'newyear': { title: `${THIS_YEAR} 신년운세`, icon: YEAR_INFO.icon, desc: `${YEAR_INFO.ganZhi}년 ${YEAR_INFO.animal}띠 총운` },
   'tojeong': { title: '토정비결', icon: '📖', desc: '한 해의 길흉화복' },
   'zamidusu': { title: '자미두수', icon: '🌌', desc: '북두칠성과 12궁으로 보는 명운' },
   // [비활성 — B안] 'love'/'wealth' 단독 카테고리는 메인 8 중복으로 제거
