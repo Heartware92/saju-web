@@ -115,6 +115,28 @@ const CATEGORY_GROUPS: CategoryGroup[] = [
 
 const ALL_CATEGORIES = CATEGORY_GROUPS.flatMap(g => g.items);
 
+type ResolvedCategory = 'lover' | 'friend' | 'parent_child' | 'sibling' | 'work' | 'business' | 'spouse' | 'rival' | 'mentor' | 'som' | null;
+
+function resolveCustomCategory(label: string): ResolvedCategory {
+  const t = label.trim().toLowerCase();
+  const KEYWORD_MAP: [string[], ResolvedCategory][] = [
+    [['연인', '남친', '여친', '남자친구', '여자친구', '애인', '사귀', '커플'], 'lover'],
+    [['썸', '좋아하는', '관심있는', '호감'], 'som'],
+    [['배우자', '남편', '아내', '부부', '결혼'], 'spouse'],
+    [['친구', '벗', '동창', '절친', '베프', '단짝'], 'friend'],
+    [['부모', '엄마', '아빠', '아버지', '어머니', '자녀', '아들', '딸', '부녀', '부자', '모녀', '모자'], 'parent_child'],
+    [['형제', '자매', '오빠', '언니', '동생', '누나', '형'], 'sibling'],
+    [['직장', '동료', '상사', '부하', '팀원', '팀장', '회사'], 'work'],
+    [['사업', '파트너', '공동대표', '동업', '창업', '공동창업'], 'business'],
+    [['라이벌', '경쟁', '적수', '맞수'], 'rival'],
+    [['멘토', '멘티', '스승', '제자', '선생', '선배', '후배'], 'mentor'],
+  ];
+  for (const [keywords, cat] of KEYWORD_MAP) {
+    if (keywords.some(kw => t.includes(kw))) return cat;
+  }
+  return null;
+}
+
 // ──────────────────────────────────────────────
 // 상대방 입력 폼 상태
 // ──────────────────────────────────────────────
@@ -283,7 +305,7 @@ export default function GunghapPage() {
   const [myProfileId, setMyProfileId] = useState<string>('');
   const [other, setOther] = useState<OtherInput>(defaultOther);
   const [pet, setPet] = useState<PetInput>(defaultPet);
-  const [otherMode, setOtherMode] = useState<'profile' | 'manual'>('manual');
+  const [otherMode, setOtherMode] = useState<'profile' | 'manual'>('profile');
   const [otherProfileId, setOtherProfileId] = useState<string>('');
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<string>('');
@@ -352,7 +374,7 @@ export default function GunghapPage() {
       setOtherProfileId('');
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [otherProfileChoices.length, selectedProfile?.id]);
+  }, [otherProfileChoices.length, selectedProfile?.id, category]);
 
   const isPetCategory = category === 'pet';
 
@@ -657,11 +679,34 @@ export default function GunghapPage() {
         case 'business':
           prompt = generateBusinessGunghapPrompt(myResult, otherResult, myName, otherName);
           break;
-        default:
-          prompt = generateGeneralGunghapPrompt(
-            myResult, otherResult, myName, otherName,
-            getCategoryDisplayLabel()
-          );
+        default: {
+          const lbl = getCategoryDisplayLabel();
+          const resolved = category === 'custom' ? resolveCustomCategory(lbl) : null;
+          if (resolved === 'lover') {
+            prompt = generateLoverGunghapPrompt(myResult, otherResult, myName, otherName);
+          } else if (resolved === 'friend') {
+            prompt = generateFriendGunghapPrompt(myResult, otherResult, myName, otherName);
+          } else if (resolved === 'parent_child') {
+            prompt = generateFamilyGunghapPrompt(myResult, otherResult, myName, otherName, '부모-자녀');
+          } else if (resolved === 'sibling') {
+            prompt = generateFamilyGunghapPrompt(myResult, otherResult, myName, otherName, '형제자매');
+          } else if (resolved === 'work') {
+            prompt = generateWorkGunghapPrompt(myResult, otherResult, myName, otherName);
+          } else if (resolved === 'business') {
+            prompt = generateBusinessGunghapPrompt(myResult, otherResult, myName, otherName);
+          } else if (resolved === 'spouse') {
+            prompt = generateSpouseGunghapPrompt(myResult, otherResult, myName, otherName);
+          } else if (resolved === 'rival') {
+            prompt = generateRivalGunghapPrompt(myResult, otherResult, myName, otherName);
+          } else if (resolved === 'mentor') {
+            prompt = generateMentorGunghapPrompt(myResult, otherResult, myName, otherName);
+          } else if (resolved === 'som') {
+            prompt = generateSomGunghapPrompt(myResult, otherResult, myName, otherName);
+          } else {
+            prompt = generateGeneralGunghapPrompt(myResult, otherResult, myName, otherName, lbl);
+          }
+          break;
+        }
       }
 
       // 역할 컨텍스트 주입 + 제목/점수 요청 래핑
@@ -737,7 +782,7 @@ export default function GunghapPage() {
     setOther(defaultOther);
     setPet(defaultPet);
     setOtherProfileId('');
-    setOtherMode('manual');
+    setOtherMode('profile');
     setMyRole('');
     setOtherRole('');
     setCustomLabel('');
