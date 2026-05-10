@@ -467,20 +467,23 @@ export default function GunghapPage() {
     return () => { cancelled = true; };
   }, [activeRecordId]);
 
-  // ── 궁합 기존 결과 목록 로딩 — 없으면 바로 카테고리 선택으로 ──
+  // ── 궁합 기존 결과 목록 로딩 — landing 진입 시마다 재조회 ──
+  // 분석 완료 후 "처음으로"로 돌아왔을 때 방금 저장된 풀이가 즉시 목록에 반영되도록
+  // step === 'landing' 으로 전환될 때마다 fresh fetch.
   useEffect(() => {
     if (isArchiveMode) { setArchiveLoading(false); return; }
+    if (step !== 'landing') return;
     let cancelled = false;
     setArchiveLoading(true);
     findGunghapArchives(20).then(list => {
       if (cancelled) return;
       setArchiveList(list);
-      if (list.length === 0 && step === 'landing') setStep('category');
+      if (list.length === 0) setStep('category');
     }).catch(() => {}).finally(() => {
       if (!cancelled) setArchiveLoading(false);
     });
     return () => { cancelled = true; };
-  }, [isArchiveMode]);
+  }, [isArchiveMode, step]);
 
   const otherDisplayName = isPetCategory
     ? pet.name.trim()
