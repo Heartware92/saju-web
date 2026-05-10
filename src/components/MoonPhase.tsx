@@ -1,19 +1,20 @@
 'use client';
 
 /**
- * 실제 천문학적 달 위상을 SVG로 렌더.
+ * 달 위상 SVG — 표준 8 위상으로 스냅 + 일정한 밝기로 렌더.
  *
- * 계산 원리 (Meeus 간략 공식)
- *  - 기준: 2000-01-06 18:14 UTC (알려진 삭/new moon)
- *  - 삭망월: 29.53058770576일
- *  - phase = ((now - 기준) / 삭망월) % 1  →  0=삭, 0.5=보름
+ * 천문 phase(0~1) 를 8개 anchor 중 가장 가까운 것으로 스냅 → 모양만 단계적으로 변함.
+ * 밝은 면 fill·drop-shadow·크기는 모든 위상에서 동일.
  *
- * 렌더링 (표준 moon-phase SVG)
- *  - 반원(semicircle): waxing → 오른쪽, waning → 왼쪽
- *  - 터미네이터 타원: rx = |cos(2π·phase)| · R
- *  - cos 부호로 crescent vs gibbous 구분 (sweep flag 방향)
- *
- * 북반구(서울) 기준: waxing = 오른쪽부터 밝아짐
+ * 8 위상 anchor (북반구·서울 기준):
+ *   0  삭(new)         — 보이지 않으므로 얇은 그믐달 모양으로 대체 표시
+ *   1  초승달          — 오른쪽 얇은 조각
+ *   2  상현달(반달)    — 오른쪽 반원
+ *   3  상현망(gibbous) — 오른쪽 부풀림
+ *   4  보름달          — 원
+ *   5  하현망(gibbous) — 왼쪽 부풀림
+ *   6  하현달(반달)    — 왼쪽 반원
+ *   7  그믐달          — 왼쪽 얇은 조각
  */
 
 import { useEffect, useId, useState } from 'react';
@@ -22,46 +23,60 @@ export interface MoonPhaseProps {
   size?: number;
 }
 
-// 기준 삭(new moon): 2000-01-06 18:14 UTC (NASA 기준)
 const KNOWN_NEW_MOON_MS = Date.UTC(2000, 0, 6, 18, 14, 0);
 const SYNODIC_MONTH_MS = 29.53058770576 * 86400000;
 
-/** 천문학적 달 위상 (0=삭, 0.5=보름, 1=삭) */
 function getAstronomicalPhase(): number {
   const elapsed = Date.now() - KNOWN_NEW_MOON_MS;
   const raw = (elapsed / SYNODIC_MONTH_MS) % 1;
   return (raw + 1) % 1;
 }
 
-/** phase(0~1) → 한국어 위상 이름 */
-function phaseName(phase: number): string {
-  if (phase < 0.033 || phase >= 0.967) return '삭(그믐)';
-  if (phase < 0.10) return '초승달';
-  if (phase < 0.20) return '초승달 지난 뒤';
-  if (phase < 0.28) return '상현달(반달)';
-  if (phase < 0.47) return '상현망';
-  if (phase < 0.53) return '보름달';
-  if (phase < 0.72) return '하현망';
-  if (phase < 0.78) return '하현달(반달)';
-  return '그믐달';
+interface PhaseAnchor {
+  index: number;        // 0~7
+  name: string;         // 한국어 이름
+  value: number;        // 렌더에 쓸 phase 값 (0~1)
+}
+
+const PHASE_ANCHORS: PhaseAnchor[] = [
+  { index: 0, name: '삭',       value: 0.04 },  // 삭은 보이지 않으므로 얇은 그믐달 모양으로 표시
+  { index: 1, name: '초승달',   value: 0.125 },
+  { index: 2, name: '상현달',   value: 0.25 },
+  { index: 3, name: '상현망',   value: 0.375 },
+  { index: 4, name: '보름달',   value: 0.5 },
+  { index: 5, name: '하현망',   value: 0.625 },
+  { index: 6, name: '하현달',   value: 0.75 },
+  { index: 7, name: '그믐달',   value: 0.875 },
+];
+
+const ANCHOR_CENTERS = [0.0, 0.125, 0.25, 0.375, 0.5, 0.625, 0.75, 0.875];
+
+function snapToAnchor(rawPhase: number): PhaseAnchor {
+  let bestIdx = 0;
+  let bestDist = Infinity;
+  for (let i = 0; i < ANCHOR_CENTERS.length; i++) {
+    const c = ANCHOR_CENTERS[i];
+    const d = Math.min(Math.abs(rawPhase - c), Math.abs(rawPhase - c - 1), Math.abs(rawPhase - c + 1));
+    if (d < bestDist) {
+      bestDist = d;
+      bestIdx = i;
+    }
+  }
+  return PHASE_ANCHORS[bestIdx];
 }
 
 export default function MoonPhase({ size = 76 }: MoonPhaseProps) {
   const uid = useId();
   const litId = `moon-lit-${uid}`;
-  const [phase, setPhase] = useState(0.5);
+  const [rawPhase, setRawPhase] = useState(0.5);
 
   useEffect(() => {
-    setPhase(getAstronomicalPhase());
+    setRawPhase(getAstronomicalPhase());
   }, []);
 
-  const name = phaseName(phase);
-  const isInvisible = phase < 0.02 || phase > 0.98;
-  const renderPhase = isInvisible ? 0.5 : phase;
-
-  const ariaLabel = isInvisible
-    ? `오늘 달: ${name} — 달이 보이지 않는 날이라 보름달로 표시합니다`
-    : `오늘 달: ${name}`;
+  const anchor = snapToAnchor(rawPhase);
+  const renderPhase = anchor.value;
+  const ariaLabel = `오늘 달: ${anchor.name}`;
 
   const R = (size - 8) / 2;
   const viewR = R + 4;
@@ -70,12 +85,7 @@ export default function MoonPhase({ size = 76 }: MoonPhaseProps) {
   const cos = Math.cos(2 * Math.PI * renderPhase);
   const rx = Math.abs(cos) * R;
 
-  // 반원: waxing → 오른쪽(sweep=1), waning → 왼쪽(sweep=0)
   const semiSweep = waxing ? 1 : 0;
-
-  // 터미네이터 타원 sweep:
-  //   crescent(cos>0) → 반원과 같은 쪽으로 → 사이 얇은 조각
-  //   gibbous(cos<0)  → 반원 반대쪽으로 → 반원 + 반대쪽 벌지 = 넓은 면적
   let ellipseSweep: 0 | 1;
   if (waxing) {
     ellipseSweep = cos >= 0 ? 0 : 1;
@@ -84,8 +94,6 @@ export default function MoonPhase({ size = 76 }: MoonPhaseProps) {
   }
 
   const litPath = `M 0 ${-R} A ${R} ${R} 0 0 ${semiSweep} 0 ${R} A ${rx} ${R} 0 0 ${ellipseSweep} 0 ${-R} Z`;
-
-  const showCraters = renderPhase > 0.35 && renderPhase < 0.65;
 
   return (
     <svg
@@ -111,14 +119,6 @@ export default function MoonPhase({ size = 76 }: MoonPhaseProps) {
           filter: 'drop-shadow(0 0 6px rgba(255, 230, 180, 0.35))',
         }}
       />
-
-      {showCraters && (
-        <g opacity="0.15">
-          <circle cx={R * 0.2} cy={-R * 0.15} r={R * 0.12} fill="#8a6a4a" />
-          <circle cx={-R * 0.1} cy={R * 0.22} r={R * 0.08} fill="#8a6a4a" />
-          <circle cx={R * 0.28} cy={R * 0.28} r={R * 0.06} fill="#8a6a4a" />
-        </g>
-      )}
     </svg>
   );
 }
