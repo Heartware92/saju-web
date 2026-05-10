@@ -968,30 +968,39 @@ export interface TodayFortuneV3AIResult {
   userContext?: TodayUserContext;
 }
 
-/** [today_scores] 종합:XX 시험:XX 공부:XX 멘탈:XX 대인:XX 이성:XX 금전:XX 운동:XX 회복:XX 횡재:XX */
+/** [today_scores] 종합:XX 시험:XX 공부:XX 멘탈:XX 대인:XX 이성:XX 금전:XX 운동:XX 회복:XX 횡재:XX
+ *
+ * AI 가이드와 일치하는 floor 보장:
+ * - 종합 60~97 (어떤 흉운에도 60 미만 금지)
+ * - 항목별 55~97 (페널티 누적 시도 보호)
+ */
 export function parseTodayV3DomainScores(raw: string): TodayV3DomainScores | undefined {
   const m = raw.match(/\[today_scores\]\s*종합:(\d+)\s*시험:(\d+)\s*공부:(\d+)\s*멘탈:(\d+)\s*대인:(\d+)\s*이성:(\d+)\s*금전:(\d+)\s*운동:(\d+)\s*회복:(\d+)\s*횡재:(\d+)/);
   if (!m) return undefined;
-  const clamp = (s: string) => Math.min(100, Math.max(0, Number(s)));
+  const clampOverall = (s: string) => Math.min(97, Math.max(60, Number(s)));
+  const clampDomain = (s: string) => Math.min(97, Math.max(55, Number(s)));
   return {
-    overall:  clamp(m[1]),
-    exam:     clamp(m[2]),
-    focus:    clamp(m[3]),
-    mental:   clamp(m[4]),
-    social:   clamp(m[5]),
-    love:     clamp(m[6]),
-    money:    clamp(m[7]),
-    exercise: clamp(m[8]),
-    recovery: clamp(m[9]),
-    luck:     clamp(m[10]),
+    overall:  clampOverall(m[1]),
+    exam:     clampDomain(m[2]),
+    focus:    clampDomain(m[3]),
+    mental:   clampDomain(m[4]),
+    social:   clampDomain(m[5]),
+    love:     clampDomain(m[6]),
+    money:    clampDomain(m[7]),
+    exercise: clampDomain(m[8]),
+    recovery: clampDomain(m[9]),
+    luck:     clampDomain(m[10]),
   };
 }
 
-/** [today_flow] 자정:XX 아침:XX 오후:XX 저녁:XX */
+/** [today_flow] 자정:XX 아침:XX 오후:XX 저녁:XX
+ *
+ * AI 가이드와 일치하는 floor 보장: 시간대별 50~95 (가장 약한 시간대도 50 미만 금지)
+ */
 export function parseTodayV3FlowScores(raw: string): TodayV3FlowScores | undefined {
   const m = raw.match(/\[today_flow\]\s*자정:(\d+)\s*아침:(\d+)\s*오후:(\d+)\s*저녁:(\d+)/);
   if (!m) return undefined;
-  const clamp = (s: string) => Math.min(100, Math.max(0, Number(s)));
+  const clamp = (s: string) => Math.min(95, Math.max(50, Number(s)));
   return {
     midnight:  clamp(m[1]),
     morning:   clamp(m[2]),
