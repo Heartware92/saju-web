@@ -10,18 +10,17 @@ interface CorePalaceScoresProps {
 }
 
 function colorOfScore(score: number): string {
-  if (score >= 75) return '#4ADE80';
-  if (score >= 60) return '#A78BFA';
-  if (score >= 45) return '#FBBF24';
+  if (score >= 80) return '#4ADE80';
+  if (score >= 68) return '#A78BFA';
+  if (score >= 58) return '#FBBF24';
   return '#F87171';
 }
 
 function gradeOfScore(score: number): string {
-  if (score >= 80) return '대길';
-  if (score >= 65) return '길';
-  if (score >= 50) return '평';
-  if (score >= 35) return '주의';
-  return '시험';
+  if (score >= 85) return '대길';
+  if (score >= 72) return '길';
+  if (score >= 62) return '평';
+  return '주의';
 }
 
 export function CorePalaceScores({ cores, overall }: CorePalaceScoresProps) {

@@ -78,9 +78,10 @@ export function scorePalace(palace: ZamidusuPalace): number {
 }
 
 function liftScore(raw: number): number {
+  // 상향 평준화: 50~96 범위 보장 (다른 운세 카테고리와 일관 — 어떤 약궁도 50점 이하 금지)
   const t = (raw - 8) / 88;
   const curved = Math.pow(t, 0.72);
-  return Math.round(30 + curved * 66);
+  return Math.round(50 + curved * 46);
 }
 
 // ============================================
@@ -115,7 +116,7 @@ export interface CoreScore {
 }
 
 function headlineForCore(key: CorePalaceKey, score: number): string {
-  if (score >= 75) {
+  if (score >= 80) {
     return ({
       '명궁':   '주인공 별이 환하게 떠 있다',
       '재백궁': '재물의 흐름이 단단하다',
@@ -125,7 +126,7 @@ function headlineForCore(key: CorePalaceKey, score: number): string {
       '복덕궁': '마음의 평안이 깊다',
     } as Record<CorePalaceKey, string>)[key];
   }
-  if (score >= 55) {
+  if (score >= 65) {
     return ({
       '명궁':   '본질의 빛이 차분하게 깃든다',
       '재백궁': '재물의 결이 안정적으로 흐른다',
@@ -135,7 +136,7 @@ function headlineForCore(key: CorePalaceKey, score: number): string {
       '복덕궁': '내면이 잔잔히 흐른다',
     } as Record<CorePalaceKey, string>)[key];
   }
-  if (score >= 40) {
+  if (score >= 55) {
     return ({
       '명궁':   '본질을 갈고닦을 시기',
       '재백궁': '재물은 가꾸어야 자란다',
@@ -158,7 +159,7 @@ function headlineForCore(key: CorePalaceKey, score: number): string {
 export function calcCoreScores(chart: ZamidusuResult): CoreScore[] {
   return CORE_PALACE_KEYS.map((key) => {
     const palace = chart.palaces.find((p) => p.name === key);
-    const score = palace ? scorePalace(palace) : 50;
+    const score = palace ? scorePalace(palace) : 70;
     return {
       key,
       label: CORE_PALACE_LABEL[key],
@@ -248,9 +249,9 @@ export interface DaehanSegment {
 
 function headlineForDaehan(palaceName: string, score: number): string {
   const domain = PALACE_DOMAIN_SHORT[palaceName] ?? palaceName;
-  if (score >= 75) return `${domain}의 별이 무르익는 시기`;
-  if (score >= 60) return `${domain}이 차분하게 흐르는 시기`;
-  if (score >= 45) return `${domain}을 다듬는 시기`;
+  if (score >= 80) return `${domain}의 별이 무르익는 시기`;
+  if (score >= 68) return `${domain}이 차분하게 흐르는 시기`;
+  if (score >= 58) return `${domain}을 다듬는 시기`;
   return `${domain}의 결을 점검할 시기`;
 }
 

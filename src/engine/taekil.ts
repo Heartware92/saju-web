@@ -338,9 +338,9 @@ function calcTimeSlotEnergy(
 // ============================================
 
 function gradeFromScore(s: number): TaekilGrade {
-  if (s >= 75) return '대길';
-  if (s >= 60) return '길';
-  if (s >= 40) return '평';
+  if (s >= 80) return '대길';
+  if (s >= 65) return '길';
+  if (s >= 45) return '평';
   return '흉';
 }
 
@@ -494,8 +494,14 @@ function scoreOneDay(
     }
   }
 
-  // 11) clamp + grade
-  const score = Math.max(5, Math.min(95, Math.round(base)));
+  // 11) 비대칭 상향 — 좋은 점수만 끌어올림 (날짜 비교용이므로 흉일은 그대로 유지)
+  // 55점 초과분에 대해 1.3배 가속, 55점 이하는 변경 없음.
+  // 결과: 90→100→clamp95, 80→88, 70→75, 55→55, 40→40, 5→5
+  let liftedBase = base;
+  if (base > 55) {
+    liftedBase = 55 + (base - 55) * 1.3;
+  }
+  const score = Math.max(5, Math.min(95, Math.round(liftedBase)));
   const grade = gradeFromScore(score);
   if (reasons.length === 0) {
     reasons.push(grade === '대길' || grade === '길' ? '전반적으로 무난한 길일' : '특별한 길흉 요소 없음');
