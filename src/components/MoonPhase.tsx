@@ -49,7 +49,6 @@ function phaseName(phase: number): string {
 export default function MoonPhase({ size = 76 }: MoonPhaseProps) {
   const uid = useId();
   const litId = `moon-lit-${uid}`;
-  const darkId = `moon-dark-${uid}`;
   const [phase, setPhase] = useState(0.5);
 
   useEffect(() => {
@@ -103,13 +102,7 @@ export default function MoonPhase({ size = 76 }: MoonPhaseProps) {
           <stop offset="55%" stopColor="#fff0cc" />
           <stop offset="100%" stopColor="#f0d090" />
         </radialGradient>
-        <radialGradient id={darkId} cx="50%" cy="50%">
-          <stop offset="0%" stopColor="#3a2a5a" stopOpacity="0.85" />
-          <stop offset="100%" stopColor="#1a1230" stopOpacity="0.75" />
-        </radialGradient>
       </defs>
-
-      <circle r={R} fill={`url(#${darkId})`} />
 
       <path
         d={litPath}

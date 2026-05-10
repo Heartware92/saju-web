@@ -1066,9 +1066,9 @@ export const getTodayFortuneV3Report = async (
     const date = isoDate ?? new Date().toISOString().slice(0, 10);
     const todayGz = calcTodayGanZhi(result, date);
     const prompt = generateTodayFortuneV3Prompt(result, todayGz, date, ctx);
-    // 만세력 풍부화 + 분량 하한 상향 → 토큰·타임아웃 모두 확장
-    // 13 섹션 합산 2200자+ 목표 → 7500 토큰 여유 / 90초 timeout
-    const content = await callGPT(prompt, 7500, undefined, { allowTruncated: true, timeoutMs: 90_000 });
+    // 만세력 풍부화 + 분량 하한 상향(3300자+) + 분기별 가이드 풍부화 → 토큰·타임아웃 더 확장
+    // 13 섹션 합산 3300자+ 목표 → 9500 토큰 여유 / 120초 timeout
+    const content = await callGPT(prompt, 9500, undefined, { allowTruncated: true, timeoutMs: 120_000 });
     const domainScores = parseTodayV3DomainScores(content);
     const flowScores = parseTodayV3FlowScores(content);
     const sections = parseTodayV3Sections(content);
