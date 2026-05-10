@@ -837,10 +837,7 @@ export default function PeriodFortunePage({ scope }: { scope: FortuneScope | 'da
         <div className="flex items-center gap-4">
           <ScoreRing score={fortune.overallScore} grade={fortune.overallGrade} />
           <div className="flex-1 min-w-0">
-            <div className="text-[14px] text-text-tertiary mb-1">{fortune.lunarLabel}</div>
-            <div className="text-[16px] font-bold text-text-primary leading-snug mb-1.5">
-              {fortune.headline}
-            </div>
+            <div className="text-[13px] text-text-tertiary mb-2">{fortune.lunarLabel}</div>
             <div className="flex items-center gap-1.5 flex-wrap">
               <TermChip term={fortune.targetGanZhi.ganZhi} />
               <TermChip term={fortune.targetGanZhi.tenGodGan} />
@@ -848,7 +845,10 @@ export default function PeriodFortunePage({ scope }: { scope: FortuneScope | 'da
             </div>
           </div>
         </div>
-        <p className="text-[15px] text-text-secondary mt-3 leading-[1.85]">
+        <div className="text-[17px] font-bold text-text-primary leading-snug mt-4 break-keep">
+          {fortune.headline}
+        </div>
+        <p className="text-[15px] text-text-secondary mt-2 leading-[1.85]">
           {fortune.summary}
         </p>
       </motion.section>
