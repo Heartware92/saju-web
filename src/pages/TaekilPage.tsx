@@ -473,17 +473,19 @@ export default function TaekilPage() {
                               setSubItem(selected ? null : item);
                             }}
                             style={{
-                              padding: '12px 6px',
+                              padding: '13px 4px',
                               borderRadius: '10px',
                               border: `2px solid ${selected ? 'var(--cta-primary)' : 'transparent'}`,
                               background: selected
                                 ? 'rgba(124,92,252,0.25)'
                                 : 'rgba(255,255,255,0.06)',
-                              fontSize: '15px',
-                              fontWeight: selected ? 700 : 500,
+                              fontSize: '17px',
+                              fontWeight: selected ? 700 : 600,
                               color: selected ? '#fff' : 'var(--text-secondary)',
                               cursor: 'pointer',
                               textAlign: 'center',
+                              whiteSpace: 'nowrap',
+                              letterSpacing: '-0.02em',
                             }}
                           >
                             {item}
