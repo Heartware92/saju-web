@@ -72,10 +72,10 @@ const FORTUNE_GRADE_COLOR: Record<FortuneGrade, string> = {
 
 function scoreToGrade(s: number): FortuneGrade {
   if (s >= 90) return '대길';
-  if (s >= 75) return '길';
-  if (s >= 60) return '중길';
-  if (s >= 45) return '평';
-  if (s >= 30) return '중흉';
+  if (s >= 82) return '길';
+  if (s >= 72) return '중길';
+  if (s >= 65) return '평';
+  if (s >= 60) return '중흉';
   return '흉';
 }
 

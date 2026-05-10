@@ -11,10 +11,10 @@ export const GRADE_COLOR: Record<FortuneGrade, string> = {
 
 export function scoreToGrade(s: number): FortuneGrade {
   if (s >= 90) return '대길';
-  if (s >= 75) return '길';
-  if (s >= 60) return '중길';
-  if (s >= 45) return '평';
-  if (s >= 30) return '중흉';
+  if (s >= 82) return '길';
+  if (s >= 72) return '중길';
+  if (s >= 65) return '평';
+  if (s >= 60) return '중흉';
   return '흉';
 }
 
@@ -49,7 +49,8 @@ export function parseGunghapHeader(text: string): {
   const headerMatch = text.match(/\[gunghap[_\s]?header\]\s*(.+?)\s*\|\s*(\d{1,3})\s*\[\/gunghap[_\s]?header\]/);
   if (headerMatch) {
     title = headerMatch[1].trim();
-    score = Math.min(100, Math.max(0, parseInt(headerMatch[2], 10)));
+    // 종합 점수 floor 60 / ceiling 97 — 다른 카테고리와 일관 (사용자 경험 보호)
+    score = Math.min(97, Math.max(60, parseInt(headerMatch[2], 10)));
     body = body.replace(/\[gunghap[_\s]?header\].*?\[\/gunghap[_\s]?header\]\s*\n?/, '').trim();
   }
 
@@ -67,7 +68,8 @@ export function parseGunghapHeader(text: string): {
       const [k, v] = pair.split(':').map(s => s.trim());
       const domainKey = keyMap[k];
       if (domainKey && v) {
-        domainScores[domainKey] = Math.min(100, Math.max(0, parseInt(v, 10)));
+        // 영역별 점수 floor 55 / ceiling 97 — 종합보다 약간 더 변동성 허용
+        domainScores[domainKey] = Math.min(97, Math.max(55, parseInt(v, 10)));
       }
     }
     body = body.replace(/\[gunghap[_\s]?scores\].*?\[\/gunghap[_\s]?scores\]\s*\n?/, '').trim();

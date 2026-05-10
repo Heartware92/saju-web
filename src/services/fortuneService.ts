@@ -374,7 +374,10 @@ export interface TojeongAIResult {
   error?: string;
 }
 
-/** [tojeong_scores] 재물:72 | 애정:65 | 건강:58 | 직장:80 [/tojeong_scores] 파싱 */
+/** [tojeong_scores] 재물:72 | 애정:65 | 건강:58 | 직장:80 [/tojeong_scores] 파싱
+ *
+ * AI 가이드와 일치하는 floor 보장: 영역별 60~97 (다른 운세 카테고리와 일관)
+ */
 export function parseTojeongScores(raw: string): { wealth: number; love: number; health: number; career: number } | null {
   const m = raw.match(/\[tojeong_scores\]\s*(.+?)\s*\[\/tojeong_scores\]/);
   if (!m) return null;
@@ -382,7 +385,7 @@ export function parseTojeongScores(raw: string): { wealth: number; love: number;
   const extract = (label: string): number => {
     const r = new RegExp(`${label}\\s*:\\s*(\\d+)`);
     const found = inner.match(r);
-    return found ? Math.min(100, Math.max(0, Number(found[1]))) : 50;
+    return found ? Math.min(97, Math.max(60, Number(found[1]))) : 70;
   };
   return {
     wealth: extract('재물'),
