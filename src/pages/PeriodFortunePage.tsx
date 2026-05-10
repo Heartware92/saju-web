@@ -184,7 +184,7 @@ function RemedyCardGrid({ bodyText }: { bodyText: string }) {
           transition={{ delay: 0.05 * i }}
           className="rounded-xl px-4 py-3 bg-[rgba(139,92,246,0.08)] border border-[rgba(139,92,246,0.15)]"
         >
-          <div className="text-[13px] font-bold text-cta/90 mb-1.5">{card.label}</div>
+          <div className="text-[17px] font-bold text-cta mb-2">{card.label}</div>
           <p className="text-[14px] text-text-secondary leading-[1.85]">{card.text}</p>
         </motion.div>
       ))}
