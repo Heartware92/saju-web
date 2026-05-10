@@ -1,20 +1,14 @@
 'use client';
 
 /**
- * 달 위상 SVG — 표준 8 위상으로 스냅 + 일정한 밝기로 렌더.
+ * 달 위상 SVG — 음력일(0~29) 단위로 스냅 + 일정한 밝기로 렌더.
  *
- * 천문 phase(0~1) 를 8개 anchor 중 가장 가까운 것으로 스냅 → 모양만 단계적으로 변함.
- * 밝은 면 fill·drop-shadow·크기는 모든 위상에서 동일.
+ * 천문 phase(0~1) 를 음력일자(lunar age, 0~29) 로 변환해 round → 같은 날 동안 모양 안정.
+ * 음력 한 달(삭망월) ≈ 29.53일 → 30단계 (1일=삭, 15일=보름 근처, 29일=다시 삭 근접).
  *
- * 8 위상 anchor (북반구·서울 기준):
- *   0  삭(new)         — 보이지 않으므로 얇은 그믐달 모양으로 대체 표시
- *   1  초승달          — 오른쪽 얇은 조각
- *   2  상현달(반달)    — 오른쪽 반원
- *   3  상현망(gibbous) — 오른쪽 부풀림
- *   4  보름달          — 원
- *   5  하현망(gibbous) — 왼쪽 부풀림
- *   6  하현달(반달)    — 왼쪽 반원
- *   7  그믐달          — 왼쪽 얇은 조각
+ * 밝은 면 fill·drop-shadow·viewBox 모두 동일 → 어떤 위상에서도 밝기·크기 일정.
+ *
+ * 북반구(서울) 기준: 차오름(waxing) = 오른쪽부터 밝아짐.
  */
 
 import { useEffect, useId, useState } from 'react';
@@ -25,44 +19,47 @@ export interface MoonPhaseProps {
 
 const KNOWN_NEW_MOON_MS = Date.UTC(2000, 0, 6, 18, 14, 0);
 const SYNODIC_MONTH_MS = 29.53058770576 * 86400000;
+const SYNODIC_DAYS = 29.53058770576;
 
+/** 천문 phase 0~1 (0=삭, 0.5=보름, 1=삭) */
 function getAstronomicalPhase(): number {
   const elapsed = Date.now() - KNOWN_NEW_MOON_MS;
   const raw = (elapsed / SYNODIC_MONTH_MS) % 1;
   return (raw + 1) % 1;
 }
 
-interface PhaseAnchor {
-  index: number;        // 0~7
-  name: string;         // 한국어 이름
-  value: number;        // 렌더에 쓸 phase 값 (0~1)
+/** phase(0~1) → 한국어 위상 이름 (8개 표준) */
+function phaseName(phase: number): string {
+  if (phase < 0.033 || phase >= 0.967) return '삭';
+  if (phase < 0.20) return '초승달';
+  if (phase < 0.30) return '상현달';
+  if (phase < 0.47) return '상현망';
+  if (phase < 0.53) return '보름달';
+  if (phase < 0.70) return '하현망';
+  if (phase < 0.80) return '하현달';
+  return '그믐달';
 }
 
-const PHASE_ANCHORS: PhaseAnchor[] = [
-  { index: 0, name: '삭',       value: 0.04 },  // 삭은 보이지 않으므로 얇은 그믐달 모양으로 표시
-  { index: 1, name: '초승달',   value: 0.125 },
-  { index: 2, name: '상현달',   value: 0.25 },
-  { index: 3, name: '상현망',   value: 0.375 },
-  { index: 4, name: '보름달',   value: 0.5 },
-  { index: 5, name: '하현망',   value: 0.625 },
-  { index: 6, name: '하현달',   value: 0.75 },
-  { index: 7, name: '그믐달',   value: 0.875 },
-];
+/** 너무 얇은 crescent(삭 근처)는 최소 가시성 phase 로 보정 */
+const MIN_VISIBLE_PHASE = 0.04;
 
-const ANCHOR_CENTERS = [0.0, 0.125, 0.25, 0.375, 0.5, 0.625, 0.75, 0.875];
+interface DailyPhase {
+  lunarDay: number;   // 0~29
+  phase: number;      // 렌더용 phase (가시성 보정 포함)
+  name: string;
+}
 
-function snapToAnchor(rawPhase: number): PhaseAnchor {
-  let bestIdx = 0;
-  let bestDist = Infinity;
-  for (let i = 0; i < ANCHOR_CENTERS.length; i++) {
-    const c = ANCHOR_CENTERS[i];
-    const d = Math.min(Math.abs(rawPhase - c), Math.abs(rawPhase - c - 1), Math.abs(rawPhase - c + 1));
-    if (d < bestDist) {
-      bestDist = d;
-      bestIdx = i;
-    }
-  }
-  return PHASE_ANCHORS[bestIdx];
+function snapToDailyPhase(rawPhase: number): DailyPhase {
+  // 음력일 0~29 로 스냅 (round)
+  const lunarDay = Math.round(rawPhase * SYNODIC_DAYS) % 30;
+  const snapped = (lunarDay / SYNODIC_DAYS) % 1;
+
+  // 가시성 보정: 너무 얇으면 최소 폭 보장
+  let renderPhase = snapped;
+  if (snapped < MIN_VISIBLE_PHASE) renderPhase = MIN_VISIBLE_PHASE;
+  else if (snapped > 1 - MIN_VISIBLE_PHASE) renderPhase = 1 - MIN_VISIBLE_PHASE;
+
+  return { lunarDay, phase: renderPhase, name: phaseName(snapped) };
 }
 
 export default function MoonPhase({ size = 76 }: MoonPhaseProps) {
@@ -74,9 +71,8 @@ export default function MoonPhase({ size = 76 }: MoonPhaseProps) {
     setRawPhase(getAstronomicalPhase());
   }, []);
 
-  const anchor = snapToAnchor(rawPhase);
-  const renderPhase = anchor.value;
-  const ariaLabel = `오늘 달: ${anchor.name}`;
+  const { lunarDay, phase: renderPhase, name } = snapToDailyPhase(rawPhase);
+  const ariaLabel = `오늘 달: ${name} (음력 ${lunarDay + 1}일)`;
 
   const R = (size - 8) / 2;
   const viewR = R + 4;
