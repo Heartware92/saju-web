@@ -189,13 +189,19 @@ export default function HomePage() {
       router.push(`/login?from=${targetPath}`);
       return;
     }
+    // 대표 프로필이 아직 없으면 게이트 모달을 띄우지 않고 바로 프로필 등록으로 보낸다
+    // (모달 안에서 fetchProfiles 후 즉시 onClose 되며 깜박이는 현상 회피)
+    if (!profilesLoading && !primary) {
+      router.push('/saju/input?mode=profile-only');
+      return;
+    }
     const gate = buildGateConfig(targetPath);
     if (gate) {
       setActiveGate(gate);
     } else {
       router.push(targetPath);
     }
-  }, [user, router]);
+  }, [user, router, primary, profilesLoading]);
 
   return (
     <div className="min-h-screen">
