@@ -483,15 +483,19 @@ export default function SajuResultPage() {
             if (!text) return null;
             const isAdvice = key === 'advice';
 
+            // 은유 부제목 추출 — "[은유]" 마커 기반 결정적 파싱
+            // a30ea72 이후 모든 카드에 [은유] 마커가 강제됨. 기존 휴리스틱은 오탐/미탐 둘 다 발생.
             const lines = text.trim().split('\n');
-            const firstLine = lines[0]?.trim() ?? '';
-            const hasMetaphor = lines.length > 1
-              && firstLine.length > 0
-              && firstLine.length <= 40
-              && !firstLine.endsWith('.')
-              && !/[다요니까습]$/.test(firstLine);
-            const metaphorTitle = hasMetaphor ? firstLine : '';
-            const bodyText = hasMetaphor ? lines.slice(1).join('\n').trim() : text.trim();
+            let metaphorTitle = '';
+            let bodyText = text.trim();
+            for (let i = 0; i < Math.min(lines.length, 3); i++) {
+              const m = lines[i]?.trim().match(/^\[은유\]\s*(.+)/);
+              if (m) {
+                metaphorTitle = m[1].trim();
+                bodyText = [...lines.slice(0, i), ...lines.slice(i + 1)].join('\n').trim();
+                break;
+              }
+            }
 
             return (
               <motion.div
