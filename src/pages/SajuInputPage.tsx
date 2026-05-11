@@ -525,6 +525,23 @@ export default function SajuInputPage() {
               현재 입력된 생년월일/시간/성별/출생지가 프로필로 저장됩니다
             </p>
 
+            {(!dateValidation.ok || !timeValidation.ok) && (
+              <p style={{
+                marginBottom: 12,
+                padding: '10px 12px',
+                fontSize: 13,
+                color: '#F87171',
+                background: 'rgba(239,68,68,0.08)',
+                border: '1px solid rgba(239,68,68,0.25)',
+                borderRadius: 8,
+                lineHeight: 1.5,
+              }}>
+                {!dateValidation.ok && '생년월일이 비어있거나 형식이 잘못되었어요. '}
+                {!timeValidation.ok && '시간이 비어있거나 형식이 잘못되었어요. '}
+                모달을 닫고 본 화면에서 먼저 입력해 주세요.
+              </p>
+            )}
+
             <div className={styles.modalActions}>
               <button
                 className={styles.modalBtnSecondary}

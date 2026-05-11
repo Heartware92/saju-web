@@ -200,7 +200,12 @@ export default function HomePage() {
   return (
     <div className="min-h-screen">
       {/* 달 — 우상단 고정, 스크롤 시 자연스럽게 올라감 */}
-      <div className="absolute top-14 right-4 w-[76px] h-[76px] pointer-events-none opacity-70 z-[1]">
+      <div
+        className="absolute top-14 right-4 w-[76px] h-[76px] pointer-events-none opacity-70 z-[1] rounded-full"
+        style={{
+          boxShadow: '0 0 30px 10px rgba(255,240,200,0.10), 0 0 60px 20px rgba(255,220,180,0.05)',
+        }}
+      >
         <MoonPhase size={76} />
       </div>
 
@@ -227,7 +232,7 @@ export default function HomePage() {
               transition={{ duration: 0.5 }}
               className="w-full"
             >
-              <Link href={user ? "/saju/input" : "/login?from=/saju/input"} className="block">
+              <Link href={user ? "/saju/input?mode=profile-only" : "/login?from=/saju/input?mode=profile-only"} className="block">
                 <div className="relative mx-auto w-full max-w-[340px] rounded-2xl px-6 py-8
                                 bg-gradient-to-br from-[rgba(124,92,252,0.18)] to-[rgba(201,166,255,0.08)]
                                 border border-[var(--border-subtle)] hover:border-cta/50
