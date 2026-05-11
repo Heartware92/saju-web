@@ -1279,7 +1279,9 @@ export const calculateSaju = (
 
   const genderNum = gender === 'male' ? 1 : 0;
   const yun = baZi.getYun(genderNum);
-  const daewoonRaw = yun.getDaYun();
+  // lunar-javascript 의 getDaYun() 은 첫 요소가 출생~첫대운 직전의 유년기(ganZhi 빈값)
+  // placeholder 라서 그대로 쓰면 카드가 한 칸씩 밀린다. 한 개 더 받아서 첫 요소를 제거.
+  const daewoonRaw = yun.getDaYun(11).slice(1);
 
   const dayGan = normalizeGan(baZi.getDayGan());
   const monthZhiNorm = normalizeZhi(baZi.getMonthZhi());

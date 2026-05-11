@@ -56,7 +56,7 @@ declare module 'lunar-javascript' {
     getStartYear(): number;
     getStartMonth(): number;
     getStartDay(): number;
-    getDaYun(): DaYun[];
+    getDaYun(count?: number): DaYun[];
   }
 
   export class DaYun {
