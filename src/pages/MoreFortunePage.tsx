@@ -481,7 +481,7 @@ export default function MoreFortunePage({ category }: Props) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center px-6 text-center">
         <p className="text-text-secondary mb-4">{cfg.title}을 보려면 대표 프로필이 필요해요.</p>
-        <Link href="/saju/input" className="text-cta font-semibold underline">프로필 등록</Link>
+        <Link href="/saju/input?mode=profile-only" className="text-cta font-semibold underline">프로필 등록</Link>
       </div>
     );
   }

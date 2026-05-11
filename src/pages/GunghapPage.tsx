@@ -856,7 +856,7 @@ export default function GunghapPage() {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center px-6 text-center">
         <p className="text-text-secondary mb-4">내 프로필을 먼저 등록해야 궁합을 볼 수 있어요.</p>
-        <Link href="/saju/input" className="text-cta font-semibold underline">프로필 등록</Link>
+        <Link href="/saju/input?mode=profile-only" className="text-cta font-semibold underline">프로필 등록</Link>
       </div>
     );
   }

@@ -344,7 +344,7 @@ function NoPrimaryModal({ onClose }: { onClose: () => void }) {
           </p>
           <div className="flex gap-2">
             <button onClick={onClose} className="flex-1 py-2.5 rounded-xl border border-[var(--border-subtle)] text-[15px] text-text-secondary">닫기</button>
-            <button onClick={() => router.push('/saju/input')}
+            <button onClick={() => router.push('/saju/input?mode=profile-only')}
               className="flex-1 py-2.5 rounded-xl font-bold text-white text-[15px]"
               style={{ background: 'var(--cta-primary)' }}>
               프로필 등록하기

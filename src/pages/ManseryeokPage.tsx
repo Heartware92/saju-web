@@ -53,7 +53,7 @@ export default function ManseryeokPage() {
           <p style={{ margin: '16px 0 24px', color: 'var(--text-secondary)' }}>
             만세력을 보려면 먼저 생년월일시를 등록해주세요.
           </p>
-          <Link href="/saju/input" className={styles.backBtn} style={{ margin: '0 auto', textDecoration: 'none' }}>
+          <Link href="/saju/input?mode=profile-only" className={styles.backBtn} style={{ margin: '0 auto', textDecoration: 'none' }}>
             프로필 등록하기
           </Link>
         </div>

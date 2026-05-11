@@ -446,7 +446,7 @@ export default function TojeongResultPage() {
           <p className="text-[17px] font-semibold text-text-primary mb-2">대표 프로필이 없어요</p>
           <p className="text-[15px] text-text-secondary mb-4">프로필을 등록하면 토정비결을 볼 수 있어요</p>
           <button
-            onClick={() => router.push('/saju/input')}
+            onClick={() => router.push('/saju/input?mode=profile-only')}
             className="px-4 py-2 rounded-lg bg-cta text-white text-[15px] font-semibold"
           >
             프로필 등록하기

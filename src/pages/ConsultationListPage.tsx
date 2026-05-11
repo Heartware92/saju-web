@@ -322,7 +322,7 @@ export default function ConsultationListPage() {
       {profiles.length === 0 && (
         <div className="text-center py-16 px-6">
           <p className="text-text-secondary mb-4">프로필을 먼저 등록해야 상담이 가능해요.</p>
-          <Link href="/saju/input" className="text-cta font-semibold underline">프로필 등록</Link>
+          <Link href="/saju/input?mode=profile-only&from=sangdamso" className="text-cta font-semibold underline">프로필 등록</Link>
         </div>
       )}
 

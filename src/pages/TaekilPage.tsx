@@ -399,7 +399,7 @@ export default function TaekilPage() {
           <p style={{ margin: '16px 0 24px', color: 'var(--text-secondary)' }}>
             택일을 하려면 먼저 생년월일시를 등록해주세요.
           </p>
-          <button className={styles.backBtn} onClick={() => router.push('/saju/input')} style={{ margin: '0 auto' }}>
+          <button className={styles.backBtn} onClick={() => router.push('/saju/input?mode=profile-only')} style={{ margin: '0 auto' }}>
             프로필 등록하기
           </button>
         </div>
