@@ -411,6 +411,8 @@
   align-items: center;
   gap: 3px 0;
   white-space: normal;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 /* Element Chart (오행 분포) */
