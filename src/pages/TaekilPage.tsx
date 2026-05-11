@@ -159,7 +159,7 @@ export default function TaekilPage() {
   // 결과 페이지 진입 시 스크롤 최상단
   useScrollToTopOnLoad(showResult && !aiLoading);
 
-  const [aiTimedOut] = useLoadingGuard(aiLoading, 70_000);
+  const [aiTimedOut] = useLoadingGuard(aiLoading, 140_000);
   useEffect(() => {
     if (aiTimedOut) {
       setAiLoading(false);

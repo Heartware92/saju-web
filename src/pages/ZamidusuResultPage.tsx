@@ -124,7 +124,7 @@ export default function ZamidusuResultPage() {
   useScrollToTopOnLoad(!!chart && !aiLoading);
 
   // ── 로딩 안전장치: 70초 초과 시 강제 해제 ──
-  const [aiTimedOut] = useLoadingGuard(aiLoading, 70_000);
+  const [aiTimedOut] = useLoadingGuard(aiLoading, 140_000);
   useEffect(() => {
     if (aiTimedOut) {
       setAiLoading(false);

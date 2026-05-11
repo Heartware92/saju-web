@@ -417,9 +417,9 @@ export default function PeriodFortunePage({ scope }: { scope: FortuneScope | 'da
   }, [recordId, scope]);
 
   // ── 로딩 안전장치: 70초 초과 시 강제 해제 ──
-  const [yearTimedOut] = useLoadingGuard(newyearReportLoading, 70_000);
-  const [dateTimedOut] = useLoadingGuard(pickedDateReportLoading, 70_000);
-  const [domainTimedOut] = useLoadingGuard(domainAILoading, 70_000);
+  const [yearTimedOut] = useLoadingGuard(newyearReportLoading, 140_000);
+  const [dateTimedOut] = useLoadingGuard(pickedDateReportLoading, 140_000);
+  const [domainTimedOut] = useLoadingGuard(domainAILoading, 140_000);
   useEffect(() => {
     if (yearTimedOut) {
       setNewyearReportLoading(false);

@@ -174,7 +174,8 @@ export default function SajuResultPage() {
   }, [searchParams, targetProfile]);
 
   // ── 로딩 안전장치: 2-pass 정통사주는 최대 120초 허용 ──
-  const [reportTimedOut] = useLoadingGuard(reportLoading, 120_000);
+  // 정통사주는 1차(~30s) + 2차(~60s) × retry 3회 → 최악 240초 가능
+  const [reportTimedOut] = useLoadingGuard(reportLoading, 240_000);
   useEffect(() => {
     if (reportTimedOut) {
       setReportLoading(false);

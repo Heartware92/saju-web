@@ -519,16 +519,14 @@ const INTERACTION_COLORS: Record<Interaction['type'], string> = {
 };
 
 const SINSAL_TYPE_COLORS: Record<SinSal['type'], string> = {
-  good: '#34D399',
-  bad: '#F43F5E',
-  neutral: '#F59E0B',
+  gilseong: '#34D399',
+  sinsal: '#F59E0B',
 };
 
-// 직원 피드백: 색만으로 신살/길성 구분이 안 됨 → 라벨로 명시
+// 길성 / 신살 2분류 — 학파마다 길살/흉살/중립 기준이 모호해 단순화
 const SINSAL_TYPE_LABELS: Record<SinSal['type'], string> = {
-  good: '길성',
-  bad: '신살',
-  neutral: '중립',
+  gilseong: '길성',
+  sinsal: '신살',
 };
 
 function elementPosToCell(el: string): { col: PillarCol; row: PillarRow } | null {
@@ -973,26 +971,22 @@ function SinSalBoard({
   });
   // 각 컬럼 안에서도 길성→신살→중립 순서로 정렬 (아래 설명 리스트와 통일)
   // 직원 피드백 + 사용자 보고: 년주에서 길성→중립→길성→신살 식 뒤섞여 보이는 문제
-  const TYPE_ORDER_COL: Record<SinSal['type'], number> = { good: 0, bad: 1, neutral: 2 };
+  const TYPE_ORDER_COL: Record<SinSal['type'], number> = { gilseong: 0, sinsal: 1 };
   (Object.keys(byCol) as unknown as PillarCol[]).forEach((c) => {
     byCol[c].sort((a, b) => TYPE_ORDER_COL[a.type] - TYPE_ORDER_COL[b.type]);
   });
 
   return (
     <div className={styles.sinsalBoardWrap}>
-      {/* 범례 — 색만 보고는 길성·신살 구분이 어려워서 명시 */}
+      {/* 범례 — 길성 / 신살 2분류 */}
       <div className={styles.sinsalLegend}>
-        <span className={styles.sinsalLegendItem} style={{ color: SINSAL_TYPE_COLORS.good }}>
-          <span className={styles.sinsalLegendDot} style={{ background: SINSAL_TYPE_COLORS.good }} />
-          길성 (이로움)
+        <span className={styles.sinsalLegendItem} style={{ color: SINSAL_TYPE_COLORS.gilseong }}>
+          <span className={styles.sinsalLegendDot} style={{ background: SINSAL_TYPE_COLORS.gilseong }} />
+          길성 (귀인성·이로움)
         </span>
-        <span className={styles.sinsalLegendItem} style={{ color: SINSAL_TYPE_COLORS.bad }}>
-          <span className={styles.sinsalLegendDot} style={{ background: SINSAL_TYPE_COLORS.bad }} />
-          신살 (주의)
-        </span>
-        <span className={styles.sinsalLegendItem} style={{ color: SINSAL_TYPE_COLORS.neutral }}>
-          <span className={styles.sinsalLegendDot} style={{ background: SINSAL_TYPE_COLORS.neutral }} />
-          중립
+        <span className={styles.sinsalLegendItem} style={{ color: SINSAL_TYPE_COLORS.sinsal }}>
+          <span className={styles.sinsalLegendDot} style={{ background: SINSAL_TYPE_COLORS.sinsal }} />
+          신살 (작용 살펴볼 것)
         </span>
       </div>
       {/*
@@ -1036,7 +1030,7 @@ function SinSalBoard({
           설명이 좁아져 줄바꿈 강제됨. 그룹 헤더에 라벨 한 번,
           각 행은 이름 + 설명만 두어 설명 폭을 최대화.
         */
-        const TYPE_ORDER: SinSal['type'][] = ['good', 'bad', 'neutral'];
+        const TYPE_ORDER: SinSal['type'][] = ['gilseong', 'sinsal'];
         const uniques = sinSals.filter((s, i, arr) => arr.findIndex(x => x.name === s.name) === i);
         const grouped = TYPE_ORDER
           .map(type => ({ type, items: uniques.filter(s => s.type === type) }))

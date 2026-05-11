@@ -155,8 +155,11 @@ export const stripAllSectionTags = (text: string): string =>
  * GPT API 호출 헬퍼 (서버 API Route 경유)
  * - 응답을 sanitize 하여 마크다운·이모지 잔해 제거
  */
-// Vercel 서버 maxDuration=120초와 맞춤. 개별 API 호출 1회당 최대 대기 시간.
-const AI_CLIENT_TIMEOUT_MS = 55_000;
+// Vercel 서버 maxDuration=120초와 맞춤 — 클라이언트는 110초에 abort.
+// 이전 55초였으나 maxDuration 이 60→120 으로 늘어난 뒤 동기화 안 돼 회귀:
+// 정통사주 2차(maxTokens 14k, 보통 50~80초) 가 클라이언트 측 timeout 에 자주
+// 걸리면서 "응답이 너무 오래 걸려요" 안내가 빈번하던 사고의 원인.
+const AI_CLIENT_TIMEOUT_MS = 110_000;
 
 /**
  * truncation 사유 에러 — UI 가 메시지 그대로 노출해 사용자가 재시도하도록 유도.

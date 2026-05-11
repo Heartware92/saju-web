@@ -172,12 +172,12 @@ function collectSpecialFeatures(
     features.push('격국 손상(敗格) 주의');
   }
 
-  // 신살 관련
+  // 신살 관련 (2분류: gilseong/sinsal)
   saju.sinSals.forEach(sinsal => {
-    if (sinsal.type === 'good') {
-      features.push(`길신: ${sinsal.name}`);
-    } else if (sinsal.type === 'bad') {
-      features.push(`흉신: ${sinsal.name}`);
+    if (sinsal.type === 'gilseong') {
+      features.push(`길성: ${sinsal.name}`);
+    } else {
+      features.push(`신살: ${sinsal.name}`);
     }
   });
 

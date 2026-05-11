@@ -137,7 +137,12 @@ export interface ElementCount {
 
 export interface SinSal {
   name: string;
-  type: 'good' | 'bad' | 'neutral';
+  /**
+   * 신살 분류 — 2단계로 단순화 (학파마다 길살/흉살/중립 기준이 달라 통용 모호함을 회피).
+   * - 'gilseong': 길성(귀인성) — 천을·태극·천복·문곡·학당·금여록·천의성·천덕·월덕 등
+   * - 'sinsal'  : 그 외 모든 살(殺) — 길·흉·중립 구분 없이 description으로 뉘앙스 전달
+   */
+  type: 'gilseong' | 'sinsal';
   description: string;
   /**
    * 신살이 걸린 기둥 인덱스 (표시 순서 기준: 0=시, 1=일, 2=월, 3=년)
@@ -587,7 +592,7 @@ const calculateSinSals = (
   const guiRenBranches = tianYiGuiRen[dayGan] || [];
   const guiRenCols = branches.filter(b => guiRenBranches.includes(b.zhi)).map(b => b.col);
   if (guiRenCols.length > 0) {
-    sinSals.push({ name: '천을귀인', type: 'good', description: '위기 시 귀인의 도움을 받는 최고의 길성, 어려울수록 도와줄 사람이 나타나는 별', pillars: guiRenCols });
+    sinSals.push({ name: '천을귀인', type: 'gilseong', description: '위기 시 귀인의 도움을 받는 최고의 길성, 어려울수록 도와줄 사람이 나타나는 별', pillars: guiRenCols });
   }
 
   // 태극귀인 (太極貴人) — 일간의 장생지 + 건록지
@@ -600,7 +605,7 @@ const calculateSinSals = (
   };
   const tgCols = branches.filter(b => (taegeukGuiIn[dayGan] || []).includes(b.zhi)).map(b => b.col);
   if (tgCols.length > 0) {
-    sinSals.push({ name: '태극귀인', type: 'good', description: '위기를 기회로 바꾸는 길성, 큰 변화 속에서도 운이 따라 결과적으로 이로운 결과', pillars: tgCols });
+    sinSals.push({ name: '태극귀인', type: 'gilseong', description: '위기를 기회로 바꾸는 길성, 큰 변화 속에서도 운이 따라 결과적으로 이로운 결과', pillars: tgCols });
   }
 
   // 천복귀인 (天福貴人) — 일간의 합 상대 건록지
@@ -610,7 +615,7 @@ const calculateSinSals = (
   };
   const cbCols = findCols(cheonbokGuiIn[dayGan] || '');
   if (cbCols.length > 0) {
-    sinSals.push({ name: '천복귀인', type: 'good', description: '하늘이 내린 복덕의 별, 평생 의식주가 풍족하고 큰 결핍 없이 안정되게 지내는 기운', pillars: cbCols });
+    sinSals.push({ name: '천복귀인', type: 'gilseong', description: '하늘이 내린 복덕의 별, 평생 의식주가 풍족하고 큰 결핍 없이 안정되게 지내는 기운', pillars: cbCols });
   }
 
   // 문곡귀인 (文曲貴人) — 일간 기준
@@ -621,7 +626,7 @@ const calculateSinSals = (
   };
   const mgCols = findCols(mungokGuiIn[dayGan] || '');
   if (mgCols.length > 0) {
-    sinSals.push({ name: '문곡귀인', type: 'good', description: '학문과 문서에 뛰어난 재능을 가진 별, 시험·자격·연구 분야에서 두각을 드러내는 기운', pillars: mgCols });
+    sinSals.push({ name: '문곡귀인', type: 'gilseong', description: '학문과 문서에 뛰어난 재능을 가진 별, 시험·자격·연구 분야에서 두각을 드러내는 기운', pillars: mgCols });
   }
 
   // 학당귀인 (學堂貴人) — 일간 오행의 장생지
@@ -632,7 +637,7 @@ const calculateSinSals = (
   };
   const hdCols = findCols(hakdang[dayGan] || '');
   if (hdCols.length > 0) {
-    sinSals.push({ name: '학당귀인', type: 'good', description: '학업과 지적 활동에 유리한 재능의 별, 배움이 깊고 가르치는 일에도 능한 기운', pillars: hdCols });
+    sinSals.push({ name: '학당귀인', type: 'gilseong', description: '학업과 지적 활동에 유리한 재능의 별, 배움이 깊고 가르치는 일에도 능한 기운', pillars: hdCols });
   }
 
   // 금여록 (金輿祿) — 일간 기준, 배우자복
@@ -643,7 +648,7 @@ const calculateSinSals = (
   };
   const gyCols = findCols(geumYeo[dayGan] || '');
   if (gyCols.length > 0) {
-    sinSals.push({ name: '금여록', type: 'good', description: '배우자복이 좋고 물질적 풍요까지 따르는 별, 안락한 가정과 안정된 재물의 기운', pillars: gyCols });
+    sinSals.push({ name: '금여록', type: 'gilseong', description: '배우자복이 좋고 물질적 풍요까지 따르는 별, 안락한 가정과 안정된 재물의 기운', pillars: gyCols });
   }
 
   // 천의성 (天醫星) — 월지 기준
@@ -654,7 +659,7 @@ const calculateSinSals = (
   };
   const cuCols = findCols(cheonUi[pillars.month.zhi] || '');
   if (cuCols.length > 0) {
-    sinSals.push({ name: '천의성', type: 'good', description: '의학·치유 관련 재능이 깊은 별, 의술·간호·상담과 인연이 있고 건강 회복력이 강함', pillars: cuCols });
+    sinSals.push({ name: '천의성', type: 'gilseong', description: '의학·치유 관련 재능이 깊은 별, 의술·간호·상담과 인연이 있고 건강 회복력이 강함', pillars: cuCols });
   }
 
   // 천덕귀인 (天德貴人) — 월지 기준 천간
@@ -667,7 +672,7 @@ const calculateSinSals = (
   if (cdGan) {
     const cdCols = stems.filter(s => s.gan === cdGan).map(s => s.col);
     if (cdCols.length > 0) {
-      sinSals.push({ name: '천덕귀인', type: 'good', description: '하늘의 덕으로 재앙을 해소하는 별, 흉을 길로 돌리고 위기에서 모면하게 하는 기운', pillars: cdCols });
+      sinSals.push({ name: '천덕귀인', type: 'gilseong', description: '하늘의 덕으로 재앙을 해소하는 별, 흉을 길로 돌리고 위기에서 모면하게 하는 기운', pillars: cdCols });
     }
   }
 
@@ -682,7 +687,7 @@ const calculateSinSals = (
   if (wdGan) {
     const wdCols = stems.filter(s => s.gan === wdGan).map(s => s.col);
     if (wdCols.length > 0) {
-      sinSals.push({ name: '월덕귀인', type: 'good', description: '월덕의 은혜를 받는 별, 관재·질병·송사를 해소하고 평온한 일상을 지키는 기운', pillars: wdCols });
+      sinSals.push({ name: '월덕귀인', type: 'gilseong', description: '월덕의 은혜를 받는 별, 관재·질병·송사를 해소하고 평온한 일상을 지키는 기운', pillars: wdCols });
     }
   }
 
@@ -700,7 +705,7 @@ const calculateSinSals = (
     if (!target) return;
     const cols = findCols(target);
     if (cols.length > 0 && !sinSals.some(s => s.name === '역마살' && s.pillars.some(c => cols.includes(c)))) {
-      sinSals.push({ name: '역마살', type: 'neutral', description: '이동수가 많은 별, 해외·여행·무역·출장과 인연이 깊고 한곳에 오래 머물기 어려운 기운', pillars: cols });
+      sinSals.push({ name: '역마살', type: 'sinsal', description: '이동수가 많은 별, 해외·여행·무역·출장과 인연이 깊고 한곳에 오래 머물기 어려운 기운', pillars: cols });
     }
   };
   addYeokMa(yearBranch);
@@ -720,7 +725,7 @@ const calculateSinSals = (
     const cols = findCols(target).filter(c => !doHwaAdded.has(c));
     if (cols.length > 0) {
       cols.forEach(c => doHwaAdded.add(c));
-      sinSals.push({ name: '도화살', type: 'neutral', description: '인기와 매력이 강한 별, 연예·예술·대인관계에서 유리하나 이성 관계의 구설은 조심', pillars: cols });
+      sinSals.push({ name: '도화살', type: 'sinsal', description: '인기와 매력이 강한 별, 연예·예술·대인관계에서 유리하나 이성 관계의 구설은 조심', pillars: cols });
     }
   };
   addDoHwa(yearBranch);
@@ -740,7 +745,7 @@ const calculateSinSals = (
     const cols = findCols(target).filter(c => !hgAdded.has(c));
     if (cols.length > 0) {
       cols.forEach(c => hgAdded.add(c));
-      sinSals.push({ name: '화개살', type: 'neutral', description: '종교·학문·예술적 재능의 별, 깊이 있는 탐구자 기질이며 다소 고독한 면이 따른다', pillars: cols });
+      sinSals.push({ name: '화개살', type: 'sinsal', description: '종교·학문·예술적 재능의 별, 깊이 있는 탐구자 기질이며 다소 고독한 면이 따른다', pillars: cols });
     }
   };
   addHwaGae(yearBranch);
@@ -754,7 +759,7 @@ const calculateSinSals = (
   };
   const hyCols = findCols(hongYeom[dayGan] || '');
   if (hyCols.length > 0) {
-    sinSals.push({ name: '홍염살', type: 'neutral', description: '강한 이성 매력의 별, 연애·결혼에 영향이 크고 외도·삼각관계 구설을 조심해야 함', pillars: hyCols });
+    sinSals.push({ name: '홍염살', type: 'sinsal', description: '강한 이성 매력의 별, 연애·결혼에 영향이 크고 외도·삼각관계 구설을 조심해야 함', pillars: hyCols });
   }
 
   // 현침살 (懸針殺) — 천간 형태(甲/辛/壬/癸) + 일간 기준 지지 (일간 자신 제외)
@@ -768,7 +773,7 @@ const calculateSinSals = (
   const hcZhiCols = findCols(hyeonchimZhi[dayGan] || '');
   const hcAllCols = [...new Set([...hcStemCols, ...hcZhiCols])];
   if (hcAllCols.length > 0) {
-    sinSals.push({ name: '현침살', type: 'neutral', description: '날카로운 지성과 분석력의 별, 예민한 감수성과 비판적 시각을 함께 갖추는 기운', pillars: hcAllCols });
+    sinSals.push({ name: '현침살', type: 'sinsal', description: '날카로운 지성과 분석력의 별, 예민한 감수성과 비판적 시각을 함께 갖추는 기운', pillars: hcAllCols });
   }
 
   // 양인살 (羊刃殺) — 일간 기준
@@ -779,13 +784,13 @@ const calculateSinSals = (
   };
   const yiCols = findCols(yangIn[dayGan] || '');
   if (yiCols.length > 0) {
-    sinSals.push({ name: '양인살', type: 'bad', description: '강한 승부욕과 결단력의 별, 추진력은 좋으나 수술·사고·다툼을 늘 조심해야 한다', pillars: yiCols });
+    sinSals.push({ name: '양인살', type: 'sinsal', description: '강한 승부욕과 결단력의 별, 추진력은 좋으나 수술·사고·다툼을 늘 조심해야 한다', pillars: yiCols });
   }
 
   // 괴강살 (魁罡殺) — 특정 일주
   const gwaegangSet = new Set(['경진', '경술', '임진', '임술']);
   if (gwaegangSet.has(pillars.day.gan + pillars.day.zhi)) {
-    sinSals.push({ name: '괴강살', type: 'neutral', description: '강한 카리스마와 리더십의 별, 결단력 있게 일을 추진하나 고집과 강성을 조심', pillars: [1] });
+    sinSals.push({ name: '괴강살', type: 'sinsal', description: '강한 카리스마와 리더십의 별, 결단력 있게 일을 추진하나 고집과 강성을 조심', pillars: [1] });
   }
 
   // 겁살 (劫殺) — 년지 기준
@@ -797,7 +802,7 @@ const calculateSinSals = (
   };
   const gsCols = findCols(geopSal[yearBranch] || '');
   if (gsCols.length > 0) {
-    sinSals.push({ name: '겁살', type: 'bad', description: '갑작스러운 재물 손실의 별, 도난·사기·예상치 못한 지출을 늘 경계해야 하는 기운', pillars: gsCols });
+    sinSals.push({ name: '겁살', type: 'sinsal', description: '갑작스러운 재물 손실의 별, 도난·사기·예상치 못한 지출을 늘 경계해야 하는 기운', pillars: gsCols });
   }
 
   // 망신살 (亡神殺) — 년지 기준
@@ -809,7 +814,7 @@ const calculateSinSals = (
   };
   const msCols = findCols(mangSin[yearBranch] || '');
   if (msCols.length > 0) {
-    sinSals.push({ name: '망신살', type: 'bad', description: '실수나 망신을 당할 수 있는 기운, 구설·평판 흠집을 조심하고 처신을 신중히 해야 함', pillars: msCols });
+    sinSals.push({ name: '망신살', type: 'sinsal', description: '실수나 망신을 당할 수 있는 기운, 구설·평판 흠집을 조심하고 처신을 신중히 해야 함', pillars: msCols });
   }
 
   // 장성살 (將星殺) — 년지 기준
@@ -821,7 +826,7 @@ const calculateSinSals = (
   };
   const jsCols = findCols(jangSeong[yearBranch] || '');
   if (jsCols.length > 0) {
-    sinSals.push({ name: '장성', type: 'good', description: '리더십과 권위를 상징하는 별, 승진·출세운이 강하고 사람을 이끄는 자리에 오르는 기운', pillars: jsCols });
+    sinSals.push({ name: '장성', type: 'sinsal', description: '리더십과 권위를 상징하는 별, 승진·출세운이 강하고 사람을 이끄는 자리에 오르는 기운', pillars: jsCols });
   }
 
   // 관귀학관 (官貴學館) — 정관 천간의 장생지
@@ -831,7 +836,7 @@ const calculateSinSals = (
   };
   const ghCols = findCols(gwanGwiHakGwan[dayGan] || '');
   if (ghCols.length > 0) {
-    sinSals.push({ name: '관귀학관', type: 'good', description: '관직과 시험운이 좋고 학문적 성취가 깊은 별, 공직·전문직과 인연이 두터운 기운', pillars: ghCols });
+    sinSals.push({ name: '관귀학관', type: 'sinsal', description: '관직과 시험운이 좋고 학문적 성취가 깊은 별, 공직·전문직과 인연이 두터운 기운', pillars: ghCols });
   }
 
   // 원진살 (元嗔殺) — 서로 밀어내는 지지 조합
@@ -843,7 +848,7 @@ const calculateSinSals = (
     const hasBoth = branches.some(br => br.zhi === a) && branches.some(br => br.zhi === b);
     if (hasBoth) {
       const cols = branches.filter(br => br.zhi === a || br.zhi === b).map(br => br.col);
-      sinSals.push({ name: '원진살', type: 'bad', description: '서로 밀어내는 기운, 가까운 관계일수록 까닭 없는 갈등이 생기기 쉬워 인내가 필요', pillars: cols });
+      sinSals.push({ name: '원진살', type: 'sinsal', description: '서로 밀어내는 기운, 가까운 관계일수록 까닭 없는 갈등이 생기기 쉬워 인내가 필요', pillars: cols });
     }
   });
 
@@ -855,7 +860,7 @@ const calculateSinSals = (
   };
   const bhCols = findCols(baekho[dayGan] || '');
   if (bhCols.length > 0) {
-    sinSals.push({ name: '백호대살', type: 'bad', description: '사고·수술·혈액 관련을 조심해야 하는 별, 다만 강한 결단력과 추진력을 함께 갖춘다', pillars: bhCols });
+    sinSals.push({ name: '백호대살', type: 'sinsal', description: '사고·수술·혈액 관련을 조심해야 하는 별, 다만 강한 결단력과 추진력을 함께 갖춘다', pillars: bhCols });
   }
 
   // ── 삼형 ──
@@ -864,11 +869,11 @@ const calculateSinSals = (
 
   if (hasInSaSin) {
     const cols = branches.filter(b => ['인', '사', '신'].includes(b.zhi)).map(b => b.col);
-    sinSals.push({ name: '인사신 삼형', type: 'bad', description: '지세지형 — 교통사고·수술·송사·갈등의 형살, 차분한 판단과 안전 운전이 꼭 필요', pillars: cols });
+    sinSals.push({ name: '인사신 삼형', type: 'sinsal', description: '지세지형 — 교통사고·수술·송사·갈등의 형살, 차분한 판단과 안전 운전이 꼭 필요', pillars: cols });
   }
   if (hasChukSulMi) {
     const cols = branches.filter(b => ['축', '술', '미'].includes(b.zhi)).map(b => b.col);
-    sinSals.push({ name: '축술미 삼형', type: 'bad', description: '무은지형 — 가족 갈등과 건강 문제의 형살, 친근한 사이일수록 거리 조절이 필요', pillars: cols });
+    sinSals.push({ name: '축술미 삼형', type: 'sinsal', description: '무은지형 — 가족 갈등과 건강 문제의 형살, 친근한 사이일수록 거리 조절이 필요', pillars: cols });
   }
 
   // 귀문관살 (鬼門關殺)
@@ -879,7 +884,7 @@ const calculateSinSals = (
     const hasBoth = pair.every(p => branches.some(br => br.zhi === p));
     if (hasBoth) {
       const cols = branches.filter(b => pair.includes(b.zhi)).map(b => b.col);
-      sinSals.push({ name: '귀문관살', type: 'neutral', description: '영적 감수성과 직관력이 강한 별, 예술·종교·심리 분야에 깊은 재능이 있는 기운', pillars: cols });
+      sinSals.push({ name: '귀문관살', type: 'sinsal', description: '영적 감수성과 직관력이 강한 별, 예술·종교·심리 분야에 깊은 재능이 있는 기운', pillars: cols });
     }
   });
 

@@ -451,7 +451,7 @@ export default function TodayFortunePage() {
   const apiCalledKeyRef = useRef<string | null>(null);
 
   // 로딩 안전장치 — 130s. callGPT 자체 90s + 여유.
-  const [reportTimedOut] = useLoadingGuard(reportLoading, 130_000);
+  const [reportTimedOut] = useLoadingGuard(reportLoading, 140_000);
   useEffect(() => {
     if (reportTimedOut) {
       setReportLoading(false);

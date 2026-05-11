@@ -1036,9 +1036,9 @@ export const generateTodayFortuneV3Prompt = (
   const missingSipseongStr = missingSipseong.length > 0 ? missingSipseong.join(', ') : '없음(모두 분포)';
 
   // ── 신살 분류 (길/흉/중)
-  const sinSalGood = sinSals.filter(s => s.type === 'good').map(s => s.name).join('·') || '없음';
-  const sinSalBad = sinSals.filter(s => s.type === 'bad').map(s => s.name).join('·') || '없음';
-  const sinSalNeutral = sinSals.filter(s => s.type === 'neutral').map(s => s.name).join('·') || '없음';
+  const sinSalGood = sinSals.filter(s => s.type === 'gilseong').map(s => s.name).join('·') || '없음';
+  const sinSalBad = sinSals.filter(s => s.type === 'sinsal').map(s => s.name).join('·') || '없음';
+  const sinSalNeutral = sinSals.filter(s => s.type === 'sinsal').map(s => s.name).join('·') || '없음';
   const interStrOrigin = interactions.length > 0 ? interactions.map(i => `${i.type}: ${i.description}`).join(' / ') : '없음';
 
   // ── 운기 4층
@@ -1162,9 +1162,9 @@ ${strengthBlock}
 십성 분포: ${sipseong}
 원국에 0개인 십성: ${missingSipseongStr}
    → "사주에 ~십성이 강하다/있다/약하다"로 서술 금지. "원국에 없는 ~" 또는 "~이(가) 부재한 사주"로만.
-신살(길성): ${sinSalGood}
-신살(흉성): ${sinSalBad}
-신살(중립): ${sinSalNeutral}
+길성: ${sinSalGood}
+신살: ${sinSalBad}
+(※ 신살의 길/흉/중립은 학파마다 다름 — description 어휘로 판단)
 원국 합충형파해: ${interStrOrigin}
 간여지동: ${formatGanYeojidong(result)}
 병존·삼존: ${formatByeongjOn(result)}
@@ -1649,7 +1649,7 @@ function buildJungtongsajuInput(result: SajuResult) {
     `과다 오행: ${maxEl[0]}(${maxEl[1]}%)`,
   ].join(' / ');
 
-  const sinSalStr = sinSals.length > 0 ? sinSals.map(s => `${s.name}(${s.type === 'good' ? '길' : s.type === 'bad' ? '흉' : '중'})`).join(' ') : '없음';
+  const sinSalStr = sinSals.length > 0 ? sinSals.map(s => `${s.name}(${s.type === 'gilseong' ? '길성' : '신살'})`).join(' ') : '없음';
   const interactionStr = interactions.length > 0 ? interactions.map(i => `${i.type}: ${i.description}`).join(' / ') : '없음';
 
   const currentYear = new Date().getFullYear();
@@ -3588,8 +3588,8 @@ function buildPersonBlock(result: SajuResult, name: string): string {
   const kongmangStr = kongmangList.length > 0 ? kongmangList.join('·') : '없음';
 
   // 신살 요약
-  const sinSalGood = result.sinSals.filter(s => s.type === 'good').map(s => s.name).join('·') || '없음';
-  const sinSalBad = result.sinSals.filter(s => s.type === 'bad').map(s => s.name).join('·') || '없음';
+  const sinSalGood = result.sinSals.filter(s => s.type === 'gilseong').map(s => s.name).join('·') || '없음';
+  const sinSalBad = result.sinSals.filter(s => s.type === 'sinsal').map(s => s.name).join('·') || '없음';
 
   // 신강신약 세부
   const sd = (result as typeof result & { strengthDetail?: { bijeopScore?: number; inseongScore?: number } }).strengthDetail;
@@ -3607,7 +3607,7 @@ function buildPersonBlock(result: SajuResult, name: string): string {
     `일지 합·충: ${result.interactions.filter(i => i.description.includes(p.day.zhi)).map(i => `${i.type}:${i.description}`).join(' / ') || '없음'}`,
     `간여지동: ${formatGanYeojidong(result)} / 병존·삼존: ${formatByeongjOn(result)}`,
     `공망: ${kongmangStr}`,
-    `신살(길): ${sinSalGood} / 신살(흉): ${sinSalBad}`,
+    `길성: ${sinSalGood} / 신살: ${sinSalBad}`,
   ];
   return lines.join('\n');
 }
@@ -5750,9 +5750,9 @@ export function buildConsultationSystemPrompt(
   const monthStr = buildMonthUnsStr(saju, seWoon);
 
   // 신살 (type별 그룹핑 — 길신/흉신 구분해서 제공)
-  const goodSins = saju.sinSals.filter(s => s.type === 'good').map(s => s.name);
-  const badSins = saju.sinSals.filter(s => s.type === 'bad').map(s => s.name);
-  const neutralSins = saju.sinSals.filter(s => s.type === 'neutral').map(s => s.name);
+  const goodSins = saju.sinSals.filter(s => s.type === 'gilseong').map(s => s.name);
+  const badSins = saju.sinSals.filter(s => s.type === 'sinsal').map(s => s.name);
+  const neutralSins = saju.sinSals.filter(s => s.type === 'sinsal').map(s => s.name);
   const sinSalLines: string[] = [];
   if (goodSins.length > 0) sinSalLines.push(`길신: ${goodSins.join(', ')}`);
   if (badSins.length > 0) sinSalLines.push(`흉신: ${badSins.join(', ')}`);
@@ -5888,7 +5888,7 @@ function buildMoreFortuneBlock(result: SajuResult): string {
   }
 
   const sinSalStr = result.sinSals.length > 0
-    ? result.sinSals.map(s => `${s.name}(${s.type === 'good' ? '길' : s.type === 'bad' ? '흉' : '중'})`).join(' · ')
+    ? result.sinSals.map(s => `${s.name}(${s.type === 'gilseong' ? '길성' : '신살'})`).join(' · ')
     : '특별 신살 없음';
 
   return `[원국]
@@ -6026,7 +6026,7 @@ export const generateHealthShortPrompt = (result: SajuResult): string => {
   const healthRiskKeys = ['백호','양인','겁살','재살','원진','급각','탕화'];
   const healthRisk = result.sinSals
     .filter(s => healthRiskKeys.some(k => s.name.includes(k)))
-    .map(s => `${s.name}(${s.type === 'good' ? '길' : s.type === 'bad' ? '흉' : '중'})`)
+    .map(s => `${s.name}(${s.type === 'gilseong' ? '길성' : '신살'})`)
     .join(' · ') || '없음';
 
   return `당신은 35년 경력의 사주명리 전문가입니다. 아래 사람의 건강운을 짧고 명확하게 풀어주세요.
@@ -6334,7 +6334,7 @@ export const generatePersonalityShortPrompt = (result: SajuResult): string => {
 
   const personalitySinSals = result.sinSals
     .filter(s => ['도화', '홍염', '괴강', '백호', '양인', '화개', '역마', '천을귀인', '문창', '학당', '고신', '과숙', '천문', '급각'].some(k => s.name.includes(k)))
-    .map(s => `${s.name}(${s.type === 'good' ? '길' : s.type === 'bad' ? '흉' : '중'}: ${s.description})`)
+    .map(s => `${s.name}(${s.type === 'gilseong' ? '길성' : '신살'}: ${s.description})`)
     .join('\n  · ') || '없음';
 
   const interactionStr = result.interactions.length > 0
