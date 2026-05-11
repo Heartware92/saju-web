@@ -13,7 +13,7 @@
 
 import React, { useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { auth, supabase } from '../services/supabase';
+import { auth, supabase, agreement } from '../services/supabase';
 import { useUserStore } from '../store/useUserStore';
 
 export default function ConsentPage() {
@@ -47,7 +47,7 @@ export default function ConsentPage() {
     setError('');
     setSubmitting(true);
     try {
-      await auth.recordAgreement(agreedMarketing);
+      await agreement.upsertMine(agreedMarketing);
 
       // 동의 후 라우팅: 소셜 + 휴대폰 미인증이면 phone-verify
       const { data: { session } } = await supabase.auth.getSession();

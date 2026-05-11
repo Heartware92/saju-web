@@ -9,7 +9,7 @@
 
 import { useEffect, useState } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
-import { supabase } from '../services/supabase';
+import { supabase, agreement } from '../services/supabase';
 import { useCreditStore } from '../store/useCreditStore';
 import { useProfileStore } from '../store/useProfileStore';
 import { useUserStore } from '../store/useUserStore';
@@ -62,10 +62,10 @@ export default function AuthCallbackPage() {
 
           const next = searchParams.get('next') || '/';
 
-          // 1) 약관 동의 누락된 OAuth 신규 사용자 → 동의 페이지로
-          //    (이메일 가입은 signUpWithEmail 단계에서 이미 기록됨)
-          const hasTermsAgreed = !!session.user.user_metadata?.terms_agreed_at;
-          if (!hasTermsAgreed) {
+          // 1) 약관 동의 누락 → 동의 페이지로
+          //    public.user_agreements 테이블에서 조회 (OAuth 가 덮어쓸 수 없는 위치).
+          const ag = await agreement.getMine();
+          if (!ag?.terms_agreed_at) {
             const dest = encodeURIComponent(next);
             router.replace(`/auth/consent?next=${dest}`);
             return;

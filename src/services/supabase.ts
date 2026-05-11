@@ -42,45 +42,19 @@ export const auth = {
   signUpWithEmail: async (
     email: string,
     password: string,
-    phone?: string,
-    marketingAgreed?: boolean
+    phone?: string
   ) => {
     const redirectBase = typeof window !== 'undefined' ? window.location.origin : '';
-    const nowIso = new Date().toISOString();
-    const userData: Record<string, unknown> = {
-      terms_agreed_at: nowIso,
-      privacy_agreed_at: nowIso,
-      age14_agreed_at: nowIso,
-      marketing_agreed_at: marketingAgreed ? nowIso : null,
-    };
-    if (phone) userData.phone = phone;
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: {
         emailRedirectTo: `${redirectBase}/auth/callback`,
-        data: userData,
+        data: phone ? { phone } : undefined,
       },
     });
     if (error) throw error;
     return data;
-  },
-
-  /**
-   * 동의 정보를 현재 로그인된 사용자의 user_metadata 에 기록한다.
-   * OAuth 첫 로그인 시 ConsentPage 에서 호출.
-   */
-  recordAgreement: async (marketingAgreed: boolean) => {
-    const nowIso = new Date().toISOString();
-    const { error } = await supabase.auth.updateUser({
-      data: {
-        terms_agreed_at: nowIso,
-        privacy_agreed_at: nowIso,
-        age14_agreed_at: nowIso,
-        marketing_agreed_at: marketingAgreed ? nowIso : null,
-      },
-    });
-    if (error) throw error;
   },
 
   // 비밀번호 재설정 이메일 발송 — /auth/update-password 로 redirect
@@ -123,6 +97,52 @@ export const auth = {
     return data;
   },
 
+};
+
+/**
+ * 약관 동의 정보 — public.user_agreements 테이블 분리 저장.
+ * (auth.users.user_metadata 는 OAuth provider 가 덮어쓸 수 있어 신뢰 불가)
+ */
+export interface UserAgreement {
+  user_id: string;
+  terms_agreed_at: string;
+  privacy_agreed_at: string;
+  age14_agreed_at: string;
+  marketing_agreed_at: string | null;
+  updated_at: string;
+}
+
+export const agreement = {
+  /** 현재 로그인 사용자의 동의 레코드 조회 — 없으면 null */
+  getMine: async (): Promise<UserAgreement | null> => {
+    const { data, error } = await supabase
+      .from('user_agreements')
+      .select('*')
+      .maybeSingle();
+    if (error) {
+      console.error('Error fetching agreement:', error);
+      return null;
+    }
+    return (data as UserAgreement | null) ?? null;
+  },
+
+  /** 동의 정보 upsert — 가입/첫 OAuth 후 ConsentPage 에서 호출 */
+  upsertMine: async (marketingAgreed: boolean) => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error('Not authenticated');
+    const nowIso = new Date().toISOString();
+    const { error } = await supabase
+      .from('user_agreements')
+      .upsert({
+        user_id: user.id,
+        terms_agreed_at: nowIso,
+        privacy_agreed_at: nowIso,
+        age14_agreed_at: nowIso,
+        marketing_agreed_at: marketingAgreed ? nowIso : null,
+        updated_at: nowIso,
+      });
+    if (error) throw error;
+  },
 };
 
 /**

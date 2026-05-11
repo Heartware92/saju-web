@@ -4,7 +4,7 @@
 
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { supabase, auth } from '../services/supabase';
+import { supabase, auth, agreement } from '../services/supabase';
 import { useCreditStore } from './useCreditStore';
 import { useProfileStore } from './useProfileStore';
 import type { AuthUser } from '../types/user';
@@ -102,9 +102,19 @@ export const useUserStore = create<UserState>()(
         try {
           set({ loading: true, error: null });
 
-          const response = await auth.signUpWithEmail(email, password, phone, marketingAgreed);
+          const response = await auth.signUpWithEmail(email, password, phone);
 
           set({ user: response.user || null, loading: false });
+
+          // 가입 직후 동의 정보 기록 (user_agreements 테이블)
+          // 세션이 즉시 생성되는 환경(이메일 확인 비활성화)에서 RLS 통과 가능
+          if (response.user) {
+            try {
+              await agreement.upsertMine(!!marketingAgreed);
+            } catch (e) {
+              console.error('Agreement upsert failed at signup (will be retried at first login):', e);
+            }
+          }
 
           // 회원가입 시 자동으로 1엽전이 Supabase Trigger로 지급됨
           // 크레딧 정보 로드
