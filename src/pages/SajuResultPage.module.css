@@ -398,9 +398,10 @@
 }
 
 .hiddenStems {
-  font-size: 11px;
+  font-size: 15px;
   color: var(--text-secondary);
-  letter-spacing: 1px;
+  letter-spacing: 2px;
+  line-height: 1.6;
 }
 
 /* Element Chart (오행 분포) */
@@ -1554,7 +1555,11 @@
 }
 
 .hiddenStemTap {
-  margin: 0 1px;
+  display: inline-block;
+  margin: 0 2px;
+  padding: 4px 5px;
+  min-width: 22px;
+  text-align: center;
 }
 
 .termBackdrop {
