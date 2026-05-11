@@ -12,6 +12,7 @@ import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { useUserStore } from '../store/useUserStore';
 import { BackButton } from './ui/BackButton';
+import { SocialAuthButtons } from './SocialAuthButtons';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -70,6 +71,10 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, messag
             >
               회원가입
             </Link>
+          </div>
+
+          <div className="mt-6 pt-5 border-t border-[var(--border-subtle)]">
+            <SocialAuthButtons label="간편 로그인" />
           </div>
 
           <button
