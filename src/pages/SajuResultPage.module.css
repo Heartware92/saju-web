@@ -1370,7 +1370,7 @@
 .sinsalDescItem {
   display: flex;
   align-items: flex-start;
-  gap: 12px;
+  gap: 8px;
   font-size: 16px;
   line-height: 1.6;
   padding-bottom: 10px;
@@ -1384,7 +1384,7 @@
 
 .sinsalDescName {
   flex-shrink: 0;
-  min-width: 78px;
+  min-width: 68px;
   font-weight: 700;
   font-size: 16px;
 }
