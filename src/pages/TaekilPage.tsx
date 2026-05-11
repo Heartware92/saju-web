@@ -1127,28 +1127,28 @@ export default function TaekilPage() {
                                   {/* 시간 에너지 맵 */}
                                   {timeSlots && timeSlots.length > 0 && (
                                     <div style={{
-                                      padding: '12px 10px',
+                                      padding: '16px 14px',
                                       background: 'rgba(255,255,255,0.03)', borderRadius: 12,
                                       border: '1px solid rgba(255,255,255,0.06)',
                                     }}>
-                                      <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-tertiary)', marginBottom: 10 }}>
+                                      <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-secondary)', marginBottom: 14 }}>
                                         시간 에너지 흐름
                                       </div>
                                       <div style={{
                                         display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between',
-                                        gap: 2, height: 48, padding: '0 2px',
+                                        gap: 3, height: 68, padding: '0 2px',
                                       }}>
                                         {timeSlots.map((slot) => {
                                           const isPeak = slot.energy >= 7;
-                                          const barH = Math.max(6, (slot.energy / maxTimeEnergy) * 48);
+                                          const barH = Math.max(8, (slot.energy / maxTimeEnergy) * 68);
                                           return (
                                             <div key={slot.zhi} style={{
                                               display: 'flex', flexDirection: 'column', alignItems: 'center',
                                               flex: 1, gap: 3,
                                             }}>
                                               <div style={{
-                                                width: '100%', maxWidth: 18,
-                                                height: barH, borderRadius: 3,
+                                                width: '100%', maxWidth: 24,
+                                                height: barH, borderRadius: 4,
                                                 background: isPeak
                                                   ? 'linear-gradient(180deg, #34D399, rgba(52,211,153,0.4))'
                                                   : slot.energy <= 3
@@ -1162,21 +1162,30 @@ export default function TaekilPage() {
                                       </div>
                                       <div style={{
                                         display: 'flex', justifyContent: 'space-between',
-                                        marginTop: 4, padding: '0 2px',
+                                        marginTop: 8, padding: '0 2px',
                                       }}>
                                         {timeSlots.map((slot) => (
                                           <span key={slot.zhi} style={{
                                             flex: 1, textAlign: 'center',
-                                            fontSize: 9, fontWeight: slot.energy >= 7 ? 800 : 500,
-                                            color: slot.energy >= 7 ? '#34D399' : 'var(--text-tertiary)',
+                                            fontSize: 14, fontWeight: slot.energy >= 7 ? 800 : 600,
+                                            color: slot.energy >= 7 ? '#34D399' : 'var(--text-secondary)',
+                                            letterSpacing: '-0.01em',
                                           }}>
                                             {slot.zhi}
                                           </span>
                                         ))}
                                       </div>
                                       {peakSlots.length > 0 && (
-                                        <div style={{ marginTop: 8, fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.6 }}>
-                                          {peakSlots.map(s => `${s.name}(${s.hours})`).join(', ')} 에너지 집중 구간
+                                        <div style={{
+                                          marginTop: 14,
+                                          paddingTop: 12,
+                                          borderTop: '1px solid rgba(255,255,255,0.06)',
+                                          fontSize: 14, color: 'var(--text-secondary)', lineHeight: 1.75,
+                                          wordBreak: 'keep-all',
+                                        }}>
+                                          <span style={{ color: '#34D399', fontWeight: 700 }}>에너지 집중 구간</span>
+                                          {' · '}
+                                          {peakSlots.map(s => `${s.name}(${s.hours})`).join(', ')}
                                         </div>
                                       )}
                                     </div>
