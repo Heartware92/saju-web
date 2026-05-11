@@ -842,22 +842,56 @@ export const getJungtongsajuReport = async (
     }
 
     // ── 2차 호출: Application 8섹션 (1차 컨텍스트 + 별칭 차단 리스트) ──
-    // ★★ 2차 실패해도 1차 결과는 절대 잃지 않음 — 결제 후 빈손 방지 안전장치
+    // ★★ 결제 후 빈손 방지 — 자동 retry 2회 + 파싱 실패도 재시도 트리거
     const appPrompt = generateJungtongsajuApplicationPrompt(result, coreContent, forbiddenAliases);
     let appContent = '';
     let appSections: Partial<Record<JungtongsajuSectionKey, string>> = {};
     let appError: string | null = null;
-    try {
-      // 명세 ~5,200자 → 한국어 토큰 비율 고려 12,000 (안전 여유 2.3x)
-      appContent = await callGPT(appPrompt, 12000);
-      appSections = parseJungtongsaju(appContent);
-    } catch (e: any) {
-      // 2차 실패 — 1차 4섹션 결과는 살려서 반환. 사용자에게 결제 후 빈손 X.
-      console.error('[jungtongsaju] 2차 호출 실패, 1차 4섹션만 반환:', e?.message);
-      appError = e?.message || '2차 분석 중 오류가 발생했어요.';
+
+    // 8섹션이 모두 들어왔는지 검증 — 결제 사고 방지의 최후 보루
+    const APPLICATION_KEYS = ['character', 'career', 'wealth', 'love', 'health', 'relation', 'luck', 'advice'] as const;
+    const tryApplicationCall = async (): Promise<{ content: string; sections: Partial<Record<JungtongsajuSectionKey, string>> }> => {
+      // 명세 ~5,200자 → 14,000 (이전 12,000 → truncation 여유 확보)
+      const content = await callGPT(appPrompt, 14000);
+      const sections = parseJungtongsaju(content);
+      const parsedKeys = Object.keys(sections);
+      // 마커 누락 / 형식 어긋남 등으로 빈 객체 또는 일부만 파싱된 경우 — 에러로 취급해 retry 트리거
+      if (parsedKeys.length === 0) {
+        throw new Error('PARSE_EMPTY: 2차 응답에서 섹션 마커를 하나도 찾지 못함');
+      }
+      const missing = APPLICATION_KEYS.filter((k) => !sections[k]);
+      // 8개 중 4개 미만이면 명백히 손상된 응답 — 재시도
+      if (missing.length >= 5) {
+        throw new Error(`PARSE_PARTIAL: 2차 응답 ${parsedKeys.length}/8 섹션만 파싱됨 (누락: ${missing.join(',')})`);
+      }
+      // 마지막 섹션(advice) 누락은 truncation 의심 — 재시도
+      if (!sections.advice) {
+        throw new Error('TRUNCATED: 2차 응답에 advice 섹션 누락(응답 잘림 의심)');
+      }
+      return { content, sections };
+    };
+
+    const MAX_APP_ATTEMPTS = 3;
+    for (let attempt = 1; attempt <= MAX_APP_ATTEMPTS; attempt++) {
+      try {
+        const r = await tryApplicationCall();
+        appContent = r.content;
+        appSections = r.sections;
+        appError = null;
+        if (attempt > 1) console.log(`[jungtongsaju] 2차 호출 ${attempt}회차 성공`);
+        break;
+      } catch (e: any) {
+        appError = e?.message || '2차 분석 중 오류가 발생했어요.';
+        console.warn(`[jungtongsaju] 2차 호출 ${attempt}회차 실패:`, appError);
+        if (attempt < MAX_APP_ATTEMPTS) {
+          // 점진 백오프: 1500ms, 2500ms
+          await new Promise((r) => setTimeout(r, 1500 + (attempt - 1) * 1000));
+        }
+      }
     }
 
     // ── 머지 + archive ──
+    // ★ partial 케이스에서도 appContent raw 가 있으면 archive 에 함께 저장(복원 시 보강 가능)
     const merged: Partial<Record<JungtongsajuSectionKey, string>> = { ...coreSections, ...appSections };
     const fullContent = appContent ? `${coreContent}\n\n${appContent}` : coreContent;
     archiveSaju({
@@ -870,14 +904,14 @@ export const getJungtongsajuReport = async (
     });
 
     const adviceMeta = merged.advice ? parseAdviceMeta(merged.advice) : undefined;
-    // 2차 실패해도 success: true (1차 결과는 정상). 단 partial 표시 + 안내 메시지
+    // 3회 retry 후에도 실패한 경우만 partial — 사용자에게 명확한 안내
     return {
       success: true,
       sections: merged,
       adviceMeta,
       ...(appError ? {
         partial: true,
-        partialMessage: '핵심 4섹션은 분석 완료. 나머지 8섹션(직업·재물·애정·건강 등)은 일시 오류로 분석 못 했어요. 새로고침 시 재차감 없이 8섹션만 다시 시도합니다.',
+        partialMessage: '핵심 4섹션은 분석 완료. 나머지 8섹션(직업·재물·애정·건강 등)은 3회 재시도 후에도 일시 오류가 지속됐어요. 잠시 후 다시 풀이를 받으면 재차감 없이 8섹션만 다시 시도합니다.',
       } : {}),
     };
   } catch (error: any) {
