@@ -1,6 +1,8 @@
 'use client';
 
 import { useState, useEffect, useMemo, useRef } from 'react';
+import { useWasFreshOnEntry } from '../hooks/useFreshGate';
+import { ExpiredAnalysisCard } from '../components/ExpiredAnalysisCard';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { Lunar } from 'lunar-javascript';
@@ -55,6 +57,8 @@ const JUNGTONGSAJU_MESSAGES = [
 export default function SajuResultPage() {
   const searchParams = useSearchParams();
   const router = useRouter();
+  const wasFresh = useWasFreshOnEntry();
+  const [expired, setExpired] = useState(false);
   const profileId = searchParams?.get('profileId') ?? null;
   const recordId = searchParams?.get('recordId') ?? null;
   const isArchiveMode = !!recordId;
@@ -184,11 +188,11 @@ export default function SajuResultPage() {
     if (isArchiveMode) return;
     if (!result) return;
 
-    const isFresh = searchParams?.get('fresh') === '1';
+    const isFresh = wasFresh || refetchNonce > 0;
 
     // 중복 호출 방지 (탭 복귀·프로필 hydration 방어)
     const effectKey = sajuKey(result);
-    if (!isFresh && refetchNonce === 0 && apiCalledKeyRef.current === effectKey) return;
+    if (!isFresh && apiCalledKeyRef.current === effectKey) return;
 
     let cancelled = false;
 
@@ -246,6 +250,14 @@ export default function SajuResultPage() {
 
       if (report || reportLoading) return;
 
+      // ★ 결제 사고 차단 — 홈/게이트에서 들어온 fresh 진입이 아니면 자동 호출 금지
+      // cache miss + 보관함 미발견까지 와도 fresh 신호가 없으면 만료 안내로 분기
+      if (!isFresh) {
+        setExpired(true);
+        setReportLoading(false);
+        return;
+      }
+
       apiCalledKeyRef.current = effectKey;
       setReportLoading(true);
       getJungtongsajuReport(result, (partial) => {
@@ -277,6 +289,12 @@ export default function SajuResultPage() {
     return () => { cancelled = true; };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [result, isArchiveMode, refetchNonce]);
+
+  // ── 만료 가드 ──────────────────────────────────
+  // cache miss + 보관함 미발견 + fresh 신호 없음 → 홈에서 다시 시작 유도
+  if (expired) {
+    return <ExpiredAnalysisCard serviceName="정통 사주" />;
+  }
 
   // ── 프로필 선택 가드 ──────────────────────────────────
   if (needsProfileSelect) {

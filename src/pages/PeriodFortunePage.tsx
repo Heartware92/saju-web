@@ -12,6 +12,8 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { useWasFreshOnEntry } from '../hooks/useFreshGate';
+import { ExpiredAnalysisCard } from '../components/ExpiredAnalysisCard';
 import { motion } from 'framer-motion';
 import { useProfileStore } from '../store/useProfileStore';
 import { useUserStore } from '../store/useUserStore';
@@ -254,6 +256,8 @@ function CalendarPicker({ value, onChange }: { value: string; onChange: (v: stri
 export default function PeriodFortunePage({ scope }: { scope: FortuneScope | 'date' }) {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const wasFresh = useWasFreshOnEntry();
+  const [expired, setExpired] = useState(false);
   const profileId = searchParams?.get('profileId') ?? null;
   const recordId = searchParams?.get('recordId') ?? null;
   const isArchiveMode = !!recordId;
@@ -444,12 +448,12 @@ export default function PeriodFortunePage({ scope }: { scope: FortuneScope | 'da
 
     let cancelled = false;
 
-    const isFresh = searchParams?.get('fresh') === '1';
+    const isFresh = wasFresh || refetchNonce > 0;
 
     // ★ cache 우선 — 메모리 unload→reload 후에도 archive 모달 없이 즉시 복원
     // scope 별 캐시 키가 있으면 archive 모달 분기 자체를 skip.
     const peekCache = (): boolean => {
-      if (isFresh || refetchNonce > 0) return false;
+      if (isFresh) return false;
       const sk = sajuKey(saju);
       if (scope === 'year') {
         const cached = useReportCacheStore.getState().getReport<NewyearReportAIResult>('newyear', `${sk}:${targetYear}`);
@@ -514,6 +518,15 @@ export default function PeriodFortunePage({ scope }: { scope: FortuneScope | 'da
       }
 
       const sk = sajuKey(saju);
+
+      // ★ 결제 사고 차단 — cache miss + archive 미발견 + fresh 신호 없음 → 만료 안내
+      if (!isFresh) {
+        setExpired(true);
+        setNewyearReportLoading(false);
+        setPickedDateReportLoading(false);
+        setDomainAILoading(false);
+        return;
+      }
       apiCalledKeyRef.current = effectKey;
 
     // scope=year: 신년운세 종합 리포트 호출 (도메인 상세는 패스)
@@ -521,13 +534,13 @@ export default function PeriodFortunePage({ scope }: { scope: FortuneScope | 'da
     if (scope === 'year') {
       const cacheKey = `${sk}:${targetYear}`;
       const cached = useReportCacheStore.getState().getReport<NewyearReportAIResult>('newyear', cacheKey);
-      if (!(isFresh || refetchNonce > 0) && cached?.error) {
+      if (!(isFresh) && cached?.error) {
         setNewyearReport({ success: false, error: cached.error });
         setNewyearReportLoading(false);
         return;
       }
       // 캐시 silent restore (같은 디바이스 빠른 재진입). 보관함 모달은 별도 useEffect 에서 처리.
-      if (!(isFresh || refetchNonce > 0) && cached?.data) {
+      if (!(isFresh) && cached?.data) {
         setNewyearReport(cached.data);
         setNewyearReportLoading(false);
         return;
@@ -563,12 +576,12 @@ export default function PeriodFortunePage({ scope }: { scope: FortuneScope | 'da
       if (!dateConfirmed) return;
       const cacheKey = `${sk}:${pickedDate}`;
       const cached = useReportCacheStore.getState().getReport<PickedDateReportAIResult>('period_date', cacheKey);
-      if (!(isFresh || refetchNonce > 0) && cached?.error) {
+      if (!(isFresh) && cached?.error) {
         setPickedDateReport({ success: false, error: cached.error });
         setPickedDateReportLoading(false);
         return;
       }
-      if (!(isFresh || refetchNonce > 0) && cached?.data) {
+      if (!(isFresh) && cached?.data) {
         setPickedDateReport(cached.data);
         setPickedDateReportLoading(false);
         return;
@@ -663,6 +676,12 @@ export default function PeriodFortunePage({ scope }: { scope: FortuneScope | 'da
     return () => { cancelled = true; };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [saju, fortune, scope, pickedDate, targetYear, today, isArchiveMode, dateConfirmed, refetchNonce]);
+
+  // ── 만료 가드 ──
+  if (expired) {
+    const serviceName = scope === 'year' ? '신년운세' : scope === 'date' ? '지정일 운세' : '오늘의 운세';
+    return <ExpiredAnalysisCard serviceName={serviceName} />;
+  }
 
   if (needsProfileSelect) {
     const CURRENT_YEAR = new Date().getFullYear();
