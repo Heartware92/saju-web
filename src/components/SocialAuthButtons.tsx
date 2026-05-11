@@ -1,5 +1,14 @@
 'use client';
 
+/**
+ * 소셜 로그인 버튼 (Google / Kakao).
+ *
+ * 약관 동의는 AuthCallbackPage 가 user_metadata.terms_agreed_at 을 보고
+ * 자동으로 /auth/consent 로 분기하므로, 여기서는 모달을 띄우지 않는다.
+ * - 기존 사용자: 동의 메타 존재 → 콜백이 그대로 홈으로 보냄
+ * - 신규 OAuth 사용자: 동의 메타 없음 → 콜백이 /auth/consent 로 보냄
+ */
+
 import React, { useState } from 'react';
 import { auth } from '../services/supabase';
 
@@ -9,43 +18,20 @@ interface SocialAuthButtonsProps {
 }
 
 export const SocialAuthButtons: React.FC<SocialAuthButtonsProps> = ({ label }) => {
-  const [pendingProvider, setPendingProvider] = useState<'google' | 'kakao' | null>(null);
   const [error, setError] = useState('');
-  const [agreedTerms, setAgreedTerms] = useState(false);
-  const [agreedPrivacy, setAgreedPrivacy] = useState(false);
-  const [agreedAge14, setAgreedAge14] = useState(false);
-  const [agreedMarketing, setAgreedMarketing] = useState(false);
-  const [showPolicy, setShowPolicy] = useState<'terms' | 'privacy' | null>(null);
+  const [pending, setPending] = useState<'google' | 'kakao' | null>(null);
 
-  const allAgreed = agreedTerms && agreedPrivacy && agreedAge14 && agreedMarketing;
-  const allRequiredAgreed = agreedTerms && agreedPrivacy && agreedAge14;
-
-  const toggleAllAgree = (v: boolean) => {
-    setAgreedTerms(v);
-    setAgreedPrivacy(v);
-    setAgreedAge14(v);
-    setAgreedMarketing(v);
-  };
-
-  const handleClick = (provider: 'google' | 'kakao') => {
+  const handleClick = async (provider: 'google' | 'kakao') => {
     setError('');
-    setPendingProvider(provider);
-  };
-
-  const handleProceed = async () => {
-    if (!pendingProvider) return;
-    if (!allRequiredAgreed) {
-      setError('필수 항목에 모두 동의해주세요.');
-      return;
-    }
-    setError('');
+    setPending(provider);
     try {
-      await auth.signInWithProvider(pendingProvider);
+      await auth.signInWithProvider(provider);
+      // signInWithOAuth 는 브라우저를 OAuth 페이지로 리다이렉트시키므로 이후 코드는 실행되지 않음
     } catch (err) {
       console.error('Social login error:', err);
       setError('소셜 로그인 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.');
+      setPending(null);
     }
-    setPendingProvider(null);
   };
 
   return (
@@ -66,7 +52,8 @@ export const SocialAuthButtons: React.FC<SocialAuthButtonsProps> = ({ label }) =
         <button
           type="button"
           onClick={() => handleClick('google')}
-          className="w-14 h-14 rounded-full border border-[var(--border-default)] bg-space-elevated/40 flex items-center justify-center transition-all hover:scale-105 hover:border-[var(--border-strong)] hover:bg-space-elevated"
+          disabled={pending !== null}
+          className="w-14 h-14 rounded-full border border-[var(--border-default)] bg-space-elevated/40 flex items-center justify-center transition-all hover:scale-105 hover:border-[var(--border-strong)] hover:bg-space-elevated disabled:opacity-60 disabled:cursor-not-allowed"
           title="구글로 시작하기"
           aria-label="구글로 시작하기"
         >
@@ -81,7 +68,8 @@ export const SocialAuthButtons: React.FC<SocialAuthButtonsProps> = ({ label }) =
         <button
           type="button"
           onClick={() => handleClick('kakao')}
-          className="w-14 h-14 rounded-full bg-[#FEE500] flex items-center justify-center transition-all hover:scale-105 hover:shadow-lg hover:shadow-[#FEE500]/20"
+          disabled={pending !== null}
+          className="w-14 h-14 rounded-full bg-[#FEE500] flex items-center justify-center transition-all hover:scale-105 hover:shadow-lg hover:shadow-[#FEE500]/20 disabled:opacity-60 disabled:cursor-not-allowed"
           title="카카오로 시작하기"
           aria-label="카카오로 시작하기"
         >
@@ -90,95 +78,6 @@ export const SocialAuthButtons: React.FC<SocialAuthButtonsProps> = ({ label }) =
           </svg>
         </button>
       </div>
-
-      {/* 약관 동의 모달 */}
-      {pendingProvider && (
-        <div className="fixed inset-0 z-[60] overflow-y-auto">
-          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setPendingProvider(null)} />
-          <div className="flex min-h-full items-end sm:items-center justify-center">
-            <div onClick={(e) => e.stopPropagation()} className="relative w-full sm:max-w-[420px] rounded-t-2xl sm:rounded-2xl p-6 bg-space-surface border border-[var(--border-subtle)] animate-slideUp">
-              <button type="button" onClick={() => setPendingProvider(null)} className="absolute top-3 right-3 w-7 h-7 flex items-center justify-center rounded-full bg-white/5 text-[var(--text-tertiary)] hover:bg-white/10 hover:text-[var(--text-primary)] transition-colors" aria-label="닫기">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="6" y1="6" x2="18" y2="18" /><line x1="18" y1="6" x2="6" y2="18" /></svg>
-              </button>
-              <h3 className="text-base font-bold text-text-primary mb-1">약관 동의</h3>
-              <p className="text-xs text-text-secondary mb-4">서비스 이용을 위해 약관에 동의해주세요.</p>
-
-              <div className="space-y-2.5">
-                <label className="flex items-center gap-3 cursor-pointer pb-2 border-b border-[var(--border-subtle)]">
-                  <input type="checkbox" checked={allAgreed} onChange={(e) => toggleAllAgree(e.target.checked)} className="w-5 h-5 rounded accent-[var(--cta-primary)] cursor-pointer" />
-                  <span className="text-sm font-semibold text-text-primary">모두 동의 (필수 + 선택 포함)</span>
-                </label>
-
-                <label className="flex items-center gap-3 cursor-pointer">
-                  <input type="checkbox" checked={agreedTerms} onChange={(e) => setAgreedTerms(e.target.checked)} className="w-5 h-5 rounded accent-[var(--cta-primary)] cursor-pointer" />
-                  <span className="text-sm text-text-secondary flex-1">
-                    <span className="text-status-error font-bold">[필수]</span>{' '}이용약관 동의{' '}
-                    <button type="button" onClick={() => setShowPolicy('terms')} className="text-cta hover:underline font-medium">보기</button>
-                  </span>
-                </label>
-
-                <label className="flex items-center gap-3 cursor-pointer">
-                  <input type="checkbox" checked={agreedPrivacy} onChange={(e) => setAgreedPrivacy(e.target.checked)} className="w-5 h-5 rounded accent-[var(--cta-primary)] cursor-pointer" />
-                  <span className="text-sm text-text-secondary flex-1">
-                    <span className="text-status-error font-bold">[필수]</span>{' '}개인정보처리방침 동의{' '}
-                    <button type="button" onClick={() => setShowPolicy('privacy')} className="text-cta hover:underline font-medium">보기</button>
-                  </span>
-                </label>
-
-                <label className="flex items-center gap-3 cursor-pointer">
-                  <input type="checkbox" checked={agreedAge14} onChange={(e) => setAgreedAge14(e.target.checked)} className="w-5 h-5 rounded accent-[var(--cta-primary)] cursor-pointer" />
-                  <span className="text-sm text-text-secondary flex-1">
-                    <span className="text-status-error font-bold">[필수]</span>{' '}만 14세 이상입니다
-                  </span>
-                </label>
-
-                <label className="flex items-center gap-3 cursor-pointer">
-                  <input type="checkbox" checked={agreedMarketing} onChange={(e) => setAgreedMarketing(e.target.checked)} className="w-5 h-5 rounded accent-[var(--cta-primary)] cursor-pointer" />
-                  <span className="text-sm text-text-secondary flex-1">
-                    <span className="text-text-tertiary font-bold">[선택]</span>{' '}이벤트·혜택 등 마케팅 정보 수신 동의
-                  </span>
-                </label>
-              </div>
-
-              <button
-                type="button"
-                onClick={handleProceed}
-                disabled={!allRequiredAgreed}
-                className="w-full h-12 rounded-lg bg-gradient-to-r from-cta to-cta-active text-white font-bold text-sm mt-4 cursor-pointer transition-all hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                동의하고 로그인
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* 이용약관 / 개인정보처리방침 뷰어 모달 */}
-      {showPolicy && (
-        <div className="fixed inset-0 z-[70] bg-space-deep flex flex-col">
-          <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--border-subtle)] bg-space-surface/90 backdrop-blur-sm shrink-0">
-            <button
-              type="button"
-              onClick={() => setShowPolicy(null)}
-              className="text-text-secondary hover:text-text-primary text-sm flex items-center gap-1"
-            >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-              </svg>
-              닫기
-            </button>
-            <h2 className="text-sm font-bold text-text-primary">
-              {showPolicy === 'terms' ? '이용약관' : '개인정보처리방침'}
-            </h2>
-            <div className="w-12" />
-          </div>
-          <iframe
-            src={`/${showPolicy}?embed=1`}
-            className="flex-1 w-full border-none"
-            title={showPolicy === 'terms' ? '이용약관' : '개인정보처리방침'}
-          />
-        </div>
-      )}
     </>
   );
 };

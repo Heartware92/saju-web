@@ -17,7 +17,7 @@ interface UserState {
   // Actions
   initialize: () => Promise<void>;
   login: (email: string, password: string) => Promise<void>;
-  signup: (email: string, password: string, phone?: string) => Promise<void>;
+  signup: (email: string, password: string, phone?: string, marketingAgreed?: boolean) => Promise<void>;
   logout: () => Promise<void>;
   resetPassword: (email: string) => Promise<void>;
 }
@@ -98,11 +98,11 @@ export const useUserStore = create<UserState>()(
       /**
        * 이메일/비밀번호 회원가입
        */
-      signup: async (email: string, password: string, phone?: string) => {
+      signup: async (email: string, password: string, phone?: string, marketingAgreed?: boolean) => {
         try {
           set({ loading: true, error: null });
 
-          const response = await auth.signUpWithEmail(email, password, phone);
+          const response = await auth.signUpWithEmail(email, password, phone, marketingAgreed);
 
           set({ user: response.user || null, loading: false });
 

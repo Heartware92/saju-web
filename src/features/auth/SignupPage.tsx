@@ -161,7 +161,7 @@ export const SignupPage: React.FC = () => {
     }
 
     try {
-      await signup(email, password, phone.replace(/[^0-9]/g, ''));
+      await signup(email, password, phone.replace(/[^0-9]/g, ''), agreedMarketing);
       setSuccess(true);
       setTimeout(() => {
         router.replace('/');
@@ -377,27 +377,27 @@ export const SignupPage: React.FC = () => {
               </div>
 
               {/* 동의 항목 — 한국 KISA 가이드: 이용약관·개인정보·만14세 별도 분리 */}
-              <div className="pt-2 space-y-2.5 border-t border-[var(--border-subtle)] pt-4">
+              <div className="pt-2 space-y-2.5 border-t border-[var(--border-subtle)] pt-4 text-left">
                 {/* 모두 동의 */}
-                <label className="flex items-center gap-3 cursor-pointer pb-2 border-b border-[var(--border-subtle)]">
+                <label className="flex items-start gap-3 cursor-pointer pb-2 border-b border-[var(--border-subtle)] text-left">
                   <input
                     type="checkbox"
                     checked={allAgreed}
                     onChange={(e) => toggleAllAgree(e.target.checked)}
-                    className="w-5 h-5 rounded accent-[var(--cta-primary)] cursor-pointer"
+                    className="w-5 h-5 mt-0.5 rounded accent-[var(--cta-primary)] cursor-pointer shrink-0"
                   />
-                  <span className="text-sm font-semibold text-text-primary">모두 동의 (필수 + 선택 포함)</span>
+                  <span className="text-sm font-semibold text-text-primary flex-1 text-left">모두 동의 (필수 + 선택 포함)</span>
                 </label>
 
                 {/* 이용약관 */}
-                <label className="flex items-center gap-3 cursor-pointer">
+                <label className="flex items-start gap-3 cursor-pointer text-left">
                   <input
                     type="checkbox"
                     checked={agreedTerms}
                     onChange={(e) => setAgreedTerms(e.target.checked)}
-                    className="w-5 h-5 rounded accent-[var(--cta-primary)] cursor-pointer"
+                    className="w-5 h-5 mt-0.5 rounded accent-[var(--cta-primary)] cursor-pointer shrink-0"
                   />
-                  <span className="text-sm text-text-secondary flex-1">
+                  <span className="text-sm text-text-secondary flex-1 text-left">
                     <span className="text-status-error font-bold">[필수]</span>{' '}
                     이용약관에 동의합니다{' '}
                     <button
@@ -411,14 +411,14 @@ export const SignupPage: React.FC = () => {
                 </label>
 
                 {/* 개인정보처리방침 */}
-                <label className="flex items-center gap-3 cursor-pointer">
+                <label className="flex items-start gap-3 cursor-pointer text-left">
                   <input
                     type="checkbox"
                     checked={agreedPrivacy}
                     onChange={(e) => setAgreedPrivacy(e.target.checked)}
-                    className="w-5 h-5 rounded accent-[var(--cta-primary)] cursor-pointer"
+                    className="w-5 h-5 mt-0.5 rounded accent-[var(--cta-primary)] cursor-pointer shrink-0"
                   />
-                  <span className="text-sm text-text-secondary flex-1">
+                  <span className="text-sm text-text-secondary flex-1 text-left">
                     <span className="text-status-error font-bold">[필수]</span>{' '}
                     개인정보처리방침에 동의합니다{' '}
                     <button
@@ -432,28 +432,28 @@ export const SignupPage: React.FC = () => {
                 </label>
 
                 {/* 만 14세 이상 — 한국 개인정보보호법 22조 의무 */}
-                <label className="flex items-center gap-3 cursor-pointer">
+                <label className="flex items-start gap-3 cursor-pointer text-left">
                   <input
                     type="checkbox"
                     checked={agreedAge14}
                     onChange={(e) => setAgreedAge14(e.target.checked)}
-                    className="w-5 h-5 rounded accent-[var(--cta-primary)] cursor-pointer"
+                    className="w-5 h-5 mt-0.5 rounded accent-[var(--cta-primary)] cursor-pointer shrink-0"
                   />
-                  <span className="text-sm text-text-secondary flex-1">
+                  <span className="text-sm text-text-secondary flex-1 text-left">
                     <span className="text-status-error font-bold">[필수]</span>{' '}
                     만 14세 이상입니다
                   </span>
                 </label>
 
                 {/* 마케팅 수신 동의 */}
-                <label className="flex items-center gap-3 cursor-pointer">
+                <label className="flex items-start gap-3 cursor-pointer text-left">
                   <input
                     type="checkbox"
                     checked={agreedMarketing}
                     onChange={(e) => setAgreedMarketing(e.target.checked)}
-                    className="w-5 h-5 rounded accent-[var(--cta-primary)] cursor-pointer"
+                    className="w-5 h-5 mt-0.5 rounded accent-[var(--cta-primary)] cursor-pointer shrink-0"
                   />
-                  <span className="text-sm text-text-secondary flex-1">
+                  <span className="text-sm text-text-secondary flex-1 text-left">
                     <span className="text-text-tertiary font-bold">[선택]</span>{' '}
                     이벤트·혜택 등 마케팅 정보 수신에 동의합니다
                   </span>

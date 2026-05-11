@@ -39,18 +39,48 @@ export const auth = {
     return data;
   },
 
-  signUpWithEmail: async (email: string, password: string, phone?: string) => {
+  signUpWithEmail: async (
+    email: string,
+    password: string,
+    phone?: string,
+    marketingAgreed?: boolean
+  ) => {
     const redirectBase = typeof window !== 'undefined' ? window.location.origin : '';
+    const nowIso = new Date().toISOString();
+    const userData: Record<string, unknown> = {
+      terms_agreed_at: nowIso,
+      privacy_agreed_at: nowIso,
+      age14_agreed_at: nowIso,
+      marketing_agreed_at: marketingAgreed ? nowIso : null,
+    };
+    if (phone) userData.phone = phone;
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: {
         emailRedirectTo: `${redirectBase}/auth/callback`,
-        data: phone ? { phone } : undefined,
+        data: userData,
       },
     });
     if (error) throw error;
     return data;
+  },
+
+  /**
+   * 동의 정보를 현재 로그인된 사용자의 user_metadata 에 기록한다.
+   * OAuth 첫 로그인 시 ConsentPage 에서 호출.
+   */
+  recordAgreement: async (marketingAgreed: boolean) => {
+    const nowIso = new Date().toISOString();
+    const { error } = await supabase.auth.updateUser({
+      data: {
+        terms_agreed_at: nowIso,
+        privacy_agreed_at: nowIso,
+        age14_agreed_at: nowIso,
+        marketing_agreed_at: marketingAgreed ? nowIso : null,
+      },
+    });
+    if (error) throw error;
   },
 
   // 비밀번호 재설정 이메일 발송 — /auth/update-password 로 redirect

@@ -60,12 +60,27 @@ export default function AuthCallbackPage() {
             useProfileStore.getState().fetchProfiles({ force: true, userId: session.user.id }),
           ]);
 
+          const next = searchParams.get('next') || '/';
+
+          // 1) 약관 동의 누락된 OAuth 신규 사용자 → 동의 페이지로
+          //    (이메일 가입은 signUpWithEmail 단계에서 이미 기록됨)
+          const hasTermsAgreed = !!session.user.user_metadata?.terms_agreed_at;
+          if (!hasTermsAgreed) {
+            const dest = encodeURIComponent(next);
+            router.replace(`/auth/consent?next=${dest}`);
+            return;
+          }
+
+          // 2) 소셜 신규 사용자 + 휴대폰 미인증 → 휴대폰 인증
           const isSocial = session.user.app_metadata?.provider && session.user.app_metadata.provider !== 'email';
           const hasPhone = !!session.user.user_metadata?.phone;
           if (isSocial && !hasPhone) {
             router.replace('/auth/phone-verify');
             return;
           }
+
+          router.replace(next);
+          return;
         }
 
         const next = searchParams.get('next') || '/';
