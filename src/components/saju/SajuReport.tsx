@@ -1108,11 +1108,12 @@ function DaeWoonSection({
   }, [selectedDwAge, birthYear]);
 
   // 대운 선택에 따라 세운 10년분 동적 계산
+  // 대운과 동일하게 우→좌 정렬(왼=미래, 오른=과거) — calculateSeWoonRange 는 오름차순이므로 reverse
   const displaySeWoon = useMemo(() => {
-    if (selectedDwRange) {
-      return calculateSeWoonRange(result.dayMaster, selectedDwRange.startYear, 10, yearZhi);
-    }
-    return seWoon;
+    const range = selectedDwRange
+      ? calculateSeWoonRange(result.dayMaster, selectedDwRange.startYear, 10, yearZhi)
+      : seWoon;
+    return [...range].reverse();
   }, [selectedDwRange, result.dayMaster, yearZhi, seWoon]);
 
   // 대운 변경 시 세운 선택: 현재 년도가 범위 안이면 유지, 아니면 초기화
