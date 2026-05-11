@@ -95,25 +95,28 @@ export default function AuthCallbackPage() {
 
   if (status === 'failed') {
     return (
-      <div className="min-h-screen flex items-center justify-center px-4">
-        <div className="max-w-md w-full rounded-2xl bg-space-surface/70 border border-[var(--border-subtle)] p-8 text-center">
-          <div className="text-5xl mb-4">⚠️</div>
-          <h1 className="text-lg font-bold mb-2 text-text-primary">로그인 실패</h1>
-          <p className="text-sm text-text-secondary mb-6 leading-relaxed">{message}</p>
-          <button
-            onClick={() => router.push('/login')}
-            className="px-4 py-2 rounded-lg bg-cta text-white text-sm font-bold"
-          >
-            로그인 페이지로
-          </button>
+      <div className="app-auth-shell">
+        <div className="app-auth-container flex items-center justify-center px-4">
+          <div className="max-w-md w-full rounded-2xl bg-space-surface/70 border border-[var(--border-subtle)] p-8 text-center">
+            <h1 className="text-lg font-bold mb-2 text-text-primary">로그인 실패</h1>
+            <p className="text-sm text-text-secondary mb-6 leading-relaxed">{message}</p>
+            <button
+              onClick={() => router.push('/login')}
+              className="px-4 py-2 rounded-lg bg-cta text-white text-sm font-bold"
+            >
+              로그인 페이지로
+            </button>
+          </div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center">
-      <div className="w-10 h-10 border-3 border-cta border-t-transparent rounded-full animate-spin" />
+    <div className="app-auth-shell">
+      <div className="app-auth-container flex items-center justify-center">
+        <div className="w-10 h-10 border-3 border-cta border-t-transparent rounded-full animate-spin" />
+      </div>
     </div>
   );
 }
