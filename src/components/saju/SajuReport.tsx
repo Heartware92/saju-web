@@ -1642,6 +1642,22 @@ export default function SajuReport({
           })()}
         </div>
 
+        {/* 용신·희신·기신 풀이 — 사용자 피드백: 단어만 보면 뜻 모름 */}
+        <div className={styles.yongshinLegend}>
+          <p>
+            <b>용신(用神)</b> — 내 일간(자기 자신)의 균형을 맞춰주는 핵심 오행이에요.
+            이 기운이 강한 시기·환경·인연을 만나면 일이 풀려요.
+          </p>
+          <p>
+            <b>희신(喜神)</b> — 용신을 도와주는 보조 오행이에요.
+            용신만큼은 아니어도 좋은 운을 더해주는 기운이라 함께 받으면 효과가 커져요.
+          </p>
+          <p>
+            <b>기신(忌神)</b> — 용신을 깨뜨려 흉작용을 일으키는 오행이에요.
+            이 기운이 강한 시기엔 무리한 결정·확장은 잠시 미루는 게 좋아요.
+          </p>
+        </div>
+
         {gyeokguk && (
           <>
             <div className={styles.subheading} style={{ marginTop: 16 }}>격국 (格局)</div>

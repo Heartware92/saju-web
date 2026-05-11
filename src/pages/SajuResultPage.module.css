@@ -735,6 +735,31 @@
   line-height: 1.45;
 }
 
+/* 용신·희신·기신 범례 — 단어 정의 설명 카드 */
+.yongshinLegend {
+  margin-top: 10px;
+  padding: 12px 14px;
+  background: rgba(255, 255, 255, 0.025);
+  border: 1px solid var(--border-subtle);
+  border-radius: 12px;
+  font-size: 13px;
+  color: var(--text-secondary);
+  line-height: 1.65;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  text-align: left;
+}
+
+.yongshinLegend p {
+  margin: 0;
+}
+
+.yongshinLegend b {
+  color: var(--text-primary);
+  font-weight: 700;
+}
+
 /* Tojeong (토정비결) */
 .gwaeBig {
   text-align: center;
