@@ -397,35 +397,20 @@
   font-weight: 500;
 }
 
+/* 지장간은 본기·중기·여기 최대 3글자. 4기둥 모두 3글자 케이스(辰戌丑未 등)
+   에서 한 줄로 깔면 셀 경계가 사라지므로 데스크탑·모바일 모두 2행 wrap.
+   3글자 케이스: 첫 행 2글자 + 둘째 행 1글자 */
 .hiddenStems {
-  font-size: 16px;
+  font-size: 17px;
   color: var(--text-secondary);
   letter-spacing: 0;
-  line-height: 1.4;
+  line-height: 1.35;
   display: flex;
+  flex-wrap: wrap;
   justify-content: center;
   align-items: center;
-  gap: 0;
-  white-space: nowrap;
-  flex-wrap: nowrap;
-}
-
-/* 모바일은 2행 wrap. 지장간은 최대 3글자(본기·중기·여기)이므로
-   2행이면 충분. 폰트·터치 영역 키워서 가독성·클릭 정확도 확보 */
-@media (max-width: 480px) {
-  .hiddenStems {
-    flex-wrap: wrap;
-    white-space: normal;
-    font-size: 17px;
-    line-height: 1.35;
-    gap: 3px 0;
-  }
-  .hiddenStemTap {
-    flex: 0 0 50%;
-    margin: 0;
-    padding: 5px 0;
-    min-width: 0;
-  }
+  gap: 3px 0;
+  white-space: normal;
 }
 
 /* Element Chart (오행 분포) */
@@ -1580,11 +1565,11 @@
 
 .hiddenStemTap {
   display: inline-block;
-  margin: 0 1px;
-  padding: 3px 3px;
-  min-width: 18px;
+  flex: 0 0 50%;
+  margin: 0;
+  padding: 5px 0;
+  min-width: 0;
   text-align: center;
-  flex-shrink: 0;
 }
 
 .termBackdrop {
