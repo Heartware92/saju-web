@@ -609,10 +609,11 @@ function PillarsRelationBoard({
     type: Interaction['type'];
     desc: string;
     d: string;
+    midX: number;
+    midY: number;
     labelX: number;
     labelY: number;
   };
-  const arcs: Arc[] = [];
 
   // 노드 반경 — 선이 노드 바깥에서 시작/끝나도록
   const NODE_R = 30;
@@ -644,7 +645,22 @@ function PillarsRelationBoard({
     return { x: dx / len, y: dy / len };
   };
 
-  let lineStack = 0;
+  // ── 1단계: raw arc 정보 수집 (라벨 위치 미정) ─────────────────────────
+  type RawArc = {
+    key: string;
+    color: string;
+    type: Interaction['type'];
+    desc: string;
+    d: string;
+    midX: number;
+    midY: number;
+    perpX: number;
+    perpY: number;
+    outX: number;
+    outY: number;
+    adjacent: boolean;
+  };
+  const rawArcs: RawArc[] = [];
 
   edges.forEach(({ it, cells, idx }) => {
     const color = INTERACTION_COLORS[it.type];
@@ -657,9 +673,6 @@ function PillarsRelationBoard({
         const va = octVertices[ia];
         const vb = octVertices[ib];
 
-        // 인접/비인접 모두 동일: 두 노드 가장자리를 잇는 직선
-        // 인접이면 팔각형 점선 아웃라인 위에 정확히 덮임
-        // 비인접이면 팔각형 내부를 가로지름
         const { sx, sy, ex, ey } = shortenedLine(va, vb);
         const d = `M ${sx.toFixed(1)} ${sy.toFixed(1)} L ${ex.toFixed(1)} ${ey.toFixed(1)}`;
         const midX = (sx + ex) / 2;
@@ -668,38 +681,84 @@ function PillarsRelationBoard({
         const diff = Math.abs(ia - ib);
         const adjacent = diff === 1 || diff === 7;
 
-        let labelX: number;
-        let labelY: number;
-        if (adjacent) {
-          // 아웃라인 위 선 → 라벨은 바깥쪽으로 오프셋
-          const out = outwardAt(midX, midY);
-          labelX = midX + out.x * 14;
-          labelY = midY + out.y * 14;
-        } else {
-          // 내부 직선 → 수직 방향 오프셋 + 스택
-          const dxL = ex - sx;
-          const dyL = ey - sy;
-          const len = Math.hypot(dxL, dyL) || 1;
-          const perpX = -dyL / len;
-          const perpY = dxL / len;
-          const sign = lineStack % 2 === 0 ? 1 : -1;
-          const mag = 10 + Math.floor(lineStack / 2) * 14;
-          labelX = midX + perpX * mag * sign;
-          labelY = midY + perpY * mag * sign;
-          lineStack++;
-        }
+        // 선에 수직 단위 벡터
+        const dxL = ex - sx;
+        const dyL = ey - sy;
+        const len = Math.hypot(dxL, dyL) || 1;
+        const perpX = -dyL / len;
+        const perpY = dxL / len;
+        // 중심 → 중점 외향 단위 벡터
+        const out = outwardAt(midX, midY);
 
-        arcs.push({
+        rawArcs.push({
           key: `${idx}-${i}-${j}`,
-          color,
-          type: it.type,
-          desc: it.description,
-          d,
-          labelX,
-          labelY,
+          color, type: it.type, desc: it.description, d,
+          midX, midY, perpX, perpY, outX: out.x, outY: out.y, adjacent,
         });
       }
     }
+  });
+
+  // ── 2단계: 라벨 위치 결정 — 다중 후보 + 충돌 회피 스코어링 ────────────
+  // 8각형 모든 선 케이스(인접 8 + diff2 8 + diff3 8 + 대각 4 = 28)에서
+  // 라벨이 다른 라벨·노드와 겹치지 않도록 후보 중 최대 거리 위치 선택.
+  const NODE_AVOID = 32;     // 노드 중심 회피 반경
+  const LABEL_MIN_DIST = 18; // 라벨 간 최소 거리 목표
+  const VIEW_PAD = 6;        // viewBox 경계 여유
+
+  const nodePositions = octVertices.map(v => ({ x: v.x, y: v.y }));
+  const placedLabels: Array<{ x: number; y: number }> = [];
+
+  // 인접선 먼저 배치(고정 바깥 위치 선호) → 비인접선이 그 뒤에 회피
+  const sortedRaw = rawArcs.slice().sort((a, b) => (b.adjacent ? 1 : 0) - (a.adjacent ? 1 : 0));
+
+  const arcs: Arc[] = sortedRaw.map(r => {
+    // 후보 위치 — 수직 방향 ±, 외향, 그리고 거리 단계
+    const candidates: Array<{ x: number; y: number; bias: number }> = [];
+    const DIST_STEPS = [14, 20, 28, 38, 50];
+    for (const dist of DIST_STEPS) {
+      // 수직 양쪽
+      candidates.push({ x: r.midX + r.perpX * dist, y: r.midY + r.perpY * dist, bias: dist === 14 ? 0 : 2 });
+      candidates.push({ x: r.midX - r.perpX * dist, y: r.midY - r.perpY * dist, bias: dist === 14 ? 0 : 2 });
+      // 외향 (인접선은 외향이 자연스러움)
+      const outBias = r.adjacent ? -4 : 1;
+      candidates.push({ x: r.midX + r.outX * dist, y: r.midY + r.outY * dist, bias: outBias + (dist === 14 ? 0 : 2) });
+    }
+
+    // 각 후보 평가: 라벨 간 최소거리 + 노드 회피 + 경계 페널티 - bias(가까운 게 더 좋음)
+    let best = candidates[0];
+    let bestScore = -Infinity;
+    for (const c of candidates) {
+      let labelDist = Infinity;
+      for (const p of placedLabels) {
+        labelDist = Math.min(labelDist, Math.hypot(c.x - p.x, c.y - p.y));
+      }
+      if (placedLabels.length === 0) labelDist = LABEL_MIN_DIST * 2;
+
+      let nodePenalty = 0;
+      for (const n of nodePositions) {
+        const dn = Math.hypot(c.x - n.x, c.y - n.y);
+        if (dn < NODE_AVOID) nodePenalty += (NODE_AVOID - dn) * 2;
+      }
+
+      let boundPenalty = 0;
+      if (c.x < VIEW_PAD) boundPenalty += (VIEW_PAD - c.x) * 3;
+      if (c.x > VB_W - VIEW_PAD) boundPenalty += (c.x - (VB_W - VIEW_PAD)) * 3;
+      if (c.y < VIEW_PAD) boundPenalty += (VIEW_PAD - c.y) * 3;
+      if (c.y > VB_H - VIEW_PAD) boundPenalty += (c.y - (VB_H - VIEW_PAD)) * 3;
+
+      const score = labelDist - nodePenalty - boundPenalty - c.bias;
+      if (score > bestScore) {
+        bestScore = score;
+        best = c;
+      }
+    }
+    placedLabels.push({ x: best.x, y: best.y });
+
+    return {
+      key: r.key, color: r.color, type: r.type, desc: r.desc, d: r.d,
+      midX: r.midX, midY: r.midY, labelX: best.x, labelY: best.y,
+    };
   });
 
   // 확장 viewBox — 상단 컬럼 헤더 + 행 라벨 여유
@@ -781,6 +840,25 @@ function PillarsRelationBoard({
                 transition={{ duration: 0.7, ease: 'easeOut' }}
               />
             ))}
+
+            {/* 라벨 leader — 라벨이 어느 선 위에서 떨어졌는지 명시 */}
+            {arcs.map(a => {
+              const dist = Math.hypot(a.labelX - a.midX, a.labelY - a.midY);
+              if (dist < 10) return null;
+              return (
+                <line
+                  key={`lead-${a.key}`}
+                  x1={a.midX}
+                  y1={a.midY}
+                  x2={a.labelX}
+                  y2={a.labelY}
+                  stroke={a.color}
+                  strokeWidth={0.6}
+                  strokeDasharray="2 2"
+                  opacity={0.45}
+                />
+              );
+            })}
           </g>
         </svg>
 
