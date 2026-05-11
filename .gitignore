@@ -38,6 +38,9 @@ yarn-error.log*
 
 # typescript
 *.tsbuildinfo
+
+# 작업 메모 (사적)
+수정해야할사항.md
 next-env.d.ts
 
 # KASI audit cache (regenerable)
