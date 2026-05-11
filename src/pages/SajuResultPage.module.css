@@ -410,26 +410,21 @@
   flex-wrap: nowrap;
 }
 
-/* 최악 케이스: 4기둥 모두 3글자 지장간(辰戌丑未 등)이 들어와도
-   좁은 모바일 셀(~70px)에 한 줄로 들어가도록 단계 축소 */
-@media (max-width: 420px) {
+/* 모바일은 2행 wrap. 지장간은 최대 3글자(본기·중기·여기)이므로
+   2행이면 충분. 폰트·터치 영역 키워서 가독성·클릭 정확도 확보 */
+@media (max-width: 480px) {
   .hiddenStems {
-    font-size: 14px;
+    flex-wrap: wrap;
+    white-space: normal;
+    font-size: 17px;
+    line-height: 1.35;
+    gap: 3px 0;
   }
   .hiddenStemTap {
+    flex: 0 0 50%;
     margin: 0;
-    padding: 3px 2px;
-    min-width: 16px;
-  }
-}
-
-@media (max-width: 360px) {
-  .hiddenStems {
-    font-size: 13px;
-  }
-  .hiddenStemTap {
-    padding: 2px 1px;
-    min-width: 14px;
+    padding: 5px 0;
+    min-width: 0;
   }
 }
 
