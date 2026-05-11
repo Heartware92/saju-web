@@ -587,7 +587,7 @@ const calculateSinSals = (
   const guiRenBranches = tianYiGuiRen[dayGan] || [];
   const guiRenCols = branches.filter(b => guiRenBranches.includes(b.zhi)).map(b => b.col);
   if (guiRenCols.length > 0) {
-    sinSals.push({ name: '천을귀인', type: 'good', description: '위기 시 귀인의 도움을 받는 최고의 길신', pillars: guiRenCols });
+    sinSals.push({ name: '천을귀인', type: 'good', description: '위기에 귀인 도움, 최고의 길성', pillars: guiRenCols });
   }
 
   // 태극귀인 (太極貴人) — 일간의 장생지 + 건록지
@@ -600,7 +600,7 @@ const calculateSinSals = (
   };
   const tgCols = branches.filter(b => (taegeukGuiIn[dayGan] || []).includes(b.zhi)).map(b => b.col);
   if (tgCols.length > 0) {
-    sinSals.push({ name: '태극귀인', type: 'good', description: '위기를 기회로 바꾸는 길성, 큰 변화 속 행운', pillars: tgCols });
+    sinSals.push({ name: '태극귀인', type: 'good', description: '위기를 기회로, 큰 변화 속 행운', pillars: tgCols });
   }
 
   // 천복귀인 (天福貴人) — 일간의 합 상대 건록지
@@ -621,7 +621,7 @@ const calculateSinSals = (
   };
   const mgCols = findCols(mungokGuiIn[dayGan] || '');
   if (mgCols.length > 0) {
-    sinSals.push({ name: '문곡귀인', type: 'good', description: '학문과 문서에 뛰어난 재능, 시험운', pillars: mgCols });
+    sinSals.push({ name: '문곡귀인', type: 'good', description: '학문·문서에 뛰어난 재능, 시험운', pillars: mgCols });
   }
 
   // 학당귀인 (學堂貴人) — 일간 오행의 장생지
@@ -654,7 +654,7 @@ const calculateSinSals = (
   };
   const cuCols = findCols(cheonUi[pillars.month.zhi] || '');
   if (cuCols.length > 0) {
-    sinSals.push({ name: '천의성', type: 'good', description: '의학/치유 관련 재능, 건강 회복력', pillars: cuCols });
+    sinSals.push({ name: '천의성', type: 'good', description: '의학·치유 재능, 건강 회복력', pillars: cuCols });
   }
 
   // 천덕귀인 (天德貴人) — 월지 기준 천간
@@ -667,7 +667,7 @@ const calculateSinSals = (
   if (cdGan) {
     const cdCols = stems.filter(s => s.gan === cdGan).map(s => s.col);
     if (cdCols.length > 0) {
-      sinSals.push({ name: '천덕귀인', type: 'good', description: '하늘의 덕으로 재앙 해소, 흉을 길로', pillars: cdCols });
+      sinSals.push({ name: '천덕귀인', type: 'good', description: '하늘의 덕, 흉을 길로 돌림', pillars: cdCols });
     }
   }
 
@@ -700,7 +700,7 @@ const calculateSinSals = (
     if (!target) return;
     const cols = findCols(target);
     if (cols.length > 0 && !sinSals.some(s => s.name === '역마살' && s.pillars.some(c => cols.includes(c)))) {
-      sinSals.push({ name: '역마살', type: 'neutral', description: '이동수가 많음, 해외/여행/무역 기회', pillars: cols });
+      sinSals.push({ name: '역마살', type: 'neutral', description: '이동·해외 여행·무역 기회', pillars: cols });
     }
   };
   addYeokMa(yearBranch);
@@ -720,7 +720,7 @@ const calculateSinSals = (
     const cols = findCols(target).filter(c => !doHwaAdded.has(c));
     if (cols.length > 0) {
       cols.forEach(c => doHwaAdded.add(c));
-      sinSals.push({ name: '도화살', type: 'neutral', description: '인기와 매력, 연예/예술/대인관계에 유리', pillars: cols });
+      sinSals.push({ name: '도화살', type: 'neutral', description: '인기·매력, 연예·예술·대인관계', pillars: cols });
     }
   };
   addDoHwa(yearBranch);
@@ -740,7 +740,7 @@ const calculateSinSals = (
     const cols = findCols(target).filter(c => !hgAdded.has(c));
     if (cols.length > 0) {
       cols.forEach(c => hgAdded.add(c));
-      sinSals.push({ name: '화개살', type: 'neutral', description: '종교/학문/예술적 재능, 고독한 탐구자', pillars: cols });
+      sinSals.push({ name: '화개살', type: 'neutral', description: '종교·학문·예술 재능, 고독한 탐구자', pillars: cols });
     }
   };
   addHwaGae(yearBranch);
@@ -768,7 +768,7 @@ const calculateSinSals = (
   const hcZhiCols = findCols(hyeonchimZhi[dayGan] || '');
   const hcAllCols = [...new Set([...hcStemCols, ...hcZhiCols])];
   if (hcAllCols.length > 0) {
-    sinSals.push({ name: '현침살', type: 'neutral', description: '날카로운 지성과 분석력, 예민한 감수성', pillars: hcAllCols });
+    sinSals.push({ name: '현침살', type: 'neutral', description: '날카로운 지성·분석력, 예민한 감수성', pillars: hcAllCols });
   }
 
   // 양인살 (羊刃殺) — 일간 기준
@@ -779,7 +779,7 @@ const calculateSinSals = (
   };
   const yiCols = findCols(yangIn[dayGan] || '');
   if (yiCols.length > 0) {
-    sinSals.push({ name: '양인살', type: 'bad', description: '강한 승부욕과 결단력, 수술/사고 주의', pillars: yiCols });
+    sinSals.push({ name: '양인살', type: 'bad', description: '강한 승부욕·결단력, 수술·사고 주의', pillars: yiCols });
   }
 
   // 괴강살 (魁罡殺) — 특정 일주
@@ -843,7 +843,7 @@ const calculateSinSals = (
     const hasBoth = branches.some(br => br.zhi === a) && branches.some(br => br.zhi === b);
     if (hasBoth) {
       const cols = branches.filter(br => br.zhi === a || br.zhi === b).map(br => br.col);
-      sinSals.push({ name: '원진살', type: 'bad', description: '서로 밀어내는 기운, 인간관계 갈등 주의', pillars: cols });
+      sinSals.push({ name: '원진살', type: 'bad', description: '서로 밀어내는 기운, 관계 갈등 주의', pillars: cols });
     }
   });
 
@@ -855,7 +855,7 @@ const calculateSinSals = (
   };
   const bhCols = findCols(baekho[dayGan] || '');
   if (bhCols.length > 0) {
-    sinSals.push({ name: '백호대살', type: 'bad', description: '사고/수술/혈액 관련 주의, 결단력', pillars: bhCols });
+    sinSals.push({ name: '백호대살', type: 'bad', description: '사고·수술·혈액 주의, 결단력', pillars: bhCols });
   }
 
   // ── 삼형 ──
@@ -864,7 +864,7 @@ const calculateSinSals = (
 
   if (hasInSaSin) {
     const cols = branches.filter(b => ['인', '사', '신'].includes(b.zhi)).map(b => b.col);
-    sinSals.push({ name: '인사신 삼형', type: 'bad', description: '지세지형 - 교통사고, 수술, 갈등 주의', pillars: cols });
+    sinSals.push({ name: '인사신 삼형', type: 'bad', description: '지세지형 — 교통사고·수술 주의', pillars: cols });
   }
   if (hasChukSulMi) {
     const cols = branches.filter(b => ['축', '술', '미'].includes(b.zhi)).map(b => b.col);
@@ -879,7 +879,7 @@ const calculateSinSals = (
     const hasBoth = pair.every(p => branches.some(br => br.zhi === p));
     if (hasBoth) {
       const cols = branches.filter(b => pair.includes(b.zhi)).map(b => b.col);
-      sinSals.push({ name: '귀문관살', type: 'neutral', description: '영적 감수성, 직관력 강함, 예술/종교적 재능', pillars: cols });
+      sinSals.push({ name: '귀문관살', type: 'neutral', description: '영적 감수성·직관력, 예술/종교 재능', pillars: cols });
     }
   });
 
