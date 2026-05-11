@@ -952,42 +952,48 @@ function SinSalBoard({
           ))}
         </div>
       </div>
-      {sinSals.length > 0 && (
-        <ul className={styles.sinsalDescList}>
-          {/*
-            중복 제거 후 길성→신살→중립 순서 정렬. 사용자가 좋은 거부터 보고 싶어해서
-            (직원 피드백: '신살 → 길성' 또는 '길성 → 신살' 일정한 순서 유지가 가독성↑)
-          */}
-          {(() => {
-            const TYPE_ORDER: Record<SinSal['type'], number> = { good: 0, bad: 1, neutral: 2 };
-            return sinSals
-              .filter((s, i, arr) => arr.findIndex(x => x.name === s.name) === i)
-              .slice()
-              .sort((a, b) => TYPE_ORDER[a.type] - TYPE_ORDER[b.type])
-              .map((s) => (
-                <li key={s.name} className={styles.sinsalDescItem}>
-                  {/* [길성]/[신살]/[중립] 배지 — 색만으로 구분 안 되는 문제 해결 */}
-                  <span
-                    className={styles.sinsalTypeBadge}
-                    style={{
-                      color: SINSAL_TYPE_COLORS[s.type],
-                      borderColor: SINSAL_TYPE_COLORS[s.type],
-                    }}
-                  >
-                    {SINSAL_TYPE_LABELS[s.type]}
-                  </span>
-                  <span
-                    className={styles.sinsalDescName}
-                    style={{ color: SINSAL_TYPE_COLORS[s.type] }}
-                  >
-                    {s.name}
-                  </span>
-                  <span className={styles.sinsalDescText}>{s.description}</span>
-                </li>
-              ));
-          })()}
-        </ul>
-      )}
+      {sinSals.length > 0 && (() => {
+        /*
+          타입(길성/신살/중립)별로 그룹화 — 각 행마다 라벨 반복하면
+          설명이 좁아져 줄바꿈 강제됨. 그룹 헤더에 라벨 한 번,
+          각 행은 이름 + 설명만 두어 설명 폭을 최대화.
+        */
+        const TYPE_ORDER: SinSal['type'][] = ['good', 'bad', 'neutral'];
+        const uniques = sinSals.filter((s, i, arr) => arr.findIndex(x => x.name === s.name) === i);
+        const grouped = TYPE_ORDER
+          .map(type => ({ type, items: uniques.filter(s => s.type === type) }))
+          .filter(g => g.items.length > 0);
+        return (
+          <div className={styles.sinsalGroups}>
+            {grouped.map(({ type, items }) => (
+              <div key={type} className={styles.sinsalGroup}>
+                <div
+                  className={styles.sinsalGroupHeader}
+                  style={{
+                    color: SINSAL_TYPE_COLORS[type],
+                    borderColor: SINSAL_TYPE_COLORS[type],
+                  }}
+                >
+                  {SINSAL_TYPE_LABELS[type]}
+                </div>
+                <ul className={styles.sinsalDescList}>
+                  {items.map((s) => (
+                    <li key={s.name} className={styles.sinsalDescItem}>
+                      <span
+                        className={styles.sinsalDescName}
+                        style={{ color: SINSAL_TYPE_COLORS[type] }}
+                      >
+                        {s.name}
+                      </span>
+                      <span className={styles.sinsalDescText}>{s.description}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ))}
+          </div>
+        );
+      })()}
     </div>
   );
 }
