@@ -76,14 +76,6 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, messag
           <div className="mt-6 pt-5 border-t border-[var(--border-subtle)]">
             <SocialAuthButtons label="간편 로그인" />
           </div>
-
-          <button
-            type="button"
-            onClick={() => window.history.back()}
-            className="mt-5 text-[13px] text-text-tertiary hover:text-text-secondary"
-          >
-            돌아가기
-          </button>
         </div>
       </div>
     );
