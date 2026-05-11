@@ -413,6 +413,13 @@
   white-space: normal;
   width: 100%;
   box-sizing: border-box;
+  padding: 0 6px;
+  border-right: 1px solid rgba(168, 132, 255, 0.18);
+}
+
+/* 마지막 기둥(년주) 은 우측 구분선 없음 — 행 끝 */
+.pillarsRow > .hiddenStems:last-child {
+  border-right: none;
 }
 
 /* Element Chart (오행 분포) */
