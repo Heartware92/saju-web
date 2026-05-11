@@ -410,6 +410,29 @@
   flex-wrap: nowrap;
 }
 
+/* 최악 케이스: 4기둥 모두 3글자 지장간(辰戌丑未 등)이 들어와도
+   좁은 모바일 셀(~70px)에 한 줄로 들어가도록 단계 축소 */
+@media (max-width: 420px) {
+  .hiddenStems {
+    font-size: 14px;
+  }
+  .hiddenStemTap {
+    margin: 0;
+    padding: 3px 2px;
+    min-width: 16px;
+  }
+}
+
+@media (max-width: 360px) {
+  .hiddenStems {
+    font-size: 13px;
+  }
+  .hiddenStemTap {
+    padding: 2px 1px;
+    min-width: 14px;
+  }
+}
+
 /* Element Chart (오행 분포) */
 .elementChart {
   display: flex;
