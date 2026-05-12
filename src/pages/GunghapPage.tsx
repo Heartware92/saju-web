@@ -108,8 +108,8 @@ const CATEGORY_GROUPS: CategoryGroup[] = [
     groupLabel: '재미로 보기',
     groupColor: 'text-amber-400',
     items: [
-      { id: 'idol_fan', label: '아이돌과 팬', desc: '스타와 팬의 사주 인연', icon: '★', accent: 'from-yellow-500/25 to-amber-400/15' },
-      { id: 'pet', label: '나와 반려동물', desc: '나와 반려묘·강아지', icon: '◆', accent: 'from-amber-500/25 to-orange-400/15' },
+      { id: 'idol_fan', label: '유명인과 팬', desc: '유명인과 팬의 사주 인연', icon: '★', accent: 'from-yellow-500/25 to-amber-400/15' },
+      { id: 'pet', label: '나와 반려동물', desc: '각종 반려동물', icon: '◆', accent: 'from-amber-500/25 to-orange-400/15' },
       { id: 'custom', label: '직접 입력', desc: '원하는 관계를 직접 입력', icon: '✎', accent: 'from-purple-500/25 to-violet-400/15' },
     ],
   },
@@ -191,7 +191,7 @@ const CATEGORY_LABEL_MAP: Record<string, string> = {
   sibling: '형제·자매',
   work: '직장 동료',
   business: '사업 파트너',
-  idol_fan: '아이돌과 팬',
+  idol_fan: '유명인과 팬',
   pet: '반려동물',
   custom: '직접 입력',
 };
@@ -211,7 +211,7 @@ const AUTO_ROLES: Record<string, [string, string]> = {
   sibling: ['나', '형제·자매'],
   work: ['나', '동료'],
   business: ['나', '사업 파트너'],
-  idol_fan: ['팬', '아이돌'],
+  idol_fan: ['팬', '유명인'],
   pet: ['나', '반려동물'],
   custom: ['나', '상대'],
 };
