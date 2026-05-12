@@ -826,15 +826,58 @@ export const getJungtongsajuReport = async (
   profileId?: string,
 ): Promise<JungtongsajuAIResult> => {
   try {
-    // ── 1차 호출: Core 4섹션 ──
+    // ── 1차 호출: Core 4섹션 (retry 2회, 타임아웃 분리) ──
+    // 정통사주는 유료 — 1차부터 무너지면 차감 자체를 막아야 한다.
+    // 기존엔 마커 파싱 실패 시 success:true + rawText 폴백으로 떨어져 차감되던 사고가 있어,
+    // 명시적 CORE_FAIL 처리로 success:false 반환 → 페이지의 r.success 분기에서 차감 차단.
     const corePrompt = generateJungtongsajuCorePrompt(result);
-    // 명세 ~3,000자 → 한국어 토큰 비율 고려 7,000 (안전 여유 2.3x)
-    const coreContent = await callGPT(corePrompt, 7000);
-    const coreSections = parseJungtongsaju(coreContent);
-    if (Object.keys(coreSections).length === 0) {
-      // 마커 파싱 실패 — 1차부터 무너지면 rawText fallback
-      return { success: true, rawText: coreContent };
+    const CORE_KEYS: JungtongsajuSectionKey[] = ['general', 'daymaster', 'element', 'interaction'];
+    // 1회차 90초(느린 응답도 받아줌), 재시도 70초(이미 한번 실패했으니 빨리)
+    const CORE_TIMEOUTS = [90_000, 70_000];
+    const tryCoreCall = async (timeoutMs: number) => {
+      // 명세 ~3,000자 → 한국어 토큰 비율 고려 7,000 (안전 여유 2.3x)
+      const content = await callGPT(corePrompt, 7000, undefined, { timeoutMs });
+      const sections = parseJungtongsaju(content);
+      if (Object.keys(sections).length === 0) {
+        throw new Error('CORE_PARSE_EMPTY: 1차 응답에서 섹션 마커를 하나도 찾지 못함');
+      }
+      // 4섹션 중 3개 이상 누락 = 명백히 손상된 응답 — 재시도 트리거
+      const missing = CORE_KEYS.filter((k) => !sections[k]);
+      if (missing.length >= 3) {
+        throw new Error(`CORE_PARSE_PARTIAL: 1차 응답 ${Object.keys(sections).length}/4 섹션만 파싱됨`);
+      }
+      return { content, sections };
+    };
+
+    let coreContent = '';
+    let coreSections: Partial<Record<JungtongsajuSectionKey, string>> = {};
+    let coreLastError: string | null = null;
+    for (let attempt = 1; attempt <= CORE_TIMEOUTS.length; attempt++) {
+      try {
+        const r = await tryCoreCall(CORE_TIMEOUTS[attempt - 1]);
+        coreContent = r.content;
+        coreSections = r.sections;
+        coreLastError = null;
+        if (attempt > 1) console.log(`[jungtongsaju] 1차 호출 ${attempt}회차 성공`);
+        break;
+      } catch (e: any) {
+        coreLastError = e?.message || '1차 분석 중 오류가 발생했어요.';
+        console.warn(`[jungtongsaju] 1차 호출 ${attempt}회차 실패:`, coreLastError);
+        if (attempt < CORE_TIMEOUTS.length) {
+          await new Promise((r) => setTimeout(r, 1500));
+        }
+      }
     }
+
+    if (coreLastError) {
+      // 1차 완전 실패 — success:false 반환으로 페이지 측 차감 차단.
+      // 디버그용 prefix 는 사용자에게 노출하지 않고 일반화된 메시지로 안내.
+      const userMsg = coreLastError.startsWith('CORE_')
+        ? '풀이 형식 오류가 반복돼요. 잠시 후 다시 시도해주세요.'
+        : coreLastError;
+      return { success: false, error: userMsg };
+    }
+
     // 점진 노출 — 페이지가 1차 결과 즉시 렌더하도록 콜백
     onCoreReady?.({ success: true, sections: coreSections });
 

@@ -73,6 +73,8 @@ export default function SajuResultPage() {
   const [result, setResult] = useState<SajuResult | null>(null);
   const [report, setReport] = useState<JungtongsajuAIResult | null>(null);
   const [reportLoading, setReportLoading] = useState(!isArchiveMode && !needsProfileSelect);
+  // 1차(Core 4섹션) 결과 도착 여부 — 안전망·진행 표시·차감 가드에 모두 사용
+  const hasAnySections = !!report?.sections && Object.keys(report.sections).length > 0;
 
   // 결과 준비 완료 시 스크롤 최상단
   useScrollToTopOnLoad(!!report && !reportLoading);
@@ -173,15 +175,23 @@ export default function SajuResultPage() {
     }
   }, [searchParams, targetProfile]);
 
-  // ── 로딩 안전장치: 2-pass 정통사주는 최대 120초 허용 ──
-  // 정통사주는 1차(~30s) + 2차(~60s) × retry 3회 → 최악 240초 가능
-  const [reportTimedOut] = useLoadingGuard(reportLoading, 240_000);
+  // ── 로딩 안전장치 (2단계) ─────────────────────────────
+  // 유료 서비스 — 사용자가 빈 로딩 화면에 오래 갇히지 않게 단계별 안전망을 둔다.
+  // ① 1차 안전망 180초: 1차(Core 4섹션) 결과가 안 오면 강제 종료 + 에러 표시.
+  //    fortuneService 측 retry 2회(90s+70s+백오프) 합산 ~165s 이내 정상 종료 가정.
+  // ② 전체 안전망 280초: 1차 도착 후 2차가 너무 오래 걸려도 결국 끊는다.
+  //    1차 결과는 이미 노출돼 있으므로 사용자 체감 손실은 최소화.
+  const [coreTimedOut] = useLoadingGuard(reportLoading && !hasAnySections, 180_000);
+  const [fullTimedOut] = useLoadingGuard(reportLoading, 280_000);
   useEffect(() => {
-    if (reportTimedOut) {
+    if (coreTimedOut && !hasAnySections) {
       setReportLoading(false);
-      if (!report) setReport({ success: false, error: '응답이 너무 오래 걸려요. 새로고침 후 다시 시도해주세요.' });
+      if (!report) setReport({ success: false, error: '응답이 너무 오래 걸려요. 잠시 후 다시 시도해주세요.' });
     }
-  }, [reportTimedOut, report]);
+  }, [coreTimedOut, hasAnySections, report]);
+  useEffect(() => {
+    if (fullTimedOut) setReportLoading(false);
+  }, [fullTimedOut]);
 
   // ── 보관함 DB 확인 → AI 호출 (순차 실행) ──
   // 보관함 체크를 먼저 완료한 뒤, 기존 풀이가 없을 때만 AI 호출
@@ -270,7 +280,12 @@ export default function SajuResultPage() {
           setReport(r);
           const cache = useReportCacheStore.getState();
           if (r.success) {
-            cache.setReport('jungtong', cacheKey, r);
+            // partial(2차 부분 실패) 은 캐시에 저장하지 않는다.
+            // 다음 진입 시 cache miss → fresh 흐름으로 자연스럽게 2차만 재시도되도록.
+            // (markCharged 가 살아있어 재차감은 발생하지 않음)
+            if (!r.partial) {
+              cache.setReport('jungtong', cacheKey, r);
+            }
             if (!cache.isCharged('jungtong', cacheKey)) {
               cache.markCharged('jungtong', cacheKey);
               chargeRef.current('sun', SUN_COST_BIG, CHARGE_REASONS.traditional).catch(() => {});
@@ -344,14 +359,13 @@ export default function SajuResultPage() {
   // ── 리포트 로딩 중 전체 화면 — 1차(Core 4섹션) 결과가 아직 없을 때만 ──
   // 2-pass: 1차 결과 도착하면 partial sections 가 setReport 로 채워짐 → 그 시점부터 페이지 렌더
   // 2차는 백그라운드 진행. reportLoading 은 true 유지하되 페이지 안에서 "심층 분석 중" 배지로 표시
-  const hasAnySections = !!report?.sections && Object.keys(report.sections).length > 0;
   if (reportLoading && !hasAnySections) {
     return (
       <AILoadingBar
         label="정통사주 분석중"
-        minLabel="30초"
-        maxLabel="1분 30초"
-        estimatedSeconds={70}
+        minLabel="40초"
+        maxLabel="2분"
+        estimatedSeconds={50}
         messages={JUNGTONGSAJU_MESSAGES}
         topContent={
           <motion.div
