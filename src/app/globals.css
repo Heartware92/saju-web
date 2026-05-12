@@ -189,9 +189,14 @@
   font-display: swap;
 }
 
-/* 운세 결과 풀이 본문 paragraph 컨테이너 일괄 — Tailwind `leading-[1.85]` 시그니처 매칭
-   (전체 24곳: 정통사주/오늘/신년/지정일/궁합/토정/자미두수/타로/택일·share blocks 풀이 본문) */
+/* 운세 결과 풀이 본문 paragraph 컨테이너 일괄 — 두 가지 시그니처 매칭
+   1) `leading-[1.85]`: 섹션 카드 본문 (최신 결과 / 마커 파싱 성공 경로)
+   2) `whitespace-pre-line` + text-text-secondary: rawText fallback (구버전 보관함) */
 .leading-\[1\.85\] {
+  font-family: var(--font-body);
+}
+.whitespace-pre-line.text-text-secondary,
+p.whitespace-pre-line {
   font-family: var(--font-body);
 }
 
