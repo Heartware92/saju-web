@@ -15,15 +15,21 @@ interface AIResult {
 const GEMINI_API_URL =
   'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent';
 
-/** Gemini 1회 호출 — 5xx/429 재시도는 호출자가 담당. */
+/** Gemini 1회 호출 — 5xx/429/타임아웃 재시도는 호출자가 담당. */
 async function callGeminiOnce(
   prompt: string,
   maxTokens: number,
   systemPrompt: string,
   temperature: number = 0.4,
+  timeoutMs: number = 35_000,
 ): Promise<{ ok: true; data: AIResult } | { ok: false; status: number | null; msg: string; retryable: boolean }> {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) return { ok: false, status: null, msg: 'NO_GEMINI_KEY', retryable: false };
+
+  // AbortController — Gemini 가 가끔 응답이 매우 느린(60s+) 경우 즉시 끊고 retry/폴백으로 넘긴다.
+  // 이 timeout 이 없으면 Vercel maxDuration(120s) 까지 매달려 점진 노출이 죽는 사고.
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
 
   try {
     const res = await fetch(`${GEMINI_API_URL}?key=${apiKey}`, {
@@ -38,6 +44,7 @@ async function callGeminiOnce(
           thinkingConfig: { thinkingBudget: 0 },
         },
       }),
+      signal: controller.signal,
     });
 
     if (!res.ok) {
@@ -61,34 +68,45 @@ async function callGeminiOnce(
       },
     };
   } catch (e: any) {
-    // 네트워크 실패 — 재시도 가능
+    // AbortError(타임아웃) 또는 네트워크 실패 — 모두 재시도 가능으로 분류
+    if (e?.name === 'AbortError') {
+      return { ok: false, status: null, msg: `TIMEOUT_${timeoutMs}ms`, retryable: true };
+    }
     return { ok: false, status: null, msg: e?.message ?? 'fetch failed', retryable: true };
+  } finally {
+    clearTimeout(timer);
   }
 }
 
-/** Gemini 호출 + 5xx/429/네트워크 실패 시 백오프 재시도 (총 3회 시도). */
+/** Gemini 호출 + 5xx/429/타임아웃/네트워크 실패 시 백오프 재시도. */
+// 정통사주 점진 노출을 위해 빠른 실패→빠른 폴백 전략.
+// 시도별 timeout: 35s → 25s. 합산 최악 ~62s + 백오프 0.8s → 64초 안에 OpenAI 폴백으로 넘어감.
+// 기존 3회 retry(타임아웃 없음) 는 Gemini 가 느릴 때 120s maxDuration 까지 매달리던 사고의 원인.
 async function callGeminiWithRetry(
   prompt: string,
   maxTokens: number,
   systemPrompt: string,
   temperature: number = 0.4,
 ): Promise<{ ok: true; data: AIResult } | { ok: false; status: number | null; msg: string }> {
-  const backoffsMs = [200, 800, 1600];
+  const attempts: Array<{ timeoutMs: number; backoffAfterMs: number }> = [
+    { timeoutMs: 35_000, backoffAfterMs: 800 },
+    { timeoutMs: 25_000, backoffAfterMs: 0 },
+  ];
   let lastStatus: number | null = null;
   let lastMsg = '';
 
-  for (let attempt = 0; attempt <= backoffsMs.length; attempt++) {
-    const r = await callGeminiOnce(prompt, maxTokens, systemPrompt, temperature);
+  for (let i = 0; i < attempts.length; i++) {
+    const { timeoutMs, backoffAfterMs } = attempts[i];
+    const r = await callGeminiOnce(prompt, maxTokens, systemPrompt, temperature, timeoutMs);
     if (r.ok) return r;
 
     lastStatus = r.status;
     lastMsg = r.msg;
 
-    if (!r.retryable || attempt >= backoffsMs.length) break;
+    if (!r.retryable || i === attempts.length - 1) break;
 
-    const wait = backoffsMs[attempt];
-    console.warn(`[AI] Gemini ${r.status ?? 'NET'} 재시도 ${attempt + 1}/${backoffsMs.length} (${wait}ms 대기): ${r.msg}`);
-    await new Promise((res) => setTimeout(res, wait));
+    console.warn(`[AI] Gemini ${r.status ?? 'NET'} 재시도 ${i + 1}/${attempts.length} (${backoffAfterMs}ms 대기): ${r.msg}`);
+    if (backoffAfterMs > 0) await new Promise((res) => setTimeout(res, backoffAfterMs));
   }
 
   return { ok: false, status: lastStatus, msg: lastMsg };
@@ -104,39 +122,52 @@ async function callOpenAI(
   maxTokens: number,
   systemPrompt: string,
   temperature: number = 0.4,
+  timeoutMs: number = 45_000,
 ): Promise<AIResult> {
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) throw new Error('NO_OPENAI_KEY');
 
-  const res = await fetch(OPENAI_API_URL, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${apiKey}`,
-    },
-    body: JSON.stringify({
-      model: OPENAI_MODEL,
-      messages: [
-        { role: 'system', content: systemPrompt },
-        { role: 'user', content: prompt },
-      ],
-      temperature,
-      max_tokens: maxTokens,
-    }),
-  });
+  // OpenAI 도 가끔 stall 가능 — 45s 안에 응답 없으면 끊고 사용자에 503 안내(재차감 없음).
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
 
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error(`OpenAI ${res.status}: ${err?.error?.message || ''}`);
+  try {
+    const res = await fetch(OPENAI_API_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        model: OPENAI_MODEL,
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: prompt },
+        ],
+        temperature,
+        max_tokens: maxTokens,
+      }),
+      signal: controller.signal,
+    });
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(`OpenAI ${res.status}: ${err?.error?.message || ''}`);
+    }
+
+    const data = await res.json();
+    const choice = data.choices?.[0];
+    return {
+      content: choice?.message?.content ?? '',
+      truncated: choice?.finish_reason === 'length',
+      provider: 'openai',
+    };
+  } catch (e: any) {
+    if (e?.name === 'AbortError') throw new Error(`OpenAI TIMEOUT_${timeoutMs}ms`);
+    throw e;
+  } finally {
+    clearTimeout(timer);
   }
-
-  const data = await res.json();
-  const choice = data.choices?.[0];
-  return {
-    content: choice?.message?.content ?? '',
-    truncated: choice?.finish_reason === 'length',
-    provider: 'openai',
-  };
 }
 
 // ── 메인 핸들러 ────────────────────────────────────────────────────────────
