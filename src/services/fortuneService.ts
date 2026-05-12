@@ -146,10 +146,22 @@ export const sanitizeAIOutput = (raw: string): string => {
 
 /**
  * rawText 폴백 렌더링용 — 섹션 파싱 실패 시 모든 구조적 태그를 제거하여 깨끗한 텍스트 반환.
- * 여는 태그 [key]와 닫는 태그 [/key] 모두 제거. [은유]도 제거 (폴백 시 마커 불필요).
+ *
+ * 제거 대상:
+ *   1) 영문 섹션 마커: [general] / [/general] / [character] 등
+ *   2) [은유] / 【은유】 / **[은유]** 등 모든 변형 — 줄 통째 strip
+ *   3) 본문 잔존 인라인 [은유] 마커
+ *
+ * 이전 정규식 `/\[\/?[a-zA-Z_]+\]/g` 는 영문만 매칭해 [은유] 가 한글 캐릭터라
+ * strip 되지 않고 본문에 그대로 노출되는 사고가 있었음.
  */
 export const stripAllSectionTags = (text: string): string =>
-  text.replace(/\[\/?[a-zA-Z_]+\]/g, '').replace(/\n{3,}/g, '\n\n').trim();
+  text
+    .replace(/\[\/?[a-zA-Z_]+\]/g, '')                                         // 영문 섹션 마커
+    .replace(/^[\s*▶■#·•\-]*[[【『]\s*은유\s*[:：]?\s*[\]】』].*$/gm, '')      // [은유] 줄 통째
+    .replace(/[\s*]*[[【『]\s*은유\s*[:：]?\s*[\]】』][\s*]*/g, '')             // 인라인 잔존 마커 안전망
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
 
 /**
  * GPT API 호출 헬퍼 (서버 API Route 경유)
