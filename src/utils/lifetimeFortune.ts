@@ -13,6 +13,7 @@ export interface LifetimePoint {
   year: number;
   score: number;       // 0~100
   grade: FortuneGrade;
+  sewoonGanZhi: string;
   daewoonGanZhi: string;
   daewoonGan: string;
   daewoonZhi: string;
@@ -29,10 +30,12 @@ export function computeLifetimeFortune(saju: SajuResult, maxAge: number = 99): L
     const year = birthYear + age;
     let score = 50;
     let grade: FortuneGrade = '평';
+    let sewoonGanZhi = '';
     try {
       const f = calculatePeriodFortune(saju, { scope: 'year', year });
       score = f.overallScore;
       grade = f.overallGrade;
+      sewoonGanZhi = f.targetGanZhi.ganZhi;
     } catch {
       // 만약 일부 연도 계산 실패 시 기본값으로 처리 — 차트 끊김 방지
     }
@@ -42,6 +45,7 @@ export function computeLifetimeFortune(saju: SajuResult, maxAge: number = 99): L
       year,
       score,
       grade,
+      sewoonGanZhi,
       daewoonGanZhi: dw ? `${dw.gan}${dw.zhi}` : '',
       daewoonGan: dw?.gan ?? '',
       daewoonZhi: dw?.zhi ?? '',
