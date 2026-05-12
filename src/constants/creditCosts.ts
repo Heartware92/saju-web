@@ -30,7 +30,7 @@ export const CONSULTATION_PACK_MOON_COST = 3;
 export const CHARGE_REASONS = {
   traditional: '정통사주',
   newyear: '신년운세',
-  today: '오늘의 운세',
+  today: '실시간 운세',
   gunghap: '궁합',
   date: '지정일 운세',
   taekil: '택일',

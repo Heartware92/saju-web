@@ -35,7 +35,7 @@ const YEAR_INFO = getYearInfo(THIS_YEAR);
 // 카테고리 정의 (앱과 동일)
 // [B안] love/wealth 입력 카드는 비활성. 외부에서 ?category=love 로 진입 시 traditional 로 fallback.
 const SAJU_CATEGORIES: Record<string, { title: string; icon: string; desc: string }> = {
-  'today': { title: '오늘의 운세', icon: '☀️', desc: '하루의 흐름 미리보기' },
+  'today': { title: '실시간 운세', icon: '☀️', desc: '지금의 운세' },
   'tomorrow': { title: '내일의 운세', icon: '🌙', desc: '미리 준비하는 내일' },
   'traditional': { title: '정통 사주', icon: '📜', desc: '나의 타고난 명운 분석' },
   'newyear': { title: `${THIS_YEAR} 신년운세`, icon: YEAR_INFO.icon, desc: `${YEAR_INFO.ganZhi}년 ${YEAR_INFO.animal}띠 총운` },

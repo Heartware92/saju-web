@@ -177,7 +177,7 @@ const PackageCard: React.FC<{
 const UsageGuide: React.FC = () => {
   const items = [
     { name: '만세력 확인 + 기본 해석', cost: '무료', icon: '🆓' },
-    { name: '오늘의 운세', cost: '🌙 1', icon: '' },
+    { name: '실시간 운세', cost: '🌙 1', icon: '' },
     { name: '타로 리딩', cost: '🌙 1', icon: '' },
     { name: '사주 상세 해석', cost: '☀️ 2', icon: '' },
     { name: '애정운 / 재물운 특화', cost: '☀️ 2', icon: '' },

@@ -74,7 +74,7 @@ export const YeopjeonPackage: React.FC<PackageCardProps> = ({
 export const PackageComparison: React.FC = () => {
   const items = [
     { name: '만세력 확인 + 기본 해석', cost: '무료', type: 'free' },
-    { name: '오늘의 운세', cost: '🌙 1', type: 'moon' },
+    { name: '실시간 운세', cost: '🌙 1', type: 'moon' },
     { name: '타로 리딩', cost: '🌙 1', type: 'moon' },
     { name: '사주 상세 해석', cost: '☀️ 2', type: 'sun' },
     { name: '애정운 / 재물운 특화', cost: '☀️ 2', type: 'sun' },
