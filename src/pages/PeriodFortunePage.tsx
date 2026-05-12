@@ -15,6 +15,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { useProfileStore } from '../store/useProfileStore';
 import { extractMetaphor } from '../utils/parseMetaphor';
+import { SectionCollapsible } from '../components/saju/SectionCollapsible';
 import { useUserStore } from '../store/useUserStore';
 import { useCreditStore } from '../store/useCreditStore';
 import { useReportCacheStore, sajuKey, type ReportKind } from '../store/useReportCacheStore';
@@ -1093,32 +1094,13 @@ export default function PeriodFortunePage({ scope }: { scope: FortuneScope | 'da
                   : rawBody.replace(/\n(?!\n)/g, ' ');
 
                 return (
-                  <motion.div
+                  <SectionCollapsible
                     key={key}
-                    initial={{ opacity: 0, y: 6 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.06 * idx }}
-                    className="rounded-2xl p-5 bg-[rgba(20,12,38,0.55)] border border-[var(--border-subtle)]"
+                    title={NEWYEAR_SECTION_LABELS[key]}
+                    metaphorTitle={metaphorTitle}
+                    defaultOpen={idx === 0}
+                    enterDelay={0.06 * idx}
                   >
-                    {/* 섹션 라벨 — 상단에 크게 강조 */}
-                    <div className="flex items-center gap-2 mb-2">
-                      <span className="inline-block w-1 h-5 rounded-full bg-cta" />
-                      <div
-                        className="text-[17px] font-bold text-text-primary tracking-tight"
-                        style={{ fontFamily: 'var(--font-title)' }}
-                      >
-                        {NEWYEAR_SECTION_LABELS[key]}
-                      </div>
-                    </div>
-
-                    {/* 은유 제목 — 라벨 아래, 서브 톤 */}
-                    <div
-                      className="text-[17px] font-bold leading-snug text-cta/90 mb-4 pl-3"
-                      style={{ fontFamily: 'var(--font-title)' }}
-                    >
-                      {metaphorTitle}
-                    </div>
-
                     {key === 'monthly' ? (
                       <div className="space-y-3">
                         {(bodyText.includes('\n\n')
@@ -1135,7 +1117,7 @@ export default function PeriodFortunePage({ scope }: { scope: FortuneScope | 'da
                         {bodyText}
                       </p>
                     )}
-                  </motion.div>
+                  </SectionCollapsible>
                 );
               })}
             </div>
