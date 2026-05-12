@@ -10,6 +10,7 @@ import { determineGyeokguk } from '@/engine/gyeokguk';
 import { stemToHanja, zhiToHanja } from '@/lib/character';
 import SajuReport from '@/components/saju/SajuReport';
 import { AdviceCard } from '@/components/saju/AdviceCard';
+import { highlightSajuTerms } from '@/utils/highlightSajuTerms';
 
 const ELEMENT_COLORS: Record<string, string> = {
   '목': '#34D399', '화': '#F43F5E', '토': '#F59E0B', '금': '#CBD5E1', '수': '#3B82F6',
@@ -155,7 +156,7 @@ export function SajuTraditionalResultBlock({ record }: Props) {
                 <AdviceCard yongSinElement={result.yongSinElement} meta={adviceMeta} />
               ) : (
                 <p className="text-[17px] text-text-secondary leading-[1.85] whitespace-pre-line tracking-[-0.005em]">
-                  {bodyText}
+                  {highlightSajuTerms(bodyText)}
                 </p>
               )}
             </motion.div>

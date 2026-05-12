@@ -25,6 +25,7 @@ import { SUN_COST_BIG, CHARGE_REASONS } from '../constants/creditCosts';
 import { determineGyeokguk } from '../engine/gyeokguk';
 import { stemToHanja, zhiToHanja } from '../lib/character';
 import { AdviceCard } from '../components/saju/AdviceCard';
+import { highlightSajuTerms } from '../utils/highlightSajuTerms';
 import SajuReport from '../components/saju/SajuReport';
 import { AILoadingBar } from '../components/AILoadingBar';
 import { BackButton } from '../components/ui/BackButton';
@@ -63,8 +64,24 @@ export default function SajuResultPage() {
   const targetProfile = useMemo(() => {
     if (profileId) return profiles.find(p => p.id === profileId) ?? null;
     if (needsProfileSelect) return null;
+    // URL year/month/day 로 진입한 경우 birth 가 일치하는 프로필을 찾는다.
+    // 대표 프로필로 무조건 fallback 하면, B 의 birth 로 진입한 풀이가 보관함에 A 이름으로 저장되는 사고 발생.
+    // 일치하는 프로필이 없으면 null — archiveSaju 가 sourceBirth 매칭(또는 그것도 실패 시 대표 fallback)으로 처리.
+    const yStr = searchParams?.get('year');
+    const mStr = searchParams?.get('month');
+    const dStr = searchParams?.get('day');
+    const genderStr = searchParams?.get('gender');
+    const calendarTypeStr = (searchParams?.get('calendarType') ?? 'solar') as 'solar' | 'lunar';
+    if (yStr && mStr && dStr) {
+      const birthDate = `${yStr.padStart(4, '0')}-${mStr.padStart(2, '0')}-${dStr.padStart(2, '0')}`;
+      return profiles.find(p =>
+        p.birth_date === birthDate &&
+        p.gender === genderStr &&
+        (p.calendar_type ?? 'solar') === calendarTypeStr
+      ) ?? null;
+    }
     return profiles.find(p => p.is_primary) ?? null;
-  }, [profiles, profileId, needsProfileSelect]);
+  }, [profiles, profileId, needsProfileSelect, searchParams]);
 
   const [result, setResult] = useState<SajuResult | null>(null);
   const [report, setReport] = useState<JungtongsajuAIResult | null>(null);
@@ -471,7 +488,7 @@ export default function SajuResultPage() {
       {report?.rawText && (
         <div className="rounded-2xl p-4 mb-3 bg-[rgba(20,12,38,0.55)] border border-[var(--border-subtle)]">
           <p className="text-[15px] text-text-secondary leading-relaxed whitespace-pre-line">
-            {stripAllSectionTags(report.rawText)}
+            {highlightSajuTerms(stripAllSectionTags(report.rawText))}
           </p>
         </div>
       )}
@@ -534,7 +551,7 @@ export default function SajuResultPage() {
                 ) : (
                   <div className="text-[17px] text-text-secondary leading-[1.85] tracking-[-0.005em] space-y-3">
                     {bodyText.split(/\n\n+/).map((para, pi) => (
-                      <p key={pi} className="whitespace-pre-line">{para.trim()}</p>
+                      <p key={pi} className="whitespace-pre-line">{highlightSajuTerms(para.trim())}</p>
                     ))}
                   </div>
                 )}

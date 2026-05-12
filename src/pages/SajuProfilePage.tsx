@@ -53,6 +53,9 @@ export default function SajuProfilePage() {
     }
 
     const params = new URLSearchParams({
+      // profileId 를 함께 전달해야 보관함 저장 시 대표 프로필로 fallback 되지 않는다.
+      // (이전 버그: 대표=A, 선택=B 일 때 보관함에 A 이름으로 저장)
+      profileId: profile.id,
       year: y.toString(),
       month: m.toString(),
       day: d.toString(),
