@@ -3,10 +3,14 @@
 /**
  * 평생 운세 흐름 그래프 (1~99세)
  *
- * - 가로 스크롤 가능 (모바일에서 한 화면에 ~30년 정도)
- * - 마운트 시 현재 만나이 위치로 자동 스크롤
- * - 차트 클릭/터치 → 가장 가까운 나이 선택 → 상단에 상세 정보 표시
- * - 대운 전환점 세로 점선, 현재 나이는 별도 표시 (선택과 분리)
+ * UX/UI:
+ *  - 가로 스크롤, 마운트 시 현재 만나이 자동 위치
+ *  - 차트 클릭/터치 → 가장 가까운 나이 선택
+ *  - 부드러운 곡선 (Catmull-Rom smoothing)
+ *  - 점수대별 색상 그라데이션 stroke
+ *  - 대운 segment 배경 band
+ *  - 인생 최고/최저 자동 추출 + 빠른 점프 버튼
+ *  - 폰트/자간: 본문은 SUIT + 0.14em, 타이틀은 마루부리
  */
 
 import { useEffect, useMemo, useRef, useState } from 'react';
@@ -32,14 +36,14 @@ const GRADE_COLOR: Record<LifetimeGrade, string> = {
   '흉': '#F87171',
 };
 
-// 차트 크기 — 한 살당 18px → 99세 ≈ 1800px (가로 스크롤로 전체 노출)
-const PX_PER_YEAR = 18;
-const W = 99 * PX_PER_YEAR + 60; // 좌우 여백 포함
-const H = 220;
-const PAD_L = 36;
-const PAD_R = 24;
-const PAD_T = 20;
-const PAD_B = 36;
+// ── 차트 차원 ──
+const PX_PER_YEAR = 20;
+const W = 99 * PX_PER_YEAR + 64;
+const H = 260;
+const PAD_L = 40;
+const PAD_R = 28;
+const PAD_T = 24;
+const PAD_B = 50;
 const PLOT_W = W - PAD_L - PAD_R;
 const PLOT_H = H - PAD_T - PAD_B;
 
@@ -48,6 +52,25 @@ const AGE_MAX = 99;
 const xOf = (age: number) => PAD_L + ((age - AGE_MIN) / (AGE_MAX - AGE_MIN)) * PLOT_W;
 const yOf = (score: number) => PAD_T + (1 - score / 100) * PLOT_H;
 
+// Catmull-Rom → Bezier 변환으로 곡선을 부드럽게
+function smoothPath(pts: { x: number; y: number }[]): string {
+  if (pts.length < 2) return '';
+  const segs: string[] = [`M${pts[0].x.toFixed(1)},${pts[0].y.toFixed(1)}`];
+  for (let i = 0; i < pts.length - 1; i++) {
+    const p0 = pts[i - 1] ?? pts[i];
+    const p1 = pts[i];
+    const p2 = pts[i + 1];
+    const p3 = pts[i + 2] ?? p2;
+    const t = 0.5; // tension
+    const c1x = p1.x + ((p2.x - p0.x) / 6) * t;
+    const c1y = p1.y + ((p2.y - p0.y) / 6) * t;
+    const c2x = p2.x - ((p3.x - p1.x) / 6) * t;
+    const c2y = p2.y - ((p3.y - p1.y) / 6) * t;
+    segs.push(`C${c1x.toFixed(1)},${c1y.toFixed(1)} ${c2x.toFixed(1)},${c2y.toFixed(1)} ${p2.x.toFixed(1)},${p2.y.toFixed(1)}`);
+  }
+  return segs.join(' ');
+}
+
 export function LifetimeFortuneChart({ saju }: Props) {
   const points = useMemo(() => computeLifetimeFortune(saju, 99), [saju]);
   const currentAge = useMemo(() => getCurrentAge(saju), [saju]);
@@ -55,42 +78,67 @@ export function LifetimeFortuneChart({ saju }: Props) {
   const [selectedAge, setSelectedAge] = useState<number>(currentAge);
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  // 마운트 시 현재 나이가 가운데 보이도록 스크롤
+  // 마운트 시 현재 나이가 중앙에 오도록 스크롤
   useEffect(() => {
     if (!scrollRef.current) return;
     const targetX = xOf(currentAge);
     const containerW = scrollRef.current.clientWidth;
-    // SVG 는 100% width 가 아닌 고정 W 크기 — 실제 렌더링은 동일 비율
-    // 하지만 viewBox 매핑이라 ratio 적용해야 함
     const svgEl = scrollRef.current.querySelector('svg');
     const renderedW = svgEl?.getBoundingClientRect().width ?? W;
     const ratio = renderedW / W;
     scrollRef.current.scrollLeft = Math.max(0, targetX * ratio - containerW / 2);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // 빠른 점프 — 부드럽게 스크롤
+  const scrollToAge = (age: number) => {
+    if (!scrollRef.current) return;
+    const svgEl = scrollRef.current.querySelector('svg');
+    const renderedW = svgEl?.getBoundingClientRect().width ?? W;
+    const ratio = renderedW / W;
+    const targetX = xOf(age) * ratio - scrollRef.current.clientWidth / 2;
+    scrollRef.current.scrollTo({ left: Math.max(0, targetX), behavior: 'smooth' });
+    setSelectedAge(age);
+  };
 
   if (!points.length) return null;
 
-  // 라인 / 에어리어
-  const linePath = points
-    .map((p, i) => `${i === 0 ? 'M' : 'L'}${xOf(p.age).toFixed(1)},${yOf(p.score).toFixed(1)}`)
-    .join(' ');
-  const lastX = xOf(points[points.length - 1].age).toFixed(1);
-  const firstX = xOf(points[0].age).toFixed(1);
+  // 곡선 + 영역
+  const smoothPts = points.map((p) => ({ x: xOf(p.age), y: yOf(p.score) }));
+  const linePath = smoothPath(smoothPts);
+  const lastX = smoothPts[smoothPts.length - 1].x.toFixed(1);
+  const firstX = smoothPts[0].x.toFixed(1);
   const baseY = (PAD_T + PLOT_H).toFixed(1);
   const areaPath = `${linePath} L${lastX},${baseY} L${firstX},${baseY} Z`;
 
   const daewoonStarts = points.filter((p) => p.isDaewoonStart);
-  const selectedPoint: LifetimePoint | undefined = points.find((p) => p.age === selectedAge);
-  const currentPoint: LifetimePoint | undefined = points.find((p) => p.age === currentAge);
+
+  // 대운 segment band
+  const daewoonBands = daewoonStarts.map((start, idx) => {
+    const nextStart = daewoonStarts[idx + 1];
+    const endAge = nextStart ? nextStart.age - 1 : AGE_MAX;
+    return {
+      key: `band-${start.age}`,
+      x1: xOf(start.age),
+      x2: xOf(endAge + 0.5),
+      label: start.daewoonGanZhi,
+      midAge: Math.floor((start.age + endAge) / 2),
+      tinted: idx % 2 === 0, // 짝홀로 색 교차
+    };
+  });
+
+  const selectedPoint = points.find((p) => p.age === selectedAge);
+  const currentPoint = points.find((p) => p.age === currentAge);
 
   const avgScore = Math.round(points.reduce((s, p) => s + p.score, 0) / points.length);
 
+  // 인생 최고/최저 추출 (현재 나이 이전 / 이후 구분 없이 전체에서 1개씩)
+  const best = points.reduce((a, b) => (b.score > a.score ? b : a));
+  const worst = points.reduce((a, b) => (b.score < a.score ? b : a));
+
   const yTicks = [0, 50, 100];
-  // 10년 단위 + 시작/끝
   const xTicks = [1, 10, 20, 30, 40, 50, 60, 70, 80, 90, 99];
 
-  // SVG 클릭 / 터치 → 가장 가까운 나이 선택
   const handlePointer = (clientX: number, target: SVGSVGElement) => {
     const rect = target.getBoundingClientRect();
     const localX = clientX - rect.left;
@@ -117,61 +165,129 @@ export function LifetimeFortuneChart({ saju }: Props) {
             평생 운세 흐름
           </div>
         </div>
-        <div className="text-[13px] text-text-tertiary">평균 {avgScore}점</div>
+        <div
+          className="text-[13.5px] text-text-tertiary"
+          style={{ fontFamily: 'var(--font-body)', letterSpacing: '0.04em' }}
+        >
+          평균 <span className="text-text-secondary font-semibold">{avgScore}</span>점
+        </div>
       </div>
-      <p className="text-[14.5px] text-text-secondary mb-3 pl-3 leading-[1.7]">
-        1세부터 99세까지의 종합 운세 점수예요. 대운(10년 주기) 과 세운(연 단위) 의 천간·지지가
-        원국과 어떻게 상호작용하는지 점수화한 결과로, 차트를 좌우로 밀거나 원하는 나이를 탭하면
-        상세 정보가 위에 표시돼요.
+
+      <p
+        className="text-[15.5px] text-text-secondary mb-3 pl-3 leading-[1.75]"
+        style={{ fontFamily: 'var(--font-body)', letterSpacing: '0.04em' }}
+      >
+        1세부터 99세까지 종합 운세 점수예요. 대운(10년 주기)·세운(연 단위)의 천간·지지가 원국과
+        어떻게 상호작용하는지 점수화한 결과로, 차트를 좌우로 밀거나 원하는 나이를 탭하면 상세
+        정보가 표시돼요.
       </p>
 
-      {/* 선택된 나이 정보 — 상단 카드 */}
+      {/* 선택된 나이 — 2층 카드 */}
       {selectedPoint && (
-        <div className="mb-3 rounded-xl px-3 py-2.5 bg-[rgba(124,92,252,0.10)] border border-[rgba(124,92,252,0.28)] flex items-center gap-3 flex-wrap">
-          <div className="flex items-center gap-2">
-            <span
-              className="w-2.5 h-2.5 rounded-full"
-              style={{ background: GRADE_COLOR[selectedPoint.grade] }}
-            />
-            <span className="text-[15px] font-bold text-text-primary">
-              {selectedPoint.age}세
-            </span>
-            <span className="text-[12px] text-text-tertiary">({selectedPoint.year}년)</span>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <span className="text-[12px] text-text-tertiary">점수</span>
-            <span
-              className="text-[15px] font-bold"
-              style={{ color: GRADE_COLOR[selectedPoint.grade] }}
-            >
-              {selectedPoint.score}
-            </span>
-            <span className="text-[12px] text-text-secondary">· {selectedPoint.grade}</span>
-          </div>
-          {selectedPoint.daewoonGanZhi && (
-            <div className="flex items-center gap-1.5">
-              <span className="text-[12px] text-text-tertiary">대운</span>
+        <div className="mb-4 rounded-xl px-4 py-3 bg-[rgba(124,92,252,0.10)] border border-[rgba(124,92,252,0.32)]">
+          <div className="flex items-center justify-between mb-2">
+            <div className="flex items-baseline gap-2">
               <span
-                className="text-[14px] font-bold text-text-primary"
+                className="text-[24px] font-bold text-text-primary"
                 style={{ fontFamily: 'var(--font-title)' }}
               >
-                {selectedPoint.daewoonGanZhi}
+                {selectedPoint.age}세
               </span>
-            </div>
-          )}
-          {selectedPoint.sewoonGanZhi && (
-            <div className="flex items-center gap-1.5">
-              <span className="text-[12px] text-text-tertiary">세운</span>
               <span
-                className="text-[14px] font-bold text-text-primary"
-                style={{ fontFamily: 'var(--font-title)' }}
+                className="text-[13px] text-text-tertiary"
+                style={{ fontFamily: 'var(--font-body)' }}
               >
-                {selectedPoint.sewoonGanZhi}
+                {selectedPoint.year}년
+              </span>
+              {selectedPoint.age === currentAge && (
+                <span className="text-[11px] px-1.5 py-0.5 rounded-full bg-cta/20 text-cta font-semibold">
+                  현재
+                </span>
+              )}
+            </div>
+            <div className="flex items-baseline gap-1.5">
+              <span
+                className="text-[28px] font-bold leading-none"
+                style={{ color: GRADE_COLOR[selectedPoint.grade] }}
+              >
+                {selectedPoint.score}
+              </span>
+              <span className="text-[12px] text-text-tertiary">점</span>
+              <span
+                className="text-[14px] font-bold ml-1"
+                style={{ color: GRADE_COLOR[selectedPoint.grade] }}
+              >
+                · {selectedPoint.grade}
               </span>
             </div>
-          )}
+          </div>
+
+          <div className="flex items-center gap-4 pt-2 border-t border-[rgba(124,92,252,0.18)]">
+            {selectedPoint.daewoonGanZhi && (
+              <div className="flex items-baseline gap-1.5">
+                <span
+                  className="text-[12px] text-text-tertiary"
+                  style={{ fontFamily: 'var(--font-body)' }}
+                >
+                  대운
+                </span>
+                <span
+                  className="text-[16px] font-bold text-text-primary"
+                  style={{ fontFamily: 'var(--font-title)' }}
+                >
+                  {selectedPoint.daewoonGanZhi}
+                </span>
+              </div>
+            )}
+            {selectedPoint.sewoonGanZhi && (
+              <div className="flex items-baseline gap-1.5">
+                <span
+                  className="text-[12px] text-text-tertiary"
+                  style={{ fontFamily: 'var(--font-body)' }}
+                >
+                  세운
+                </span>
+                <span
+                  className="text-[16px] font-bold text-text-primary"
+                  style={{ fontFamily: 'var(--font-title)' }}
+                >
+                  {selectedPoint.sewoonGanZhi}
+                </span>
+              </div>
+            )}
+          </div>
         </div>
       )}
+
+      {/* 빠른 점프 버튼 */}
+      <div className="flex items-center gap-2 mb-3 flex-wrap">
+        {currentPoint && (
+          <button
+            type="button"
+            onClick={() => scrollToAge(currentAge)}
+            className="px-2.5 py-1 rounded-full text-[12.5px] bg-cta/15 border border-cta/40 text-cta hover:bg-cta/25 transition-all"
+            style={{ fontFamily: 'var(--font-body)', letterSpacing: '0.02em' }}
+          >
+            현재 {currentAge}세
+          </button>
+        )}
+        <button
+          type="button"
+          onClick={() => scrollToAge(best.age)}
+          className="px-2.5 py-1 rounded-full text-[12.5px] bg-emerald-500/12 border border-emerald-500/35 text-emerald-300 hover:bg-emerald-500/22 transition-all"
+          style={{ fontFamily: 'var(--font-body)', letterSpacing: '0.02em' }}
+        >
+          최고 {best.age}세 ({best.score})
+        </button>
+        <button
+          type="button"
+          onClick={() => scrollToAge(worst.age)}
+          className="px-2.5 py-1 rounded-full text-[12.5px] bg-red-500/12 border border-red-500/35 text-red-300 hover:bg-red-500/22 transition-all"
+          style={{ fontFamily: 'var(--font-body)', letterSpacing: '0.02em' }}
+        >
+          주의 {worst.age}세 ({worst.score})
+        </button>
+      </div>
 
       {/* 가로 스크롤 SVG */}
       <div
@@ -194,10 +310,32 @@ export function LifetimeFortuneChart({ saju }: Props) {
         >
           <defs>
             <linearGradient id="lifeFortuneFill" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="#A78BFA" stopOpacity="0.45" />
+              <stop offset="0%" stopColor="#A78BFA" stopOpacity="0.50" />
               <stop offset="100%" stopColor="#A78BFA" stopOpacity="0" />
             </linearGradient>
+            {/* 점수대별 색 그라데이션 — 위는 초록, 중간 노랑, 아래 빨강 */}
+            <linearGradient id="lifeLineStroke" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="#34D399" />
+              <stop offset="35%" stopColor="#86EFAC" />
+              <stop offset="55%" stopColor="#FBBF24" />
+              <stop offset="80%" stopColor="#FB923C" />
+              <stop offset="100%" stopColor="#F87171" />
+            </linearGradient>
           </defs>
+
+          {/* 대운 segment 배경 band */}
+          {daewoonBands.map((b) =>
+            b.tinted ? (
+              <rect
+                key={b.key}
+                x={b.x1}
+                y={PAD_T}
+                width={Math.max(0, b.x2 - b.x1)}
+                height={PLOT_H}
+                fill="rgba(168,139,250,0.04)"
+              />
+            ) : null,
+          )}
 
           {/* Y 보조선 + 라벨 */}
           {yTicks.map((t) => (
@@ -207,7 +345,7 @@ export function LifetimeFortuneChart({ saju }: Props) {
                 x2={W - PAD_R}
                 y1={yOf(t)}
                 y2={yOf(t)}
-                stroke="rgba(255,255,255,0.07)"
+                stroke="rgba(255,255,255,0.08)"
                 strokeWidth="1"
                 strokeDasharray={t === 50 ? '0' : '2 4'}
               />
@@ -215,15 +353,16 @@ export function LifetimeFortuneChart({ saju }: Props) {
                 x={PAD_L - 8}
                 y={yOf(t) + 4}
                 textAnchor="end"
-                fontSize="11"
-                fill="rgba(255,255,255,0.5)"
+                fontSize="12"
+                fill="rgba(255,255,255,0.55)"
+                style={{ fontFamily: 'var(--font-body)' }}
               >
                 {t}
               </text>
             </g>
           ))}
 
-          {/* 대운 전환 세로 점선 */}
+          {/* 대운 전환 세로선 + 간지 라벨 */}
           {daewoonStarts.map((p) => (
             <g key={`dw-${p.age}`}>
               <line
@@ -231,16 +370,16 @@ export function LifetimeFortuneChart({ saju }: Props) {
                 x2={xOf(p.age)}
                 y1={PAD_T}
                 y2={PAD_T + PLOT_H}
-                stroke="rgba(168,139,250,0.22)"
+                stroke="rgba(168,139,250,0.28)"
                 strokeWidth="1"
                 strokeDasharray="2 3"
               />
               <text
                 x={xOf(p.age)}
-                y={PAD_T + PLOT_H + 28}
+                y={PAD_T + PLOT_H + 32}
                 textAnchor="middle"
-                fontSize="10"
-                fill="rgba(168,139,250,0.7)"
+                fontSize="12"
+                fill="rgba(168,139,250,0.85)"
                 style={{ fontFamily: 'var(--font-title)' }}
               >
                 {p.daewoonGanZhi}
@@ -251,12 +390,12 @@ export function LifetimeFortuneChart({ saju }: Props) {
           {/* 에어리어 fill */}
           <path d={areaPath} fill="url(#lifeFortuneFill)" />
 
-          {/* 메인 라인 */}
+          {/* 메인 라인 — 점수대별 색 그라데이션 */}
           <path
             d={linePath}
             fill="none"
-            stroke="#A78BFA"
-            strokeWidth="2"
+            stroke="url(#lifeLineStroke)"
+            strokeWidth="2.2"
             strokeLinecap="round"
             strokeLinejoin="round"
           />
@@ -266,28 +405,29 @@ export function LifetimeFortuneChart({ saju }: Props) {
             <text
               key={`xt-${age}`}
               x={xOf(age)}
-              y={PAD_T + PLOT_H + 14}
+              y={PAD_T + PLOT_H + 16}
               textAnchor="middle"
-              fontSize="11"
-              fill="rgba(255,255,255,0.5)"
+              fontSize="12.5"
+              fill="rgba(255,255,255,0.55)"
+              style={{ fontFamily: 'var(--font-body)' }}
             >
               {age}
             </text>
           ))}
 
-          {/* 현재 만나이 — 회색 작은 dot (선택 강조와 분리) */}
+          {/* 현재 만나이 — 회색 작은 dot */}
           {currentPoint && currentAge !== selectedAge && (
             <circle
               cx={xOf(currentPoint.age)}
               cy={yOf(currentPoint.score)}
-              r="3"
-              fill="rgba(255,255,255,0.45)"
+              r="3.5"
+              fill="rgba(255,255,255,0.55)"
               stroke="#1C1033"
               strokeWidth="1.5"
             />
           )}
 
-          {/* 선택된 나이 강조 — 큰 dot + 점수 라벨 */}
+          {/* 선택된 나이 강조 */}
           {selectedPoint && (
             <g>
               <line
@@ -298,33 +438,34 @@ export function LifetimeFortuneChart({ saju }: Props) {
                 stroke={GRADE_COLOR[selectedPoint.grade]}
                 strokeWidth="1.4"
                 strokeDasharray="3 3"
-                opacity="0.55"
+                opacity="0.6"
               />
               <circle
                 cx={xOf(selectedPoint.age)}
                 cy={yOf(selectedPoint.score)}
-                r="6"
+                r="6.5"
                 fill={GRADE_COLOR[selectedPoint.grade]}
                 stroke="#1C1033"
                 strokeWidth="2"
               />
               <rect
-                x={xOf(selectedPoint.age) - 28}
-                y={yOf(selectedPoint.score) - 22}
-                width="56"
-                height="14"
+                x={xOf(selectedPoint.age) - 30}
+                y={yOf(selectedPoint.score) - 24}
+                width="60"
+                height="16"
                 rx="3"
-                fill="rgba(15,9,32,0.85)"
+                fill="rgba(15,9,32,0.92)"
                 stroke={GRADE_COLOR[selectedPoint.grade]}
                 strokeWidth="0.8"
               />
               <text
                 x={xOf(selectedPoint.age)}
-                y={yOf(selectedPoint.score) - 12}
+                y={yOf(selectedPoint.score) - 13}
                 textAnchor="middle"
-                fontSize="10.5"
+                fontSize="11.5"
                 fontWeight="700"
                 fill={GRADE_COLOR[selectedPoint.grade]}
+                style={{ fontFamily: 'var(--font-body)' }}
               >
                 {selectedPoint.age}세 · {selectedPoint.score}점
               </text>
@@ -334,25 +475,47 @@ export function LifetimeFortuneChart({ saju }: Props) {
       </div>
 
       {/* 범례 */}
-      <div className="flex items-center justify-center gap-4 mt-3 flex-wrap">
+      <div
+        className="flex items-center justify-center gap-4 mt-3 flex-wrap"
+        style={{ fontFamily: 'var(--font-body)', letterSpacing: '0.03em' }}
+      >
         <div className="flex items-center gap-1.5">
-          <span className="w-2.5 h-2.5 rounded-full" style={{ background: '#A78BFA' }} />
-          <span className="text-[12px] text-text-tertiary">종합 운세 점수</span>
+          <svg width="20" height="6">
+            <line
+              x1="0"
+              y1="3"
+              x2="20"
+              y2="3"
+              stroke="url(#lifeLineStroke)"
+              strokeWidth="2.2"
+              strokeLinecap="round"
+            />
+          </svg>
+          <span className="text-[13px] text-text-tertiary">종합 운세 점수</span>
         </div>
         <div className="flex items-center gap-1.5">
-          <span className="w-2.5 h-0.5" style={{ background: 'rgba(168,139,250,0.6)' }} />
-          <span className="text-[12px] text-text-tertiary">대운 전환 (10년)</span>
+          <span
+            className="inline-block w-3 h-3 rounded-sm"
+            style={{ background: 'rgba(168,139,250,0.18)' }}
+          />
+          <span className="text-[13px] text-text-tertiary">대운 (10년 주기)</span>
         </div>
         {currentPoint && (
           <div className="flex items-center gap-1.5">
-            <span className="w-2 h-2 rounded-full" style={{ background: 'rgba(255,255,255,0.45)' }} />
-            <span className="text-[12px] text-text-tertiary">현재 ({currentAge}세)</span>
+            <span
+              className="w-2.5 h-2.5 rounded-full"
+              style={{ background: 'rgba(255,255,255,0.55)' }}
+            />
+            <span className="text-[13px] text-text-tertiary">현재 {currentAge}세</span>
           </div>
         )}
       </div>
 
-      <p className="text-[12px] text-text-tertiary mt-2 text-center">
-        ← 좌우로 밀어보세요 · 원하는 나이를 탭하면 상세 정보가 표시됩니다
+      <p
+        className="text-[13px] text-text-tertiary mt-3 text-center"
+        style={{ fontFamily: 'var(--font-body)', letterSpacing: '0.04em' }}
+      >
+        좌우로 밀어보세요 · 원하는 나이를 탭하면 상세 정보가 표시돼요
       </p>
     </motion.div>
   );
