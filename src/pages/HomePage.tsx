@@ -426,7 +426,7 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* 상단 서비스 7종 — 모두 동일 크기 (지정일·택일 사이즈) 로 2열 그리드 */}
+      {/* 상단 서비스 7종 — 지정일·택일 운세 사이즈로 통일 (h-[88], 폰트 19/15) */}
       <section className="px-4 -mt-3 relative z-10">
         <motion.div
           variants={stagger}
@@ -440,13 +440,13 @@ export default function HomePage() {
               <button type="button" onClick={(e) => handleServiceClick(e, svc.direct)} className="w-full text-left">
                 <div className={`
                   service-card
-                  relative rounded-xl p-3 h-[96px]
+                  relative rounded-xl p-3 h-[88px]
                   bg-gradient-to-br ${svc.gradient}
                   border border-[var(--border-subtle)]
                   flex flex-col items-center justify-center text-center gap-1
                 `}>
-                  <h3 className="text-[16px] font-bold text-text-primary tracking-tight">{svc.title}</h3>
-                  <p className="text-[13px] font-medium text-text-secondary">{svc.desc}</p>
+                  <h3 className="text-[19px] font-bold text-text-primary tracking-tight">{svc.title}</h3>
+                  <p className="text-[15px] font-medium text-text-secondary">{svc.desc}</p>
                 </div>
               </button>
             </motion.div>
@@ -471,8 +471,8 @@ export default function HomePage() {
             <motion.div key={svc.id} variants={fadeUp}>
               <button type="button" onClick={(e) => handleServiceClick(e, svc.href)} className="w-full">
                 <div className="service-card flex flex-col items-center justify-center h-[80px] p-2.5 rounded-xl bg-space-surface/60 border border-[var(--border-subtle)]">
-                  <span className="text-[15px] font-bold text-text-primary text-center leading-tight mb-1 whitespace-nowrap">{svc.title}</span>
-                  <span className="text-[12px] text-text-tertiary text-center leading-tight line-clamp-1 whitespace-nowrap">{svc.desc}</span>
+                  <span className="text-[17px] font-bold text-text-primary text-center leading-tight mb-1 whitespace-nowrap">{svc.title}</span>
+                  <span className="text-[14px] text-text-tertiary text-center leading-tight line-clamp-1 whitespace-nowrap">{svc.desc}</span>
                 </div>
               </button>
             </motion.div>
