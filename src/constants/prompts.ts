@@ -3610,7 +3610,7 @@ export type GunghapCategory =
   | 'sibling'      // 형제/자매
   | 'work'         // 직장 동료
   | 'business'     // 사업 파트너
-  | 'idol_fan'     // 유명인과 팬
+  | 'idol_fan'     // 유명인과의 궁합
   | 'pet'          // 나와 반려동물
   | 'custom';      // 직접 입력
 
