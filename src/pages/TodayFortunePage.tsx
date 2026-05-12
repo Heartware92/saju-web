@@ -16,6 +16,7 @@ import { useState, useEffect, useMemo, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { useProfileStore } from '../store/useProfileStore';
+import { extractMetaphor } from '../utils/parseMetaphor';
 import { useCreditStore } from '../store/useCreditStore';
 import { useReportCacheStore, sajuKey, type ReportKind } from '../store/useReportCacheStore';
 import { RestoreReportModal } from '../components/RestoreReportModal';
@@ -852,12 +853,17 @@ export default function TodayFortunePage() {
 
             // 마지막 safety: 본문에 마커 잔여물이 새어나오지 않게 한 번 더 정화
             const safe = stripStrayMarkers(text);
-            // 첫 줄 = 은유 제목, 나머지 = 본문 (정통사주 패턴)
-            const lines = safe.split('\n');
-            const firstLine = lines[0]?.trim() ?? '';
-            const hasMetaphor = lines.length > 1 && firstLine.length > 0 && firstLine.length <= 40 && !firstLine.endsWith('.');
-            const metaphorTitle = hasMetaphor ? firstLine : '';
-            const bodyText = hasMetaphor ? lines.slice(1).join('\n').trim() : safe;
+            // [은유] 마커 우선 추출 + 본문 strip. 마커 없으면 첫 줄 휴리스틱 fallback.
+            const parsed = extractMetaphor(safe);
+            let metaphorTitle = parsed.metaphorTitle;
+            let bodyText = parsed.bodyText;
+            if (!metaphorTitle) {
+              const lines = bodyText.split('\n');
+              const firstLine = lines[0]?.trim() ?? '';
+              const hasMetaphor = lines.length > 1 && firstLine.length > 0 && firstLine.length <= 40 && !firstLine.endsWith('.');
+              metaphorTitle = hasMetaphor ? firstLine : '';
+              bodyText = hasMetaphor ? lines.slice(1).join('\n').trim() : bodyText;
+            }
 
             // 5번 운용법 헤더는 사용자 취미에 맞춰 동적
             // 13번 맞춤 포인트 헤더는 jobState에 맞춰 동적 (학생→"오늘의 학습 습관 한 가지" 등)
@@ -887,7 +893,7 @@ export default function TodayFortunePage() {
                   </div>
                 </div>
                 {metaphorTitle && (
-                  <div className="text-[17px] font-medium leading-snug text-cta/90 mb-4 pl-3" style={{ fontFamily: 'var(--font-title)' }}>
+                  <div className="text-[17px] font-bold leading-snug text-cta/90 mb-4 pl-3" style={{ fontFamily: 'var(--font-title)' }}>
                     {metaphorTitle}
                   </div>
                 )}

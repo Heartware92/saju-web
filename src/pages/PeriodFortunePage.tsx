@@ -14,6 +14,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { useProfileStore } from '../store/useProfileStore';
+import { extractMetaphor } from '../utils/parseMetaphor';
 import { useUserStore } from '../store/useUserStore';
 import { useCreditStore } from '../store/useCreditStore';
 import { useReportCacheStore, sajuKey, type ReportKind } from '../store/useReportCacheStore';
@@ -1070,14 +1071,19 @@ export default function PeriodFortunePage({ scope }: { scope: FortuneScope | 'da
                 const text = newyearReport.sections?.[key];
                 if (!text) return null;
 
-                // 첫 줄 = 은유 제목, 나머지 = 본문 — 정통사주와 동일 포맷
-                const lines = text.trim().split('\n');
-                let metaphorTitle = lines[0]?.trim() ?? '';
-                let rawBody = lines.slice(1).join('\n').trim();
+                // [은유] 마커 우선 추출 + 본문 strip. 마커 없으면 첫 줄 fallback.
+                const parsed = extractMetaphor(text);
+                let metaphorTitle = parsed.metaphorTitle;
+                let rawBody = parsed.bodyText;
+                if (!metaphorTitle) {
+                  const lines = rawBody.split('\n');
+                  metaphorTitle = lines[0]?.trim() ?? '';
+                  rawBody = lines.slice(1).join('\n').trim();
+                }
 
                 // monthly 이전 캐시 호환: 첫 줄이 "N월(" 패턴이면 은유 제목 없는 구 포맷
                 if (key === 'monthly' && /^\d{1,2}월\s*\(/.test(metaphorTitle)) {
-                  rawBody = text.trim();
+                  rawBody = parsed.bodyText;
                   metaphorTitle = '';
                 }
 
@@ -1107,7 +1113,7 @@ export default function PeriodFortunePage({ scope }: { scope: FortuneScope | 'da
 
                     {/* 은유 제목 — 라벨 아래, 서브 톤 */}
                     <div
-                      className="text-[17px] font-medium leading-snug text-cta/90 mb-4 pl-3"
+                      className="text-[17px] font-bold leading-snug text-cta/90 mb-4 pl-3"
                       style={{ fontFamily: 'var(--font-title)' }}
                     >
                       {metaphorTitle}
@@ -1183,9 +1189,15 @@ export default function PeriodFortunePage({ scope }: { scope: FortuneScope | 'da
               {PICKED_DATE_SECTION_KEYS.map((key, idx) => {
                 const text = pickedDateReport.sections?.[key];
                 if (!text) return null;
-                const lines = text.trim().split('\n');
-                const metaphorTitle = lines[0]?.trim() ?? '';
-                const bodyText = lines.slice(1).join('\n').trim();
+                // [은유] 마커 우선 추출 + 본문 strip. 마커 없으면 첫 줄 fallback.
+                const parsed = extractMetaphor(text);
+                let metaphorTitle = parsed.metaphorTitle;
+                let bodyText = parsed.bodyText;
+                if (!metaphorTitle) {
+                  const lines = bodyText.split('\n');
+                  metaphorTitle = lines[0]?.trim() ?? '';
+                  bodyText = lines.slice(1).join('\n').trim();
+                }
                 const isYes = key === 'date_yes';
                 const isNo = key === 'date_no';
                 const isRemedy = key === 'date_remedy';
@@ -1207,7 +1219,7 @@ export default function PeriodFortunePage({ scope }: { scope: FortuneScope | 'da
                       </div>
                     </div>
                     <div
-                      className="text-[17px] font-medium leading-snug text-cta/90 mb-4 pl-3"
+                      className="text-[17px] font-bold leading-snug text-cta/90 mb-4 pl-3"
                       style={{ fontFamily: 'var(--font-title)' }}
                     >
                       {metaphorTitle}

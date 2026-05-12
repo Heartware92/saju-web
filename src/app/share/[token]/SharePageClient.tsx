@@ -18,6 +18,7 @@ import {
   parseTodayV3DomainScores, parseTodayV3FlowScores, parseTojeongScores,
 } from '@/services/fortuneService';
 import { parseGunghapHeader } from '@/lib/gunghap';
+import { extractMetaphor } from '@/utils/parseMetaphor';
 import { GunghapResultBlock } from '@/components/gunghap/GunghapResultBlock';
 import { RadarChart } from '@/components/charts/RadarChart';
 import { SajuTraditionalResultBlock } from '@/components/share/blocks/SajuTraditionalResultBlock';
@@ -420,20 +421,9 @@ export default function SharePageClient({ type, record }: Props) {
   );
 }
 
-function extractMetaphor(textLines: string[]): { metaphor: string; bodyLines: string[] } {
-  for (let i = 0; i < Math.min(textLines.length, 3); i++) {
-    const m = textLines[i]?.trim().match(/^\[은유\]\s*(.+)/);
-    if (m) {
-      return { metaphor: m[1].trim(), bodyLines: [...textLines.slice(0, i), ...textLines.slice(i + 1)] };
-    }
-  }
-  return { metaphor: '', bodyLines: textLines };
-}
-
 function SectionCard({ label, text, idx }: { label: string; text: string; idx: number }) {
-  const lines = text.trim().split('\n');
-  const { metaphor: metaphorTitle, bodyLines } = extractMetaphor(lines);
-  const bodyText = bodyLines.join('\n').trim();
+  // 공통 파서로 교체 — 다양한 [은유] 마커 변형과 본문 잔존 마커 strip 까지 한 번에 처리.
+  const { metaphorTitle, bodyText } = extractMetaphor(text);
 
   return (
     <motion.div
@@ -456,7 +446,7 @@ function SectionCard({ label, text, idx }: { label: string; text: string; idx: n
 
       {metaphorTitle && (
         <div
-          className="text-[17px] font-medium leading-snug text-cta/90 mb-4 pl-3"
+          className="text-[17px] font-bold leading-snug text-cta/90 mb-4 pl-3"
           style={{ fontFamily: 'var(--font-serif)' }}
         >
           {metaphorTitle}

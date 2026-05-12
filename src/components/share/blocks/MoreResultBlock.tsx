@@ -2,6 +2,7 @@
 
 import { motion } from 'framer-motion';
 import { MORE_FORTUNE_CONFIGS, type MoreFortuneId } from '@/constants/moreFortunes';
+import { extractMetaphor } from '@/utils/parseMetaphor';
 
 interface Props {
   record: Record<string, any>;
@@ -20,12 +21,17 @@ export function MoreResultBlock({ record }: Props) {
   const charMeanings = (eng.charMeanings as string[] | undefined) ?? [];
   const dreamText = eng.dreamText as string | undefined;
 
-  // ─ 줄/단락 정리
-  const rawLines = text.replace(/\r/g, '').split('\n');
-  const metaphorIdx = rawLines.findIndex(l => l.trim().length > 0);
-  const metaphor = metaphorIdx >= 0 ? rawLines[metaphorIdx].trim() : '';
-
-  const restLines = metaphorIdx >= 0 ? rawLines.slice(metaphorIdx + 1) : [];
+  // [은유] 마커 우선 추출 + 본문 strip. 마커 없으면 첫 비어있지 않은 줄 fallback.
+  const parsed = extractMetaphor(text.replace(/\r/g, ''));
+  let metaphor = parsed.metaphorTitle;
+  let restLinesSource = parsed.bodyText;
+  if (!metaphor) {
+    const rawLines = restLinesSource.split('\n');
+    const metaphorIdx = rawLines.findIndex(l => l.trim().length > 0);
+    metaphor = metaphorIdx >= 0 ? rawLines[metaphorIdx].trim() : '';
+    restLinesSource = metaphorIdx >= 0 ? rawLines.slice(metaphorIdx + 1).join('\n') : '';
+  }
+  const restLines = restLinesSource.split('\n');
   let jawonLine = '';
   const bodyLines: string[] = [];
   for (const ln of restLines) {
@@ -97,7 +103,7 @@ export function MoreResultBlock({ record }: Props) {
         </div>
 
         {metaphor && (
-          <div className="text-[17px] font-medium leading-snug text-cta/90 mb-4 pl-3" style={{ fontFamily: 'var(--font-title)' }}>
+          <div className="text-[17px] font-bold leading-snug text-cta/90 mb-4 pl-3" style={{ fontFamily: 'var(--font-title)' }}>
             {metaphor}
           </div>
         )}

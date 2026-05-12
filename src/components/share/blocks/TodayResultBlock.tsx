@@ -13,6 +13,7 @@ import {
   stripStrayMarkers,
 } from '@/services/fortuneService';
 import { computeSajuFromProfile } from '@/utils/profileSaju';
+import { extractMetaphor } from '@/utils/parseMetaphor';
 import type { BirthProfile } from '@/types/credit';
 
 interface Props {
@@ -234,11 +235,17 @@ export function TodayResultBlock({ record }: Props) {
           const text = sections[key];
           if (!text) return null;
           const safe = stripStrayMarkers(text);
-          const lines = safe.split('\n');
-          const firstLine = lines[0]?.trim() ?? '';
-          const hasMetaphor = lines.length > 1 && firstLine.length > 0 && firstLine.length <= 40 && !firstLine.endsWith('.');
-          const metaphorTitle = hasMetaphor ? firstLine : '';
-          const bodyText = hasMetaphor ? lines.slice(1).join('\n').trim() : safe;
+          // [은유] 마커 우선 추출 + 본문 strip. 마커 없으면 첫 줄 휴리스틱 fallback.
+          const parsed = extractMetaphor(safe);
+          let metaphorTitle = parsed.metaphorTitle;
+          let bodyText = parsed.bodyText;
+          if (!metaphorTitle) {
+            const lines = bodyText.split('\n');
+            const firstLine = lines[0]?.trim() ?? '';
+            const hasMetaphor = lines.length > 1 && firstLine.length > 0 && firstLine.length <= 40 && !firstLine.endsWith('.');
+            metaphorTitle = hasMetaphor ? firstLine : '';
+            bodyText = hasMetaphor ? lines.slice(1).join('\n').trim() : bodyText;
+          }
 
           const headerLabel = (() => {
             if (key === 'today_hobby_method' && userContext) {
@@ -266,7 +273,7 @@ export function TodayResultBlock({ record }: Props) {
                 </div>
               </div>
               {metaphorTitle && (
-                <div className="text-[15px] font-medium leading-snug text-cta/90 mb-4 pl-3" style={{ fontFamily: 'var(--font-title)' }}>
+                <div className="text-[15px] font-bold leading-snug text-cta/90 mb-4 pl-3" style={{ fontFamily: 'var(--font-title)' }}>
                   {metaphorTitle}
                 </div>
               )}

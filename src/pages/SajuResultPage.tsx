@@ -26,6 +26,7 @@ import { determineGyeokguk } from '../engine/gyeokguk';
 import { stemToHanja, zhiToHanja } from '../lib/character';
 import { AdviceCard } from '../components/saju/AdviceCard';
 import { highlightSajuTerms } from '../utils/highlightSajuTerms';
+import { extractMetaphor } from '../utils/parseMetaphor';
 import { LifetimeFortuneChart } from '../components/saju/LifetimeFortuneChart';
 import SajuReport from '../components/saju/SajuReport';
 import { AILoadingBar } from '../components/AILoadingBar';
@@ -505,19 +506,10 @@ export default function SajuResultPage() {
             if (!text) return null;
             const isAdvice = key === 'advice';
 
-            // 은유 부제목 추출 — "[은유]" 마커 기반 결정적 파싱
-            // a30ea72 이후 모든 카드에 [은유] 마커가 강제됨. 기존 휴리스틱은 오탐/미탐 둘 다 발생.
-            const lines = text.trim().split('\n');
-            let metaphorTitle = '';
-            let bodyText = text.trim();
-            for (let i = 0; i < Math.min(lines.length, 3); i++) {
-              const m = lines[i]?.trim().match(/^\[은유\]\s*(.+)/);
-              if (m) {
-                metaphorTitle = m[1].trim();
-                bodyText = [...lines.slice(0, i), ...lines.slice(i + 1)].join('\n').trim();
-                break;
-              }
-            }
+            // 은유 부제목 추출 + 본문에서 마커 strip — utils/parseMetaphor 의 견고한 파서로 통일.
+            // (이전 단순 정규식은 [은유] / 【은유】 / **[은유]** / 본문 중간 위치 등 변형을 못 잡아
+            //  보관함 옛 record 재생 시 본문에 마커가 그대로 노출되는 사고가 있었음)
+            const { metaphorTitle, bodyText } = extractMetaphor(text);
 
             return (
               <motion.div
@@ -540,7 +532,7 @@ export default function SajuResultPage() {
 
                 {metaphorTitle && (
                   <div
-                    className="text-[17px] font-medium leading-snug text-cta/90 mb-4 pl-3"
+                    className="text-[17px] font-bold leading-snug text-cta/90 mb-4 pl-3"
                     style={{ fontFamily: 'var(--font-title)' }}
                   >
                     {metaphorTitle}

@@ -12,6 +12,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { sajuDB } from '../services/supabase';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useProfileStore } from '../store/useProfileStore';
+import { extractMetaphor } from '../utils/parseMetaphor';
 import { useUserStore } from '../store/useUserStore';
 import { useCreditStore } from '../store/useCreditStore';
 import { useReportCacheStore, sajuKey } from '../store/useReportCacheStore';
@@ -1228,9 +1229,10 @@ export default function TaekilPage() {
                             whiteSpace: 'pre-line',
                             fontFamily: 'var(--font-body)',
                           }}>
-                            {aiAdvice
-                              .replace(/^\s*\[(?:top\d|avoid)\].*$/gm, '')
-                              .trim()}
+                            {/* [top1]/[avoid] 자체 마커 strip 후 [은유] 마커도 안전망으로 제거 */}
+                            {extractMetaphor(
+                              aiAdvice.replace(/^\s*\[(?:top\d|avoid)\].*$/gm, '')
+                            ).bodyText}
                           </div>
                         )}
                       </div>

@@ -7,6 +7,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { TAROT_DECK, ELEMENT_COLORS, getCardImg } from '../engine/tarot/deck';
 import { buildTarotReading, type DrawnCard, type TarotReading } from '../engine/tarot/reading';
 import { formatTodayString, formatMonthString } from '../utils/tarotSeed';
+import { extractMetaphor } from '../utils/parseMetaphor';
 import { useProfileStore } from '../store/useProfileStore';
 import { useUserStore } from '../store/useUserStore';
 import { useCreditStore } from '../store/useCreditStore';
@@ -276,7 +277,9 @@ function ReadingView({ reading, color }: { reading: TarotReading; color: string 
 
 // ── AI ReadingView ────────────────────────────────────────────────────────────
 function AIReadingView({ content, color }: { content: string; color: string }) {
-  const sections = content.split('\n\n').filter(Boolean);
+  // [은유] 마커 안전망 — 본문에 마커가 섞여 있어도 strip 후 분할
+  const clean = extractMetaphor(content).bodyText || content;
+  const sections = clean.split('\n\n').filter(Boolean);
   return (
     <div className="space-y-3">
       <FadeIn delay={0.1}>

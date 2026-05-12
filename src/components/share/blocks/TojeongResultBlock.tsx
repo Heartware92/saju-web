@@ -5,6 +5,7 @@ import { TOJEONG_SECTION_KEYS, TOJEONG_SECTION_LABELS } from '@/constants/prompt
 import { parseTojeongSections, parseTojeongScores } from '@/services/fortuneService';
 import { calculateTojeong, type TojeongResult } from '@/engine/tojeong';
 import { buildTojeongReading } from '@/engine/tojeong/reading';
+import { extractMetaphor } from '@/utils/parseMetaphor';
 import type { GwaeGrade } from '@/engine/tojeong/gwae-table';
 import type { FortuneGrade } from '@/engine/periodFortune';
 import { RadarChart } from '@/components/charts/RadarChart';
@@ -338,10 +339,21 @@ export function TojeongResultBlock({ record }: Props) {
               }
             }
 
-            const lines = body.split('\n').filter(l => l.trim());
-            const headline = lines[0]?.trim() || '';
-            const hasHeadline = lines.length > 1 && headline.length > 0 && headline.length <= 80;
-            const bodyText = hasHeadline ? lines.slice(1).join('\n').trim() : body;
+            // [은유] 마커 우선 추출 + 본문 strip. 마커 없으면 첫 줄 휴리스틱 fallback.
+            const parsed = extractMetaphor(body);
+            let headline = parsed.metaphorTitle;
+            let bodyText = parsed.bodyText;
+            let hasHeadline = headline.length > 0;
+            if (!hasHeadline) {
+              const lines = bodyText.split('\n').filter(l => l.trim());
+              const candidate = lines[0]?.trim() || '';
+              const couldBe = lines.length > 1 && candidate.length > 0 && candidate.length <= 80;
+              if (couldBe) {
+                headline = candidate;
+                bodyText = lines.slice(1).join('\n').trim();
+                hasHeadline = true;
+              }
+            }
 
             return (
               <motion.section
@@ -358,7 +370,7 @@ export function TojeongResultBlock({ record }: Props) {
                   </div>
                 </div>
                 {hasHeadline && (
-                  <div className="text-[16px] font-medium leading-snug text-cta/90 mb-4 pl-3" style={{ fontFamily: 'var(--font-serif)' }}>
+                  <div className="text-[16px] font-bold leading-snug text-cta/90 mb-4 pl-3" style={{ fontFamily: 'var(--font-serif)' }}>
                     {headline}
                   </div>
                 )}

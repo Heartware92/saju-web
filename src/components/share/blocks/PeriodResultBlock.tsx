@@ -10,6 +10,7 @@ import { LuckyVisualCard, ELEMENT_LUCKY } from '@/components/saju/LuckyVisualCar
 import { TermChip } from '@/components/ui/TermChip';
 import { RadarChart } from '@/components/charts/RadarChart';
 import { MonthlyTrendChart } from '@/components/charts/MonthlyTrendChart';
+import { extractMetaphor } from '@/utils/parseMetaphor';
 
 interface Props {
   record: Record<string, any>;
@@ -268,11 +269,17 @@ export function PeriodResultBlock({ record }: Props) {
             {NEWYEAR_SECTION_KEYS.map((key, idx) => {
               const text = newyearSections[key];
               if (!text) return null;
-              const lines = text.trim().split('\n');
-              let metaphorTitle = lines[0]?.trim() ?? '';
-              let rawBody = lines.slice(1).join('\n').trim();
+              // 공통 파서로 [은유] 마커 우선 추출 + 본문 strip. 마커 못 잡으면 첫 줄 fallback.
+              const parsed = extractMetaphor(text);
+              let metaphorTitle = parsed.metaphorTitle;
+              let rawBody = parsed.bodyText;
+              if (!metaphorTitle) {
+                const lines = rawBody.split('\n');
+                metaphorTitle = lines[0]?.trim() ?? '';
+                rawBody = lines.slice(1).join('\n').trim();
+              }
               if (key === 'monthly' && /^\d{1,2}월\s*\(/.test(metaphorTitle)) {
-                rawBody = text.trim();
+                rawBody = parsed.bodyText;
                 metaphorTitle = '';
               }
               const bodyText = key === 'monthly' ? rawBody : rawBody.replace(/\n(?!\n)/g, ' ');
@@ -289,7 +296,7 @@ export function PeriodResultBlock({ record }: Props) {
                     </div>
                   </div>
                   {metaphorTitle && (
-                    <div className="text-[17px] font-medium leading-snug text-cta/90 mb-4 pl-3 break-keep" style={{ fontFamily: 'var(--font-title)' }}>
+                    <div className="text-[17px] font-bold leading-snug text-cta/90 mb-4 pl-3 break-keep" style={{ fontFamily: 'var(--font-title)' }}>
                       {metaphorTitle}
                     </div>
                   )}
@@ -328,9 +335,15 @@ export function PeriodResultBlock({ record }: Props) {
             {PICKED_DATE_SECTION_KEYS.map((key, idx) => {
               const text = pickedDateSections[key];
               if (!text) return null;
-              const lines = text.trim().split('\n');
-              const metaphorTitle = lines[0]?.trim() ?? '';
-              const bodyText = lines.slice(1).join('\n').trim();
+              // 공통 파서로 [은유] 마커 우선 추출 + 본문 strip. 마커 못 잡으면 첫 줄 fallback.
+              const parsed = extractMetaphor(text);
+              let metaphorTitle = parsed.metaphorTitle;
+              let bodyText = parsed.bodyText;
+              if (!metaphorTitle) {
+                const lines = bodyText.split('\n');
+                metaphorTitle = lines[0]?.trim() ?? '';
+                bodyText = lines.slice(1).join('\n').trim();
+              }
               return (
                 <motion.div key={key}
                   initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }}
@@ -344,7 +357,7 @@ export function PeriodResultBlock({ record }: Props) {
                     </div>
                   </div>
                   {metaphorTitle && (
-                    <div className="text-[17px] font-medium leading-snug text-cta/90 mb-4 pl-3 break-keep" style={{ fontFamily: 'var(--font-title)' }}>
+                    <div className="text-[17px] font-bold leading-snug text-cta/90 mb-4 pl-3 break-keep" style={{ fontFamily: 'var(--font-title)' }}>
                       {metaphorTitle}
                     </div>
                   )}

@@ -12,6 +12,7 @@ import { calculateTojeong, type TojeongResult } from '../engine/tojeong';
 import { buildTojeongReading, type TojeongReading } from '../engine/tojeong/reading';
 import type { GwaeGrade } from '../engine/tojeong/gwae-table';
 import { useProfileStore } from '../store/useProfileStore';
+import { extractMetaphor } from '../utils/parseMetaphor';
 import { useCreditStore } from '../store/useCreditStore';
 import { useReportCacheStore, type ReportKind } from '../store/useReportCacheStore';
 import { RestoreReportModal } from '../components/RestoreReportModal';
@@ -746,15 +747,21 @@ export default function TojeongResultPage() {
               }
             }
 
-            const lines = body.trim().split('\n');
-            const firstLine = lines[0]?.trim() ?? '';
-            const hasMetaphor = lines.length > 1
-              && firstLine.length > 0
-              && firstLine.length <= 40
-              && !firstLine.endsWith('.')
-              && !/[다요니까습]$/.test(firstLine);
-            const metaphorTitle = hasMetaphor ? firstLine : '';
-            const bodyText = hasMetaphor ? lines.slice(1).join('\n').trim() : body.trim();
+            // [은유] 마커 우선 추출 + 본문 strip. 마커 없으면 첫 줄 휴리스틱 fallback.
+            const parsed = extractMetaphor(body);
+            let metaphorTitle = parsed.metaphorTitle;
+            let bodyText = parsed.bodyText;
+            if (!metaphorTitle) {
+              const lines = bodyText.split('\n');
+              const firstLine = lines[0]?.trim() ?? '';
+              const hasMetaphor = lines.length > 1
+                && firstLine.length > 0
+                && firstLine.length <= 40
+                && !firstLine.endsWith('.')
+                && !/[다요니까습]$/.test(firstLine);
+              metaphorTitle = hasMetaphor ? firstLine : '';
+              bodyText = hasMetaphor ? lines.slice(1).join('\n').trim() : bodyText;
+            }
             return (
               <motion.section
                 key={key}
@@ -770,7 +777,7 @@ export default function TojeongResultPage() {
                   </div>
                 </div>
                 {metaphorTitle && (
-                  <div className="text-[17px] font-medium leading-snug text-cta/90 mb-4 pl-3" style={{ fontFamily: 'var(--font-title)' }}>
+                  <div className="text-[17px] font-bold leading-snug text-cta/90 mb-4 pl-3" style={{ fontFamily: 'var(--font-title)' }}>
                     {metaphorTitle}
                   </div>
                 )}

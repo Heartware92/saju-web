@@ -21,6 +21,7 @@ import {
 import { buildZamidusuReading, type ZamidusuReading } from '../engine/zamidusu/reading';
 import styles from './ZamidusuResultPage.module.css';
 import { useProfileStore } from '../store/useProfileStore';
+import { extractMetaphor } from '../utils/parseMetaphor';
 import { useCreditStore } from '../store/useCreditStore';
 import { useReportCacheStore, type ReportKind } from '../store/useReportCacheStore';
 import { RestoreReportModal } from '../components/RestoreReportModal';
@@ -972,11 +973,23 @@ export default function ZamidusuResultPage() {
         {ZAMIDUSU_SECTION_KEYS.map((key) => {
           const text = sections[key];
           if (!text) return null;
-          // 본문 첫 줄 = 은유 제목으로 가정
-          const lines = text.split('\n');
-          const headline = lines[0]?.trim() || '';
-          const body = lines.slice(1).join('\n').trim() || headline;
-          const hasHeadline = lines.length > 1 && headline.length > 0 && headline.length <= 80;
+          // [은유] 마커 우선 추출 + 본문 strip. 마커 없으면 첫 줄 휴리스틱 fallback.
+          const parsed = extractMetaphor(text);
+          let headline = parsed.metaphorTitle;
+          let body = parsed.bodyText;
+          let hasHeadline = headline.length > 0;
+          if (!hasHeadline) {
+            const lines = body.split('\n');
+            const candidate = lines[0]?.trim() || '';
+            const couldBe = lines.length > 1 && candidate.length > 0 && candidate.length <= 80;
+            if (couldBe) {
+              headline = candidate;
+              body = lines.slice(1).join('\n').trim() || candidate;
+              hasHeadline = true;
+            } else {
+              body = body || candidate;
+            }
+          }
           return (
             <motion.div
               key={key}
@@ -995,7 +1008,7 @@ export default function ZamidusuResultPage() {
 
               {/* 은유 제목 부제 */}
               {hasHeadline && (
-                <div style={{ fontSize: 17, fontWeight: 500, color: 'var(--cta-primary)', opacity: 0.9, lineHeight: 1.375, marginBottom: 14, paddingLeft: 12, fontFamily: 'var(--font-title)' }}>
+                <div style={{ fontSize: 17, fontWeight: 700, color: 'var(--cta-primary)', opacity: 0.9, lineHeight: 1.375, marginBottom: 14, paddingLeft: 12, fontFamily: 'var(--font-title)' }}>
                   {headline}
                 </div>
               )}

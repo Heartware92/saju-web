@@ -20,6 +20,7 @@ import { useUserStore } from '../store/useUserStore';
 import { useCreditStore } from '../store/useCreditStore';
 import { useReportCacheStore, sajuKey } from '../store/useReportCacheStore';
 import { computeSajuFromProfile } from '../utils/profileSaju';
+import { extractMetaphor } from '../utils/parseMetaphor';
 import {
   MORE_FORTUNE_CONFIGS,
   MOON_COST_PER_FORTUNE,
@@ -821,14 +822,19 @@ function MoreFortuneResultCard({
   category?: MoreFortuneId;
   onReset: () => void;
 }) {
-  // 줄 단위 정리 — 빈 줄은 단락 구분으로만 사용
-  const rawLines = text.replace(/\r/g, '').split('\n');
-  // 첫 번째 의미 있는 줄 = 은유 제목
-  let metaphorIdx = rawLines.findIndex((l) => l.trim().length > 0);
-  const metaphor = metaphorIdx >= 0 ? rawLines[metaphorIdx].trim() : '';
+  // [은유] 마커 우선 추출 + 본문 strip. 마커 없으면 첫 비어있지 않은 줄 fallback.
+  const parsed = extractMetaphor(text.replace(/\r/g, ''));
+  let metaphor = parsed.metaphorTitle;
+  let restSource = parsed.bodyText;
+  if (!metaphor) {
+    const rawLines = restSource.split('\n');
+    const metaphorIdx = rawLines.findIndex((l) => l.trim().length > 0);
+    metaphor = metaphorIdx >= 0 ? rawLines[metaphorIdx].trim() : '';
+    restSource = metaphorIdx >= 0 ? rawLines.slice(metaphorIdx + 1).join('\n') : '';
+  }
 
   // "자원오행 판정:" 라인은 별도 chip 으로 표시 (이름 풀이 한자 모드)
-  const restLines = metaphorIdx >= 0 ? rawLines.slice(metaphorIdx + 1) : [];
+  const restLines = restSource.split('\n');
   let jawonLine = '';
   const bodyLines: string[] = [];
   for (const ln of restLines) {
@@ -879,7 +885,7 @@ function MoreFortuneResultCard({
 
       {metaphor && (
         <div
-          className="text-[17px] font-medium leading-snug text-cta/90 mb-4 pl-3"
+          className="text-[17px] font-bold leading-snug text-cta/90 mb-4 pl-3"
           style={{ fontFamily: 'var(--font-title)' }}
         >
           {metaphor}

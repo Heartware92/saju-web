@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { ZAMIDUSU_SECTION_KEYS, ZAMIDUSU_SECTION_LABELS } from '@/constants/prompts';
 import { parseZamidusuSections } from '@/services/fortuneService';
 import { calculateZamidusu, type ZamidusuResult } from '@/engine/zamidusu';
+import { extractMetaphor } from '@/utils/parseMetaphor';
 import { StarChart } from '@/components/zamidusu/StarChart';
 import { CorePalaceScores } from '@/components/zamidusu/CorePalaceScores';
 import { MutagenCards } from '@/components/zamidusu/MutagenCards';
@@ -127,10 +128,23 @@ export function ZamidusuResultBlock({ record }: Props) {
       {ZAMIDUSU_SECTION_KEYS.map((key) => {
         const text = sections[key];
         if (!text) return null;
-        const lines = text.split('\n');
-        const headline = lines[0]?.trim() || '';
-        const body = lines.slice(1).join('\n').trim() || headline;
-        const hasHeadline = lines.length > 1 && headline.length > 0 && headline.length <= 80;
+        // [은유] 마커 우선 추출 + 본문 strip. 마커 없으면 첫 줄 휴리스틱 fallback.
+        const parsed = extractMetaphor(text);
+        let headline = parsed.metaphorTitle;
+        let body = parsed.bodyText;
+        let hasHeadline = headline.length > 0;
+        if (!hasHeadline) {
+          const lines = body.split('\n');
+          const candidate = lines[0]?.trim() || '';
+          const couldBe = lines.length > 1 && candidate.length > 0 && candidate.length <= 80;
+          if (couldBe) {
+            headline = candidate;
+            body = lines.slice(1).join('\n').trim() || candidate;
+            hasHeadline = true;
+          } else {
+            body = body || candidate;
+          }
+        }
         return (
           <motion.div key={key}
             initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
@@ -143,7 +157,7 @@ export function ZamidusuResultBlock({ record }: Props) {
               </div>
             </div>
             {hasHeadline && (
-              <div className="text-[16px] font-medium leading-snug text-cta/90 mb-4 pl-3" style={{ fontFamily: 'var(--font-title)' }}>
+              <div className="text-[16px] font-bold leading-snug text-cta/90 mb-4 pl-3" style={{ fontFamily: 'var(--font-title)' }}>
                 {headline}
               </div>
             )}

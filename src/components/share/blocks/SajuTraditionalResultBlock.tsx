@@ -11,6 +11,7 @@ import { stemToHanja, zhiToHanja } from '@/lib/character';
 import SajuReport from '@/components/saju/SajuReport';
 import { AdviceCard } from '@/components/saju/AdviceCard';
 import { highlightSajuTerms } from '@/utils/highlightSajuTerms';
+import { extractMetaphor } from '@/utils/parseMetaphor';
 
 const ELEMENT_COLORS: Record<string, string> = {
   '목': '#34D399', '화': '#F43F5E', '토': '#F59E0B', '금': '#CBD5E1', '수': '#3B82F6',
@@ -123,9 +124,9 @@ export function SajuTraditionalResultBlock({ record }: Props) {
           const text = sections[key];
           if (!text) return null;
           const isAdvice = key === 'advice';
-          const lines = text.trim().split('\n');
-          const metaphorTitle = lines[0]?.trim() ?? '';
-          const bodyText = lines.slice(1).join('\n').trim();
+          // 단순 lines[0] 추출은 [은유] 마커가 그대로 부제목으로 노출되는 사고가 있어
+          // 공통 파서로 교체 — SajuResultPage 와 동일 동작 보장.
+          const { metaphorTitle, bodyText } = extractMetaphor(text);
 
           return (
             <motion.div
@@ -146,7 +147,7 @@ export function SajuTraditionalResultBlock({ record }: Props) {
               </div>
               {metaphorTitle && (
                 <div
-                  className="text-[17px] font-medium leading-snug text-cta/90 mb-4 pl-3"
+                  className="text-[17px] font-bold leading-snug text-cta/90 mb-4 pl-3"
                   style={{ fontFamily: 'var(--font-serif)' }}
                 >
                   {metaphorTitle}

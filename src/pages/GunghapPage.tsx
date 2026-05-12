@@ -10,6 +10,7 @@ import { useReportCacheStore, sajuKey } from '../store/useReportCacheStore';
 import { sajuDB } from '../services/supabase';
 import { BackButton } from '../components/ui/BackButton';
 import { SUN_COST_BIG, CHARGE_REASONS } from '../constants/creditCosts';
+import { extractMetaphor } from '../utils/parseMetaphor';
 import { computeSajuFromProfile } from '../utils/profileSaju';
 import type { BirthProfile } from '../types/credit';
 import {
@@ -1624,27 +1625,16 @@ export default function GunghapPage() {
                 parts.push({ title: matches[i].title, body: cleanedText.slice(bodyStart, bodyEnd).trim() });
               }
 
-              // 은유 부제목 추출 — "[은유]" 마커 기반 결정적 파싱
-              const extractMetaphor = (textLines: string[]): { metaphor: string; bodyLines: string[] } => {
-                for (let i = 0; i < Math.min(textLines.length, 3); i++) {
-                  const m = textLines[i]?.trim().match(/^\[은유\]\s*(.+)/);
-                  if (m) {
-                    return { metaphor: m[1].trim(), bodyLines: [...textLines.slice(0, i), ...textLines.slice(i + 1)] };
-                  }
-                }
-                return { metaphor: '', bodyLines: textLines };
-              };
+              // 자체 extractMetaphor 함수 → 공통 유틸(utils/parseMetaphor)로 교체. 변형 마커 + 본문 strip 안전망 적용.
 
               return (
                 <div className="space-y-2">
                   {preamble && (() => {
-                    const pLines = preamble.trim().split('\n');
-                    const { metaphor: pMeta, bodyLines: pBodyLines } = extractMetaphor(pLines);
-                    const pBody = pBodyLines.join('\n').trim();
+                    const { metaphorTitle: pMeta, bodyText: pBody } = extractMetaphor(preamble);
                     return (
                       <div className="rounded-2xl p-5 bg-[rgba(20,12,38,0.55)] border border-[var(--border-subtle)]">
                         {pMeta && (
-                          <div className="text-[17px] font-medium leading-snug text-cta/90 mb-4" style={{ fontFamily: 'var(--font-serif)' }}>
+                          <div className="text-[17px] font-bold leading-snug text-cta/90 mb-4" style={{ fontFamily: 'var(--font-serif)' }}>
                             {pMeta}
                           </div>
                         )}
@@ -1659,9 +1649,7 @@ export default function GunghapPage() {
                     );
                   })()}
                   {parts.map((sec, idx) => {
-                    const lines = sec.body.trim().split('\n');
-                    const { metaphor: metaphorTitle, bodyLines } = extractMetaphor(lines);
-                    const bodyText = bodyLines.join('\n').trim();
+                    const { metaphorTitle, bodyText } = extractMetaphor(sec.body);
 
                     return (
                       <motion.div
@@ -1678,7 +1666,7 @@ export default function GunghapPage() {
                           </div>
                         </div>
                         {metaphorTitle && (
-                          <div className="text-[17px] font-medium leading-snug text-cta/90 mb-4 pl-3" style={{ fontFamily: 'var(--font-title)' }}>
+                          <div className="text-[17px] font-bold leading-snug text-cta/90 mb-4 pl-3" style={{ fontFamily: 'var(--font-title)' }}>
                             {metaphorTitle}
                           </div>
                         )}
