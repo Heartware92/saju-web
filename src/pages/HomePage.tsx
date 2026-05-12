@@ -28,7 +28,9 @@ import MoonPhase from '../components/MoonPhase';
  */
 const CURRENT_YEAR = new Date().getFullYear();
 
-const MAIN_SERVICES = [
+// 상단 7종 — 모두 동일 크기 (지정일·택일 운세 사이즈) 로 통일.
+// 신년 / 정통 / 궁합 (해 크레딧 정식 풀이) + 지정일 / 택일 / 토정비결 / 자미두수
+const TOP_SERVICES = [
   {
     id: 'newyear',
     title: `${CURRENT_YEAR} 신년운세`,
@@ -50,19 +52,6 @@ const MAIN_SERVICES = [
     direct: '/saju/gunghap',
     gradient: 'from-rose-500/20 to-fuchsia-500/10',
   },
-];
-
-// 오늘의 운세 — 더 많은 운세 아래 별도 영역 첫 카드로 강조 표시.
-// 해 크레딧 차감인 정식 풀이라 더많은운세(달) 와 카테고리 분리하되 시각적으론 인접 배치.
-const TODAY_SERVICE = {
-  id: 'today' as const,
-  title: '오늘의 운세',
-  desc: '오늘 하루 운세',
-  direct: '/saju/today',
-  gradient: 'from-amber-500/20 to-orange-500/10',
-};
-
-const SECONDARY_SERVICES = [
   {
     id: 'date',
     title: '지정일 운세',
@@ -96,18 +85,27 @@ const SECONDARY_SERVICES = [
 // 모든 서비스 버튼은 결과 페이지로 직행한다.
 // 대표 프로필이 없으면 결과 페이지 자체에서 "프로필 등록" 안내가 표시된다.
 
-// "더 많은 운세" — 달 크레딧 1개 소모 (작은 풀이 9종)
-// 설정은 constants/moreFortunes.ts에서 일원화하여 ID·설명·프롬프트 일치.
-const SUB_SERVICES = MORE_FORTUNE_ORDER.map((id) => {
-  const cfg = MORE_FORTUNE_CONFIGS[id];
-  return {
-    id,
-    title: cfg.title,
-    icon: cfg.icon,
-    desc: cfg.shortDesc,
-    href: `/saju/more/${id}`,
-  };
-});
+// "더 많은 운세" — 달 크레딧 1개 소모 (작은 풀이 9종) + 오늘의 운세를 1행 1열 첫 카드로 prepend.
+// 오늘의 운세는 해 크레딧이지만 시각적으로 같은 카드 사이즈로 통일 (사용자 요청).
+const SUB_SERVICES = [
+  {
+    id: 'today',
+    title: '오늘의 운세',
+    icon: '☀️',
+    desc: '오늘 하루 운세',
+    href: '/saju/today',
+  },
+  ...MORE_FORTUNE_ORDER.map((id) => {
+    const cfg = MORE_FORTUNE_CONFIGS[id];
+    return {
+      id,
+      title: cfg.title,
+      icon: cfg.icon,
+      desc: cfg.shortDesc,
+      href: `/saju/more/${id}`,
+    };
+  }),
+];
 
 const stagger = {
   hidden: {},
@@ -428,36 +426,8 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* 핵심 서비스 - 3종 (신년/정통/궁합) — grid-cols-3 으로 한 행에 배치 */}
+      {/* 상단 서비스 7종 — 모두 동일 크기 (지정일·택일 사이즈) 로 2열 그리드 */}
       <section className="px-4 -mt-3 relative z-10">
-        <motion.div
-          variants={stagger}
-          initial="hidden"
-          whileInView="visible"
-          viewport={{ once: true }}
-          className="grid grid-cols-3 gap-2.5"
-        >
-          {MAIN_SERVICES.map((svc) => (
-            <motion.div key={svc.id} variants={fadeUp}>
-              <button type="button" onClick={(e) => handleServiceClick(e, svc.direct)} className="w-full text-left">
-                <div className={`
-                  service-card
-                  relative rounded-xl p-3 h-[96px]
-                  bg-gradient-to-br ${svc.gradient}
-                  border border-[var(--border-subtle)]
-                  flex flex-col items-center justify-center text-center gap-1
-                `}>
-                  <h3 className="text-[16px] font-bold text-text-primary tracking-tight">{svc.title}</h3>
-                  <p className="text-[13px] font-medium text-text-secondary">{svc.desc}</p>
-                </div>
-              </button>
-            </motion.div>
-          ))}
-        </motion.div>
-      </section>
-
-      {/* 보조 핵심 서비스 - 2x2 (지정일·택일·토정·자미) — MAIN 과 동일 사이즈로 통일 */}
-      <section className="px-4 mt-2.5 relative z-10">
         <motion.div
           variants={stagger}
           initial="hidden"
@@ -465,7 +435,7 @@ export default function HomePage() {
           viewport={{ once: true }}
           className="grid grid-cols-2 gap-2.5"
         >
-          {SECONDARY_SERVICES.map((svc) => (
+          {TOP_SERVICES.map((svc) => (
             <motion.div key={svc.id} variants={fadeUp}>
               <button type="button" onClick={(e) => handleServiceClick(e, svc.direct)} className="w-full text-left">
                 <div className={`
@@ -510,32 +480,6 @@ export default function HomePage() {
         </motion.div>
       </section>
 
-      {/* 오늘의 운세 — 더 많은 운세 아래 별도 단일 카드 (가장 선두) */}
-      <section className="px-4 mt-5 relative z-10">
-        <motion.div
-          initial={{ opacity: 0, y: 16 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.4, ease: 'easeOut' }}
-        >
-          <button
-            type="button"
-            onClick={(e) => handleServiceClick(e, TODAY_SERVICE.direct)}
-            className="w-full text-left"
-          >
-            <div className={`
-              service-card
-              relative rounded-xl p-4 h-[96px]
-              bg-gradient-to-br ${TODAY_SERVICE.gradient}
-              border border-[var(--border-subtle)]
-              flex flex-col items-center justify-center text-center gap-1
-            `}>
-              <h3 className="text-[18px] font-bold text-text-primary tracking-tight">{TODAY_SERVICE.title}</h3>
-              <p className="text-[14px] font-medium text-text-secondary">{TODAY_SERVICE.desc}</p>
-            </div>
-          </button>
-        </motion.div>
-      </section>
 
       {/* 타로 배너 */}
       <section className="px-4 mt-6 mb-10">
