@@ -741,6 +741,27 @@ export const parseJungtongsaju = (raw: string): Partial<Record<JungtongsajuSecti
     const body = (parts[i + 1] || '').trim();
     if (body) out[key] = body;
   }
+
+  // 마커 파싱 실패 fallback — AI 가 "1. 사주 총론\n\n2. 일주론" 같은 번호 헤딩으로
+  // 응답한 경우(프롬프트 마커 강제 룰 누락) 번호 + 헤딩 라인으로 split 하여 KEYS 순서대로 매핑.
+  // 결과지 카드 렌더가 가능하도록 끝까지 살림 → 결제 사고 차단.
+  if (Object.keys(out).length === 0) {
+    // "^\d+\.?\s+한글헤딩" 패턴 (예: "1. 사주 총론", "2. 일주론") 으로 split
+    // markdown ## / ### 헤딩 prefix 도 흡수
+    const numericParts = raw.split(/^(?:#{1,3}\s+)?\s*(\d{1,2})\.?\s+[가-힣·\s]{2,30}\s*$/m);
+    // split 결과: [전문, 번호1, 본문1, 번호2, 본문2, ...]
+    // 첫 번째 element 는 number prefix 가 적용되지 않은 head text (보통 비어있거나 인사말)
+    if (numericParts.length >= 3) {
+      for (let i = 1; i < numericParts.length; i += 2) {
+        const sectionIdx = parseInt(numericParts[i], 10);
+        const body = (numericParts[i + 1] || '').trim();
+        // 번호 1~N 을 KEYS 순서대로 매핑 (1=general, 2=daymaster, ...)
+        const key = JUNGTONGSAJU_SECTION_KEYS[sectionIdx - 1];
+        if (key && body) out[key] = body;
+      }
+    }
+  }
+
   return out;
 };
 

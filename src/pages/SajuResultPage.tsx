@@ -503,17 +503,17 @@ export default function SajuResultPage() {
         </div>
       )}
 
-      {/* rawText fallback */}
-      {report?.rawText && (
+      {/* 평생 운세 흐름 그래프 — 1~99세 종합 운세 점수 시각화 (사주 총론 위에 위치) */}
+      {result && <LifetimeFortuneChart saju={result} />}
+
+      {/* rawText fallback — 섹션 파싱 실패 시에만 표시 (sections 우선) */}
+      {report?.rawText && !report?.sections && (
         <div className="rounded-2xl p-4 mb-3 bg-[rgba(20,12,38,0.55)] border border-[var(--border-subtle)]">
           <p className="text-[15px] text-text-secondary leading-relaxed whitespace-pre-line">
             {renderEmphasizedBody(stripAllSectionTags(report.rawText))}
           </p>
         </div>
       )}
-
-      {/* 평생 운세 흐름 그래프 — 1~99세 종합 운세 점수 시각화 */}
-      {result && <LifetimeFortuneChart saju={result} />}
 
       {/* 9섹션 카드 */}
       {report?.sections && (
