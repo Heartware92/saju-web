@@ -21,6 +21,10 @@ interface Props {
   children: ReactNode;
   defaultOpen?: boolean;
   enterDelay?: number;
+  /** 좌측 cta 바 색상 — 기본 #e8a490 (피치). 특정 섹션에서 emerald/red 사용 시 override */
+  barColor?: string;
+  /** Bar pulse 시 mid 색상 — 기본 크림 (#fce8b2) */
+  barPulseColor?: string;
 }
 
 const COSMIC_EASE = [0.16, 1, 0.3, 1] as const;
@@ -83,15 +87,20 @@ export function SectionCollapsible({
   children,
   defaultOpen = false,
   enterDelay = 0,
+  barColor = '#e8a490',
+  barPulseColor = '#fce8b2',
 }: Props) {
   const [open, setOpen] = useState(defaultOpen);
   const [burstKey, setBurstKey] = useState(0);
 
-  const handleToggle = () => {
+  const handleToggle = (e: React.MouseEvent<HTMLButtonElement>) => {
     setOpen((prev) => {
       if (!prev) setBurstKey((k) => k + 1);
       return !prev;
     });
+    // Android Chrome / Samsung Internet 은 탭 후 :hover / :focus 가 유지되어
+    // 헤더 배경 틴트가 남아있고 본문과 경계처럼 보이는 사고가 있음. 즉시 blur 하여 해제.
+    e.currentTarget.blur();
   };
 
   // Starlight Bloom — 듀얼 box-shadow (라일락 + 피치) 키프레임
@@ -142,21 +151,26 @@ export function SectionCollapsible({
         type="button"
         onClick={handleToggle}
         aria-expanded={open}
-        className="relative w-full flex items-center gap-2 px-5 py-4 text-left hover:bg-white/[0.03] transition-colors z-10"
+        // Android 탭 후 hover/focus 잔존 이슈 차단:
+        //  - WebkitTapHighlightColor: transparent → 탭 시 회색 박스 깜빡임 제거
+        //  - [@media(hover:hover)]:hover — 실제 hover 가능한 디바이스에서만 hover 배경 적용
+        //  - focus-visible 만 outline 표시 (키보드 접근성 유지)
+        style={{ WebkitTapHighlightColor: 'transparent' }}
+        className="relative w-full flex items-center gap-2 px-5 py-4 text-left [@media(hover:hover)]:hover:bg-white/[0.03] transition-colors z-10 focus:outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-cta/40"
       >
-        {/* CTA Bar — 펼침 시 피치→크림→피치 펄스 */}
+        {/* CTA Bar — 펼침 시 base→pulse→base 컬러 펄스 */}
         <motion.span
           animate={
             open
               ? {
-                  backgroundColor: ['#e8a490', '#fce8b2', '#e8a490'],
+                  backgroundColor: [barColor, barPulseColor, barColor],
                   boxShadow: [
                     '0 0 0 rgba(252,232,178,0)',
                     '0 0 12px rgba(252,232,178,0.8)',
                     '0 0 0 rgba(252,232,178,0)',
                   ],
                 }
-              : { backgroundColor: '#e8a490', boxShadow: '0 0 0 rgba(252,232,178,0)' }
+              : { backgroundColor: barColor, boxShadow: '0 0 0 rgba(252,232,178,0)' }
           }
           transition={{ duration: 0.7, ease: 'easeOut' }}
           className="inline-block w-1 h-5 rounded-full shrink-0"

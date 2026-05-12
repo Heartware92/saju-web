@@ -52,7 +52,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     description,
     openGraph: {
       title: `${label} — 이천점`,
-      description: `별빛이 읽어주는 ${label}`,
+      description: `우주의 기운으로 풀어낸 ${label}`,
       siteName: '이천점',
       images: [{ url: `${baseUrl}/og-image.png`, width: 1200, height: 630 }],
       type: 'article',

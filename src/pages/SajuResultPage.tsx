@@ -28,6 +28,7 @@ import { AdviceCard } from '../components/saju/AdviceCard';
 import { extractMetaphor } from '../utils/parseMetaphor';
 import { renderEmphasizedBody } from '../utils/renderEmphasizedBody';
 import { LifetimeFortuneChart } from '../components/saju/LifetimeFortuneChart';
+import { SectionCollapsible } from '../components/saju/SectionCollapsible';
 import SajuReport from '../components/saju/SajuReport';
 import { AILoadingBar } from '../components/AILoadingBar';
 import { BackButton } from '../components/ui/BackButton';
@@ -528,33 +529,13 @@ export default function SajuResultPage() {
             const { metaphorTitle, bodyText } = extractMetaphor(text);
 
             return (
-              <motion.div
+              <SectionCollapsible
                 key={key}
-                initial={{ opacity: 0, y: 6 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.06 * idx }}
-                className="rounded-2xl p-5 bg-[rgba(20,12,38,0.55)] border border-[var(--border-subtle)]"
+                title={JUNGTONGSAJU_SECTION_LABELS[key]}
+                metaphorTitle={metaphorTitle}
+                defaultOpen={idx === 0}
+                enterDelay={0.06 * idx}
               >
-                {/* 섹션 레이블 — 상단에 크게 강조 (오행 분포, 애정·결혼운 등) */}
-                <div className="flex items-center gap-2 mb-2">
-                  <span className="inline-block w-1 h-5 rounded-full bg-cta" />
-                  <div
-                    className="text-[17px] font-bold text-text-primary tracking-tight"
-                    style={{ fontFamily: 'var(--font-title)' }}
-                  >
-                    {JUNGTONGSAJU_SECTION_LABELS[key]}
-                  </div>
-                </div>
-
-                {metaphorTitle && (
-                  <div
-                    className="text-[17px] font-bold leading-snug text-cta/90 mb-4 pl-3"
-                    style={{ fontFamily: 'var(--font-title)' }}
-                  >
-                    {metaphorTitle}
-                  </div>
-                )}
-
                 {isAdvice && report.adviceMeta ? (
                   <AdviceCard
                     yongSinElement={result.yongSinElement}
@@ -567,7 +548,7 @@ export default function SajuResultPage() {
                     ))}
                   </div>
                 )}
-              </motion.div>
+              </SectionCollapsible>
             );
           })}
         </div>

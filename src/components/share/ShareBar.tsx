@@ -150,8 +150,8 @@ export function ShareBar({
     const url = await getShareLink();
     if (!url) return;
 
-    const title = shareTitle || '이천점 — 별빛이 읽어주는 사주';
-    const description = shareDescription || '운세 결과를 확인해보세요!';
+    const title = shareTitle || '이천점 — 우주의 기운을 드려요';
+    const description = shareDescription || '우주의 기운으로 풀어낸 운세 결과를 확인해보세요';
 
     const result = await shareToKakao({ title, description, shareUrl: url });
     if (result === 'no-sdk') {

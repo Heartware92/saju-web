@@ -17,6 +17,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { useProfileStore } from '../store/useProfileStore';
 import { extractMetaphor } from '../utils/parseMetaphor';
+import { SectionCollapsible } from '../components/saju/SectionCollapsible';
 import { useCreditStore } from '../store/useCreditStore';
 import { useReportCacheStore, sajuKey, type ReportKind } from '../store/useReportCacheStore';
 import { RestoreReportModal } from '../components/RestoreReportModal';
@@ -879,30 +880,19 @@ export default function TodayFortunePage() {
             })();
 
             return (
-              <motion.div
+              <SectionCollapsible
                 key={key}
-                initial={{ opacity: 0, y: 6 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.05 * idx }}
-                className="rounded-2xl p-5 bg-[rgba(20,12,38,0.55)] border border-[var(--border-subtle)]"
+                title={headerLabel}
+                metaphorTitle={metaphorTitle}
+                defaultOpen={idx === 0}
+                enterDelay={0.05 * idx}
               >
-                <div className="flex items-center gap-2 mb-2">
-                  <span className="inline-block w-1 h-5 rounded-full bg-cta" />
-                  <div className="text-[17px] font-bold text-text-primary tracking-tight" style={{ fontFamily: 'var(--font-title)' }}>
-                    {headerLabel}
-                  </div>
-                </div>
-                {metaphorTitle && (
-                  <div className="text-[17px] font-bold leading-snug text-cta/90 mb-4 pl-3" style={{ fontFamily: 'var(--font-title)' }}>
-                    {metaphorTitle}
-                  </div>
-                )}
                 <div className="text-[17px] text-text-secondary leading-[1.85] tracking-[-0.005em] space-y-3">
                   {bodyText.split(/\n\n+/).map((para, pi) => (
                     <p key={pi} className="whitespace-pre-line">{para.trim()}</p>
                   ))}
                 </div>
-              </motion.div>
+              </SectionCollapsible>
             );
           })}
         </div>

@@ -1183,29 +1183,16 @@ export default function PeriodFortunePage({ scope }: { scope: FortuneScope | 'da
                 const isYes = key === 'date_yes';
                 const isNo = key === 'date_no';
                 const isRemedy = key === 'date_remedy';
+                const sectionBarColor = isYes ? '#34D399' : isNo ? '#F87171' : '#e8a490';
                 return (
-                  <motion.div
+                  <SectionCollapsible
                     key={key}
-                    initial={{ opacity: 0, y: 6 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.05 * idx }}
-                    className="rounded-2xl p-5 bg-[rgba(20,12,38,0.55)] border border-[var(--border-subtle)]"
+                    title={PICKED_DATE_SECTION_LABELS[key]}
+                    metaphorTitle={metaphorTitle}
+                    defaultOpen={idx === 0}
+                    enterDelay={0.05 * idx}
+                    barColor={sectionBarColor}
                   >
-                    <div className="flex items-center gap-2 mb-2">
-                      <span className={`inline-block w-1 h-5 rounded-full ${isYes ? 'bg-emerald-400' : isNo ? 'bg-red-400' : 'bg-cta'}`} />
-                      <div
-                        className="text-[17px] font-bold text-text-primary tracking-tight"
-                        style={{ fontFamily: 'var(--font-title)' }}
-                      >
-                        {PICKED_DATE_SECTION_LABELS[key]}
-                      </div>
-                    </div>
-                    <div
-                      className="text-[17px] font-bold leading-snug text-cta/90 mb-4 pl-3"
-                      style={{ fontFamily: 'var(--font-title)' }}
-                    >
-                      {metaphorTitle}
-                    </div>
                     {isRemedy ? (
                       <RemedyCardGrid bodyText={bodyText} />
                     ) : (isYes || isNo) ? (
@@ -1226,7 +1213,7 @@ export default function PeriodFortunePage({ scope }: { scope: FortuneScope | 'da
                         ))}
                       </div>
                     )}
-                  </motion.div>
+                  </SectionCollapsible>
                 );
               })}
             </div>

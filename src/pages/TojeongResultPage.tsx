@@ -13,6 +13,7 @@ import { buildTojeongReading, type TojeongReading } from '../engine/tojeong/read
 import type { GwaeGrade } from '../engine/tojeong/gwae-table';
 import { useProfileStore } from '../store/useProfileStore';
 import { extractMetaphor } from '../utils/parseMetaphor';
+import { SectionCollapsible } from '../components/saju/SectionCollapsible';
 import { useCreditStore } from '../store/useCreditStore';
 import { useReportCacheStore, type ReportKind } from '../store/useReportCacheStore';
 import { RestoreReportModal } from '../components/RestoreReportModal';
@@ -716,19 +717,12 @@ export default function TojeongResultPage() {
               const monthEntries = parseMonthlyEntries(body);
               if (monthEntries.length > 0) {
                 return (
-                  <motion.section
+                  <SectionCollapsible
                     key={key}
-                    initial={{ opacity: 0, y: 12 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.15 + idx * 0.05 }}
-                    className="rounded-2xl p-4 bg-[rgba(20,12,38,0.55)] border border-[var(--border-subtle)]"
+                    title={TOJEONG_SECTION_LABELS[key]}
+                    defaultOpen={idx === 0}
+                    enterDelay={0.15 + idx * 0.05}
                   >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
-                      <span style={{ display: 'inline-block', width: 4, height: 20, borderRadius: 2, background: 'var(--cta-primary)' }} />
-                      <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--text-primary)', fontFamily: 'var(--font-title)', letterSpacing: '-0.01em' }}>
-                        {TOJEONG_SECTION_LABELS[key]}
-                      </div>
-                    </div>
                     <div className="space-y-2">
                       {monthEntries.map(me => (
                         <div key={me.month} className="rounded-lg p-3 bg-white/5">
@@ -742,7 +736,7 @@ export default function TojeongResultPage() {
                         </div>
                       ))}
                     </div>
-                  </motion.section>
+                  </SectionCollapsible>
                 );
               }
             }
@@ -763,30 +757,19 @@ export default function TojeongResultPage() {
               bodyText = hasMetaphor ? lines.slice(1).join('\n').trim() : bodyText;
             }
             return (
-              <motion.section
+              <SectionCollapsible
                 key={key}
-                initial={{ opacity: 0, y: 12 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.15 + idx * 0.05 }}
-                className="rounded-2xl p-5 bg-[rgba(20,12,38,0.55)] border border-[var(--border-subtle)]"
+                title={TOJEONG_SECTION_LABELS[key]}
+                metaphorTitle={metaphorTitle}
+                defaultOpen={idx === 0}
+                enterDelay={0.15 + idx * 0.05}
               >
-                <div className="flex items-center gap-2 mb-2">
-                  <span className="inline-block w-1 h-5 rounded-full bg-cta" />
-                  <div className="text-[17px] font-bold text-text-primary tracking-tight" style={{ fontFamily: 'var(--font-title)' }}>
-                    {TOJEONG_SECTION_LABELS[key]}
-                  </div>
-                </div>
-                {metaphorTitle && (
-                  <div className="text-[17px] font-bold leading-snug text-cta/90 mb-4 pl-3" style={{ fontFamily: 'var(--font-title)' }}>
-                    {metaphorTitle}
-                  </div>
-                )}
                 <div className="text-[17px] text-text-secondary leading-[1.85] tracking-[-0.005em] space-y-3">
                   {bodyText.split(/\n\n+/).map((para, pi) => (
                     <p key={pi} className="whitespace-pre-line">{para.trim()}</p>
                   ))}
                 </div>
-              </motion.section>
+              </SectionCollapsible>
             );
           })}
         </div>

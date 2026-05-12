@@ -19,6 +19,7 @@ import {
   ZamidusuPalace,
 } from '../engine/zamidusu';
 import { buildZamidusuReading, type ZamidusuReading } from '../engine/zamidusu/reading';
+import { SectionCollapsible } from '../components/saju/SectionCollapsible';
 import styles from './ZamidusuResultPage.module.css';
 import { useProfileStore } from '../store/useProfileStore';
 import { extractMetaphor } from '../utils/parseMetaphor';
@@ -970,7 +971,7 @@ export default function ZamidusuResultPage() {
         )}
 
         {/* AI 풀이 — 섹션별 은유 헤드라인으로 카드화 */}
-        {ZAMIDUSU_SECTION_KEYS.map((key) => {
+        {ZAMIDUSU_SECTION_KEYS.map((key, idx) => {
           const text = sections[key];
           if (!text) return null;
           // [은유] 마커 우선 추출 + 본문 strip. 마커 없으면 첫 줄 휴리스틱 fallback.
@@ -991,28 +992,13 @@ export default function ZamidusuResultPage() {
             }
           }
           return (
-            <motion.div
+            <SectionCollapsible
               key={key}
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.4 }}
-              className={styles.section}
+              title={ZAMIDUSU_SECTION_LABELS[key]}
+              metaphorTitle={hasHeadline ? headline : undefined}
+              defaultOpen={idx === 0}
+              enterDelay={0.05 * idx}
             >
-              {/* 섹션 레이블 — 정통사주와 동일 패턴 (세로바 + 큰 레이블) */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-                <span style={{ display: 'inline-block', width: 4, height: 20, borderRadius: 2, background: 'var(--cta-primary)' }} />
-                <div style={{ fontSize: 17, fontWeight: 700, color: 'var(--text-primary)', fontFamily: 'var(--font-title)', letterSpacing: '-0.025em' }}>
-                  {ZAMIDUSU_SECTION_LABELS[key]}
-                </div>
-              </div>
-
-              {/* 은유 제목 부제 */}
-              {hasHeadline && (
-                <div style={{ fontSize: 17, fontWeight: 700, color: 'var(--cta-primary)', opacity: 0.9, lineHeight: 1.375, marginBottom: 14, paddingLeft: 12, fontFamily: 'var(--font-title)' }}>
-                  {headline}
-                </div>
-              )}
-
               {(() => {
                 const raw = hasHeadline ? body : text;
                 const paragraphs = splitIntoParagraphs(raw);
@@ -1032,7 +1018,7 @@ export default function ZamidusuResultPage() {
                   </p>
                 ));
               })()}
-            </motion.div>
+            </SectionCollapsible>
           );
         })}
 

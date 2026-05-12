@@ -11,6 +11,7 @@ import { sajuDB } from '../services/supabase';
 import { BackButton } from '../components/ui/BackButton';
 import { SUN_COST_BIG, CHARGE_REASONS } from '../constants/creditCosts';
 import { extractMetaphor } from '../utils/parseMetaphor';
+import { SectionCollapsible } from '../components/saju/SectionCollapsible';
 import { computeSajuFromProfile } from '../utils/profileSaju';
 import type { BirthProfile } from '../types/credit';
 import {
@@ -1652,30 +1653,19 @@ export default function GunghapPage() {
                     const { metaphorTitle, bodyText } = extractMetaphor(sec.body);
 
                     return (
-                      <motion.div
+                      <SectionCollapsible
                         key={idx}
-                        initial={{ opacity: 0, y: 6 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: 0.06 * idx }}
-                        className="rounded-2xl p-5 bg-[rgba(20,12,38,0.55)] border border-[var(--border-subtle)]"
+                        title={sec.title}
+                        metaphorTitle={metaphorTitle}
+                        defaultOpen={idx === 0}
+                        enterDelay={0.06 * idx}
                       >
-                        <div className="flex items-center gap-2 mb-2">
-                          <span className="inline-block w-1 h-5 rounded-full bg-cta" />
-                          <div className="text-[17px] font-bold text-text-primary tracking-tight" style={{ fontFamily: 'var(--font-title)' }}>
-                            {sec.title}
-                          </div>
-                        </div>
-                        {metaphorTitle && (
-                          <div className="text-[17px] font-bold leading-snug text-cta/90 mb-4 pl-3" style={{ fontFamily: 'var(--font-title)' }}>
-                            {metaphorTitle}
-                          </div>
-                        )}
                         <div className="text-[17px] text-text-secondary leading-[1.85] tracking-[-0.005em] space-y-3">
                           {bodyText.split(/\n\n+/).map((para, pi) => (
                             <p key={pi} className="whitespace-pre-line">{para.trim()}</p>
                           ))}
                         </div>
-                      </motion.div>
+                      </SectionCollapsible>
                     );
                   })}
                 </div>

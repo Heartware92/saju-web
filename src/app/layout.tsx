@@ -20,14 +20,14 @@ const notoSansKR = Noto_Sans_KR({
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || 'https://www.2000-saju.com';
 
 export const metadata: Metadata = {
-  title: "이천점 — 우주의 기운을 당신께 드려요",
-  description: "별빛이 읽어주는 사주·타로·자미두수. 오늘 하늘이 건네는 한 문장을 받아보세요.",
+  title: "이천점 — 우주의 기운을 드려요",
+  description: "우주의 기운으로 풀어내는 사주·타로·자미두수. 오늘 당신을 위한 한 문장을 받아보세요.",
   icons: {
     icon: '/favicon.png',
   },
   openGraph: {
-    title: '이천점 — 우주의 기운을 당신께 드려요',
-    description: '별빛이 읽어주는 사주·타로·자미두수',
+    title: '이천점 — 우주의 기운을 드려요',
+    description: '우주의 기운으로 풀어내는 사주·타로·자미두수',
     siteName: '이천점',
     images: [{ url: `${BASE_URL}/og-image.png`, width: 1200, height: 630 }],
     type: 'website',

@@ -414,7 +414,7 @@ export default function SharePageClient({ type, record }: Props) {
           나도 운세 보러 가기
         </a>
         <p className="text-[12px] text-text-tertiary mt-2">
-          이천점 — 별빛이 읽어주는 사주
+          이천점 — 우주의 기운을 드려요
         </p>
       </motion.div>
     </div>
