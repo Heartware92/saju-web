@@ -740,7 +740,7 @@ export default function TojeongResultPage() {
                   >
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
                       <span style={{ display: 'inline-block', width: 4, height: 20, borderRadius: 2, background: 'var(--cta-primary)' }} />
-                      <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--text-primary)', fontFamily: 'var(--font-serif)', letterSpacing: '-0.01em' }}>
+                      <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--text-primary)', fontFamily: 'var(--font-title)', letterSpacing: '-0.01em' }}>
                         {TOJEONG_SECTION_LABELS[key]}
                       </div>
                     </div>
@@ -781,12 +781,12 @@ export default function TojeongResultPage() {
               >
                 <div className="flex items-center gap-2 mb-2">
                   <span className="inline-block w-1 h-5 rounded-full bg-cta" />
-                  <div className="text-[17px] font-bold text-text-primary tracking-tight" style={{ fontFamily: 'var(--font-serif)' }}>
+                  <div className="text-[17px] font-bold text-text-primary tracking-tight" style={{ fontFamily: 'var(--font-title)' }}>
                     {TOJEONG_SECTION_LABELS[key]}
                   </div>
                 </div>
                 {metaphorTitle && (
-                  <div className="text-[17px] font-medium leading-snug text-cta/90 mb-4 pl-3" style={{ fontFamily: 'var(--font-serif)' }}>
+                  <div className="text-[17px] font-medium leading-snug text-cta/90 mb-4 pl-3" style={{ fontFamily: 'var(--font-title)' }}>
                     {metaphorTitle}
                   </div>
                 )}

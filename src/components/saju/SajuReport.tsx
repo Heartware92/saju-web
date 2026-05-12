@@ -1374,15 +1374,18 @@ function DaeWoonSection({
 
 /**
  * @param hideManseryeok - 정통사주에선 만세력 섹션 중복이라 숨김. 만세력 페이지 단독 진입 시는 그대로 표시.
+ * @param hideAnalysis - true 면 오행/십성·신강신약·용신·격국·대운수 섹션을 숨김. 정통사주 결과 페이지에서 AI 풀이가 별도로 다루므로 만세력 표 + 천간/지지 관계까지만 노출.
  * @param defaultExpanded - true 면 모든 CollapsibleSection 이 펼친 상태로 마운트. 만세력 페이지 디폴트 펼침용.
  */
 export default function SajuReport({
   result,
   hideManseryeok = false,
+  hideAnalysis = false,
   defaultExpanded = false,
 }: {
   result: SajuResult;
   hideManseryeok?: boolean;
+  hideAnalysis?: boolean;
   defaultExpanded?: boolean;
 }) {
   const { pillars, elementCount, daeWoon, seWoon, sinSals, interactions } = result;
@@ -1517,6 +1520,8 @@ export default function SajuReport({
       </div>
       )}
 
+      {!hideAnalysis && (
+      <>
       {/* 3. 오행과 십성 */}
       <CollapsibleSection title="오행과 십성" helpText={SECTION_HELP_TEXT.ohaeng} defaultOpen={defaultExpanded}>
         <div className={styles.ohaengHeader}>
@@ -1708,6 +1713,8 @@ export default function SajuReport({
         <p className={styles.subInfo}>대운 시작: {result.daeWoonStartAge}세</p>
         <DaeWoonSection daeWoon={daeWoon} seWoon={seWoon} result={result} />
       </CollapsibleSection>
+      </>
+      )}
     </>
   );
 }

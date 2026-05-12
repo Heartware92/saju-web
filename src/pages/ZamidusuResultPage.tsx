@@ -1005,14 +1005,14 @@ export default function ZamidusuResultPage() {
               {/* 섹션 레이블 — 정통사주와 동일 패턴 (세로바 + 큰 레이블) */}
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
                 <span style={{ display: 'inline-block', width: 4, height: 20, borderRadius: 2, background: 'var(--cta-primary)' }} />
-                <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--text-primary)', fontFamily: 'var(--font-serif)', letterSpacing: '-0.01em' }}>
+                <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--text-primary)', fontFamily: 'var(--font-title)', letterSpacing: '-0.01em' }}>
                   {ZAMIDUSU_SECTION_LABELS[key]}
                 </div>
               </div>
 
               {/* 은유 제목 부제 */}
               {hasHeadline && (
-                <div style={{ fontSize: 16, fontWeight: 500, color: 'var(--cta-primary)', opacity: 0.9, lineHeight: 1.5, marginBottom: 14, paddingLeft: 12, fontFamily: 'var(--font-serif)' }}>
+                <div style={{ fontSize: 16, fontWeight: 500, color: 'var(--cta-primary)', opacity: 0.9, lineHeight: 1.5, marginBottom: 14, paddingLeft: 12, fontFamily: 'var(--font-title)' }}>
                   {headline}
                 </div>
               )}

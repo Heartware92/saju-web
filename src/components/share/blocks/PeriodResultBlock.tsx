@@ -284,12 +284,12 @@ export function PeriodResultBlock({ record }: Props) {
                 >
                   <div className="flex items-center gap-2 mb-2">
                     <span className="inline-block w-1 h-5 rounded-full bg-cta" />
-                    <div className="text-[17px] font-bold text-text-primary tracking-tight break-keep" style={{ fontFamily: 'var(--font-serif)' }}>
+                    <div className="text-[17px] font-bold text-text-primary tracking-tight break-keep" style={{ fontFamily: 'var(--font-title)' }}>
                       {NEWYEAR_SECTION_LABELS[key]}
                     </div>
                   </div>
                   {metaphorTitle && (
-                    <div className="text-[17px] font-medium leading-snug text-cta/90 mb-4 pl-3 break-keep" style={{ fontFamily: 'var(--font-serif)' }}>
+                    <div className="text-[17px] font-medium leading-snug text-cta/90 mb-4 pl-3 break-keep" style={{ fontFamily: 'var(--font-title)' }}>
                       {metaphorTitle}
                     </div>
                   )}
@@ -339,12 +339,12 @@ export function PeriodResultBlock({ record }: Props) {
                 >
                   <div className="flex items-center gap-2 mb-2">
                     <span className="inline-block w-1 h-5 rounded-full bg-cta" />
-                    <div className="text-[17px] font-bold text-text-primary tracking-tight break-keep" style={{ fontFamily: 'var(--font-serif)' }}>
+                    <div className="text-[17px] font-bold text-text-primary tracking-tight break-keep" style={{ fontFamily: 'var(--font-title)' }}>
                       {PICKED_DATE_SECTION_LABELS[key]}
                     </div>
                   </div>
                   {metaphorTitle && (
-                    <div className="text-[17px] font-medium leading-snug text-cta/90 mb-4 pl-3 break-keep" style={{ fontFamily: 'var(--font-serif)' }}>
+                    <div className="text-[17px] font-medium leading-snug text-cta/90 mb-4 pl-3 break-keep" style={{ fontFamily: 'var(--font-title)' }}>
                       {metaphorTitle}
                     </div>
                   )}

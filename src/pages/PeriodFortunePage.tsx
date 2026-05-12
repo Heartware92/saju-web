@@ -1118,7 +1118,7 @@ export default function PeriodFortunePage({ scope }: { scope: FortuneScope | 'da
                       <span className="inline-block w-1 h-5 rounded-full bg-cta" />
                       <div
                         className="text-[17px] font-bold text-text-primary tracking-tight"
-                        style={{ fontFamily: 'var(--font-serif)' }}
+                        style={{ fontFamily: 'var(--font-title)' }}
                       >
                         {NEWYEAR_SECTION_LABELS[key]}
                       </div>
@@ -1127,7 +1127,7 @@ export default function PeriodFortunePage({ scope }: { scope: FortuneScope | 'da
                     {/* 은유 제목 — 라벨 아래, 서브 톤 */}
                     <div
                       className="text-[17px] font-medium leading-snug text-cta/90 mb-4 pl-3"
-                      style={{ fontFamily: 'var(--font-serif)' }}
+                      style={{ fontFamily: 'var(--font-title)' }}
                     >
                       {metaphorTitle}
                     </div>
@@ -1220,14 +1220,14 @@ export default function PeriodFortunePage({ scope }: { scope: FortuneScope | 'da
                       <span className={`inline-block w-1 h-5 rounded-full ${isYes ? 'bg-emerald-400' : isNo ? 'bg-red-400' : 'bg-cta'}`} />
                       <div
                         className="text-[17px] font-bold text-text-primary tracking-tight"
-                        style={{ fontFamily: 'var(--font-serif)' }}
+                        style={{ fontFamily: 'var(--font-title)' }}
                       >
                         {PICKED_DATE_SECTION_LABELS[key]}
                       </div>
                     </div>
                     <div
                       className="text-[17px] font-medium leading-snug text-cta/90 mb-4 pl-3"
-                      style={{ fontFamily: 'var(--font-serif)' }}
+                      style={{ fontFamily: 'var(--font-title)' }}
                     >
                       {metaphorTitle}
                     </div>

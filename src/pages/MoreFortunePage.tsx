@@ -874,7 +874,7 @@ function MoreFortuneResultCard({
         <span className="inline-block w-1 h-5 rounded-full bg-cta" />
         <div
           className="text-[17px] font-bold text-text-primary tracking-tight"
-          style={{ fontFamily: 'var(--font-serif)' }}
+          style={{ fontFamily: 'var(--font-title)' }}
         >
           {title}
         </div>
@@ -883,7 +883,7 @@ function MoreFortuneResultCard({
       {metaphor && (
         <div
           className="text-[17px] font-medium leading-snug text-cta/90 mb-4 pl-3"
-          style={{ fontFamily: 'var(--font-serif)' }}
+          style={{ fontFamily: 'var(--font-title)' }}
         >
           {metaphor}
         </div>

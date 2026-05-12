@@ -138,12 +138,12 @@ export function ZamidusuResultBlock({ record }: Props) {
           >
             <div className="flex items-center gap-2 mb-2">
               <span className="inline-block w-1 h-5 rounded-full bg-cta" />
-              <div className="text-[18px] font-bold text-text-primary tracking-tight" style={{ fontFamily: 'var(--font-serif)' }}>
+              <div className="text-[18px] font-bold text-text-primary tracking-tight" style={{ fontFamily: 'var(--font-title)' }}>
                 {ZAMIDUSU_SECTION_LABELS[key]}
               </div>
             </div>
             {hasHeadline && (
-              <div className="text-[16px] font-medium leading-snug text-cta/90 mb-4 pl-3" style={{ fontFamily: 'var(--font-serif)' }}>
+              <div className="text-[16px] font-medium leading-snug text-cta/90 mb-4 pl-3" style={{ fontFamily: 'var(--font-title)' }}>
                 {headline}
               </div>
             )}

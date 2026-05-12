@@ -453,11 +453,11 @@ export default function SajuResultPage() {
       </motion.div>
 
       {/*
-        만세력 데이터 보드 — 사주원국만 펼쳐지고 나머지(사주관계·오행십성·신강신약·대운수)는 접힘.
+        만세력 데이터 보드 — 정통사주에서는 사주원국 + 천간/지지 관계까지만 노출.
+        오행/십성·신강신약·용신·격국·대운수는 hideAnalysis 로 숨김 (AI 풀이가 별도 카드로 다룸).
         만세력 페이지(/saju/manseryeok)는 defaultExpanded={true} 로 모두 펼침.
-        (직원 피드백 재정리 — 만세력 자체는 정통사주에도 노출하되 보조 섹션은 접어 정보량 조절)
       */}
-      <SajuReport result={result} />
+      <SajuReport result={result} hideAnalysis />
 
       {/* 에러 */}
       {report?.error && (

@@ -113,8 +113,8 @@ export function SajuTraditionalResultBlock({ record }: Props) {
         </ul>
       </motion.div>
 
-      {/* 만세력 보드 */}
-      <SajuReport result={result} />
+      {/* 만세력 보드 — 정통사주 공유는 사주원국 + 천간/지지 관계까지만 노출 (SajuResultPage 와 동일) */}
+      <SajuReport result={result} hideAnalysis />
 
       {/* 9섹션 카드 */}
       <div className="space-y-2 mt-3">

@@ -133,6 +133,33 @@
   /* Fonts */
   --font-sans: 'Pretendard', -apple-system, 'Noto Sans KR', sans-serif;
   --font-serif: 'Noto Serif KR', 'Gowun Batang', serif;
+  /* 섹션 제목 / 은유 부제목 전용 — 마루 부리 (네이버 한글한글아름답게) */
+  --font-title: 'MaruBuri', 'Noto Serif KR', 'Gowun Batang', serif;
+}
+
+/* ============================================
+   Custom Fonts — 섹션 제목·은유 전용
+   ============================================ */
+@font-face {
+  font-family: 'MaruBuri';
+  src: url('/fonts/MaruBuri/MaruBuri-Regular.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'MaruBuri';
+  src: url('/fonts/MaruBuri/MaruBuri-SemiBold.ttf') format('truetype');
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'MaruBuri';
+  src: url('/fonts/MaruBuri/MaruBuri-Bold.ttf') format('truetype');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
 }
 
 /* ============================================
