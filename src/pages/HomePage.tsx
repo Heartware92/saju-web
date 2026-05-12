@@ -44,13 +44,6 @@ const MAIN_SERVICES = [
     gradient: 'from-purple-500/20 to-indigo-500/10',
   },
   {
-    id: 'today',
-    title: '오늘의 운세',
-    desc: '오늘 하루 운세',
-    direct: '/saju/today',
-    gradient: 'from-amber-500/20 to-orange-500/10',
-  },
-  {
     id: 'gunghap',
     title: '궁합',
     desc: '연인·친구·가족 케미',
@@ -58,6 +51,16 @@ const MAIN_SERVICES = [
     gradient: 'from-rose-500/20 to-fuchsia-500/10',
   },
 ];
+
+// 오늘의 운세 — 더 많은 운세 아래 별도 영역 첫 카드로 강조 표시.
+// 해 크레딧 차감인 정식 풀이라 더많은운세(달) 와 카테고리 분리하되 시각적으론 인접 배치.
+const TODAY_SERVICE = {
+  id: 'today' as const,
+  title: '오늘의 운세',
+  desc: '오늘 하루 운세',
+  direct: '/saju/today',
+  gradient: 'from-amber-500/20 to-orange-500/10',
+};
 
 const SECONDARY_SERVICES = [
   {
@@ -425,27 +428,27 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* 핵심 서비스 - 2x2 카드 (신년/정통/오늘/지정일) */}
+      {/* 핵심 서비스 - 3종 (신년/정통/궁합) — grid-cols-3 으로 한 행에 배치 */}
       <section className="px-4 -mt-3 relative z-10">
         <motion.div
           variants={stagger}
           initial="hidden"
           whileInView="visible"
           viewport={{ once: true }}
-          className="grid grid-cols-2 gap-2.5"
+          className="grid grid-cols-3 gap-2.5"
         >
           {MAIN_SERVICES.map((svc) => (
             <motion.div key={svc.id} variants={fadeUp}>
               <button type="button" onClick={(e) => handleServiceClick(e, svc.direct)} className="w-full text-left">
                 <div className={`
                   service-card
-                  relative rounded-xl p-3 h-[88px]
+                  relative rounded-xl p-3 h-[96px]
                   bg-gradient-to-br ${svc.gradient}
                   border border-[var(--border-subtle)]
                   flex flex-col items-center justify-center text-center gap-1
                 `}>
-                  <h3 className="text-[19px] font-bold text-text-primary tracking-tight">{svc.title}</h3>
-                  <p className="text-[15px] font-medium text-text-secondary">{svc.desc}</p>
+                  <h3 className="text-[16px] font-bold text-text-primary tracking-tight">{svc.title}</h3>
+                  <p className="text-[13px] font-medium text-text-secondary">{svc.desc}</p>
                 </div>
               </button>
             </motion.div>
@@ -453,7 +456,7 @@ export default function HomePage() {
         </motion.div>
       </section>
 
-      {/* 보조 핵심 서비스 - 1x2 (토정비결 / 자미두수) */}
+      {/* 보조 핵심 서비스 - 2x2 (지정일·택일·토정·자미) — MAIN 과 동일 사이즈로 통일 */}
       <section className="px-4 mt-2.5 relative z-10">
         <motion.div
           variants={stagger}
@@ -467,13 +470,13 @@ export default function HomePage() {
               <button type="button" onClick={(e) => handleServiceClick(e, svc.direct)} className="w-full text-left">
                 <div className={`
                   service-card
-                  relative rounded-xl p-3 h-[88px]
+                  relative rounded-xl p-3 h-[96px]
                   bg-gradient-to-br ${svc.gradient}
                   border border-[var(--border-subtle)]
                   flex flex-col items-center justify-center text-center gap-1
                 `}>
-                  <h3 className="text-[19px] font-bold text-text-primary tracking-tight">{svc.title}</h3>
-                  <p className="text-[15px] font-medium text-text-secondary">{svc.desc}</p>
+                  <h3 className="text-[16px] font-bold text-text-primary tracking-tight">{svc.title}</h3>
+                  <p className="text-[13px] font-medium text-text-secondary">{svc.desc}</p>
                 </div>
               </button>
             </motion.div>
@@ -498,12 +501,39 @@ export default function HomePage() {
             <motion.div key={svc.id} variants={fadeUp}>
               <button type="button" onClick={(e) => handleServiceClick(e, svc.href)} className="w-full">
                 <div className="service-card flex flex-col items-center justify-center h-[80px] p-2.5 rounded-xl bg-space-surface/60 border border-[var(--border-subtle)]">
-                  <span className="text-[17px] font-bold text-text-primary text-center leading-tight mb-1 whitespace-nowrap">{svc.title}</span>
-                  <span className="text-[14px] text-text-tertiary text-center leading-tight line-clamp-1 whitespace-nowrap">{svc.desc}</span>
+                  <span className="text-[15px] font-bold text-text-primary text-center leading-tight mb-1 whitespace-nowrap">{svc.title}</span>
+                  <span className="text-[12px] text-text-tertiary text-center leading-tight line-clamp-1 whitespace-nowrap">{svc.desc}</span>
                 </div>
               </button>
             </motion.div>
           ))}
+        </motion.div>
+      </section>
+
+      {/* 오늘의 운세 — 더 많은 운세 아래 별도 단일 카드 (가장 선두) */}
+      <section className="px-4 mt-5 relative z-10">
+        <motion.div
+          initial={{ opacity: 0, y: 16 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.4, ease: 'easeOut' }}
+        >
+          <button
+            type="button"
+            onClick={(e) => handleServiceClick(e, TODAY_SERVICE.direct)}
+            className="w-full text-left"
+          >
+            <div className={`
+              service-card
+              relative rounded-xl p-4 h-[96px]
+              bg-gradient-to-br ${TODAY_SERVICE.gradient}
+              border border-[var(--border-subtle)]
+              flex flex-col items-center justify-center text-center gap-1
+            `}>
+              <h3 className="text-[18px] font-bold text-text-primary tracking-tight">{TODAY_SERVICE.title}</h3>
+              <p className="text-[14px] font-medium text-text-secondary">{TODAY_SERVICE.desc}</p>
+            </div>
+          </button>
         </motion.div>
       </section>
 
