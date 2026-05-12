@@ -78,34 +78,77 @@ async function callGeminiOnce(
   }
 }
 
+/**
+ * maxTokens 기반 동적 timeout 전략.
+ * Vercel maxDuration(120s) 합산 안에서 Gemini retry + OpenAI 폴백 가능 시간만 배분.
+ *
+ * - small  (< 4000 토큰 ≈ 응답 1.5K자 이하): Gemini 30+25s + OpenAI 30s ≈ 85s
+ * - medium (4000~8000 ≈ 응답 3.5K자):      Gemini 50+25s + OpenAI 35s ≈ 110s
+ * - large  (8000~12000 ≈ 응답 5K자):       Gemini 80s + OpenAI 35s ≈ 115s
+ * - xlarge (12000+ 정통사주 2차 등):        Gemini 110s 단일, OpenAI 폴백 시간 없음
+ *
+ * 기존(일률 35s/25s)에 큰 호출이 폴백 단계까지 모두 abort 되던 회귀를 차단.
+ */
+interface TimeoutStrategy {
+  geminiAttempts: Array<{ timeoutMs: number; backoffAfterMs: number }>;
+  /** null = 시간 없음, OpenAI 폴백 시도 안 함 */
+  openaiTimeoutMs: number | null;
+}
+function deriveTimeoutStrategy(maxTokens: number): TimeoutStrategy {
+  if (maxTokens < 4_000) {
+    return {
+      geminiAttempts: [
+        { timeoutMs: 30_000, backoffAfterMs: 800 },
+        { timeoutMs: 25_000, backoffAfterMs: 0 },
+      ],
+      openaiTimeoutMs: 30_000,
+    };
+  }
+  if (maxTokens < 8_000) {
+    return {
+      geminiAttempts: [
+        { timeoutMs: 50_000, backoffAfterMs: 800 },
+        { timeoutMs: 25_000, backoffAfterMs: 0 },
+      ],
+      openaiTimeoutMs: 35_000,
+    };
+  }
+  if (maxTokens < 12_000) {
+    return {
+      geminiAttempts: [{ timeoutMs: 80_000, backoffAfterMs: 0 }],
+      openaiTimeoutMs: 35_000,
+    };
+  }
+  // 정통사주 2차(14k) 같은 xlarge — Gemini 단일 시도, 폴백 시간 없음
+  return {
+    geminiAttempts: [{ timeoutMs: 110_000, backoffAfterMs: 0 }],
+    openaiTimeoutMs: null,
+  };
+}
+
 /** Gemini 호출 + 5xx/429/타임아웃/네트워크 실패 시 백오프 재시도. */
-// 정통사주 점진 노출을 위해 빠른 실패→빠른 폴백 전략.
-// 시도별 timeout: 35s → 25s. 합산 최악 ~62s + 백오프 0.8s → 64초 안에 OpenAI 폴백으로 넘어감.
-// 기존 3회 retry(타임아웃 없음) 는 Gemini 가 느릴 때 120s maxDuration 까지 매달리던 사고의 원인.
 async function callGeminiWithRetry(
   prompt: string,
   maxTokens: number,
   systemPrompt: string,
   temperature: number = 0.4,
+  attempts?: Array<{ timeoutMs: number; backoffAfterMs: number }>,
 ): Promise<{ ok: true; data: AIResult } | { ok: false; status: number | null; msg: string }> {
-  const attempts: Array<{ timeoutMs: number; backoffAfterMs: number }> = [
-    { timeoutMs: 35_000, backoffAfterMs: 800 },
-    { timeoutMs: 25_000, backoffAfterMs: 0 },
-  ];
+  const list = attempts ?? deriveTimeoutStrategy(maxTokens).geminiAttempts;
   let lastStatus: number | null = null;
   let lastMsg = '';
 
-  for (let i = 0; i < attempts.length; i++) {
-    const { timeoutMs, backoffAfterMs } = attempts[i];
+  for (let i = 0; i < list.length; i++) {
+    const { timeoutMs, backoffAfterMs } = list[i];
     const r = await callGeminiOnce(prompt, maxTokens, systemPrompt, temperature, timeoutMs);
     if (r.ok) return r;
 
     lastStatus = r.status;
     lastMsg = r.msg;
 
-    if (!r.retryable || i === attempts.length - 1) break;
+    if (!r.retryable || i === list.length - 1) break;
 
-    console.warn(`[AI] Gemini ${r.status ?? 'NET'} 재시도 ${i + 1}/${attempts.length} (${backoffAfterMs}ms 대기): ${r.msg}`);
+    console.warn(`[AI] Gemini ${r.status ?? 'NET'} 재시도 ${i + 1}/${list.length} (${backoffAfterMs}ms 대기): ${r.msg}`);
     if (backoffAfterMs > 0) await new Promise((res) => setTimeout(res, backoffAfterMs));
   }
 
@@ -185,9 +228,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // ── 1순위: Gemini (재시도 3회 포함) ──
+    // maxTokens 기반 동적 전략으로 Gemini retry · OpenAI 폴백 시간 배분
+    const strategy = deriveTimeoutStrategy(maxTokens);
+
+    // ── 1순위: Gemini ──
     if (process.env.GEMINI_API_KEY) {
-      const geminiResult = await callGeminiWithRetry(prompt, maxTokens, sys, temperature);
+      const geminiResult = await callGeminiWithRetry(prompt, maxTokens, sys, temperature, strategy.geminiAttempts);
       if (geminiResult.ok) {
         return NextResponse.json({
           content: geminiResult.data.content,
@@ -196,14 +242,14 @@ export async function POST(request: NextRequest) {
         });
       }
       console.error('[AI] Gemini 모든 재시도 실패:', geminiResult.status, geminiResult.msg);
-      // → OpenAI 폴백으로 자동 진행
+      // → OpenAI 폴백 (시간이 허용되면)
     }
 
-    // ── 2순위: OpenAI gpt-4o-mini 폴백 ──
-    if (process.env.OPENAI_API_KEY) {
+    // ── 2순위: OpenAI gpt-4o-mini 폴백 (xlarge 호출은 시간 없음 → skip) ──
+    if (process.env.OPENAI_API_KEY && strategy.openaiTimeoutMs !== null) {
       try {
         console.warn('[AI] OpenAI gpt-4o-mini 폴백 시도');
-        const r = await callOpenAI(prompt, maxTokens, sys, temperature);
+        const r = await callOpenAI(prompt, maxTokens, sys, temperature, strategy.openaiTimeoutMs);
         return NextResponse.json({
           content: r.content,
           truncated: r.truncated,
