@@ -14,8 +14,6 @@
 
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useWasFreshOnEntry } from '../hooks/useFreshGate';
-import { ExpiredAnalysisCard } from '../components/ExpiredAnalysisCard';
 import { motion } from 'framer-motion';
 import { useProfileStore } from '../store/useProfileStore';
 import { useCreditStore } from '../store/useCreditStore';
@@ -411,8 +409,6 @@ function InputForm({
 export default function TodayFortunePage() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const wasFresh = useWasFreshOnEntry();
-  const [expired, setExpired] = useState(false);
   const profileId = searchParams?.get('profileId') ?? null;
   const recordId = searchParams?.get('recordId') ?? null;
   const isArchiveMode = !!recordId;
@@ -533,7 +529,7 @@ export default function TodayFortunePage() {
     if (apiCalledKeyRef.current === effectKey) return;
 
     let cancelled = false;
-    const isFresh = wasFresh;
+    const isFresh = searchParams?.get('fresh') === '1';
 
     const run = async () => {
       const cacheKey = effectKey;
@@ -580,13 +576,6 @@ export default function TodayFortunePage() {
         if (cancelled) return;
       }
 
-      // ★ 결제 사고 차단 — fresh 신호 없으면 자동 호출 금지
-      if (!isFresh) {
-        setExpired(true);
-        setReportLoading(false);
-        return;
-      }
-
       apiCalledKeyRef.current = effectKey;
       setReport(null);
       setReportLoading(true);
@@ -616,11 +605,6 @@ export default function TodayFortunePage() {
     return () => { cancelled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [result, userCtx, isArchiveMode]);
-
-  // ── 만료 가드 ─────────────────────────────────────────
-  if (expired) {
-    return <ExpiredAnalysisCard serviceName="오늘의 운세" />;
-  }
 
   // ── 프로필 선택 가드 ─────────────────────────────────────────
   if (needsProfileSelect) {

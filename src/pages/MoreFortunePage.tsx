@@ -14,7 +14,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useWasFreshOnEntry } from '../hooks/useFreshGate';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useProfileStore } from '../store/useProfileStore';
 import { useUserStore } from '../store/useUserStore';
@@ -75,7 +74,6 @@ export default function MoreFortunePage({ category }: Props) {
   // ── 모든 Hooks는 무조건 상단에 호출 (React Hooks 규칙) ──
   const router = useRouter();
   const searchParams = useSearchParams();
-  const wasFresh = useWasFreshOnEntry();
   const profileId = searchParams?.get('profileId') ?? null;
   const recordId = searchParams?.get('recordId') ?? null;
   const isArchiveMode = !!recordId;
@@ -125,10 +123,9 @@ export default function MoreFortunePage({ category }: Props) {
 
   // 학업/자녀/성격: fresh=1 진입 시 소개 페이지 건너뛰고 바로 풀이 시작
   // manualMode: "다시 풀이 받기" 클릭 시 true → 소개+CTA 페이지로 복귀
-  // ★ wasFresh: 진입 시 URL fresh 즉시 제거 → 새로고침 시 wasFresh=false → 자동 호출 차단
   const autoStartedRef = useRef(false);
   const [manualMode, setManualMode] = useState(false);
-  const freshParam = wasFresh;
+  const freshParam = searchParams?.get('fresh') === '1';
   const shouldAutoStart = freshParam && !isArchiveMode && !manualMode &&
     (category === 'study' || category === 'children' || category === 'personality');
 
@@ -221,7 +218,7 @@ export default function MoreFortunePage({ category }: Props) {
   useEffect(() => {
     if (isArchiveMode || !targetProfile || !category) return;
     if (isLegacy) return;
-    if (wasFresh) return;
+    if (searchParams?.get('fresh') === '1') return;
 
     // 카테고리가 saju 의존인 경우만 캐시 검사 (dream 은 텍스트 기반이라 별도)
     if (saju && category !== 'dream') {

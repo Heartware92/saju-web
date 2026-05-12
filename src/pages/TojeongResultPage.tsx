@@ -7,8 +7,6 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
-import { useWasFreshOnEntry } from '../hooks/useFreshGate';
-import { ExpiredAnalysisCard } from '../components/ExpiredAnalysisCard';
 import { motion } from 'framer-motion';
 import { calculateTojeong, type TojeongResult } from '../engine/tojeong';
 import { buildTojeongReading, type TojeongReading } from '../engine/tojeong/reading';
@@ -151,8 +149,6 @@ const DOMAIN_DEFS: { key: 'wealth' | 'love' | 'health' | 'career'; label: string
 export default function TojeongResultPage() {
   const searchParams = useSearchParams();
   const router = useRouter();
-  const wasFresh = useWasFreshOnEntry();
-  const [expired, setExpired] = useState(false);
   const profileId = searchParams?.get('profileId') ?? null;
   const recordId = searchParams?.get('recordId') ?? null;
   const isArchiveMode = !!recordId;
@@ -286,7 +282,7 @@ export default function TojeongResultPage() {
 
     let cancelled = false;
 
-    const isFresh = wasFresh || refetchNonce > 0;
+    const isFresh = searchParams?.get('fresh') === '1';
 
     // 페이지 사이드 자동 재시도 — 백엔드 4단 폴백이 모두 실패해 빈 결과를 받았을 때
     // 4초 대기 후 한 번 더 호출. 사용자 입장에서는 길어진 단일 로딩 안에서 처리됨.
@@ -381,14 +377,6 @@ export default function TojeongResultPage() {
       }
 
       if (aiStartedRef.current) return;
-
-      // ★ 결제 사고 차단 — fresh 신호 없으면 자동 호출 금지
-      if (!isFresh) {
-        setExpired(true);
-        setAiLoading(false);
-        return;
-      }
-
       aiStartedRef.current = true;
       aiAttemptCountRef.current = 0;
 
@@ -429,10 +417,6 @@ export default function TojeongResultPage() {
         setAiLoading(false);
       });
   };
-
-  if (expired) {
-    return <ExpiredAnalysisCard serviceName="토정비결" />;
-  }
 
   if (needsProfileSelect) {
     return (

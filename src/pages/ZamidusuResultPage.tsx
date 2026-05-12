@@ -12,8 +12,6 @@
 
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
-import { useWasFreshOnEntry } from '../hooks/useFreshGate';
-import { ExpiredAnalysisCard } from '../components/ExpiredAnalysisCard';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   calculateZamidusu,
@@ -100,8 +98,6 @@ function splitIntoParagraphs(text: string, sentencesPerPara = 3): string[] {
 export default function ZamidusuResultPage() {
   const searchParams = useSearchParams();
   const router = useRouter();
-  const wasFresh = useWasFreshOnEntry();
-  const [expired, setExpired] = useState(false);
   const profileId = searchParams?.get('profileId') ?? null;
   const recordId = searchParams?.get('recordId') ?? null;
   const isArchiveMode = !!recordId;
@@ -284,7 +280,7 @@ export default function ZamidusuResultPage() {
     let cancelled = false;
     let timeoutId: ReturnType<typeof setTimeout> | undefined;
 
-    const isFresh = wasFresh || refetchNonce > 0;
+    const isFresh = searchParams?.get('fresh') === '1';
 
     const run = async () => {
       // ★ cache 우선 — 메모리 unload→reload 후에도 archive 모달 없이 즉시 복원
@@ -333,14 +329,6 @@ export default function ZamidusuResultPage() {
       }
 
       if (aiStartedRef.current) return;
-
-      // ★ 결제 사고 차단 — fresh 신호 없으면 자동 호출 금지
-      if (!isFresh) {
-        setExpired(true);
-        setAiLoading(false);
-        return;
-      }
-
       aiStartedRef.current = true;
 
       setAiLoading(true);
@@ -452,11 +440,6 @@ export default function ZamidusuResultPage() {
         </div>
       </div>
     );
-  }
-
-  // ── 만료 가드 ──
-  if (expired) {
-    return <ExpiredAnalysisCard serviceName="자미두수" />;
   }
 
   // ── 프로필 선택 가드 ──
