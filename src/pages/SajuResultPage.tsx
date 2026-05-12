@@ -511,7 +511,7 @@ export default function SajuResultPage() {
                   <span className="inline-block w-1 h-5 rounded-full bg-cta" />
                   <div
                     className="text-[17px] font-bold text-text-primary tracking-tight"
-                    style={{ fontFamily: 'var(--font-serif)' }}
+                    style={{ fontFamily: 'var(--font-title)' }}
                   >
                     {JUNGTONGSAJU_SECTION_LABELS[key]}
                   </div>

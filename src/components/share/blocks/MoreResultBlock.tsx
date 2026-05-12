@@ -97,7 +97,7 @@ export function MoreResultBlock({ record }: Props) {
         </div>
 
         {metaphor && (
-          <div className="text-[17px] font-medium leading-snug text-cta/90 mb-4 pl-3" style={{ fontFamily: 'var(--font-title)' }}>
+          <div className="text-[17px] font-medium leading-snug text-cta/90 mb-4 pl-3" style={{ fontFamily: 'var(--font-serif)' }}>
             {metaphor}
           </div>
         )}
