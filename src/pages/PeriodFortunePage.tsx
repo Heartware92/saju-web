@@ -1119,13 +1119,13 @@ export default function PeriodFortunePage({ scope }: { scope: FortuneScope | 'da
                           ? bodyText.split(/\n\n+/)
                           : bodyText.split(/(?=\d{1,2}월\s*\()/)
                         ).filter(Boolean).map((monthBlock, mi) => (
-                          <p key={mi} className="text-[15px] text-text-secondary leading-[1.85]">
+                          <p key={mi} className="text-[17px] text-text-secondary leading-[1.85] tracking-[-0.005em]">
                             {monthBlock.replace(/\n/g, ' ').trim()}
                           </p>
                         ))}
                       </div>
                     ) : (
-                      <p className="text-[15px] text-text-secondary leading-[1.85] whitespace-pre-line">
+                      <p className="text-[17px] text-text-secondary leading-[1.85] tracking-[-0.005em] whitespace-pre-line">
                         {bodyText}
                       </p>
                     )}
@@ -1171,7 +1171,7 @@ export default function PeriodFortunePage({ scope }: { scope: FortuneScope | 'da
 
           {pickedDateReport.rawText && !pickedDateReport.sections && (
             <div className="p-4 rounded-xl bg-[rgba(20,12,38,0.55)] border border-[var(--border-subtle)]">
-              <p className="text-[15px] text-text-secondary leading-[1.85] whitespace-pre-line">
+              <p className="text-[17px] text-text-secondary leading-[1.85] tracking-[-0.005em] whitespace-pre-line">
                 {stripAllSectionTags(pickedDateReport.rawText)
                   .replace(/아침\s*[:：]\s*\d+\s*낮\s*[:：]\s*\d+\s*저녁\s*[:：]\s*\d+\s*밤\s*[:：]\s*\d+/, '')
                   .trim()}
@@ -1221,12 +1221,12 @@ export default function PeriodFortunePage({ scope }: { scope: FortuneScope | 'da
                             <span className={`shrink-0 mt-0.5 text-[16px] ${isYes ? 'text-emerald-400' : 'text-red-400'}`}>
                               {isYes ? '●' : '▲'}
                             </span>
-                            <p className="text-[15px] text-text-secondary leading-[1.85] whitespace-pre-line">{para.trim()}</p>
+                            <p className="text-[17px] text-text-secondary leading-[1.85] tracking-[-0.005em] whitespace-pre-line">{para.trim()}</p>
                           </div>
                         ))}
                       </div>
                     ) : (
-                      <div className="text-[15px] text-text-secondary leading-[1.85] space-y-3">
+                      <div className="text-[17px] text-text-secondary leading-[1.85] tracking-[-0.005em] space-y-3">
                         {bodyText.split(/\n\n+/).map((para, pi) => (
                           <p key={pi} className="whitespace-pre-line">{para.trim()}</p>
                         ))}

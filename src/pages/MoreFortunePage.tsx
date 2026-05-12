@@ -907,7 +907,7 @@ function MoreFortuneResultCard({
         {paragraphs.map((p, i) => (
           <p
             key={i}
-            className="text-[16px] text-text-secondary leading-[1.85] whitespace-pre-line tracking-[-0.005em]"
+            className="text-[17px] text-text-secondary leading-[1.85] whitespace-pre-line tracking-[-0.005em]"
           >
             {p}
           </p>

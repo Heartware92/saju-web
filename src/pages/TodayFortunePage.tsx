@@ -887,11 +887,11 @@ export default function TodayFortunePage() {
                   </div>
                 </div>
                 {metaphorTitle && (
-                  <div className="text-[15px] font-medium leading-snug text-cta/90 mb-4 pl-3" style={{ fontFamily: 'var(--font-title)' }}>
+                  <div className="text-[17px] font-medium leading-snug text-cta/90 mb-4 pl-3" style={{ fontFamily: 'var(--font-title)' }}>
                     {metaphorTitle}
                   </div>
                 )}
-                <div className="text-[15px] text-text-secondary leading-[1.85] tracking-[-0.005em] space-y-3">
+                <div className="text-[17px] text-text-secondary leading-[1.85] tracking-[-0.005em] space-y-3">
                   {bodyText.split(/\n\n+/).map((para, pi) => (
                     <p key={pi} className="whitespace-pre-line">{para.trim()}</p>
                   ))}
