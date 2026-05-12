@@ -335,8 +335,8 @@ export default function GunghapPage() {
   const [archiveLoading, setArchiveLoading] = useState(true);
   const [forceNewReading, setForceNewReading] = useState(false);
 
-  // ── 로딩 안전장치: 140초 초과 시 강제 해제 ──
-  const [loadingTimedOut] = useLoadingGuard(loading, 140_000);
+  // ── 로딩 안전장치: 70초 초과 시 강제 해제 ──
+  const [loadingTimedOut] = useLoadingGuard(loading, 70_000);
   useEffect(() => {
     if (loadingTimedOut) {
       setLoading(false);
