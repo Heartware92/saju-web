@@ -39,7 +39,7 @@ const GRADE_COLOR: Record<LifetimeGrade, string> = {
 // ── 차트 차원 ──
 const PX_PER_YEAR = 20;
 const W = 99 * PX_PER_YEAR + 64;
-const H = 260;
+const H = 240;
 const PAD_L = 40;
 const PAD_R = 28;
 const PAD_T = 24;
@@ -49,8 +49,10 @@ const PLOT_H = H - PAD_T - PAD_B;
 
 const AGE_MIN = 1;
 const AGE_MAX = 99;
+const Y_MAX = 100;
 const xOf = (age: number) => PAD_L + ((age - AGE_MIN) / (AGE_MAX - AGE_MIN)) * PLOT_W;
-const yOf = (score: number) => PAD_T + (1 - score / 100) * PLOT_H;
+const makeYOf = (yMin: number) => (score: number) =>
+  PAD_T + (1 - (Math.max(yMin, Math.min(Y_MAX, score)) - yMin) / (Y_MAX - yMin)) * PLOT_H;
 
 // Catmull-Rom → Bezier 변환으로 곡선을 부드럽게
 function smoothPath(pts: { x: number; y: number }[]): string {
@@ -74,6 +76,14 @@ function smoothPath(pts: { x: number; y: number }[]): string {
 export function LifetimeFortuneChart({ saju }: Props) {
   const points = useMemo(() => computeLifetimeFortune(saju, 99), [saju]);
   const currentAge = useMemo(() => getCurrentAge(saju), [saju]);
+
+  // Y축 적응형 — 데이터 최저점 기준 가까운 10단위 내림. 최소 0, 최대 50.
+  const yMin = useMemo(() => {
+    if (!points.length) return 20;
+    const minScore = Math.min(...points.map((p) => p.score));
+    return Math.max(0, Math.min(50, Math.floor((minScore - 5) / 10) * 10));
+  }, [points]);
+  const yOf = useMemo(() => makeYOf(yMin), [yMin]);
 
   const [selectedAge, setSelectedAge] = useState<number>(currentAge);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -136,7 +146,11 @@ export function LifetimeFortuneChart({ saju }: Props) {
   const best = points.reduce((a, b) => (b.score > a.score ? b : a));
   const worst = points.reduce((a, b) => (b.score < a.score ? b : a));
 
-  const yTicks = [0, 50, 100];
+  // Y축 눈금 — yMin 기준 동적 (3~4단계)
+  const yTicks = useMemo(() => {
+    const mid = Math.round((yMin + Y_MAX) / 2);
+    return [yMin, mid, Y_MAX];
+  }, [yMin]);
   const xTicks = [1, 10, 20, 30, 40, 50, 60, 70, 80, 90, 99];
 
   const handlePointer = (clientX: number, target: SVGSVGElement) => {
@@ -474,27 +488,39 @@ export function LifetimeFortuneChart({ saju }: Props) {
         </svg>
       </div>
 
-      {/* 범례 — 가운데 정렬, 각 항목 색상 가독성 ↑ */}
+      {/* 점수 색상 가이드 — 그라데이션이 점수 등급을 나타냄을 명시 */}
       <div
-        className="flex items-center justify-center gap-4 mt-4 flex-wrap"
+        className="flex items-center justify-center gap-2 mt-4 mb-1"
         style={{ fontFamily: 'var(--font-body)', letterSpacing: '0.03em' }}
       >
-        <div className="flex items-center gap-1.5">
-          <svg width="22" height="6">
-            <line
-              x1="0"
-              y1="3"
-              x2="22"
-              y2="3"
-              stroke="url(#lifeLineStroke)"
-              strokeWidth="2.4"
-              strokeLinecap="round"
-            />
-          </svg>
-          <span className="text-[13.5px] font-medium" style={{ color: '#E2E8F0' }}>
-            종합 운세 점수
-          </span>
-        </div>
+        <span className="text-[12.5px] font-semibold" style={{ color: '#F87171' }}>
+          흉
+        </span>
+        <svg width="120" height="10" style={{ display: 'block' }}>
+          <defs>
+            <linearGradient id="legendGrade" x1="0" y1="0" x2="1" y2="0">
+              <stop offset="0%" stopColor="#F87171" />
+              <stop offset="25%" stopColor="#FB923C" />
+              <stop offset="50%" stopColor="#FBBF24" />
+              <stop offset="75%" stopColor="#86EFAC" />
+              <stop offset="100%" stopColor="#34D399" />
+            </linearGradient>
+          </defs>
+          <rect width="120" height="10" rx="3" fill="url(#legendGrade)" />
+        </svg>
+        <span className="text-[12.5px] font-semibold" style={{ color: '#34D399' }}>
+          대길
+        </span>
+        <span className="text-[12px] ml-1" style={{ color: 'rgba(255,255,255,0.55)' }}>
+          ← 점수 등급
+        </span>
+      </div>
+
+      {/* 범례 — 대운 / 현재 */}
+      <div
+        className="flex items-center justify-center gap-4 mt-2 flex-wrap"
+        style={{ fontFamily: 'var(--font-body)', letterSpacing: '0.03em' }}
+      >
         <div className="flex items-center gap-1.5">
           <span
             className="inline-block w-3 h-3 rounded-sm border"

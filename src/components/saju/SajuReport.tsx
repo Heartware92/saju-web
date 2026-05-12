@@ -703,8 +703,17 @@ function PillarsRelationBoard({
   const NODE_AVOID = 32;     // 노드 중심 회피 반경
   const LABEL_MIN_DIST = 18; // 라벨 간 최소 거리 목표
   const VIEW_PAD = 6;        // viewBox 경계 여유
+  // 행 라벨("천간"/"지지") 텍스트 위치 — 인접선 라벨(외향)이 겹치지 않도록 마진을 키우고
+  // 동시에 라벨 후보 평가 시에도 회피되도록 nodePositions 에 포함.
+  const ROW_LABEL_MARGIN = NODE_R + 32;
+  const stemRowLabelY  = Math.min(...octVertices.filter(v => v.row === 'stem').map(v => v.y))   - ROW_LABEL_MARGIN;
+  const branchRowLabelY = Math.max(...octVertices.filter(v => v.row === 'branch').map(v => v.y)) + ROW_LABEL_MARGIN;
 
-  const nodePositions = octVertices.map(v => ({ x: v.x, y: v.y }));
+  const nodePositions = [
+    ...octVertices.map(v => ({ x: v.x, y: v.y })),
+    { x: cx, y: stemRowLabelY },
+    { x: cx, y: branchRowLabelY },
+  ];
   const placedLabels: Array<{ x: number; y: number }> = [];
 
   // 인접선 먼저 배치(고정 바깥 위치 선호) → 비인접선이 그 뒤에 회피
@@ -773,9 +782,9 @@ function PillarsRelationBoard({
     3: getVertex(3, 'stem').x,
   };
 
-  // 천간/지지 행 라벨 Y — 팔각형 바깥
-  const stemTopY = Math.min(...octVertices.filter(v => v.row === 'stem').map(v => v.y));
-  const branchBotY = Math.max(...octVertices.filter(v => v.row === 'branch').map(v => v.y));
+  // 천간/지지 행 라벨 Y — 위에서 계산한 stemRowLabelY / branchRowLabelY 와 동일 값 사용
+  const stemTopY = stemRowLabelY + ROW_LABEL_MARGIN; // 최상단 천간 노드 Y
+  const branchBotY = branchRowLabelY - ROW_LABEL_MARGIN; // 최하단 지지 노드 Y
 
   return (
     <div className={styles.octBoardWrap}>
@@ -909,16 +918,16 @@ function PillarsRelationBoard({
           </span>
         ))}
 
-        {/* 행 라벨 */}
+        {/* 행 라벨 — ROW_LABEL_MARGIN 으로 인접선 라벨과 겹치지 않게 충분히 멀리 배치 */}
         <span
           className={styles.octRowLabel}
-          style={{ top: `${((toExtY(stemTopY) - NODE_R - 18) / EXT_H) * 100}%` }}
+          style={{ top: `${(toExtY(stemRowLabelY) / EXT_H) * 100}%` }}
         >
           천간
         </span>
         <span
           className={styles.octRowLabel}
-          style={{ top: `${((toExtY(branchBotY) + NODE_R + 18) / EXT_H) * 100}%` }}
+          style={{ top: `${(toExtY(branchRowLabelY) / EXT_H) * 100}%` }}
         >
           지지
         </span>
