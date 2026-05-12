@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-// Vercel Serverless — 2-pass 호출(토정비결 등) 시 총 소요 시간 대응
-export const maxDuration = 120;
+// Vercel Fluid Compute — Pro 플랜은 maxDuration 300초까지 무료.
+// 14k 토큰 정통사주 2차(Gemini 180s + OpenAI 80s 폴백) 같은 큰 호출의 폴백 시간 확보.
+export const maxDuration = 300;
 
 interface AIResult {
   content: string;
@@ -50,6 +51,9 @@ async function callGeminiOnce(
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));
       const msg = err?.error?.message ?? '';
+      // 명시적 retryable 분류 (Google/AWS/Stripe 공통 권장):
+      // - 5xx, 429 (rate limit): 재시도 가능
+      // - 400 (bad request, context overflow), 401/403 (auth): 재시도해도 같은 결과 → 즉시 폴백
       const retryable = res.status >= 500 || res.status === 429;
       return { ok: false, status: res.status, msg, retryable };
     }
@@ -79,50 +83,60 @@ async function callGeminiOnce(
 }
 
 /**
- * maxTokens 기반 동적 timeout 전략.
- * Vercel maxDuration(120s) 합산 안에서 Gemini retry + OpenAI 폴백 가능 시간만 배분.
+ * maxTokens 기반 동적 timeout 전략 (Fluid Compute 300s 활용).
+ * 모든 호출에서 Gemini retry + OpenAI 폴백 시간을 확보. xlarge 도 폴백 가능.
  *
- * - small  (< 4000 토큰 ≈ 응답 1.5K자 이하): Gemini 30+25s + OpenAI 30s ≈ 85s
- * - medium (4000~8000 ≈ 응답 3.5K자):      Gemini 50+25s + OpenAI 35s ≈ 110s
- * - large  (8000~12000 ≈ 응답 5K자):       Gemini 80s + OpenAI 35s ≈ 115s
- * - xlarge (12000+ 정통사주 2차 등):        Gemini 110s 단일, OpenAI 폴백 시간 없음
+ * - small  (< 4000 ≈ 응답 1.5K자):    Gemini 40+30s + OpenAI 40s ≈ 110s
+ * - medium (4000~8000 ≈ 3.5K자):     Gemini 70+40s + OpenAI 50s ≈ 160s
+ * - large  (8000~12000 ≈ 5K자):      Gemini 100s + OpenAI 60s ≈ 160s
+ * - xlarge (12000+ 정통사주 2차):     Gemini 180s + OpenAI 80s ≈ 260s (300s 안)
  *
- * 기존(일률 35s/25s)에 큰 호출이 폴백 단계까지 모두 abort 되던 회귀를 차단.
+ * 백오프엔 jitter 적용 (AWS/Google 권장 — thundering herd 방지).
  */
 interface TimeoutStrategy {
   geminiAttempts: Array<{ timeoutMs: number; backoffAfterMs: number }>;
-  /** null = 시간 없음, OpenAI 폴백 시도 안 함 */
+  /** null = 시간 없음, OpenAI 폴백 시도 안 함. Fluid 300s 활용 후 모든 단계에서 폴백 가능. */
   openaiTimeoutMs: number | null;
+}
+/** Backoff 에 ±20% jitter 적용 (thundering herd 방지). */
+function jittered(baseMs: number): number {
+  const jitter = baseMs * 0.4 * (Math.random() - 0.5); // ±20%
+  return Math.max(100, Math.round(baseMs + jitter));
 }
 function deriveTimeoutStrategy(maxTokens: number): TimeoutStrategy {
   if (maxTokens < 4_000) {
     return {
       geminiAttempts: [
-        { timeoutMs: 30_000, backoffAfterMs: 800 },
-        { timeoutMs: 25_000, backoffAfterMs: 0 },
+        { timeoutMs: 40_000, backoffAfterMs: jittered(800) },
+        { timeoutMs: 30_000, backoffAfterMs: 0 },
       ],
-      openaiTimeoutMs: 30_000,
+      openaiTimeoutMs: 40_000,
     };
   }
   if (maxTokens < 8_000) {
     return {
       geminiAttempts: [
-        { timeoutMs: 50_000, backoffAfterMs: 800 },
-        { timeoutMs: 25_000, backoffAfterMs: 0 },
+        { timeoutMs: 70_000, backoffAfterMs: jittered(1_000) },
+        { timeoutMs: 40_000, backoffAfterMs: 0 },
       ],
-      openaiTimeoutMs: 35_000,
+      openaiTimeoutMs: 50_000,
     };
   }
   if (maxTokens < 12_000) {
     return {
-      geminiAttempts: [{ timeoutMs: 80_000, backoffAfterMs: 0 }],
-      openaiTimeoutMs: 35_000,
+      geminiAttempts: [
+        { timeoutMs: 100_000, backoffAfterMs: jittered(1_500) },
+        { timeoutMs: 50_000, backoffAfterMs: 0 },
+      ],
+      openaiTimeoutMs: 60_000,
     };
   }
-  // 정통사주 2차(14k) 같은 xlarge — Gemini 단일 시도, 폴백 시간 없음
+  // 정통사주 2차(14k) 같은 xlarge — Fluid 300s 활용, OpenAI 폴백 확보
   return {
-    geminiAttempts: [{ timeoutMs: 110_000, backoffAfterMs: 0 }],
-    openaiTimeoutMs: null,
+    geminiAttempts: [
+      { timeoutMs: 180_000, backoffAfterMs: 0 },
+    ],
+    openaiTimeoutMs: 80_000,
   };
 }
 
