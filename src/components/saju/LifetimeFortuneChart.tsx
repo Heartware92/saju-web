@@ -27,13 +27,16 @@ interface Props {
   saju: SajuResult;
 }
 
+// Dusk 컨셉 (Peach → Lilac → Cream → Wine) 등급 팔레트.
+// 듀스크 노을 흐름: 대길(크림 골드) → 길(피치) → 중길(다크 피치) → 평(라일락)
+//                  → 중흉(다크 라일락) → 흉(매트 와인 로즈)
 const GRADE_COLOR: Record<LifetimeGrade, string> = {
-  '대길': '#34D399',
-  '길': '#86EFAC',
-  '중길': '#FBBF24',
-  '평': '#CBD5E1',
-  '중흉': '#FB923C',
-  '흉': '#F87171',
+  '대길': '#FCE8B2',  // sun-core 크림
+  '길':   '#F4C2A1',  // sun-flare 살구
+  '중길': '#E8A490',  // cta-primary 피치
+  '평':   '#C9A6FF',  // cta-secondary 라일락
+  '중흉': '#8F7AA8',  // moon-shadow 다크 라일락
+  '흉':   '#9B5B7A',  // 매트 와인 로즈
 };
 
 // ── 차트 차원 ──
@@ -288,16 +291,28 @@ export function LifetimeFortuneChart({ saju }: Props) {
         <button
           type="button"
           onClick={() => scrollToAge(best.age)}
-          className="px-3 py-1.5 rounded-full text-[13px] bg-emerald-500/20 border border-emerald-500/50 text-emerald-300 font-semibold hover:bg-emerald-500/30 transition-all"
-          style={{ fontFamily: 'var(--font-body)', letterSpacing: '0.02em' }}
+          className="px-3 py-1.5 rounded-full text-[13px] font-semibold transition-all"
+          style={{
+            fontFamily: 'var(--font-body)',
+            letterSpacing: '0.02em',
+            background: 'rgba(252,232,178,0.16)',
+            border: '1px solid rgba(252,232,178,0.45)',
+            color: '#FCE8B2',
+          }}
         >
           최고 {best.age}세 ({best.score})
         </button>
         <button
           type="button"
           onClick={() => scrollToAge(worst.age)}
-          className="px-3 py-1.5 rounded-full text-[13px] bg-red-500/20 border border-red-500/50 text-red-300 font-semibold hover:bg-red-500/30 transition-all"
-          style={{ fontFamily: 'var(--font-body)', letterSpacing: '0.02em' }}
+          className="px-3 py-1.5 rounded-full text-[13px] font-semibold transition-all"
+          style={{
+            fontFamily: 'var(--font-body)',
+            letterSpacing: '0.02em',
+            background: 'rgba(155,91,122,0.20)',
+            border: '1px solid rgba(155,91,122,0.55)',
+            color: '#D49EB3',
+          }}
         >
           주의 {worst.age}세 ({worst.score})
         </button>
@@ -327,13 +342,14 @@ export function LifetimeFortuneChart({ saju }: Props) {
               <stop offset="0%" stopColor="#A78BFA" stopOpacity="0.50" />
               <stop offset="100%" stopColor="#A78BFA" stopOpacity="0" />
             </linearGradient>
-            {/* 점수대별 색 그라데이션 — 위는 초록, 중간 노랑, 아래 빨강 */}
+            {/* 점수대별 그라데이션 — Dusk 노을 (위 크림 → 피치 → 라일락 → 다크 와인) */}
             <linearGradient id="lifeLineStroke" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="#34D399" />
-              <stop offset="35%" stopColor="#86EFAC" />
-              <stop offset="55%" stopColor="#FBBF24" />
-              <stop offset="80%" stopColor="#FB923C" />
-              <stop offset="100%" stopColor="#F87171" />
+              <stop offset="0%" stopColor="#FCE8B2" />
+              <stop offset="25%" stopColor="#F4C2A1" />
+              <stop offset="50%" stopColor="#E8A490" />
+              <stop offset="70%" stopColor="#C9A6FF" />
+              <stop offset="88%" stopColor="#8F7AA8" />
+              <stop offset="100%" stopColor="#9B5B7A" />
             </linearGradient>
           </defs>
 
@@ -488,27 +504,28 @@ export function LifetimeFortuneChart({ saju }: Props) {
         </svg>
       </div>
 
-      {/* 점수 색상 가이드 — 그라데이션이 점수 등급을 나타냄을 명시 */}
+      {/* 점수 색상 가이드 — Dusk 노을 그라데이션 */}
       <div
         className="flex items-center justify-center gap-2 mt-4 mb-1"
         style={{ fontFamily: 'var(--font-body)', letterSpacing: '0.03em' }}
       >
-        <span className="text-[12.5px] font-semibold" style={{ color: '#F87171' }}>
+        <span className="text-[12.5px] font-semibold" style={{ color: '#9B5B7A' }}>
           흉
         </span>
         <svg width="120" height="10" style={{ display: 'block' }}>
           <defs>
             <linearGradient id="legendGrade" x1="0" y1="0" x2="1" y2="0">
-              <stop offset="0%" stopColor="#F87171" />
-              <stop offset="25%" stopColor="#FB923C" />
-              <stop offset="50%" stopColor="#FBBF24" />
-              <stop offset="75%" stopColor="#86EFAC" />
-              <stop offset="100%" stopColor="#34D399" />
+              <stop offset="0%" stopColor="#9B5B7A" />
+              <stop offset="20%" stopColor="#8F7AA8" />
+              <stop offset="45%" stopColor="#C9A6FF" />
+              <stop offset="70%" stopColor="#E8A490" />
+              <stop offset="85%" stopColor="#F4C2A1" />
+              <stop offset="100%" stopColor="#FCE8B2" />
             </linearGradient>
           </defs>
           <rect width="120" height="10" rx="3" fill="url(#legendGrade)" />
         </svg>
-        <span className="text-[12.5px] font-semibold" style={{ color: '#34D399' }}>
+        <span className="text-[12.5px] font-semibold" style={{ color: '#FCE8B2' }}>
           대길
         </span>
         <span className="text-[12px] ml-1" style={{ color: 'rgba(255,255,255,0.55)' }}>
