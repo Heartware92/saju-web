@@ -2592,18 +2592,20 @@ export const generateTojeongPrompt = (tj: TojeongResult): string => {
     .map((kw, i) => `  · ${i + 1}월: ${kw}`)
     .join('\n');
 
-  // 세운 오행
+  // 세운 오행 — lunar-javascript 는 한자(丙午) 반환, 매핑 키는 한글(병/오) 이므로 normalize 필수
   const yearGanZhi = tj.yearGanZhi.ganZhi;
   const yearGan = yearGanZhi[0] ?? '';
   const yearZhi = yearGanZhi[1] ?? '';
-  const seunGanElement = GAN_ELEMENT_MAP[yearGan] ?? '목';
-  const seunZhiElement = ZHI_ELEMENT_MAP[yearZhi] ?? '토';
+  const yearGanKor = normalizeGan(yearGan);
+  const yearZhiKor = normalizeZhi(yearZhi);
+  const seunGanElement = GAN_ELEMENT_MAP[yearGanKor] ?? '목';
+  const seunZhiElement = ZHI_ELEMENT_MAP[yearZhiKor] ?? '토';
 
   // 생년 지지 × 세운 지지
   const birthZhi = getBirthZhi(tj.birthSolar.year);
   const birthZhiIdx = ZHI_KO.indexOf(birthZhi);
   const birthAnimal = birthZhiIdx >= 0 ? ZHI_ANIMAL[birthZhiIdx] : '';
-  const zhiRelation = getZhiRelation(birthZhi, yearZhi);
+  const zhiRelation = getZhiRelation(birthZhi, yearZhiKor);
 
   // 원문 한문 괘사
   const hanjaSaBlock = entry.hanjaSa
@@ -2745,13 +2747,16 @@ function buildTojeongBaseBlock(tj: TojeongResult): string {
   const yearGanZhi = tj.yearGanZhi.ganZhi;
   const yearGan = yearGanZhi[0] ?? '';
   const yearZhi = yearGanZhi[1] ?? '';
-  const seunGanElement = GAN_ELEMENT_MAP[yearGan] ?? '목';
-  const seunZhiElement = ZHI_ELEMENT_MAP[yearZhi] ?? '토';
+  // lunar-javascript 는 한자(丙午) 반환, 매핑 키는 한글(병/오) 이므로 normalize 필수
+  const yearGanKor = normalizeGan(yearGan);
+  const yearZhiKor = normalizeZhi(yearZhi);
+  const seunGanElement = GAN_ELEMENT_MAP[yearGanKor] ?? '목';
+  const seunZhiElement = ZHI_ELEMENT_MAP[yearZhiKor] ?? '토';
 
   const birthZhi = getBirthZhi(tj.birthSolar.year);
   const birthZhiIdx = ZHI_KO.indexOf(birthZhi);
   const birthAnimal = birthZhiIdx >= 0 ? ZHI_ANIMAL[birthZhiIdx] : '';
-  const zhiRelation = getZhiRelation(birthZhi, yearZhi);
+  const zhiRelation = getZhiRelation(birthZhi, yearZhiKor);
 
   const hanjaSaBlock = entry.hanjaSa
     ? `▣ 원문 괘사 (卦辭)
