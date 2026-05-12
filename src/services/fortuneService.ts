@@ -725,7 +725,17 @@ export interface JungtongsajuAIResult {
 export const parseJungtongsaju = (raw: string): Partial<Record<JungtongsajuSectionKey, string>> => {
   const out: Partial<Record<JungtongsajuSectionKey, string>> = {};
   const keysPattern = JUNGTONGSAJU_SECTION_KEYS.join('|');
-  const parts = raw.split(new RegExp(`^\\s*\\[(${keysPattern})\\]\\s*$`, 'm'));
+
+  // AI 가 섹션 마커 주변에 markdown bold(**), prefix 기호(▶ ■ # · • -), 잔여 공백을
+  // 끼우는 케이스를 흡수 — 줄 통째가 마커이면 양옆 장식을 깎아 [key] 단독 줄로 정규화.
+  // 이전 split 정규식은 마커가 줄에 단독으로 있을 때만 매칭해 `**[character]**` 같은
+  // 변형에서 빈 객체가 반환되어 rawText fallback 으로 떨어지는 사고가 있었음.
+  const normalized = raw.replace(
+    new RegExp(`^[\\s*#▶■·•\\-]*\\[(${keysPattern})\\][\\s*#]*$`, 'gm'),
+    '[$1]',
+  );
+
+  const parts = normalized.split(new RegExp(`^\\s*\\[(${keysPattern})\\]\\s*$`, 'm'));
   for (let i = 1; i < parts.length; i += 2) {
     const key = parts[i] as JungtongsajuSectionKey;
     const body = (parts[i + 1] || '').trim();
