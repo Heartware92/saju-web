@@ -26,6 +26,7 @@ import { determineGyeokguk } from '../engine/gyeokguk';
 import { stemToHanja, zhiToHanja } from '../lib/character';
 import { AdviceCard } from '../components/saju/AdviceCard';
 import { highlightSajuTerms } from '../utils/highlightSajuTerms';
+import { LifetimeFortuneChart } from '../components/saju/LifetimeFortuneChart';
 import SajuReport from '../components/saju/SajuReport';
 import { AILoadingBar } from '../components/AILoadingBar';
 import { BackButton } from '../components/ui/BackButton';
@@ -492,6 +493,9 @@ export default function SajuResultPage() {
           </p>
         </div>
       )}
+
+      {/* 평생 운세 흐름 그래프 — 1~99세 종합 운세 점수 시각화 */}
+      {result && <LifetimeFortuneChart saju={result} />}
 
       {/* 9섹션 카드 */}
       {report?.sections && (
