@@ -25,8 +25,8 @@ import { SUN_COST_BIG, CHARGE_REASONS } from '../constants/creditCosts';
 import { determineGyeokguk } from '../engine/gyeokguk';
 import { stemToHanja, zhiToHanja } from '../lib/character';
 import { AdviceCard } from '../components/saju/AdviceCard';
-import { highlightSajuTerms } from '../utils/highlightSajuTerms';
 import { extractMetaphor } from '../utils/parseMetaphor';
+import { renderEmphasizedBody } from '../utils/renderEmphasizedBody';
 import { LifetimeFortuneChart } from '../components/saju/LifetimeFortuneChart';
 import SajuReport from '../components/saju/SajuReport';
 import { AILoadingBar } from '../components/AILoadingBar';
@@ -490,7 +490,7 @@ export default function SajuResultPage() {
       {report?.rawText && (
         <div className="rounded-2xl p-4 mb-3 bg-[rgba(20,12,38,0.55)] border border-[var(--border-subtle)]">
           <p className="text-[15px] text-text-secondary leading-relaxed whitespace-pre-line">
-            {highlightSajuTerms(stripAllSectionTags(report.rawText))}
+            {renderEmphasizedBody(stripAllSectionTags(report.rawText))}
           </p>
         </div>
       )}
@@ -547,7 +547,7 @@ export default function SajuResultPage() {
                 ) : (
                   <div className="text-[17px] text-text-secondary leading-[1.85] tracking-[-0.005em] space-y-3">
                     {bodyText.split(/\n\n+/).map((para, pi) => (
-                      <p key={pi} className="whitespace-pre-line">{highlightSajuTerms(para.trim())}</p>
+                      <p key={pi} className="whitespace-pre-line">{renderEmphasizedBody(para.trim())}</p>
                     ))}
                   </div>
                 )}
