@@ -86,6 +86,9 @@ export default function SajuResultPage() {
   }, [profiles, profileId, needsProfileSelect, searchParams]);
 
   const [result, setResult] = useState<SajuResult | null>(null);
+  // 헤더에 표시할 사용자 입력 원본 시간 (HH:MM). result.solarDate 의 시각은 진태양시 보정 후 값이라
+  // 사용자가 입력한 시간과 다르게 보여 혼란을 주므로 별도 state 로 보관.
+  const [displayBirthTime, setDisplayBirthTime] = useState<string | null>(null);
   const [report, setReport] = useState<JungtongsajuAIResult | null>(null);
   const [reportLoading, setReportLoading] = useState(!isArchiveMode && !needsProfileSelect);
 
@@ -125,6 +128,9 @@ export default function SajuResultPage() {
           const minute = record.birth_time ? parseInt(record.birth_time.split(':')[1] || '0', 10) : 0;
           const unknownTime = !record.birth_time;
           setResult(calculateSaju(year, month, day, hour, minute, record.gender, unknownTime));
+          if (!unknownTime && record.birth_time) {
+            setDisplayBirthTime(record.birth_time.slice(0, 5));
+          }
         } catch (e) {
           console.error('[archive replay] saju recalc failed', e);
         }
@@ -183,8 +189,17 @@ export default function SajuResultPage() {
       }
 
       setResult(calculateSaju(finalY, finalM, finalD, finalH, finalMin, gender, unknownTime));
+      if (!unknownTime) {
+        const hhStr = String(hour).padStart(2, '0');
+        const mmStr = String(minute).padStart(2, '0');
+        setDisplayBirthTime(`${hhStr}:${mmStr}`);
+      } else {
+        setDisplayBirthTime(null);
+      }
     } else if (targetProfile) {
       setResult(computeSajuFromProfile(targetProfile));
+      // 프로필 기반 진입 — birth_time 이 있으면 그 값을 그대로 노출
+      setDisplayBirthTime(targetProfile.birth_time ? targetProfile.birth_time.slice(0, 5) : null);
     }
   }, [searchParams, targetProfile]);
 
@@ -388,7 +403,8 @@ export default function SajuResultPage() {
         </div>
       </div>
       <p className="text-sm text-text-tertiary text-center mt-2 mb-4">
-        {targetProfile?.name ? `${targetProfile.name} · ` : ''}{result.solarDate} (양력) | {result.lunarDateSimple} (음력)
+        {/* result.solarDate 는 진태양시 보정 후 시각이라 노출 X. 사용자 입력 원본 시간(displayBirthTime) 사용. */}
+        {targetProfile?.name ? `${targetProfile.name} · ` : ''}{result.solarDate.slice(0, 10)}{displayBirthTime ? ` ${displayBirthTime}` : ''} (양력) | {result.lunarDateSimple} (음력)
       </p>
 
       {/* 시간 미상 배너 */}
