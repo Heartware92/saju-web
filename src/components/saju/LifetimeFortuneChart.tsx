@@ -259,13 +259,13 @@ export function LifetimeFortuneChart({ saju }: Props) {
         </div>
       )}
 
-      {/* 빠른 점프 버튼 */}
-      <div className="flex items-center gap-2 mb-3 flex-wrap">
+      {/* 빠른 점프 버튼 — 가운데 정렬 */}
+      <div className="flex items-center justify-center gap-2 mb-3 flex-wrap">
         {currentPoint && (
           <button
             type="button"
             onClick={() => scrollToAge(currentAge)}
-            className="px-2.5 py-1 rounded-full text-[12.5px] bg-cta/15 border border-cta/40 text-cta hover:bg-cta/25 transition-all"
+            className="px-3 py-1.5 rounded-full text-[13px] bg-cta/20 border border-cta/50 text-cta font-semibold hover:bg-cta/30 transition-all"
             style={{ fontFamily: 'var(--font-body)', letterSpacing: '0.02em' }}
           >
             현재 {currentAge}세
@@ -274,7 +274,7 @@ export function LifetimeFortuneChart({ saju }: Props) {
         <button
           type="button"
           onClick={() => scrollToAge(best.age)}
-          className="px-2.5 py-1 rounded-full text-[12.5px] bg-emerald-500/12 border border-emerald-500/35 text-emerald-300 hover:bg-emerald-500/22 transition-all"
+          className="px-3 py-1.5 rounded-full text-[13px] bg-emerald-500/20 border border-emerald-500/50 text-emerald-300 font-semibold hover:bg-emerald-500/30 transition-all"
           style={{ fontFamily: 'var(--font-body)', letterSpacing: '0.02em' }}
         >
           최고 {best.age}세 ({best.score})
@@ -282,7 +282,7 @@ export function LifetimeFortuneChart({ saju }: Props) {
         <button
           type="button"
           onClick={() => scrollToAge(worst.age)}
-          className="px-2.5 py-1 rounded-full text-[12.5px] bg-red-500/12 border border-red-500/35 text-red-300 hover:bg-red-500/22 transition-all"
+          className="px-3 py-1.5 rounded-full text-[13px] bg-red-500/20 border border-red-500/50 text-red-300 font-semibold hover:bg-red-500/30 transition-all"
           style={{ fontFamily: 'var(--font-body)', letterSpacing: '0.02em' }}
         >
           주의 {worst.age}세 ({worst.score})
@@ -474,46 +474,62 @@ export function LifetimeFortuneChart({ saju }: Props) {
         </svg>
       </div>
 
-      {/* 범례 */}
+      {/* 범례 — 가운데 정렬, 각 항목 색상 가독성 ↑ */}
       <div
-        className="flex items-center justify-center gap-4 mt-3 flex-wrap"
+        className="flex items-center justify-center gap-4 mt-4 flex-wrap"
         style={{ fontFamily: 'var(--font-body)', letterSpacing: '0.03em' }}
       >
         <div className="flex items-center gap-1.5">
-          <svg width="20" height="6">
+          <svg width="22" height="6">
             <line
               x1="0"
               y1="3"
-              x2="20"
+              x2="22"
               y2="3"
               stroke="url(#lifeLineStroke)"
-              strokeWidth="2.2"
+              strokeWidth="2.4"
               strokeLinecap="round"
             />
           </svg>
-          <span className="text-[13px] text-text-tertiary">종합 운세 점수</span>
+          <span className="text-[13.5px] font-medium" style={{ color: '#E2E8F0' }}>
+            종합 운세 점수
+          </span>
         </div>
         <div className="flex items-center gap-1.5">
           <span
-            className="inline-block w-3 h-3 rounded-sm"
-            style={{ background: 'rgba(168,139,250,0.18)' }}
+            className="inline-block w-3 h-3 rounded-sm border"
+            style={{
+              background: 'rgba(168,139,250,0.20)',
+              borderColor: 'rgba(168,139,250,0.55)',
+            }}
           />
-          <span className="text-[13px] text-text-tertiary">대운 (10년 주기)</span>
+          <span className="text-[13.5px] font-medium" style={{ color: '#C4B5FD' }}>
+            대운 (10년 주기)
+          </span>
         </div>
         {currentPoint && (
           <div className="flex items-center gap-1.5">
             <span
-              className="w-2.5 h-2.5 rounded-full"
-              style={{ background: 'rgba(255,255,255,0.55)' }}
+              className="w-3 h-3 rounded-full border"
+              style={{
+                background: '#FFFFFF',
+                borderColor: 'rgba(255,255,255,0.8)',
+              }}
             />
-            <span className="text-[13px] text-text-tertiary">현재 {currentAge}세</span>
+            <span className="text-[13.5px] font-medium text-text-primary">
+              현재 {currentAge}세
+            </span>
           </div>
         )}
       </div>
 
       <p
-        className="text-[13px] text-text-tertiary mt-3 text-center"
-        style={{ fontFamily: 'var(--font-body)', letterSpacing: '0.04em' }}
+        className="text-[13px] mt-3 text-center"
+        style={{
+          fontFamily: 'var(--font-body)',
+          letterSpacing: '0.04em',
+          color: 'rgba(255,255,255,0.65)',
+        }}
       >
         좌우로 밀어보세요 · 원하는 나이를 탭하면 상세 정보가 표시돼요
       </p>
