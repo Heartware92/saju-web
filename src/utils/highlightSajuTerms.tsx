@@ -25,8 +25,8 @@ const SIPSEONG_COLOR = '#A78BFA';
 const SINSAL_COLOR = '#C084FC';
 const YONGSIN_COLOR = '#FBBF24';
 
-/** 한글 조사·공백·구두점·끝 lookahead — 십성 자연 경계 검사 */
-const KO_BOUNDARY = '(?=[은는이가을를의도만와과로으야아여하서]|\\s|$|[.,;:!?)\\]])';
+// 십성 trailing lookahead 제거됨 — "비견운", "비견적", "비견·겁재", "비견(比肩)" 등 자연스러운 후속 형태 모두 강조 대상에 포함하기 위함.
+// 부분 단어 prefix 충돌은 lookbehind `(?<![가-힣])` 가 차단.
 
 type Rule = {
   pattern: RegExp;
@@ -55,12 +55,11 @@ const RULES: Rule[] = [
     pattern: /(?<![가-힣])(?:목|화|토|금|수)(?=\s*(?:기운|기|성분|운|이\s*(?:강|약|많|적|부족|왕|쇠|왕성|왕함)|가\s*(?:강|약|많|적|부족|왕|쇠)|을\s*(?:생|극|돕)|이\s*(?:생|극|돕)))/g,
     color: 'element-from-match',
   },
-  // 5) 십성 — 상관 제외 ("상관없다" 충돌), 조사·공백 lookahead 로만 매칭
+  // 5) 십성 — 상관 제외 ("상관없다" 일반 단어 충돌 매우 흔해서), lookbehind 만 사용
+  //    trailing 제거로 "비견운", "비견적", "비견·겁재", "비견(比肩)" 등 모두 강조 대상.
+  //    "비견할" 같은 일반 비교 표현은 사주 본문에 거의 등장하지 않아 trade-off 수용.
   {
-    pattern: new RegExp(
-      `(?<![가-힣])(?:비견|겁재|식신|편재|정재|편관|정관|편인|정인)${KO_BOUNDARY}`,
-      'g',
-    ),
+    pattern: /(?<![가-힣])(?:비견|겁재|식신|편재|정재|편관|정관|편인|정인)/g,
     color: SIPSEONG_COLOR,
   },
   // 6) 용신류 — 핵심 강조

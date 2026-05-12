@@ -144,9 +144,9 @@ export function AdviceCard({ yongSinElement, meta }: AdviceCardProps) {
         </div>
       </div>
 
-      {/* 본문 */}
+      {/* 본문 — 정통사주 다른 섹션 본문과 동일 스펙(17px / 1.85 / -0.005em) */}
       {meta.body && (
-        <p className="text-[15px] text-text-secondary leading-relaxed whitespace-pre-line">
+        <p className="text-[17px] text-text-secondary leading-[1.85] tracking-[-0.005em] whitespace-pre-line">
           {meta.body}
         </p>
       )}
@@ -155,10 +155,10 @@ export function AdviceCard({ yongSinElement, meta }: AdviceCardProps) {
       {meta.actions.length > 0 && (
         <div className="rounded-xl p-3 bg-white/5 border border-white/10">
           <div className="text-[13px] text-text-tertiary mb-2">평생 실천</div>
-          <ul className="flex flex-col gap-1.5">
+          <ul className="flex flex-col gap-2">
             {meta.actions.map((action, i) => (
-              <li key={i} className="flex items-start gap-2 text-[15px] text-text-secondary">
-                <span className="text-text-tertiary mt-0.5 shrink-0">·</span>
+              <li key={i} className="flex items-start gap-2 text-[17px] text-text-secondary leading-[1.85] tracking-[-0.005em]">
+                <span className="text-text-tertiary shrink-0">·</span>
                 <span>{action}</span>
               </li>
             ))}
