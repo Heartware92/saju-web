@@ -604,7 +604,7 @@ export default function ZamidusuResultPage() {
                 exit={{ opacity: 0, height: 0 }}
                 style={{ overflow: 'hidden' }}
               >
-                <p style={{ fontSize: 15, color: 'var(--text-secondary)', lineHeight: 1.85, letterSpacing: '-0.005em', margin: '14px 0 0' }}>
+                <p style={{ fontSize: 15, color: 'var(--text-secondary)', lineHeight: 1.85, letterSpacing: '-0.005em', margin: '14px 0 0', fontFamily: 'var(--font-body)' }}>
                   자미두수(紫微斗數)는 <b style={{ color: 'var(--text-primary)' }}>북극성</b>과 <b style={{ color: 'var(--text-primary)' }}>북두칠성</b>으로 운명을 읽는 천 년 된 별자리 점성술이에요.
                   태어난 순간 하늘에 나만의 <b style={{ color: 'var(--text-primary)' }}>별자리 지도(명반)</b>가 그려지는데, 이 지도에는 인생의 12개 방이 있어요.
                   각 방에는 다른 주인공 별이 앉아서 — 사랑·재물·건강·명예 — 인생의 각 영역을 이끌어가죠.
@@ -1012,6 +1012,7 @@ export default function ZamidusuResultPage() {
                       lineHeight: 1.85,
                       letterSpacing: '-0.005em',
                       margin: i === 0 ? 0 : '14px 0 0',
+                      fontFamily: 'var(--font-body)',
                     }}
                   >
                     {p}

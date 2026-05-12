@@ -242,7 +242,7 @@ export function TaekilResultBlock({ record }: Props) {
 
                     {adv.summary && (
                       <div style={{ marginBottom: 14 }}>
-                        <p style={{ fontSize: 14, color: 'var(--text-secondary)', lineHeight: 1.85, margin: 0, whiteSpace: 'pre-line' }}>
+                        <p style={{ fontSize: 14, color: 'var(--text-secondary)', lineHeight: 1.85, margin: 0, whiteSpace: 'pre-line', fontFamily: 'var(--font-body)' }}>
                           {adv.summary}
                         </p>
                       </div>
@@ -312,6 +312,7 @@ export function TaekilResultBlock({ record }: Props) {
               padding: 16, background: 'rgba(20,12,38,0.55)', borderRadius: 14,
               border: '1px solid var(--border-subtle)',
               fontSize: 15, color: 'var(--text-secondary)', lineHeight: 1.85, whiteSpace: 'pre-line',
+              fontFamily: 'var(--font-body)',
             }}>
               {content.replace(/^\s*\[(?:top\d|avoid)\].*$/gm, '').trim()}
             </div>

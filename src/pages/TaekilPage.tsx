@@ -1118,7 +1118,7 @@ export default function TaekilPage() {
                                   {/* 종합 분석 */}
                                   {adv.summary && (
                                     <div style={{ marginBottom: 14 }}>
-                                      <p style={{ fontSize: 14, color: 'var(--text-secondary)', lineHeight: 1.85, margin: 0, whiteSpace: 'pre-line' }}>
+                                      <p style={{ fontSize: 14, color: 'var(--text-secondary)', lineHeight: 1.85, margin: 0, whiteSpace: 'pre-line', fontFamily: 'var(--font-body)' }}>
                                         {adv.summary}
                                       </p>
                                     </div>
@@ -1226,6 +1226,7 @@ export default function TaekilPage() {
                             color: 'var(--text-secondary)',
                             lineHeight: 1.85,
                             whiteSpace: 'pre-line',
+                            fontFamily: 'var(--font-body)',
                           }}>
                             {aiAdvice
                               .replace(/^\s*\[(?:top\d|avoid)\].*$/gm, '')
