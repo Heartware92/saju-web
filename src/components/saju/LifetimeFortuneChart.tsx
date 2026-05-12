@@ -15,15 +15,15 @@ import {
   computeLifetimeFortune,
   getCurrentAge,
   type LifetimePoint,
+  type LifetimeGrade,
 } from '@/utils/lifetimeFortune';
 import type { SajuResult } from '@/utils/sajuCalculator';
-import type { FortuneGrade } from '@/engine/periodFortune';
 
 interface Props {
   saju: SajuResult;
 }
 
-const GRADE_COLOR: Record<FortuneGrade, string> = {
+const GRADE_COLOR: Record<LifetimeGrade, string> = {
   '대길': '#34D399',
   '길': '#86EFAC',
   '중길': '#FBBF24',

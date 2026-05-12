@@ -1,18 +1,20 @@
 /**
- * 평생 운세 흐름 (1~99세) — 기존 calculatePeriodFortune 엔진 재사용.
+ * 정통사주 평생 운세 흐름 (1~99세).
  *
- * 매 나이마다 (출생연도 + age) 에 해당하는 세운 + 활성 대운으로 종합 점수를 산출한다.
- * 결과를 라인 차트로 시각화하여 인생 전반의 흐름을 한 눈에 보여준다.
+ * 점수는 lifetimeFortuneScoring.ts 의 전용 함수로 계산 — 다른 카테고리(오늘운세·
+ * 신년운세 등) 의 점수에 영향을 주지 않도록 격리되어 있다.
  */
 
-import { calculatePeriodFortune, type FortuneGrade } from '../engine/periodFortune';
+import { computeLifetimeScore, lifetimeGrade, type LifetimeGrade } from './lifetimeFortuneScoring';
 import type { SajuResult } from './sajuCalculator';
+
+export type { LifetimeGrade };
 
 export interface LifetimePoint {
   age: number;
   year: number;
-  score: number;       // 0~100
-  grade: FortuneGrade;
+  score: number;       // 15~98
+  grade: LifetimeGrade;
   sewoonGanZhi: string;
   daewoonGanZhi: string;
   daewoonGan: string;
@@ -28,24 +30,24 @@ export function computeLifetimeFortune(saju: SajuResult, maxAge: number = 99): L
   const points: LifetimePoint[] = [];
   for (let age = 1; age <= maxAge; age++) {
     const year = birthYear + age;
+    const dw = saju.daeWoon.find((d) => age >= d.startAge && age < d.startAge + 10) ?? null;
+
     let score = 50;
-    let grade: FortuneGrade = '평';
-    let sewoonGanZhi = '';
+    let yearGanZhi = '';
     try {
-      const f = calculatePeriodFortune(saju, { scope: 'year', year });
-      score = f.overallScore;
-      grade = f.overallGrade;
-      sewoonGanZhi = f.targetGanZhi.ganZhi;
+      const r = computeLifetimeScore(saju, year, dw);
+      score = r.score;
+      yearGanZhi = r.yearGanZhi;
     } catch {
-      // 만약 일부 연도 계산 실패 시 기본값으로 처리 — 차트 끊김 방지
+      // 안전망 — 단일 연도 실패 시 차트 끊김 방지
     }
-    const dw = saju.daeWoon.find((d) => age >= d.startAge && age < d.startAge + 10);
+
     points.push({
       age,
       year,
       score,
-      grade,
-      sewoonGanZhi,
+      grade: lifetimeGrade(score),
+      sewoonGanZhi: yearGanZhi,
       daewoonGanZhi: dw ? `${dw.gan}${dw.zhi}` : '',
       daewoonGan: dw?.gan ?? '',
       daewoonZhi: dw?.zhi ?? '',
