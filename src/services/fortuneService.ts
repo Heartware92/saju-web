@@ -155,10 +155,11 @@ export const stripAllSectionTags = (text: string): string =>
  * GPT API 호출 헬퍼 (서버 API Route 경유)
  * - 응답을 sanitize 하여 마크다운·이모지 잔해 제거
  */
-// Vercel Fluid Compute maxDuration=300초와 정합. 클라이언트는 서버보다 짧으면 안 됨:
-// 클라가 먼저 abort 하면 서버는 응답을 끝까지 만들지만 클라가 못 받아 "타임아웃 에러"로 보이는 사고.
-// 호출자가 timeoutMs 를 명시하면 그쪽 우선 (정통사주 2차 등 큰 호출 별도 관리).
-const AI_CLIENT_TIMEOUT_MS = 280_000;
+// Vercel 서버 maxDuration=120초와 맞춤 — 클라이언트는 110초에 abort.
+// 이전 55초였으나 maxDuration 이 60→120 으로 늘어난 뒤 동기화 안 돼 회귀:
+// 정통사주 2차(maxTokens 14k, 보통 50~80초) 가 클라이언트 측 timeout 에 자주
+// 걸리면서 "응답이 너무 오래 걸려요" 안내가 빈번하던 사고의 원인.
+const AI_CLIENT_TIMEOUT_MS = 110_000;
 
 /**
  * truncation 사유 에러 — UI 가 메시지 그대로 노출해 사용자가 재시도하도록 유도.
@@ -826,34 +827,14 @@ export const getJungtongsajuReport = async (
 ): Promise<JungtongsajuAIResult> => {
   try {
     // ── 1차 호출: Core 4섹션 ──
-    // 서버 측 retry(Gemini 2회) + OpenAI 폴백이 이미 보장됨 → 클라 측 retry 중복 제거.
-    // 클라 retry 가 있으면 클라 abort 후 서버가 매번 새 호출을 처리하는 비용·시간 낭비.
-    // 마커 파싱 실패 등 형식 오류만 success:false 반환 (페이지의 r.success 분기에서 차감 차단).
     const corePrompt = generateJungtongsajuCorePrompt(result);
-    const CORE_KEYS: JungtongsajuSectionKey[] = ['general', 'daymaster', 'element', 'interaction'];
-
-    let coreContent = '';
-    let coreSections: Partial<Record<JungtongsajuSectionKey, string>> = {};
-    try {
-      // 명세 ~3,000자 → 한국어 토큰 비율 고려 7,000 (안전 여유 2.3x).
-      // 클라 100s — Gemini 정상 응답(~25-35s)은 충분히 받고, 첫 retry 도착도 70s 안.
-      // 그 이상이면 차감 차단(success:false)하고 사용자가 재시도하도록 빠른 피드백.
-      coreContent = await callGPT(corePrompt, 7000, undefined, { timeoutMs: 100_000 });
-      coreSections = parseJungtongsaju(coreContent);
-      if (Object.keys(coreSections).length === 0) {
-        return { success: false, error: '풀이 형식 오류가 반복돼요. 잠시 후 다시 시도해주세요.' };
-      }
-      // 4섹션 중 3개 이상 누락 = 명백히 손상된 응답 — 차감 차단
-      const missing = CORE_KEYS.filter((k) => !coreSections[k]);
-      if (missing.length >= 3) {
-        return { success: false, error: '풀이 형식 오류가 반복돼요. 잠시 후 다시 시도해주세요.' };
-      }
-    } catch (e: any) {
-      const msg = e?.message || '1차 분석 중 오류가 발생했어요.';
-      console.warn('[jungtongsaju] 1차 호출 실패:', msg);
-      return { success: false, error: msg };
+    // 명세 ~3,000자 → 한국어 토큰 비율 고려 7,000 (안전 여유 2.3x)
+    const coreContent = await callGPT(corePrompt, 7000);
+    const coreSections = parseJungtongsaju(coreContent);
+    if (Object.keys(coreSections).length === 0) {
+      // 마커 파싱 실패 — 1차부터 무너지면 rawText fallback
+      return { success: true, rawText: coreContent };
     }
-
     // 점진 노출 — 페이지가 1차 결과 즉시 렌더하도록 콜백
     onCoreReady?.({ success: true, sections: coreSections });
 
