@@ -520,7 +520,7 @@ export default function SajuResultPage() {
                 {metaphorTitle && (
                   <div
                     className="text-[17px] font-medium leading-snug text-cta/90 mb-4 pl-3"
-                    style={{ fontFamily: 'var(--font-serif)' }}
+                    style={{ fontFamily: 'var(--font-title)' }}
                   >
                     {metaphorTitle}
                   </div>

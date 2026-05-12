@@ -1108,7 +1108,7 @@ export default function PeriodFortunePage({ scope }: { scope: FortuneScope | 'da
                     {/* 은유 제목 — 라벨 아래, 서브 톤 */}
                     <div
                       className="text-[17px] font-medium leading-snug text-cta/90 mb-4 pl-3"
-                      style={{ fontFamily: 'var(--font-serif)' }}
+                      style={{ fontFamily: 'var(--font-title)' }}
                     >
                       {metaphorTitle}
                     </div>
@@ -1208,7 +1208,7 @@ export default function PeriodFortunePage({ scope }: { scope: FortuneScope | 'da
                     </div>
                     <div
                       className="text-[17px] font-medium leading-snug text-cta/90 mb-4 pl-3"
-                      style={{ fontFamily: 'var(--font-serif)' }}
+                      style={{ fontFamily: 'var(--font-title)' }}
                     >
                       {metaphorTitle}
                     </div>

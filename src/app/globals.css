@@ -191,13 +191,19 @@
 
 /* 운세 결과 풀이 본문 paragraph 컨테이너 일괄 — 두 가지 시그니처 매칭
    1) `leading-[1.85]`: 섹션 카드 본문 (최신 결과 / 마커 파싱 성공 경로)
-   2) `whitespace-pre-line` + text-text-secondary: rawText fallback (구버전 보관함) */
+   2) `whitespace-pre-line` + text-text-secondary: rawText fallback (구버전 보관함)
+
+   자간(letter-spacing)도 의도적으로 0.04em 확대 — 사주아이 등 동종 서비스에서
+   본문 호흡감 확보를 위해 사용하는 수준. Tailwind tracking-[-0.005em] 보다
+   더 specific 해야 override 되므로 같은 selector 안에 묶어둠. */
 .leading-\[1\.85\] {
   font-family: var(--font-body);
+  letter-spacing: 0.04em !important;
 }
 .whitespace-pre-line.text-text-secondary,
 p.whitespace-pre-line {
   font-family: var(--font-body);
+  letter-spacing: 0.04em !important;
 }
 
 /* ============================================

@@ -995,7 +995,7 @@ export default function ZamidusuResultPage() {
 
               {/* 은유 제목 부제 */}
               {hasHeadline && (
-                <div style={{ fontSize: 16, fontWeight: 500, color: 'var(--cta-primary)', opacity: 0.9, lineHeight: 1.5, marginBottom: 14, paddingLeft: 12, fontFamily: 'var(--font-serif)' }}>
+                <div style={{ fontSize: 16, fontWeight: 500, color: 'var(--cta-primary)', opacity: 0.9, lineHeight: 1.5, marginBottom: 14, paddingLeft: 12, fontFamily: 'var(--font-title)' }}>
                   {headline}
                 </div>
               )}
