@@ -143,16 +143,20 @@ export default function MoreFortunePage({ category }: Props) {
   const handleUseCached = () => { cacheGate?.restore(); setCacheGate(null); };
   const handleRefetch = () => {
     setCacheGate(null);
-    // ★ 사용자 신고: "새로 풀이받기" 눌러도 이전 풀이 그대로 나옴
-    // 원인: setCacheGate(null) 만 호출하면 메모리 캐시(useReportCacheStore)와 보관함 record 가
-    //   handleRead() 의 캐시 조회 분기 또는 silent restore useEffect 에 의해 다시 복원됨.
-    // 픽스: 캐시 무효화 + 결과 초기화 + fresh URL 라우팅으로 auto-start 트리거.
+    // ★ 사용자 신고:
+    //   1) "새로 풀이받기" 눌러도 이전 풀이 그대로 나옴
+    //   2) 로딩창 없이 소개 페이지로 떨어짐
+    // 원인:
+    //   1) setCacheGate(null) 만 호출하면 메모리 캐시·보관함 record 가 다시 복원됨
+    //   2) manualMode 가 true 상태이면 shouldAutoStart=false → 소개 화면
+    // 픽스: 캐시 무효화 + 결과 초기화 + manualMode 리셋 + fresh URL 라우팅
     if (category) {
       useReportCacheStore.getState().invalidate(`more:${category}` as const);
     }
     setResult(null);
     setError(null);
     setSavedRecordId(null);
+    setManualMode(false); // ★ 핵심: 이전에 "다시 풀이"를 눌렀던 흔적 제거 → auto-start 가능
     autoStartedRef.current = false;
     if (typeof window !== 'undefined') {
       const params = new URLSearchParams(window.location.search);
