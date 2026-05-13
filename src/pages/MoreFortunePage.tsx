@@ -158,54 +158,40 @@ export default function MoreFortunePage({ category }: Props) {
   const [cacheGate, setCacheGate] = useState<{ kind: 'today' | 'jungtong' | 'zamidusu' | 'tojeong' | 'newyear' | 'period_date' | 'period_day' | 'taekil' | 'gunghap' | 'tarot' | `more:${string}`; key: string; restore: () => void } | null>(null);
   const handleUseCached = () => { cacheGate?.restore(); setCacheGate(null); };
   const handleRefetch = () => {
-    // ★★★ SajuResultPage 패턴 그대로 적용:
-    //   다른 페이지(정통사주·신년·자미두수 등) 는 refetchNonce state 를
-    //   useEffect dependency 로 두고, handleRefetch 가 increment 하여
-    //   AI 호출 useEffect 가 자동 재실행되는 구조로 잘 작동 중.
+    // ★★★ 최후 수단: in-page refetch 가 사용자 환경에서 작동 안 하는 사고가
+    //   반복되어, localStorage 정리 + 페이지 강제 새로 로드 (브라우저 캐시
+    //   회피용 timestamp 포함) 로 무조건 새 풀이가 시작되도록 보장.
     //
-    // MoreFortunePage 는 AI 호출이 handleRead 함수 안이라 별도 useEffect 가
-    // 필요 — refetchNonce 변경 시 handleReadRef.current(true) 직접 호출.
-    //
-    // 추가: zustand persist 의 localStorage 비동기 저장 사고 차단을 위해
-    //   localStorage 직접 삭제 (다음 마운트·hydrate 에서 옛 캐시 복원 차단)
-    setCacheGate(null);
+    // 흐름:
+    //   1. zustand store 메모리 캐시 invalidate
+    //   2. localStorage 'report-cache' 에서 'more:${category}::' 접두 키 삭제
+    //   3. URL fresh=1 + _t=timestamp + recordId 제거
+    //   4. window.location.href 로 페이지 강제 새로 로드
     if (category) {
       useReportCacheStore.getState().invalidate(`more:${category}` as const);
-      // localStorage 직접 정리 — persist 비동기 저장 race 차단
-      if (typeof window !== 'undefined') {
-        try {
-          const raw = window.localStorage.getItem('report-cache');
-          if (raw) {
-            const parsed = JSON.parse(raw);
-            if (parsed?.state?.entries) {
-              const prefix = `more:${category}::`;
-              for (const key of Object.keys(parsed.state.entries)) {
-                if (key.startsWith(prefix)) delete parsed.state.entries[key];
-              }
-              window.localStorage.setItem('report-cache', JSON.stringify(parsed));
-            }
-          }
-        } catch { /* ignore — invalidate 만으로 fallback */ }
-      }
     }
-    setResult(null);
-    setResultSections(null);
-    setError(null);
-    setSavedRecordId(null);
-    setManualMode(false);
-    autoStartedRef.current = false;
-    setLoading(true);
-    // recordId 가 URL 에 있다면 보관함 모드 해제용으로만 제거 (in-page refetch, fresh=1 안 씀)
     if (typeof window !== 'undefined') {
+      // localStorage 직접 정리 — persist 비동기 저장 race 차단
+      try {
+        const raw = window.localStorage.getItem('report-cache');
+        if (raw && category) {
+          const parsed = JSON.parse(raw);
+          if (parsed?.state?.entries) {
+            const prefix = `more:${category}::`;
+            for (const key of Object.keys(parsed.state.entries)) {
+              if (key.startsWith(prefix)) delete parsed.state.entries[key];
+            }
+            window.localStorage.setItem('report-cache', JSON.stringify(parsed));
+          }
+        }
+      } catch { /* ignore */ }
+      // 페이지 강제 새로 로드 — fresh=1 + timestamp (브라우저 캐시 회피)
       const params = new URLSearchParams(window.location.search);
-      if (params.has('recordId')) {
-        params.delete('recordId');
-        const rest = params.toString();
-        router.replace(`${window.location.pathname}${rest ? `?${rest}` : ''}`);
-      }
+      params.set('fresh', '1');
+      params.set('_t', String(Date.now()));
+      params.delete('recordId');
+      window.location.href = `${window.location.pathname}?${params.toString()}`;
     }
-    // ★ refetchNonce 증가 → 아래 useEffect 가 handleReadRef.current(true) 호출
-    setRefetchNonce(n => n + 1);
   };
 
   // 보관함 재생 메타 (원본 기록 시각 표시용)
@@ -561,7 +547,7 @@ export default function MoreFortunePage({ category }: Props) {
         cache.setReport(kindKey, cacheKey, resp!.content);
         if (!cache.isCharged(kindKey, cacheKey)) {
           cache.markCharged(kindKey, cacheKey);
-          const consumed = await chargeForContent('moon', MOON_COST_PER_FORTUNE, `더많은운세:${cfg.title}`);
+          const consumed = await chargeForContent('moon', MOON_COST_PER_FORTUNE, `더많은운세:${cfg.title}`, `more:${kindKey}:${cacheKey}`);
           if (!consumed) {
             console.error('크레딧 차감 실패 (응답은 이미 생성됨)');
           }
