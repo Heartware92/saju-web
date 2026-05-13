@@ -664,6 +664,13 @@ export default function MoreFortunePage({ category }: Props) {
               isArchiveMode={isArchiveMode}
               category={category}
               onReset={() => {
+                // ★ 자동 풀이 카테고리 (학업·자녀·성격) 는 사용자 추가 입력이 없으므로
+                //   소개 화면을 거치지 않고 곧장 새 풀이 시작 (handleRefetch 와 동일 동작)
+                //   이름·꿈 카테고리는 입력 필요 → 기존대로 manualMode=true 로 소개 화면 복귀
+                if (category === 'study' || category === 'children' || category === 'personality') {
+                  handleRefetch();
+                  return;
+                }
                 setResult(null);
                 setError(null);
                 setManualMode(true);

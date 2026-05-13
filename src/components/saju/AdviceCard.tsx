@@ -106,6 +106,26 @@ interface AdviceCardProps {
   meta: AdviceMeta;
 }
 
+// 12지지 → 실제 시간 매핑 (사용자가 한자만 보고 시간 모르는 케이스 해결)
+const ZHI_HOUR: Record<string, string> = {
+  '자': '23-01시', '축': '01-03시', '인': '03-05시', '묘': '05-07시',
+  '진': '07-09시', '사': '09-11시', '오': '11-13시', '미': '13-15시',
+  '신': '15-17시', '유': '17-19시', '술': '19-21시', '해': '21-23시',
+};
+// timeSlot 안의 "X시" 또는 "X·Y시" 패턴에 시간 병기 — 이미 "(...시)" 가 있으면 그대로 둠
+function annotateTimeSlot(s: string): string {
+  if (!s) return '—';
+  if (/\d{1,2}/.test(s)) return s; // 이미 숫자 시간 포함
+  return s.replace(/([자축인묘진사오미신유술해])(·([자축인묘진사오미신유술해]))?시/g, (_m, a, _b, c) => {
+    const aHour = ZHI_HOUR[a];
+    if (c) {
+      const cHour = ZHI_HOUR[c];
+      return `${a}시 (${aHour}) · ${c}시 (${cHour})`;
+    }
+    return `${a}시 (${aHour})`;
+  });
+}
+
 export function AdviceCard({ yongSinElement, meta }: AdviceCardProps) {
   // 한자 포함된 경우 매핑
   const elementKey = Object.keys(YONGSIN_MAP).find(k =>
@@ -134,23 +154,23 @@ export function AdviceCard({ yongSinElement, meta }: AdviceCardProps) {
         </div>
       </div>
 
-      {/* 시간대 + 음식 + 행운 숫자 */}
+      {/* 시간대 + 음식 + 행운 숫자 — 좌측 정렬·폰트 통일 (LuckyVisualCard 와 동일 스펙) */}
       <div className="grid grid-cols-3 gap-2">
-        <div className="rounded-xl px-2 py-3 bg-white/5 border border-white/10 flex flex-col items-center justify-center text-center min-h-[78px]">
-          <div className="text-[11px] text-text-tertiary mb-1.5">유리한 시간대</div>
-          <div className="text-[15px] text-text-primary font-semibold leading-snug">
-            {meta.timeSlot || '—'}
+        <div className="rounded-xl px-3 py-3 bg-white/5 border border-white/10 min-h-[78px]">
+          <div className="text-[13px] text-text-tertiary mb-1.5">유리한 시간대</div>
+          <div className="text-[16px] text-text-primary font-semibold leading-snug">
+            {annotateTimeSlot(meta.timeSlot)}
           </div>
         </div>
-        <div className="rounded-xl px-2 py-3 bg-white/5 border border-white/10 flex flex-col items-center justify-center text-center min-h-[78px]">
-          <div className="text-[11px] text-text-tertiary mb-1.5">보강 음식</div>
-          <div className="text-[15px] text-text-primary font-semibold leading-snug">
+        <div className="rounded-xl px-3 py-3 bg-white/5 border border-white/10 min-h-[78px]">
+          <div className="text-[13px] text-text-tertiary mb-1.5">보강 음식</div>
+          <div className="text-[16px] text-text-primary font-semibold leading-snug">
             {meta.foods.length > 0 ? meta.foods.join(', ') : '—'}
           </div>
         </div>
-        <div className="rounded-xl px-2 py-3 bg-white/5 border border-white/10 flex flex-col items-center justify-center text-center min-h-[78px]">
-          <div className="text-[11px] text-text-tertiary mb-1.5">행운 숫자</div>
-          <div className="text-[18px] text-text-primary font-bold leading-snug tracking-wider">
+        <div className="rounded-xl px-3 py-3 bg-white/5 border border-white/10 min-h-[78px]">
+          <div className="text-[13px] text-text-tertiary mb-1.5">행운 숫자</div>
+          <div className="text-[20px] text-text-primary font-bold leading-snug tracking-wider">
             {mapData.numbers[0]} · {mapData.numbers[1]}
           </div>
         </div>
