@@ -432,11 +432,13 @@ export default function MoreFortunePage({ category }: Props) {
   }, [category, saju, koreanName, charMeanings, dreamText, isArchiveMode, freshParam]);
 
   // auto-start: 모달에서 "새로 풀이 받기" 클릭 후 소개 페이지 건너뛰고 바로 풀이
+  // ★ shouldAutoStart 는 freshParam=true 일 때만 true → 무조건 force=true 로 호출.
+  //   fresh=1 진입에서 캐시 hit 가 일어나 옛 결과가 setResult 되던 사고 차단.
   useEffect(() => {
     if (!shouldAutoStart || autoStartedRef.current) return;
     if (!canSubmit || loading || result || error) return;
     autoStartedRef.current = true;
-    handleRead();
+    handleRead(true); // ★ force=true — 캐시 검사 skip + loading 무시
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [shouldAutoStart, canSubmit, loading, result, error]);
 
