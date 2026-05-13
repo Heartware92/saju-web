@@ -541,6 +541,10 @@ export default function PeriodFortunePage({ scope }: { scope: FortuneScope | 'da
         .then(r => {
           if (cancelled) return;
           setNewyearReport(r);
+          // archive 저장이 완료된 경우 ShareBar 즉시 노출
+          if (r.success && r.archivedRecordId) {
+            setSavedRecordId(r.archivedRecordId);
+          }
           const cache = useReportCacheStore.getState();
           if (r.success) {
             cache.setReport('newyear', cacheKey, r);
@@ -581,6 +585,10 @@ export default function PeriodFortunePage({ scope }: { scope: FortuneScope | 'da
         .then(r => {
           if (cancelled) return;
           setPickedDateReport(r);
+          // archive 저장이 완료된 경우 ShareBar 즉시 노출
+          if (r.success && r.archivedRecordId) {
+            setSavedRecordId(r.archivedRecordId);
+          }
           const cache = useReportCacheStore.getState();
           if (r.success) {
             cache.setReport('period_date', cacheKey, r);

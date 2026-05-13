@@ -291,6 +291,10 @@ export default function SajuResultPage() {
         .then(r => {
           if (cancelled) return;
           setReport(r);
+          // archive 저장이 완료된 경우 ShareBar 즉시 노출
+          if (r.success && r.archivedRecordId) {
+            setSavedRecordId(r.archivedRecordId);
+          }
           const cache = useReportCacheStore.getState();
           if (r.success) {
             cache.setReport('jungtong', cacheKey, r);

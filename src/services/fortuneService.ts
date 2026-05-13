@@ -387,6 +387,8 @@ export interface TojeongAIResult {
   /** 도메인별 0~100 점수 (시각화용) */
   domainScores?: { wealth: number; love: number; health: number; career: number };
   error?: string;
+  /** archive 저장 후 record id — ShareBar 표시에 사용 */
+  archivedRecordId?: string;
 }
 
 /** [tojeong_scores] 재물:72 | 애정:65 | 건강:58 | 직장:80 [/tojeong_scores] 파싱
@@ -438,8 +440,8 @@ export const getTojeongReading = async (
   sourceBirth?: { birth_date: string; gender: 'male' | 'female'; calendar_type?: 'solar' | 'lunar' },
   profileId?: string,
 ): Promise<TojeongAIResult> => {
-  const archive = (content: string) => {
-    archiveSaju({ profileId, sourceBirth, category: 'tojeong', engineResult: tj as unknown as Record<string, unknown>, interpretation: content, isDetailed: true });
+  const archive = async (content: string): Promise<string | null> => {
+    return await archiveSaju({ profileId, sourceBirth, category: 'tojeong', engineResult: tj as unknown as Record<string, unknown>, interpretation: content, isDetailed: true }).catch(() => null);
   };
 
   // 전체 150초 제한 — 4단 폴백을 모두 시도할 수 있는 마진.
@@ -458,15 +460,15 @@ export const getTojeongReading = async (
 
 async function tojeongAllAttempts(
   tj: TojeongResult,
-  archive: (content: string) => void,
+  archive: (content: string) => Promise<string | null>,
 ): Promise<TojeongAIResult> {
   // ── 시도 1: 2-pass (풍부한 결과, pass1 35s + pass2 25s) ──
   // pass2 가 실패해도 pass1 결과만으로 반환. pass1 자체가 실패하면 시도 2로.
   try {
     const result = await tojeong2Pass(tj);
     if (result.content) {
-      archive(result.content);
-      return result;
+      const archivedRecordId = await archive(result.content);
+      return { ...result, ...(archivedRecordId ? { archivedRecordId } : {}) };
     }
   } catch (e: any) {
     console.warn('[tojeong] try1 (2-pass) failed:', e.message);
@@ -476,8 +478,8 @@ async function tojeongAllAttempts(
   try {
     const content = await callGPT(generateTojeongPrompt(tj), 4000, undefined, { allowTruncated: true, timeoutMs: 35_000 });
     if (content) {
-      archive(content);
-      return { success: true, content };
+      const archivedRecordId = await archive(content);
+      return { success: true, content, ...(archivedRecordId ? { archivedRecordId } : {}) };
     }
   } catch (e: any) {
     console.warn('[tojeong] try2 (single 4000) failed:', e.message);
@@ -487,8 +489,8 @@ async function tojeongAllAttempts(
   try {
     const content = await callGPT(generateTojeongPrompt(tj), 2400, undefined, { allowTruncated: true, timeoutMs: 25_000 });
     if (content) {
-      archive(content);
-      return { success: true, content };
+      const archivedRecordId = await archive(content);
+      return { success: true, content, ...(archivedRecordId ? { archivedRecordId } : {}) };
     }
   } catch (e: any) {
     console.warn('[tojeong] try3 (compact 2400) failed:', e.message);
@@ -499,8 +501,8 @@ async function tojeongAllAttempts(
   try {
     const content = await callGPT(generateTojeongPrompt(tj), 1500, undefined, { allowTruncated: true, timeoutMs: 20_000 });
     if (content) {
-      archive(content);
-      return { success: true, content };
+      const archivedRecordId = await archive(content);
+      return { success: true, content, ...(archivedRecordId ? { archivedRecordId } : {}) };
     }
   } catch (e: any) {
     console.warn('[tojeong] try4 (minimal 1500) failed:', e.message);
@@ -545,6 +547,8 @@ export interface ZamidusuAIResult {
   /** 섹션별 본문 — key는 ZAMIDUSU_SECTION_KEYS 중 하나 */
   sections?: Partial<Record<ZamidusuSectionKey, string>>;
   error?: string;
+  /** archive 저장 후 record id — ShareBar 표시에 사용 */
+  archivedRecordId?: string;
 }
 
 const ZAMIDUSU_KEYS: ZamidusuSectionKey[] = [
@@ -588,12 +592,12 @@ export const getZamidusuReading = async (
     const sections: Partial<Record<ZamidusuSectionKey, string>> = { ...pass1Sections, ...pass2Sections };
     const content = `${pass1Content}\n\n${pass2Content}`;
 
-    archiveSaju({ profileId, sourceBirth, category: 'zamidusu', engineResult: z as unknown as Record<string, unknown>, interpretation: content, isDetailed: true });
+    const archivedRecordId = await archiveSaju({ profileId, sourceBirth, category: 'zamidusu', engineResult: z as unknown as Record<string, unknown>, interpretation: content, isDetailed: true }).catch(() => null);
 
     if (Object.keys(sections).length === 0) {
-      return { success: true, content, sections: undefined };
+      return { success: true, content, sections: undefined, ...(archivedRecordId ? { archivedRecordId } : {}) };
     }
-    return { success: true, content, sections };
+    return { success: true, content, sections, ...(archivedRecordId ? { archivedRecordId } : {}) };
   } catch (error: any) {
     return { success: false, error: error.message };
   }
@@ -720,6 +724,8 @@ export interface JungtongsajuAIResult {
   /** 2-pass 의 2차가 실패하고 1차 4섹션만 받았을 때 true. 사용자에게 안내 표시. */
   partial?: boolean;
   partialMessage?: string;
+  /** archive 저장 후 record id — ShareBar 표시에 사용 */
+  archivedRecordId?: string;
 }
 
 export const parseJungtongsaju = (raw: string): Partial<Record<JungtongsajuSectionKey, string>> => {
@@ -940,14 +946,15 @@ export const getJungtongsajuReport = async (
     // ★ partial 케이스에서도 appContent raw 가 있으면 archive 에 함께 저장(복원 시 보강 가능)
     const merged: Partial<Record<JungtongsajuSectionKey, string>> = { ...coreSections, ...appSections };
     const fullContent = appContent ? `${coreContent}\n\n${appContent}` : coreContent;
-    archiveSaju({
+    // archive 결과를 await로 받아 ShareBar 즉시 표시 가능하게 함 (fire-and-forget X)
+    const archivedRecordId = await archiveSaju({
       profileId,
       sourceBirth: sourceBirthFromSaju(result),
       category: 'traditional',
       resultData: result as unknown as Record<string, unknown>,
       interpretation: fullContent,
       isDetailed: true,
-    });
+    }).catch(() => null);
 
     const adviceMeta = merged.advice ? parseAdviceMeta(merged.advice) : undefined;
     // 3회 retry 후에도 실패한 경우만 partial — 사용자에게 명확한 안내
@@ -955,6 +962,7 @@ export const getJungtongsajuReport = async (
       success: true,
       sections: merged,
       adviceMeta,
+      ...(archivedRecordId ? { archivedRecordId } : {}),
       ...(appError ? {
         partial: true,
         partialMessage: '핵심 4섹션은 분석 완료. 나머지 8섹션(직업·재물·애정·건강 등)은 3회 재시도 후에도 일시 오류가 지속됐어요. 잠시 후 다시 풀이를 받으면 재차감 없이 8섹션만 다시 시도합니다.',
@@ -1049,6 +1057,8 @@ export interface TodayFortuneV3AIResult {
   todayGz?: TodayGanZhi;
   isoDate?: string;
   userContext?: TodayUserContext;
+  /** archive 저장 후 record id — ShareBar 표시에 사용 */
+  archivedRecordId?: string;
 }
 
 /** [today_scores] 종합:XX 시험:XX 공부:XX 멘탈:XX 대인:XX 이성:XX 금전:XX 운동:XX 회복:XX 횡재:XX
@@ -1165,19 +1175,19 @@ export const getTodayFortuneV3Report = async (
     const flowScores = parseTodayV3FlowScores(content);
     const sections = parseTodayV3Sections(content);
 
-    archiveSaju({
+    const archivedRecordId = await archiveSaju({
       profileId,
       sourceBirth: sourceBirthFromSaju(result),
       category: 'today',
       resultData: result as unknown as Record<string, unknown>,
       engineResult: { todayGz, isoDate: date, userContext: ctx, version: 'v3' } as Record<string, unknown>,
       interpretation: content,
-    });
+    }).catch(() => null);
 
     if (Object.keys(sections).length === 0) {
-      return { success: true, rawText: content, domainScores, flowScores, todayGz, isoDate: date, userContext: ctx };
+      return { success: true, rawText: content, domainScores, flowScores, todayGz, isoDate: date, userContext: ctx, ...(archivedRecordId ? { archivedRecordId } : {}) };
     }
-    return { success: true, sections, domainScores, flowScores, todayGz, isoDate: date, userContext: ctx };
+    return { success: true, sections, domainScores, flowScores, todayGz, isoDate: date, userContext: ctx, ...(archivedRecordId ? { archivedRecordId } : {}) };
   } catch (error: any) {
     return { success: false, error: error.message };
   }
@@ -1189,6 +1199,8 @@ export interface TaekilAdviceResult {
   success: boolean;
   advice?: string;
   error?: string;
+  /** archive 저장 후 record id — ShareBar 표시에 사용 */
+  archivedRecordId?: string;
 }
 
 export const getTaekilAdvice = async (
@@ -1202,8 +1214,8 @@ export const getTaekilAdvice = async (
     // [taekil_advice] 마커 제거하고 본문만 추출
     const match = raw.match(/\[taekil_advice\]\s*([\s\S]+)/);
     const advice = match ? match[1].trim() : raw.trim();
-    archiveSaju({ profileId, sourceBirth: sourceBirthFromSaju(saju), category: 'taekil', resultData: saju as unknown as Record<string, unknown>, engineResult: taekil as unknown as Record<string, unknown>, interpretation: advice });
-    return { success: true, advice };
+    const archivedRecordId = await archiveSaju({ profileId, sourceBirth: sourceBirthFromSaju(saju), category: 'taekil', resultData: saju as unknown as Record<string, unknown>, engineResult: taekil as unknown as Record<string, unknown>, interpretation: advice }).catch(() => null);
+    return { success: true, advice, ...(archivedRecordId ? { archivedRecordId } : {}) };
   } catch (error: any) {
     return { success: false, error: error.message };
   }
@@ -1219,6 +1231,8 @@ export interface NewyearReportAIResult {
   sections?: Partial<Record<NewyearSectionKey, string>>;
   rawText?: string;
   error?: string;
+  /** archive 저장 후 record id — ShareBar 표시에 사용 */
+  archivedRecordId?: string;
 }
 
 export const parseNewyearReport = (raw: string): Partial<Record<NewyearSectionKey, string>> => {
@@ -1278,12 +1292,12 @@ export const getNewyearReport = async (
     const sections: Partial<Record<NewyearSectionKey, string>> = { ...pass1Sections, ...pass2Sections };
     const content = `${pass1Content}\n\n${pass2Content}`;
 
-    archiveSaju({ profileId, sourceBirth: sourceBirthFromSaju(result), category: 'newyear', resultData: result as unknown as Record<string, unknown>, engineResult: { year, seWoon, currentDaeWoon } as unknown as Record<string, unknown>, interpretation: content, isDetailed: true });
+    const archivedRecordId = await archiveSaju({ profileId, sourceBirth: sourceBirthFromSaju(result), category: 'newyear', resultData: result as unknown as Record<string, unknown>, engineResult: { year, seWoon, currentDaeWoon } as unknown as Record<string, unknown>, interpretation: content, isDetailed: true }).catch(() => null);
 
     if (Object.keys(sections).length === 0) {
-      return { success: true, rawText: content };
+      return { success: true, rawText: content, ...(archivedRecordId ? { archivedRecordId } : {}) };
     }
-    return { success: true, sections };
+    return { success: true, sections, ...(archivedRecordId ? { archivedRecordId } : {}) };
   } catch (error: any) {
     return { success: false, error: error.message };
   }
@@ -1313,6 +1327,8 @@ export interface PickedDateReportAIResult {
   flow?: DateFlowScores;
   rawText?: string;
   error?: string;
+  /** archive 저장 후 record id — ShareBar 표시에 사용 */
+  archivedRecordId?: string;
 }
 
 export const parsePickedDateReport = (raw: string): Partial<Record<PickedDateSectionKey, string>> => {
@@ -1353,7 +1369,7 @@ export const getPickedDateReport = async (
     const content = await callGPT(prompt, 7000);
     const sections = parsePickedDateReport(content);
     const flow = parseDateFlowScores(content);
-    archiveSaju({
+    const archivedRecordId = await archiveSaju({
       profileId,
       sourceBirth: sourceBirthFromSaju(result),
       category: 'period',
@@ -1362,11 +1378,11 @@ export const getPickedDateReport = async (
       interpretation: content,
       creditType: 'sun',
       isDetailed: true,
-    });
+    }).catch(() => null);
     if (Object.keys(sections).length === 0) {
-      return { success: true, rawText: content, flow };
+      return { success: true, rawText: content, flow, ...(archivedRecordId ? { archivedRecordId } : {}) };
     }
-    return { success: true, sections, rawText: content, flow };
+    return { success: true, sections, rawText: content, flow, ...(archivedRecordId ? { archivedRecordId } : {}) };
   } catch (error: any) {
     return { success: false, error: error.message };
   }

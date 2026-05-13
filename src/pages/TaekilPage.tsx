@@ -333,6 +333,8 @@ export default function TaekilPage() {
       setAiAdvice(r.advice);
       setParsedAdvice(parseTaekilStructuredAdvice(r.advice));
       setShowResult(true);
+      // archive 저장이 완료된 경우 ShareBar 즉시 노출
+      if (r.archivedRecordId) setSavedRecordId(r.archivedRecordId);
       const cache = useReportCacheStore.getState();
       cache.setReport('taekil', taekilCacheKey, r.advice);
       if (!cache.isCharged('taekil', taekilCacheKey)) {

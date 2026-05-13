@@ -348,6 +348,8 @@ export default function ZamidusuResultPage() {
           clearTimeout(timeoutId);
           setAiResult(r);
           setAiLoading(false);
+          // archive 저장이 완료된 경우 ShareBar 즉시 노출
+          if (r.success && r.archivedRecordId) setSavedRecordId(r.archivedRecordId);
           const cache = useReportCacheStore.getState();
           if (r.success) {
             cache.setReport('zamidusu', cacheKey, r);
@@ -526,6 +528,7 @@ export default function ZamidusuResultPage() {
       .then(r => {
         setAiResult(r);
         setAiLoading(false);
+        if (r.success && r.archivedRecordId) setSavedRecordId(r.archivedRecordId);
       })
       .catch(err => {
         setAiResult({ success: false, error: err?.message || '풀이를 불러오지 못했어요' });

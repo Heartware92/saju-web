@@ -299,6 +299,8 @@ export default function TojeongResultPage() {
           setAiContent(r.content);
           if (r.sections) setAiSections(r.sections);
           if (r.domainScores) setAiDomainScores(r.domainScores);
+          // archive 저장이 완료된 경우 ShareBar 즉시 노출
+          if (r.archivedRecordId) setSavedRecordId(r.archivedRecordId);
           const cache = useReportCacheStore.getState();
           cache.setReport('tojeong', cacheKey, r.content);
           if (!cache.isCharged('tojeong', cacheKey)) {
@@ -406,6 +408,8 @@ export default function TojeongResultPage() {
           setAiContent(r.content);
           if (r.sections) setAiSections(r.sections);
           if (r.domainScores) setAiDomainScores(r.domainScores);
+          // archive 저장이 완료된 경우 ShareBar 즉시 노출
+          if (r.archivedRecordId) setSavedRecordId(r.archivedRecordId);
           const cache = useReportCacheStore.getState();
           cache.setReport('tojeong', cacheKey, r.content);
           if (!cache.isCharged('tojeong', cacheKey)) {
