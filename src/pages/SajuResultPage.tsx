@@ -90,6 +90,8 @@ export default function SajuResultPage() {
   // 헤더에 표시할 사용자 입력 원본 시간 (HH:MM). result.solarDate 의 시각은 진태양시 보정 후 값이라
   // 사용자가 입력한 시간과 다르게 보여 혼란을 주므로 별도 state 로 보관.
   const [displayBirthTime, setDisplayBirthTime] = useState<string | null>(null);
+  // 보관함 모드 — record 에 박힌 풀이 시점 프로필 이름 스냅샷. 헤더 표시에서 대표 프로필 fallback 차단용.
+  const [archiveProfileName, setArchiveProfileName] = useState<string | null>(null);
   const [report, setReport] = useState<JungtongsajuAIResult | null>(null);
   const [reportLoading, setReportLoading] = useState(!isArchiveMode && !needsProfileSelect);
 
@@ -131,6 +133,13 @@ export default function SajuResultPage() {
           setResult(calculateSaju(year, month, day, hour, minute, record.gender, unknownTime));
           if (!unknownTime && record.birth_time) {
             setDisplayBirthTime(record.birth_time.slice(0, 5));
+          }
+          // 보관함 풀이의 프로필명 — record.profile_name 스냅샷 우선, 없으면 profile_id 매칭으로 fallback.
+          if (record.profile_name) {
+            setArchiveProfileName(record.profile_name);
+          } else if (record.profile_id) {
+            const matched = useProfileStore.getState().profiles.find(p => p.id === record.profile_id);
+            if (matched?.name) setArchiveProfileName(matched.name);
           }
         } catch (e) {
           console.error('[archive replay] saju recalc failed', e);
@@ -409,7 +418,12 @@ export default function SajuResultPage() {
       </div>
       <p className="text-sm text-text-tertiary text-center mt-2 mb-4">
         {/* result.solarDate 는 진태양시 보정 후 시각이라 노출 X. 사용자 입력 원본 시간(displayBirthTime) 사용. */}
-        {targetProfile?.name ? `${targetProfile.name} · ` : ''}{result.solarDate.slice(0, 10)}{displayBirthTime ? ` ${displayBirthTime}` : ''} (양력) | {result.lunarDateSimple} (음력)
+        {/* 보관함 모드면 record 의 풀이 시점 프로필명 스냅샷(archiveProfileName) 우선 — 대표 프로필 fallback 차단. */}
+        {(() => {
+          const displayName = isArchiveMode ? archiveProfileName : (targetProfile?.name ?? null);
+          return displayName ? `${displayName} · ` : '';
+        })()}
+        {result.solarDate.slice(0, 10)}{displayBirthTime ? ` ${displayBirthTime}` : ''} (양력) | {result.lunarDateSimple} (음력)
       </p>
 
       {/* 시간 미상 배너 */}
