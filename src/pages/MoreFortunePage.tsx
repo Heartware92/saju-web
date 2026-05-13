@@ -37,6 +37,9 @@ import {
   getPersonalityShort,
   getNameFortune,
   getDreamInterpretation,
+  parseStudySections,
+  parseChildrenSections,
+  parsePersonalitySections,
 } from '../services/fortuneService';
 import { sajuDB } from '../services/supabase';
 import { findRecentArchive, type ArchiveCategory } from '../services/archiveService';
@@ -216,24 +219,15 @@ export default function MoreFortunePage({ category }: Props) {
         // 저장된 interpretation 을 결과로 바로 주입 (AI 호출 없이)
         const content = record.interpretation_detailed ?? record.interpretation_basic ?? '';
         setResult(content);
-        // 학업·자녀·성격이면 섹션 마커 파싱 시도
+        // 학업·자녀·성격이면 섹션 마커 파싱 (정규화 일관성 위해 fortuneService 의 파서 재사용)
         if (record.category === 'study') {
-          const out: Record<string, string> = {};
-          const keysPattern = STUDY_SECTION_KEYS.join('|');
-          const parts = content.split(new RegExp(`^\\s*\\[(${keysPattern})\\]\\s*$`, 'm'));
-          for (let i = 1; i < parts.length; i += 2) out[parts[i]] = (parts[i + 1] || '').trim();
+          const out = parseStudySections(content) as Record<string, string>;
           setResultSections(Object.keys(out).length > 0 ? out : null);
         } else if (record.category === 'children') {
-          const out: Record<string, string> = {};
-          const keysPattern = CHILDREN_SECTION_KEYS.join('|');
-          const parts = content.split(new RegExp(`^\\s*\\[(${keysPattern})\\]\\s*$`, 'm'));
-          for (let i = 1; i < parts.length; i += 2) out[parts[i]] = (parts[i + 1] || '').trim();
+          const out = parseChildrenSections(content) as Record<string, string>;
           setResultSections(Object.keys(out).length > 0 ? out : null);
         } else if (record.category === 'personality') {
-          const out: Record<string, string> = {};
-          const keysPattern = PERSONALITY_SECTION_KEYS.join('|');
-          const parts = content.split(new RegExp(`^\\s*\\[(${keysPattern})\\]\\s*$`, 'm'));
-          for (let i = 1; i < parts.length; i += 2) out[parts[i]] = (parts[i + 1] || '').trim();
+          const out = parsePersonalitySections(content) as Record<string, string>;
           setResultSections(Object.keys(out).length > 0 ? out : null);
         } else {
           setResultSections(null);
@@ -391,14 +385,15 @@ export default function MoreFortunePage({ category }: Props) {
       const cached = useReportCacheStore.getState().getReport<string>(kindKey, cacheKey);
       if (cached?.data) {
         setResult(cached.data);
-        // 캐시 복원 시 학업·자녀·성격이면 섹션 재파싱
-        if (category === 'study' || category === 'children' || category === 'personality') {
-          const keys = category === 'study' ? STUDY_SECTION_KEYS
-            : category === 'children' ? CHILDREN_SECTION_KEYS
-            : PERSONALITY_SECTION_KEYS;
-          const out: Record<string, string> = {};
-          const parts = cached.data.split(new RegExp(`^\\s*\\[(${keys.join('|')})\\]\\s*$`, 'm'));
-          for (let i = 1; i < parts.length; i += 2) out[parts[i]] = (parts[i + 1] || '').trim();
+        // 캐시 복원 시 학업·자녀·성격이면 섹션 재파싱 (정규화 일관성 — fortuneService 파서 재사용)
+        if (category === 'study') {
+          const out = parseStudySections(cached.data) as Record<string, string>;
+          setResultSections(Object.keys(out).length > 0 ? out : null);
+        } else if (category === 'children') {
+          const out = parseChildrenSections(cached.data) as Record<string, string>;
+          setResultSections(Object.keys(out).length > 0 ? out : null);
+        } else if (category === 'personality') {
+          const out = parsePersonalitySections(cached.data) as Record<string, string>;
           setResultSections(Object.keys(out).length > 0 ? out : null);
         } else {
           setResultSections(null);
