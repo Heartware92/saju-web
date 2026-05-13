@@ -460,9 +460,10 @@ export default function TaekilResultPage() {
                         {adv.summary && (
                           <div style={{ marginBottom: 14 }}>
                             <p style={{
-                              fontSize: 14, color: 'var(--text-secondary)',
+                              fontSize: 15, color: 'var(--text-secondary)',
                               lineHeight: 1.85, margin: 0, whiteSpace: 'pre-line',
                               fontFamily: 'var(--font-body)',
+                              letterSpacing: '0.16em',
                             }}>
                               {adv.summary}
                             </p>
@@ -560,8 +561,10 @@ export default function TaekilResultPage() {
                         <span style={{ fontSize: 13, fontWeight: 700, color: '#F87171' }}>피해야 할 날</span>
                       </div>
                       <p style={{
-                        fontSize: 13, color: 'var(--text-secondary)',
-                        lineHeight: 1.7, margin: 0, whiteSpace: 'pre-line',
+                        fontSize: 14, color: 'var(--text-secondary)',
+                        lineHeight: 1.85, margin: 0, whiteSpace: 'pre-line',
+                        fontFamily: 'var(--font-body)',
+                        letterSpacing: '0.16em',
                       }}>
                         {parsedAdvice.avoid}
                       </p>
@@ -579,6 +582,7 @@ export default function TaekilResultPage() {
                   lineHeight: 1.85,
                   whiteSpace: 'pre-line',
                   fontFamily: 'var(--font-body)',
+                  letterSpacing: '0.16em',
                 }}>
                   {extractMetaphor(aiAdvice.replace(/^\s*\[(?:top\d|avoid)\].*$/gm, '')).bodyText}
                 </div>

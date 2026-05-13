@@ -585,12 +585,15 @@ export default function TaekilPage() {
                       const isToday = cell.date === todayIso;
                       const isPicked = pickedDates.includes(cell.date);
                       const isFull = pickedDates.length >= MAX_PICKS && !isPicked;
+                      // 택일 운세는 앞으로 할 일에 좋은 날을 고르는 미래 지향 서비스 — 지난 날짜는 선택 불가.
+                      // 월 단위는 이미 isPast 로 막혀 있는데, 같은 월 안의 과거 일자가 열려 있어 룰 불일치 → 동일 차단.
+                      const isPast = cell.date < todayIso;
                       const dow = new Date(cell.date).getDay();
                       return (
                         <button
                           key={cell.date}
-                          onClick={() => d && togglePick(cell.date)}
-                          disabled={!d || isFull}
+                          onClick={() => d && !isPast && togglePick(cell.date)}
+                          disabled={!d || isFull || isPast}
                           style={{
                             aspectRatio: '1',
                             display: 'flex', flexDirection: 'column',
@@ -602,11 +605,11 @@ export default function TaekilPage() {
                             background: isPicked
                               ? 'rgba(124,92,252,0.22)'
                               : 'var(--space-elevated)',
-                            cursor: (!d || isFull) ? 'default' : 'pointer',
+                            cursor: (!d || isFull || isPast) ? 'not-allowed' : 'pointer',
                             transition: 'all 0.15s',
                             padding: '2px',
                             position: 'relative',
-                            opacity: isFull ? 0.4 : 1,
+                            opacity: isPast ? 0.35 : isFull ? 0.4 : 1,
                           }}
                         >
                           {isPicked && (

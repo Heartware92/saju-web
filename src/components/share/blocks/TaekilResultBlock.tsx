@@ -242,7 +242,7 @@ export function TaekilResultBlock({ record }: Props) {
 
                     {adv.summary && (
                       <div style={{ marginBottom: 14 }}>
-                        <p style={{ fontSize: 14, color: 'var(--text-secondary)', lineHeight: 1.85, margin: 0, whiteSpace: 'pre-line', fontFamily: 'var(--font-body)' }}>
+                        <p style={{ fontSize: 15, color: 'var(--text-secondary)', lineHeight: 1.85, margin: 0, whiteSpace: 'pre-line', fontFamily: 'var(--font-body)', letterSpacing: '0.16em' }}>
                           {adv.summary}
                         </p>
                       </div>
@@ -321,7 +321,7 @@ export function TaekilResultBlock({ record }: Props) {
                     }}>!</span>
                     <span style={{ fontSize: 13, fontWeight: 700, color: '#F87171' }}>피해야 할 날</span>
                   </div>
-                  <p style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.7, margin: 0, whiteSpace: 'pre-line' }}>
+                  <p style={{ fontSize: 14, color: 'var(--text-secondary)', lineHeight: 1.85, margin: 0, whiteSpace: 'pre-line', fontFamily: 'var(--font-body)', letterSpacing: '0.16em' }}>
                     {parsedAdvice.avoid}
                   </p>
                 </div>
@@ -333,6 +333,7 @@ export function TaekilResultBlock({ record }: Props) {
               border: '1px solid var(--border-subtle)',
               fontSize: 15, color: 'var(--text-secondary)', lineHeight: 1.85, whiteSpace: 'pre-line',
               fontFamily: 'var(--font-body)',
+              letterSpacing: '0.16em',
             }}>
               {content.replace(/^\s*\[(?:top\d|avoid)\].*$/gm, '').trim()}
             </div>
