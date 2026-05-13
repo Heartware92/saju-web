@@ -181,6 +181,16 @@ function InputForm({
   const [hobbyCustomOpen, setHobbyCustomOpen] = useState(false);
   const [jobCustomOpen, setJobCustomOpen] = useState(false);
   const [loveCustomOpen, setLoveCustomOpen] = useState(false);
+
+  // Progressive disclosure — 각 섹션 완료 시 다음 섹션 노출
+  const hobbyDone = hobbies.length > 0 || customHobby.trim().length > 0;
+  // job/love 는 칩 선택 OR "직접 입력" 칩 ON + 텍스트 입력 시 done
+  const jobDone =
+    jobState !== null ||
+    (jobCustomOpen && customJobState.trim().length > 0);
+  const loveDone =
+    loveState !== null ||
+    (loveCustomOpen && customLoveState.trim().length > 0);
   const [jobState, setJobState] = useState<TodayJobState | null>(null);
   const [customJobState, setCustomJobState] = useState('');
   const [loveState, setLoveState] = useState<TodayLoveState | null>(null);
@@ -288,8 +298,13 @@ function InputForm({
         )}
       </div>
 
-      {/* 2. 직업 상태 */}
-      <div className="rounded-2xl p-5 bg-[rgba(20,12,38,0.55)] border border-[var(--border-subtle)]">
+      {/* 2. 직업 상태 — 1단계 완료 시 등장 */}
+      {hobbyDone && (
+      <motion.div
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4, ease: 'easeOut' }}
+        className="rounded-2xl p-5 bg-[rgba(20,12,38,0.55)] border border-[var(--border-subtle)]">
         <div className="flex items-center gap-2 mb-3">
           <span className="inline-block w-1 h-5 rounded-full bg-cta" />
           <h3 className="text-[16px] font-bold text-text-primary" style={{ fontFamily: 'var(--font-serif)' }}>
@@ -302,7 +317,7 @@ function InputForm({
             return (
               <button
                 key={s}
-                onClick={() => { setJobState(s); setJobCustomOpen(false); }}
+                onClick={() => { setJobState(on ? null : s); setJobCustomOpen(false); }}
                 className="px-3.5 py-2 rounded-full text-[13px] font-medium"
                 style={{
                   border: on ? '1.5px solid var(--cta-primary)' : '1px solid rgba(255,255,255,0.18)',
@@ -336,10 +351,16 @@ function InputForm({
             className="mt-3 w-full px-3 py-2.5 rounded-lg bg-[rgba(255,255,255,0.04)] border border-[rgba(255,255,255,0.12)] text-[14px] text-text-primary placeholder-text-tertiary"
           />
         )}
-      </div>
+      </motion.div>
+      )}
 
-      {/* 3. 연애 상태 */}
-      <div className="rounded-2xl p-5 bg-[rgba(20,12,38,0.55)] border border-[var(--border-subtle)]">
+      {/* 3. 연애 상태 — 2단계 완료 시 등장 */}
+      {hobbyDone && jobDone && (
+      <motion.div
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4, ease: 'easeOut' }}
+        className="rounded-2xl p-5 bg-[rgba(20,12,38,0.55)] border border-[var(--border-subtle)]">
         <div className="flex items-center gap-2 mb-3">
           <span className="inline-block w-1 h-5 rounded-full bg-cta" />
           <h3 className="text-[16px] font-bold text-text-primary" style={{ fontFamily: 'var(--font-serif)' }}>
@@ -352,7 +373,7 @@ function InputForm({
             return (
               <button
                 key={s}
-                onClick={() => { setLoveState(s); setLoveCustomOpen(false); }}
+                onClick={() => { setLoveState(on ? null : s); setLoveCustomOpen(false); }}
                 className="px-3.5 py-2 rounded-full text-[13px] font-medium"
                 style={{
                   border: on ? '1.5px solid var(--cta-primary)' : '1px solid rgba(255,255,255,0.18)',
@@ -386,10 +407,16 @@ function InputForm({
             className="mt-3 w-full px-3 py-2.5 rounded-lg bg-[rgba(255,255,255,0.04)] border border-[rgba(255,255,255,0.12)] text-[14px] text-text-primary placeholder-text-tertiary"
           />
         )}
-      </div>
+      </motion.div>
+      )}
 
-      {/* 4. 시간대별 질문 2개 */}
-      <div className="rounded-2xl p-5 bg-[rgba(20,12,38,0.55)] border border-[var(--border-subtle)]">
+      {/* 4. 지금 상태 — 3단계 완료 시 등장 */}
+      {hobbyDone && jobDone && loveDone && (
+      <motion.div
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4, ease: 'easeOut' }}
+        className="rounded-2xl p-5 bg-[rgba(20,12,38,0.55)] border border-[var(--border-subtle)]">
         <div className="flex items-center gap-2 mb-3">
           <span className="inline-block w-1 h-5 rounded-full bg-cta" />
           <h3 className="text-[16px] font-bold text-text-primary" style={{ fontFamily: 'var(--font-serif)' }}>
@@ -449,7 +476,8 @@ function InputForm({
             </div>
           ))}
         </div>
-      </div>
+      </motion.div>
+      )}
 
       <button
         onClick={submit}
