@@ -3,31 +3,37 @@
 import { motion } from 'framer-motion';
 import type { AdviceMeta } from '../../services/fortuneService';
 
-// 용신 오행 → 색상·방향 결정론적 매핑
+// 용신 오행 → 색상·방향·행운 숫자 결정론적 매핑
 const YONGSIN_MAP: Record<string, {
   colors: { name: string; css: string }[];
   direction: string;
   directionDeg: number; // 나침반: 북=0, 동=90, 남=180, 서=270, 중앙=-1
+  numbers: [number, number]; // 행운 숫자 2개 (표준 명리 매핑)
 }> = {
   목: {
     colors: [{ name: '초록', css: '#22c55e' }, { name: '연두', css: '#84cc16' }],
     direction: '동', directionDeg: 90,
+    numbers: [3, 8],
   },
   화: {
     colors: [{ name: '빨강', css: '#ef4444' }, { name: '주황', css: '#f97316' }],
     direction: '남', directionDeg: 180,
+    numbers: [2, 7],
   },
   토: {
     colors: [{ name: '노랑', css: '#eab308' }, { name: '황토', css: '#b45309' }],
     direction: '중앙', directionDeg: -1,
+    numbers: [5, 10],
   },
   금: {
     colors: [{ name: '흰색', css: '#e2e8f0' }, { name: '은색', css: '#94a3b8' }],
     direction: '서', directionDeg: 270,
+    numbers: [4, 9],
   },
   수: {
     colors: [{ name: '검정', css: '#1e293b' }, { name: '남색', css: '#1e3a8a' }],
     direction: '북', directionDeg: 0,
+    numbers: [1, 6],
   },
 };
 
@@ -128,18 +134,24 @@ export function AdviceCard({ yongSinElement, meta }: AdviceCardProps) {
         </div>
       </div>
 
-      {/* 시간대 + 음식 */}
-      <div className="grid grid-cols-2 gap-2">
+      {/* 시간대 + 음식 + 행운 숫자 */}
+      <div className="grid grid-cols-3 gap-2">
         <div className="rounded-xl p-3 bg-white/5 border border-white/10">
           <div className="text-[12px] text-text-tertiary mb-1">유리한 시간대</div>
-          <div className="text-[15px] text-text-primary font-medium">
+          <div className="text-[14px] text-text-primary font-medium leading-tight">
             {meta.timeSlot || '—'}
           </div>
         </div>
         <div className="rounded-xl p-3 bg-white/5 border border-white/10">
           <div className="text-[12px] text-text-tertiary mb-1">보강 음식</div>
-          <div className="text-[15px] text-text-primary font-medium">
+          <div className="text-[14px] text-text-primary font-medium leading-tight">
             {meta.foods.length > 0 ? meta.foods.join(', ') : '—'}
+          </div>
+        </div>
+        <div className="rounded-xl p-3 bg-white/5 border border-white/10">
+          <div className="text-[12px] text-text-tertiary mb-1">행운 숫자</div>
+          <div className="text-[14px] text-text-primary font-medium leading-tight">
+            {mapData.numbers[0]} · {mapData.numbers[1]}
           </div>
         </div>
       </div>
