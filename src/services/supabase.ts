@@ -199,11 +199,26 @@ export const creditDB = {
       p_idempotency_key: idempotencyKey ?? null,
     });
     if (error) {
-      console.error('[consumeCredit] RPC failed', error);
+      console.error('[consumeCredit] RPC error:', {
+        message: error.message,
+        code: error.code,
+        details: error.details,
+        hint: error.hint,
+        idempotencyKey,
+        reason,
+      });
       return false;
     }
-    // 'ok' / 'duplicate' 모두 사용자 입장에선 성공 (duplicate = 이미 차감됨)
-    return data === 'ok' || data === 'duplicate';
+    console.log('[consumeCredit] RPC ok:', { data, idempotencyKey, reason });
+    // 'ok' / 'duplicate' 모두 사용자 입장에선 성공
+    // 'insufficient' / 'no_user' / 'invalid_type' / 'invalid_amount' 는 실패
+    if (data === 'ok') return true;
+    if (data === 'duplicate') {
+      console.warn('[consumeCredit] duplicate — 이미 차감됨');
+      return true;
+    }
+    console.error('[consumeCredit] RPC returned non-ok:', data);
+    return false;
   },
 
   /**
@@ -226,9 +241,15 @@ export const creditDB = {
       p_idempotency_key: idempotencyKey ?? null,
     });
     if (error) {
-      console.error('[refundCredit] RPC failed', error);
+      console.error('[refundCredit] RPC error:', {
+        message: error.message,
+        code: error.code,
+        details: error.details,
+        hint: error.hint,
+      });
       return false;
     }
+    console.log('[refundCredit] RPC ok:', { data });
     return data === 'ok' || data === 'duplicate';
   },
 
