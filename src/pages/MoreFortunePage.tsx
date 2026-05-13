@@ -1163,9 +1163,43 @@ function MoreFortuneSectionedCard({
               enterDelay={idx * 0.05}
             >
               <div className="text-[17px] text-text-secondary leading-[1.85] tracking-[-0.005em] space-y-3">
-                {bodyText.split(/\n\n+/).map((para, pi) => (
-                  <p key={pi} className="whitespace-pre-line">{para.trim()}</p>
-                ))}
+                {(() => {
+                  // 단락 분리 + 단락 안에서 "- " "· " 같은 불릿 라인은 별도 리스트로 렌더
+                  const paras = bodyText.split(/\n\n+/).map(p => p.trim()).filter(Boolean);
+                  return paras.map((para, pi) => {
+                    const lines = para.split('\n');
+                    const items: { type: 'text' | 'bullet'; content: string }[] = [];
+                    for (const line of lines) {
+                      const t = line.trim();
+                      if (!t) continue;
+                      const m = t.match(/^[-·•∙]\s*(.+)$/);
+                      if (m) {
+                        items.push({ type: 'bullet', content: m[1].trim() });
+                      } else {
+                        // 이전 항목이 text 면 같은 텍스트 블록으로 합침
+                        if (items.length > 0 && items[items.length - 1].type === 'text') {
+                          items[items.length - 1].content += ' ' + t;
+                        } else {
+                          items.push({ type: 'text', content: t });
+                        }
+                      }
+                    }
+                    return (
+                      <div key={pi} className="space-y-2.5">
+                        {items.map((it, ii) =>
+                          it.type === 'bullet' ? (
+                            <div key={ii} className="flex items-start gap-2 pl-1">
+                              <span className="text-text-tertiary shrink-0 mt-[6px] leading-none">·</span>
+                              <span className="flex-1">{it.content}</span>
+                            </div>
+                          ) : (
+                            <p key={ii} className="whitespace-pre-line">{it.content}</p>
+                          )
+                        )}
+                      </div>
+                    );
+                  });
+                })()}
               </div>
             </SectionCollapsible>
           );
