@@ -177,6 +177,10 @@ function InputForm({
 }) {
   const [hobbies, setHobbies] = useState<TodayHobby[]>([]);
   const [customHobby, setCustomHobby] = useState('');
+  // "직접 입력" 칩 토글 — 클릭 시 input 노출 (취미·직업·연애 통일 UX)
+  const [hobbyCustomOpen, setHobbyCustomOpen] = useState(false);
+  const [jobCustomOpen, setJobCustomOpen] = useState(false);
+  const [loveCustomOpen, setLoveCustomOpen] = useState(false);
   const [jobState, setJobState] = useState<TodayJobState | null>(null);
   const [customJobState, setCustomJobState] = useState('');
   const [loveState, setLoveState] = useState<TodayLoveState | null>(null);
@@ -207,9 +211,9 @@ function InputForm({
     onSubmit({
       hobbies,
       customHobby: customHobby.trim() || undefined,
-      // 칩 미선택 + 직접 입력만 한 경우 '기타' / '공개 안 함' 으로 fallback.
+      // 칩 미선택 + 직접 입력만 한 경우 chip 기본값으로 fallback.
       // 프롬프트 헤더·인용은 customJobState/customLoveState 가 있으면 그 값을 우선 사용.
-      jobState: jobState ?? '기타',
+      jobState: jobState ?? '직장인',
       customJobState: customJobState.trim() || undefined,
       loveState: loveState ?? '공개 안 함',
       customLoveState: customLoveState.trim() || undefined,
@@ -233,7 +237,7 @@ function InputForm({
         </p>
       </div>
 
-      {/* 1. 취미·관심사 */}
+      {/* 1. 취미·관심사 — "직접 입력" 칩 클릭 시에만 input 노출 (시간대 질문 패턴과 통일) */}
       <div className="rounded-2xl p-5 bg-[rgba(20,12,38,0.55)] border border-[var(--border-subtle)]">
         <div className="flex items-center gap-2 mb-3">
           <span className="inline-block w-1 h-5 rounded-full bg-cta" />
@@ -260,14 +264,28 @@ function InputForm({
               </button>
             );
           })}
+          <button
+            onClick={() => setHobbyCustomOpen((o) => !o)}
+            className="px-3.5 py-2 rounded-full text-[13px] font-medium"
+            style={{
+              border: hobbyCustomOpen ? '1.5px solid var(--cta-primary)' : '1px solid rgba(255,255,255,0.18)',
+              background: hobbyCustomOpen ? 'rgba(139,92,246,0.20)' : 'rgba(255,255,255,0.04)',
+              color: hobbyCustomOpen ? '#E9D5FF' : 'var(--text-tertiary)',
+            }}
+          >
+            직접 입력
+          </button>
         </div>
-        <input
-          type="text"
-          value={customHobby}
-          onChange={(e) => setCustomHobby(e.target.value.slice(0, 30))}
-          placeholder="그 외 직접 입력 (선택)"
-          className="w-full px-3 py-2.5 rounded-lg bg-[rgba(255,255,255,0.04)] border border-[rgba(255,255,255,0.12)] text-[14px] text-text-primary placeholder-text-tertiary"
-        />
+        {hobbyCustomOpen && (
+          <input
+            type="text"
+            value={customHobby}
+            onChange={(e) => setCustomHobby(e.target.value.slice(0, 10))}
+            maxLength={10}
+            placeholder="10자 이내로 적어주세요"
+            className="w-full px-3 py-2.5 rounded-lg bg-[rgba(255,255,255,0.04)] border border-[rgba(255,255,255,0.12)] text-[14px] text-text-primary placeholder-text-tertiary"
+          />
+        )}
       </div>
 
       {/* 2. 직업 상태 */}
@@ -284,7 +302,7 @@ function InputForm({
             return (
               <button
                 key={s}
-                onClick={() => setJobState(s)}
+                onClick={() => { setJobState(s); setJobCustomOpen(false); }}
                 className="px-3.5 py-2 rounded-full text-[13px] font-medium"
                 style={{
                   border: on ? '1.5px solid var(--cta-primary)' : '1px solid rgba(255,255,255,0.18)',
@@ -296,14 +314,28 @@ function InputForm({
               </button>
             );
           })}
+          <button
+            onClick={() => { setJobCustomOpen((o) => !o); if (!jobCustomOpen) setJobState(null); }}
+            className="px-3.5 py-2 rounded-full text-[13px] font-medium"
+            style={{
+              border: jobCustomOpen ? '1.5px solid var(--cta-primary)' : '1px solid rgba(255,255,255,0.18)',
+              background: jobCustomOpen ? 'rgba(139,92,246,0.20)' : 'rgba(255,255,255,0.04)',
+              color: jobCustomOpen ? '#E9D5FF' : 'var(--text-tertiary)',
+            }}
+          >
+            직접 입력
+          </button>
         </div>
-        <input
-          type="text"
-          value={customJobState}
-          onChange={(e) => setCustomJobState(e.target.value.slice(0, 30))}
-          placeholder="그 외 직접 입력 (선택)"
-          className="mt-3 w-full px-3 py-2.5 rounded-lg bg-[rgba(255,255,255,0.04)] border border-[rgba(255,255,255,0.12)] text-[14px] text-text-primary placeholder-text-tertiary"
-        />
+        {jobCustomOpen && (
+          <input
+            type="text"
+            value={customJobState}
+            onChange={(e) => setCustomJobState(e.target.value.slice(0, 10))}
+            maxLength={10}
+            placeholder="10자 이내로 적어주세요"
+            className="mt-3 w-full px-3 py-2.5 rounded-lg bg-[rgba(255,255,255,0.04)] border border-[rgba(255,255,255,0.12)] text-[14px] text-text-primary placeholder-text-tertiary"
+          />
+        )}
       </div>
 
       {/* 3. 연애 상태 */}
@@ -320,7 +352,7 @@ function InputForm({
             return (
               <button
                 key={s}
-                onClick={() => setLoveState(s)}
+                onClick={() => { setLoveState(s); setLoveCustomOpen(false); }}
                 className="px-3.5 py-2 rounded-full text-[13px] font-medium"
                 style={{
                   border: on ? '1.5px solid var(--cta-primary)' : '1px solid rgba(255,255,255,0.18)',
@@ -332,14 +364,28 @@ function InputForm({
               </button>
             );
           })}
+          <button
+            onClick={() => { setLoveCustomOpen((o) => !o); if (!loveCustomOpen) setLoveState(null); }}
+            className="px-3.5 py-2 rounded-full text-[13px] font-medium"
+            style={{
+              border: loveCustomOpen ? '1.5px solid var(--cta-primary)' : '1px solid rgba(255,255,255,0.18)',
+              background: loveCustomOpen ? 'rgba(139,92,246,0.20)' : 'rgba(255,255,255,0.04)',
+              color: loveCustomOpen ? '#E9D5FF' : 'var(--text-tertiary)',
+            }}
+          >
+            직접 입력
+          </button>
         </div>
-        <input
-          type="text"
-          value={customLoveState}
-          onChange={(e) => setCustomLoveState(e.target.value.slice(0, 30))}
-          placeholder="그 외 직접 입력 (선택)"
-          className="mt-3 w-full px-3 py-2.5 rounded-lg bg-[rgba(255,255,255,0.04)] border border-[rgba(255,255,255,0.12)] text-[14px] text-text-primary placeholder-text-tertiary"
-        />
+        {loveCustomOpen && (
+          <input
+            type="text"
+            value={customLoveState}
+            onChange={(e) => setCustomLoveState(e.target.value.slice(0, 10))}
+            maxLength={10}
+            placeholder="10자 이내로 적어주세요"
+            className="mt-3 w-full px-3 py-2.5 rounded-lg bg-[rgba(255,255,255,0.04)] border border-[rgba(255,255,255,0.12)] text-[14px] text-text-primary placeholder-text-tertiary"
+          />
+        )}
       </div>
 
       {/* 4. 시간대별 질문 2개 */}
@@ -394,8 +440,9 @@ function InputForm({
                 <input
                   type="text"
                   value={custom}
-                  onChange={(e) => setCustom(e.target.value.slice(0, 100))}
-                  placeholder="짧게 적어주세요"
+                  onChange={(e) => setCustom(e.target.value.slice(0, 10))}
+                  maxLength={10}
+                  placeholder="10자 이내로 적어주세요"
                   className="mt-2 w-full px-3 py-2.5 rounded-lg bg-[rgba(255,255,255,0.04)] border border-[rgba(255,255,255,0.12)] text-[14px] text-text-primary placeholder-text-tertiary"
                 />
               )}
