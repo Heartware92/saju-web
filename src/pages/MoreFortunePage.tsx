@@ -141,7 +141,27 @@ export default function MoreFortunePage({ category }: Props) {
 
   const [cacheGate, setCacheGate] = useState<{ kind: 'today' | 'jungtong' | 'zamidusu' | 'tojeong' | 'newyear' | 'period_date' | 'period_day' | 'taekil' | 'gunghap' | 'tarot' | `more:${string}`; key: string; restore: () => void } | null>(null);
   const handleUseCached = () => { cacheGate?.restore(); setCacheGate(null); };
-  const handleRefetch = () => { setCacheGate(null); };
+  const handleRefetch = () => {
+    setCacheGate(null);
+    // ★ 사용자 신고: "새로 풀이받기" 눌러도 이전 풀이 그대로 나옴
+    // 원인: setCacheGate(null) 만 호출하면 메모리 캐시(useReportCacheStore)와 보관함 record 가
+    //   handleRead() 의 캐시 조회 분기 또는 silent restore useEffect 에 의해 다시 복원됨.
+    // 픽스: 캐시 무효화 + 결과 초기화 + fresh URL 라우팅으로 auto-start 트리거.
+    if (category) {
+      useReportCacheStore.getState().invalidate(`more:${category}` as const);
+    }
+    setResult(null);
+    setError(null);
+    setSavedRecordId(null);
+    autoStartedRef.current = false;
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      params.set('fresh', '1');
+      // recordId 가 있다면 새 풀이로 진입하므로 제거
+      params.delete('recordId');
+      router.replace(`${window.location.pathname}?${params.toString()}`);
+    }
+  };
 
   // 보관함 재생 메타 (원본 기록 시각 표시용)
   const [archivedAt, setArchivedAt] = useState<string | null>(null);
