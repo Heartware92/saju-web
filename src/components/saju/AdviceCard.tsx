@@ -136,21 +136,21 @@ export function AdviceCard({ yongSinElement, meta }: AdviceCardProps) {
 
       {/* 시간대 + 음식 + 행운 숫자 */}
       <div className="grid grid-cols-3 gap-2">
-        <div className="rounded-xl p-3 bg-white/5 border border-white/10">
-          <div className="text-[12px] text-text-tertiary mb-1">유리한 시간대</div>
-          <div className="text-[14px] text-text-primary font-medium leading-tight">
+        <div className="rounded-xl px-2 py-3 bg-white/5 border border-white/10 flex flex-col items-center justify-center text-center min-h-[78px]">
+          <div className="text-[11px] text-text-tertiary mb-1.5">유리한 시간대</div>
+          <div className="text-[15px] text-text-primary font-semibold leading-snug">
             {meta.timeSlot || '—'}
           </div>
         </div>
-        <div className="rounded-xl p-3 bg-white/5 border border-white/10">
-          <div className="text-[12px] text-text-tertiary mb-1">보강 음식</div>
-          <div className="text-[14px] text-text-primary font-medium leading-tight">
+        <div className="rounded-xl px-2 py-3 bg-white/5 border border-white/10 flex flex-col items-center justify-center text-center min-h-[78px]">
+          <div className="text-[11px] text-text-tertiary mb-1.5">보강 음식</div>
+          <div className="text-[15px] text-text-primary font-semibold leading-snug">
             {meta.foods.length > 0 ? meta.foods.join(', ') : '—'}
           </div>
         </div>
-        <div className="rounded-xl p-3 bg-white/5 border border-white/10">
-          <div className="text-[12px] text-text-tertiary mb-1">행운 숫자</div>
-          <div className="text-[14px] text-text-primary font-medium leading-tight">
+        <div className="rounded-xl px-2 py-3 bg-white/5 border border-white/10 flex flex-col items-center justify-center text-center min-h-[78px]">
+          <div className="text-[11px] text-text-tertiary mb-1.5">행운 숫자</div>
+          <div className="text-[18px] text-text-primary font-bold leading-snug tracking-wider">
             {mapData.numbers[0]} · {mapData.numbers[1]}
           </div>
         </div>
