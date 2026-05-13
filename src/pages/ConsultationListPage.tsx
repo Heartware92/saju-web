@@ -124,7 +124,7 @@ export default function ConsultationListPage() {
 
   const handleDeleteConversation = (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    if (!confirm('이 대화를 삭제할���요?')) return;
+    if (!confirm('이 대화를 삭제할까요?')) return;
     const next = conversations.filter(c => c.id !== id);
     if (next.length === 0) {
       const fresh = newConversation();
@@ -231,17 +231,17 @@ export default function ConsultationListPage() {
               <div className="flex flex-wrap gap-1.5 text-[12px]">
                 {status.relationshipStatus && (
                   <span className="px-2 py-0.5 rounded-full bg-rose-500/15 border border-rose-500/30 text-rose-300">
-                    💕 {status.relationshipStatus}
+                    연애 · {status.relationshipStatus}
                   </span>
                 )}
                 {status.job && (
                   <span className="px-2 py-0.5 rounded-full bg-blue-500/15 border border-blue-500/30 text-blue-300">
-                    💼 {status.job}
+                    직업 · {status.job}
                   </span>
                 )}
                 {status.concern && (
                   <span className="px-2 py-0.5 rounded-full bg-amber-500/15 border border-amber-500/30 text-amber-300">
-                    🔮 {status.concern}
+                    고민 · {status.concern}
                   </span>
                 )}
                 {!status.relationshipStatus && !status.job && !status.concern && (

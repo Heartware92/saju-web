@@ -226,7 +226,7 @@ export default function ConsultationChatPage() {
     try {
       const { data: sessionData } = await supabase.auth.getSession();
       const accessToken = sessionData?.session?.access_token;
-      if (!accessToken) throw new Error('로��인이 필요합니다.');
+      if (!accessToken) throw new Error('로그인이 필요합니다.');
 
       const systemPrompt = buildConsultationSystemPrompt(saju, {
         name: selectedProfile.name,
@@ -293,7 +293,7 @@ export default function ConsultationChatPage() {
       }
 
       if (streamError) throw new Error(streamError);
-      if (!gotDone && accumulated.length === 0) throw new Error('응답이 비어 있습���다.');
+      if (!gotDone && accumulated.length === 0) throw new Error('응답이 비어 있습니다.');
 
       const cleaned = sanitizeAIOutput(accumulated);
       if (pid === profileAtSend) {
@@ -543,7 +543,7 @@ export default function ConsultationChatPage() {
                 <div className="w-full max-w-sm rounded-2xl bg-[rgba(20,12,38,0.98)] border border-cta/40 p-5 pointer-events-auto">
                   <h3 className="text-lg font-bold text-text-primary mb-1">질문팩 구매</h3>
                   <p className="text-[13px] text-text-secondary mb-4 leading-relaxed">
-                    질문팩 1개로 <b className="text-cta">{CONSULTATION_QUESTIONS_PER_PACK}번</b> 연속으로 상담할 수 ��어요.
+                    질문팩 1개로 <b className="text-cta">{CONSULTATION_QUESTIONS_PER_PACK}번</b> 연속으로 상담할 수 있어요.
                   </p>
                   <div className="flex flex-col gap-2">
                     <button
@@ -557,7 +557,7 @@ export default function ConsultationChatPage() {
                       }}
                       className="py-3 rounded-xl bg-cta text-white font-semibold text-[15px] disabled:opacity-40 disabled:cursor-not-allowed"
                     >
-                      ☀️ {CONSULTATION_PACK_SUN_COST} 해로 구매 ({CONSULTATION_QUESTIONS_PER_PACK}질문)
+                      해 {CONSULTATION_PACK_SUN_COST}개로 구매 ({CONSULTATION_QUESTIONS_PER_PACK}질문)
                     </button>
                     <button
                       disabled={packBuying || moonBalance < CONSULTATION_PACK_MOON_COST}
@@ -570,13 +570,13 @@ export default function ConsultationChatPage() {
                       }}
                       className="py-3 rounded-xl bg-white/10 border border-white/20 text-text-primary font-semibold text-[15px] disabled:opacity-40 disabled:cursor-not-allowed"
                     >
-                      🌙 {CONSULTATION_PACK_MOON_COST} 달로 구매 ({CONSULTATION_QUESTIONS_PER_PACK}질문)
+                      달 {CONSULTATION_PACK_MOON_COST}개로 구매 ({CONSULTATION_QUESTIONS_PER_PACK}질문)
                     </button>
                     <button disabled={packBuying} onClick={() => setShowPackModal(false)} className="py-2 text-[13px] text-text-tertiary">
                       취소
                     </button>
                   </div>
-                  <p className="text-[11px] text-text-tertiary mt-3">보유: ☀�� {sunBalance} · 🌙 {moonBalance}</p>
+                  <p className="text-[11px] text-text-tertiary mt-3">보유: 해 {sunBalance} · 달 {moonBalance}</p>
                 </div>
               </motion.div>
             </>

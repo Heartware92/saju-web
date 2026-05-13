@@ -195,7 +195,7 @@ function OverviewTab({ data }: { data: DetailData }) {
         <Grid>
           <Row label="누적 결제" value={<span className={aggregates.isVip ? 'text-amber-300 font-bold' : ''}>{fmtWon(aggregates.totalSpent)}{aggregates.isVip && ' (VIP)'}</span>} />
           <Row label="주문 수" value={`${aggregates.orderCount}건 (환불 ${aggregates.refundCount}건)`} />
-          <Row label="��주 분석" value={`${aggregates.sajuTotal}회`} />
+          <Row label="사주 분석" value={`${aggregates.sajuTotal}회`} />
           <Row label="타로" value={`${aggregates.tarotTotal}회`} />
           <Row label="상담소" value={`${aggregates.consultationTotal ?? 0}건`} />
           {credit && <>
