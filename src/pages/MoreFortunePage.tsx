@@ -127,6 +127,9 @@ export default function MoreFortunePage({ category }: Props) {
   const autoStartedRef = useRef(false);
   const [manualMode, setManualMode] = useState(false);
   const freshParam = searchParams?.get('fresh') === '1';
+  // handleRead 의 stale closure 회피 — handleRefetch 같은 외부 콜백에서
+  // 항상 최신 handleRead 를 호출하도록 ref 동기화
+  const handleReadRef = useRef<((force?: boolean) => Promise<void>) | null>(null);
   const shouldAutoStart = freshParam && !isArchiveMode && !manualMode &&
     (category === 'study' || category === 'children' || category === 'personality');
 
@@ -158,6 +161,7 @@ export default function MoreFortunePage({ category }: Props) {
     setSavedRecordId(null);
     setManualMode(false); // ★ 핵심: 이전에 "다시 풀이"를 눌렀던 흔적 제거 → auto-start 가능
     autoStartedRef.current = false;
+    setLoading(true); // ★ 즉시 로딩 화면 표시 — auto-start 트리거 사이의 깜빡임 방지
     if (typeof window !== 'undefined') {
       const params = new URLSearchParams(window.location.search);
       params.set('fresh', '1');
@@ -165,6 +169,12 @@ export default function MoreFortunePage({ category }: Props) {
       params.delete('recordId');
       router.replace(`${window.location.pathname}?${params.toString()}`);
     }
+    // ★ auto-start useEffect 에만 의존하지 않고 직접 handleRead(force=true) 호출
+    //   캐시 우회 강제 + 즉시 새 AI 호출 보장 (메모리 캐시·보관함 잔여물이
+    //   silent restore useEffect 등 다른 분기에 의해 result 를 다시 채우는 사고 차단)
+    setTimeout(() => {
+      handleReadRef.current?.(true);
+    }, 0);
   };
 
   // 보관함 재생 메타 (원본 기록 시각 표시용)
@@ -376,10 +386,11 @@ export default function MoreFortunePage({ category }: Props) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [shouldAutoStart, canSubmit, loading, result, error]);
 
-  const handleRead = async () => {
+  const handleRead = async (force: boolean = false) => {
     // 꿈 해몽은 saju 없이도 실행 가능
     if (category !== 'dream' && !saju) return;
-    if (!canSubmit || loading) return;
+    // ★ force=true 면 loading 상태 무시(이전 호출 중단된 잔여 loading=true 방지)
+    if (!canSubmit || (loading && !force)) return;
 
     // 이름풀이 사전 validation: 한글 이름이 실제 한글인지 로딩 시작 전에 확인
     if (category === 'name') {
@@ -391,9 +402,11 @@ export default function MoreFortunePage({ category }: Props) {
     }
 
     // 캐시 우선 — 같은 입력 재진입 시 silent restore
+    // ★ force=true (새로 풀이받기·다시 풀이받기) 면 캐시 검사 자체를 우회하여
+    //   메모리 캐시·보관함 잔여물이 새 풀이 흐름을 가로채지 못하게 보장
     const cacheKey = buildCacheKey();
     const kindKey = `more:${category}` as const;
-    if (cacheKey) {
+    if (!force && cacheKey) {
       const cached = useReportCacheStore.getState().getReport<string>(kindKey, cacheKey);
       if (cached?.error) {
         setError(cached.error);
@@ -478,6 +491,9 @@ export default function MoreFortunePage({ category }: Props) {
       setLoading(false);
     }
   };
+
+  // handleRead 최신 참조 동기화 — handleRefetch 같은 외부 콜백에서 stale closure 회피
+  handleReadRef.current = handleRead;
 
   // 비로그인 가드
   if (!user) {
@@ -607,7 +623,7 @@ export default function MoreFortunePage({ category }: Props) {
 
             <div className={styles.section} style={{ padding: 0, background: 'none', border: 'none' }}>
               <button
-                onClick={handleRead}
+                onClick={() => { void handleRead(); }}
                 disabled={!canSubmit || loading || moonBalance < MOON_COST_PER_FORTUNE}
                 style={{
                   width: '100%',
