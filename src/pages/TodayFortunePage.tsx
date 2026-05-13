@@ -269,6 +269,38 @@ function InputForm({
   const [[q1, q2]] = useState(() => pickTwoQuestions(initialSlot));
   const slotLabel = TODAY_TIME_SLOT_LABELS[initialSlot];
 
+  // 진행형 노출 — 새 섹션이 열릴 때 화면이 따라 내려가도록 ref + scrollIntoView
+  const jobSectionRef = useRef<HTMLDivElement | null>(null);
+  const loveSectionRef = useRef<HTMLDivElement | null>(null);
+  const timeSectionRef = useRef<HTMLDivElement | null>(null);
+  const submitButtonRef = useRef<HTMLButtonElement | null>(null);
+  const prevHobbyDone = useRef(false);
+  const prevJobDone = useRef(false);
+  const prevLoveDone = useRef(false);
+
+  const scrollIntoCenter = (el: HTMLElement | null) => {
+    if (!el) return;
+    // 모션 애니메이션이 시작된 직후 한 프레임 양보 → 정확한 위치 계산
+    requestAnimationFrame(() => {
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    });
+  };
+
+  useEffect(() => {
+    if (hobbyDone && !prevHobbyDone.current) scrollIntoCenter(jobSectionRef.current);
+    prevHobbyDone.current = hobbyDone;
+  }, [hobbyDone]);
+
+  useEffect(() => {
+    if (jobDone && !prevJobDone.current) scrollIntoCenter(loveSectionRef.current);
+    prevJobDone.current = jobDone;
+  }, [jobDone]);
+
+  useEffect(() => {
+    if (loveDone && !prevLoveDone.current) scrollIntoCenter(timeSectionRef.current);
+    prevLoveDone.current = loveDone;
+  }, [loveDone]);
+
   const canSubmit =
     (hobbies.length > 0 || customHobby.trim().length > 0) &&
     (jobState !== null || customJobState.trim().length > 0) &&
@@ -366,6 +398,7 @@ function InputForm({
       {/* 2. 직업 상태 — 1단계 완료 시 등장 */}
       {hobbyDone && (
       <motion.div
+        ref={jobSectionRef}
         initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.4, ease: 'easeOut' }}
@@ -422,6 +455,7 @@ function InputForm({
       {/* 3. 연애 상태 — 2단계 완료 시 등장 */}
       {hobbyDone && jobDone && (
       <motion.div
+        ref={loveSectionRef}
         initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.4, ease: 'easeOut' }}
@@ -478,6 +512,7 @@ function InputForm({
       {/* 4. 지금 상태 — 3단계 완료 시 등장 */}
       {hobbyDone && jobDone && loveDone && (
       <motion.div
+        ref={timeSectionRef}
         initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.4, ease: 'easeOut' }}
