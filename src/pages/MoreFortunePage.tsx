@@ -1129,6 +1129,12 @@ function MoreFortuneSectionedCard({
     : category === 'children' ? CHILDREN_SECTION_LABELS as Record<string, string>
     : PERSONALITY_SECTION_LABELS as Record<string, string>;
 
+  // 본문 잔여 섹션 마커 strip 패턴
+  // AI 가 가이드 어겨 본문 안에 [aptitude] / [strengths] 같은 자기 마커를 또
+  // 출력하는 사고가 발생 — parseStudySections 가 split 으로 분리해도 본문 내부
+  // 추가 등장은 strip 안 되어 화면에 그대로 노출되던 사고 차단.
+  const markerStripPattern = new RegExp(`^\\s*\\[(${keys.join('|')})\\]\\s*$`, 'gm');
+
   return (
     <motion.div
       key="sectioned"
@@ -1138,20 +1144,14 @@ function MoreFortuneSectionedCard({
       transition={{ duration: 0.35 }}
       style={{ paddingTop: 4 }}
     >
-      {/* 카테고리 제목 — 간단한 헤더 */}
-      <div style={{ marginBottom: 16, padding: '0 4px' }}>
-        <h2 className="text-[18px] font-bold text-text-primary" style={{ fontFamily: 'var(--font-serif)' }}>
-          {title}
-        </h2>
-      </div>
-
       {/* 섹션별 collapsible 카드 — 정통사주와 동일 스펙 (extractMetaphor + metaphorTitle prop + 17px 본문) */}
       <div className="flex flex-col gap-3">
         {keys.map((key, idx) => {
           const raw = (sections[key] || '').trim();
           if (!raw) return null;
-          // 본문 안의 [은유]·【은유】·**[은유]** 등 변형 마커 strip + 첫 줄 은유 추출
-          const { metaphorTitle, bodyText } = extractMetaphor(raw);
+          // 본문 안 잔여 카테고리 마커 strip → extractMetaphor 로 [은유] 마커 + 부제 추출
+          const stripped = raw.replace(markerStripPattern, '').replace(/\n{3,}/g, '\n\n').trim();
+          const { metaphorTitle, bodyText } = extractMetaphor(stripped);
           return (
             <SectionCollapsible
               key={key}
