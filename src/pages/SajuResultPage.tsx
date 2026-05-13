@@ -95,8 +95,16 @@ export default function SajuResultPage() {
   const [report, setReport] = useState<JungtongsajuAIResult | null>(null);
   const [reportLoading, setReportLoading] = useState(!isArchiveMode && !needsProfileSelect);
 
-  // 결과 준비 완료 시 스크롤 최상단
-  useScrollToTopOnLoad(!!report && !reportLoading);
+  // 2-pass 응답 도착 시 스크롤 점프 방지용 ref —
+  // 1차(partial)가 이미 도착해 사용자가 페이지를 보고 있는 상태에서,
+  // 2차(.then 의 최종 setReport) 가 reportLoading=false 로 전환하면서
+  // useScrollToTopOnLoad 가 트리거되어 스크롤이 맨 위로 튀는 사고를 막는다.
+  // 보관함 모드(recordId)나 캐시 복원 등 partial 없이 한 번에 로딩 완료되는 케이스는
+  // ref 가 false 상태로 유지되어 스크롤이 정상 동작.
+  const firstPassReceivedRef = useRef(false);
+
+  // 결과 준비 완료 시 스크롤 최상단 — 단, 1차 partial 이 이미 도착한 뒤에는 스크롤 안 함
+  useScrollToTopOnLoad(!!report && !reportLoading && !firstPassReceivedRef.current);
   const [savedRecordId, setSavedRecordId] = useState<string | null>(null);
 
   const [cacheGate, setCacheGate] = useState<{ kind: ReportKind; key: string; restore: () => void } | null>(null);
@@ -241,6 +249,8 @@ export default function SajuResultPage() {
       setReport(null);
       setReportLoading(true);
       setSavedRecordId(null);
+      // 새 풀이 시작 시 ref reset — 이번 풀이의 1차 partial 이 도착하기 전까지는 false 유지
+      firstPassReceivedRef.current = false;
       const cacheKey = sajuKey(result);
       useReportCacheStore.getState().invalidate('jungtong', cacheKey);
     }
@@ -295,6 +305,8 @@ export default function SajuResultPage() {
       setReportLoading(true);
       getJungtongsajuReport(result, (partial) => {
         if (cancelled) return;
+        // 1차 partial 도착 마킹 → 2차 setReport 시점에 스크롤 점프 방지
+        firstPassReceivedRef.current = true;
         setReport(partial);
       }, targetProfile?.id)
         .then(r => {
