@@ -180,10 +180,10 @@ export function LuckyVisualCard({
         </div>
       </div>
 
-      {/* 숫자 + 시간대 */}
+      {/* 숫자 + 시간대 — 좌측 정렬·폰트 통일 (AdviceCard 와 동일 스펙) */}
       <div className="grid grid-cols-2 gap-2">
         <div className="rounded-xl p-3 bg-white/5 border border-white/10">
-          <div className="text-[12px] text-text-tertiary mb-1">행운 숫자</div>
+          <div className="text-[13px] text-text-tertiary mb-1.5">행운 숫자</div>
           <div
             className="text-[22px] font-bold text-text-primary tracking-widest leading-none"
             style={{ fontFamily: 'var(--font-serif)' }}
@@ -192,8 +192,8 @@ export function LuckyVisualCard({
           </div>
         </div>
         <div className="rounded-xl p-3 bg-white/5 border border-white/10">
-          <div className="text-[12px] text-text-tertiary mb-1">유리한 시간대</div>
-          <div className="text-[14px] text-text-primary font-medium leading-snug">{timeSlot || '—'}</div>
+          <div className="text-[13px] text-text-tertiary mb-1.5">유리한 시간대</div>
+          <div className="text-[16px] text-text-primary font-semibold leading-snug">{timeSlot || '—'}</div>
         </div>
       </div>
 
@@ -202,14 +202,14 @@ export function LuckyVisualCard({
         <div className="grid grid-cols-2 gap-2">
           {gem && (
             <div className="rounded-xl p-3 bg-white/5 border border-white/10">
-              <div className="text-[12px] text-text-tertiary mb-1">행운 보석·소품</div>
-              <div className="text-[14px] text-text-primary font-medium">{gem}</div>
+              <div className="text-[13px] text-text-tertiary mb-1.5">행운 보석·소품</div>
+              <div className="text-[16px] text-text-primary font-semibold leading-snug">{gem}</div>
             </div>
           )}
           {activity && (
             <div className="rounded-xl p-3 bg-white/5 border border-white/10">
-              <div className="text-[12px] text-text-tertiary mb-1">추천 활동</div>
-              <div className="text-[14px] text-text-primary font-medium">{activity}</div>
+              <div className="text-[13px] text-text-tertiary mb-1.5">추천 활동</div>
+              <div className="text-[16px] text-text-primary font-semibold leading-snug">{activity}</div>
             </div>
           )}
         </div>

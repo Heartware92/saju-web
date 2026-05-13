@@ -36,11 +36,12 @@ export function MonthlyTrendChart({ data, className = '' }: MonthlyTrendChartPro
   if (data.length === 0) return null;
 
   const W = 340;
-  const H = 160;
-  const padL = 8;
-  const padR = 8;
+  const H = 168;
+  // 라벨이 viewBox 가장자리에서 잘리지 않도록 좌우 padding 충분히 확보 + 폰트 살짝 키움.
+  const padL = 18;
+  const padR = 18;
   const padT = 16;
-  const padB = 28;
+  const padB = 32;
 
   const plotW = W - padL - padR;
   const plotH = H - padT - padB;
@@ -121,12 +122,12 @@ export function MonthlyTrendChart({ data, className = '' }: MonthlyTrendChartPro
               animate={{ opacity: 1, scale: 1 }}
               transition={{ delay: 0.4 + i * 0.05 }}
             />
-            {/* Month label */}
+            {/* Month label — 첫·마지막은 textAnchor 보정해서 viewBox 안에 안전하게 들어가게 */}
             <text
-              x={p.x} y={H - 6}
-              textAnchor="middle"
-              fontSize={10}
-              fill="rgba(255,255,255,0.45)"
+              x={p.x} y={H - 8}
+              textAnchor={i === 0 ? 'start' : i === points.length - 1 ? 'end' : 'middle'}
+              fontSize={11}
+              fill="rgba(255,255,255,0.55)"
             >
               {p.month}월
             </text>
