@@ -6637,9 +6637,9 @@ export const CHILDREN_SECTION_LABELS: Record<ChildrenSectionKey, string> = {
   pregnancy:     '임신·출산 체질',
   temperament:   '자녀 기질',
   parenting:     '양육 스타일',
-  compatibility: '자녀와의 합·충',
+  compatibility: '자녀와의 궁합',
   career_hint:   '자녀 진로·재능 힌트',
-  timing:        '유리 시기 + 실천 조언',
+  timing:        '임신·출산 좋은 시기',
 };
 
 export const generateChildrenShortPrompt = (result: SajuResult): string => {
