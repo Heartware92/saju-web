@@ -145,35 +145,27 @@ export default function MoreFortunePage({ category }: Props) {
   const [cacheGate, setCacheGate] = useState<{ kind: 'today' | 'jungtong' | 'zamidusu' | 'tojeong' | 'newyear' | 'period_date' | 'period_day' | 'taekil' | 'gunghap' | 'tarot' | `more:${string}`; key: string; restore: () => void } | null>(null);
   const handleUseCached = () => { cacheGate?.restore(); setCacheGate(null); };
   const handleRefetch = () => {
+    // ★★★ 핵심 해결책: SPA 라우터(router.replace) + in-page state refetch 조합이
+    //   모달 컨텍스트에서 stale state·재마운트 사고를 일으켜 새 AI 호출이 트리거되지
+    //   않거나 이전 결과가 잔존하는 사고가 반복됨. (Next.js App Router 의 잘 알려진
+    //   클라이언트 state·서버 컴포넌트 재계산 충돌 이슈)
+    //
+    // 가장 확실한 해결 — window.location.href 로 페이지 전체 강제 리로드:
+    //   · 모든 React state·ref 초기화 (캐시·result·loading 등 잔여물 없음)
+    //   · 새 컴포넌트 마운트 → 모든 useEffect 처음부터 실행
+    //   · fresh=1 URL → 보관함 체크 useEffect skip (모달 안 뜸)
+    //   · invalidate 후 silent restore 캐시 미스 → setResult(null)
+    //   · auto-start useEffect → handleRead() → 로딩 화면 → AI 호출
     setCacheGate(null);
-    // ★ 모달의 "새로 풀이받기" / 결과 화면의 "다시 풀이받기" 공통 핸들러.
-    // 모달 호출 시 router.replace 가 컴포넌트 재마운트를 일으키면
-    //   setTimeout 안의 handleReadRef 가 이전 인스턴스 ref 를 가리켜
-    //   호출이 무효화되는 사고가 있어 URL 라우팅을 제거하고 in-page 처리만.
-    // 보관함 잔여물은 fresh=1 URL 없이도 invalidate + state 리셋 + force AI 호출로 차단.
     if (category) {
       useReportCacheStore.getState().invalidate(`more:${category}` as const);
     }
-    // recordId 만 URL 에 남아있다면 보관함 모드 해제용으로 제거
-    // (fresh=1 은 더 이상 트리거에 사용 안 함 — 재마운트 회피)
     if (typeof window !== 'undefined') {
       const params = new URLSearchParams(window.location.search);
-      if (params.has('recordId')) {
-        params.delete('recordId');
-        const rest = params.toString();
-        router.replace(`${window.location.pathname}${rest ? `?${rest}` : ''}`);
-      }
+      params.set('fresh', '1');
+      params.delete('recordId'); // 보관함 모드 해제
+      window.location.href = `${window.location.pathname}?${params.toString()}`;
     }
-    setResult(null);
-    setError(null);
-    setSavedRecordId(null);
-    setManualMode(false);
-    autoStartedRef.current = false;
-    setLoading(true); // 즉시 로딩 화면 표시
-    // ★ 직접 handleRead(force=true) 호출 — auto-start useEffect 의존 X
-    setTimeout(() => {
-      void handleReadRef.current?.(true);
-    }, 80);
   };
 
   // 보관함 재생 메타 (원본 기록 시각 표시용)
