@@ -190,7 +190,10 @@ export default function TaekilResultPage() {
         <div className={styles.section} style={{ textAlign: 'center', padding: '48px 24px' }}>
           <p style={{ color: 'var(--text-secondary)', marginBottom: 20 }}>{error ?? '결과를 표시할 수 없어요.'}</p>
           <button
-            onClick={() => router.push('/saju/taekil')}
+            onClick={() => {
+              const qs = profileId ? `?profileId=${profileId}&fresh=1` : '?fresh=1';
+              router.push(`/saju/taekil${qs}`);
+            }}
             style={{
               padding: '12px 28px', borderRadius: 12,
               background: 'var(--cta-primary)', color: 'white',
@@ -590,7 +593,10 @@ export default function TaekilResultPage() {
             </div>
 
             <button
-              onClick={() => router.push('/saju/taekil')}
+              onClick={() => {
+                const qs = profileId ? `?profileId=${profileId}&fresh=1` : '?fresh=1';
+                router.push(`/saju/taekil${qs}`);
+              }}
               style={{
                 width: '100%', marginTop: 16,
                 padding: '14px', borderRadius: 12,

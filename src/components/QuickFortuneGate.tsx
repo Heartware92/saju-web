@@ -7,6 +7,7 @@ import { useProfileStore } from '../store/useProfileStore';
 import { useUserStore } from '../store/useUserStore';
 import { useCreditStore } from '../store/useCreditStore';
 import { findRecentArchive, findArchiveList, type ArchiveCategory, type ArchiveListItem } from '../services/archiveService';
+import { truncateTaekilLabel } from '../utils/truncateTaekilLabel';
 
 export interface QuickFortuneGateProps {
   serviceName: string;
@@ -250,7 +251,7 @@ export function QuickFortuneGate({
                       const dateLabel = item.context_date
                         ? item.context_date.replace(/-/g, '.')
                         : new Date(item.created_at).toLocaleDateString('ko-KR');
-                      const catLabel = item.context_category_label;
+                      const catLabel = truncateTaekilLabel(item.context_category_label);
                       return (
                         <button
                           key={item.id}
@@ -258,9 +259,13 @@ export function QuickFortuneGate({
                           onClick={() => navigate(`&recordId=${item.id}`)}
                           className="w-full min-h-10 py-2 px-3 rounded-lg border border-[var(--border-subtle)] text-[14px] text-text-primary font-medium hover:bg-cta/10 hover:border-cta/40 transition-all flex items-center justify-between gap-2"
                         >
-                          <span className="flex items-center gap-2">
-                            {catLabel && <span className="text-[12px] font-bold text-cta bg-cta/10 px-2 py-0.5 rounded-md">{catLabel}</span>}
-                            <span>{dateLabel}</span>
+                          <span className="flex items-center gap-2 min-w-0">
+                            {catLabel && (
+                              <span className="text-[12px] font-bold text-cta bg-cta/10 px-2 py-0.5 rounded-md whitespace-nowrap flex-shrink-0">
+                                {catLabel}
+                              </span>
+                            )}
+                            <span className="truncate">{dateLabel}</span>
                           </span>
                           <span className="text-[12px] text-text-tertiary flex-shrink-0">결과 보기</span>
                         </button>
