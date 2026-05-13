@@ -564,8 +564,8 @@ export default function GunghapPage() {
         if (!cache.isCharged('gunghap', petCacheKey)) {
           cache.markCharged('gunghap', petCacheKey);
           useCreditStore.getState()
-            .chargeForContent('sun', SUN_COST_BIG, CHARGE_REASONS.gunghap)
-            .catch(() => {});
+            .chargeForContent('sun', SUN_COST_BIG, CHARGE_REASONS.gunghap, `gunghap:${petCacheKey}`)
+            .catch(e => console.error('[charge:gunghap-pet] failed', e));
         }
         // 보관함 저장 — 반려동물 분기. partner.birth_date 는 비어있어 메타로만 보존.
         archiveSaju({
@@ -746,8 +746,8 @@ export default function GunghapPage() {
       if (!cache.isCharged('gunghap', cacheKey)) {
         cache.markCharged('gunghap', cacheKey);
         useCreditStore.getState()
-          .chargeForContent('sun', SUN_COST_BIG, CHARGE_REASONS.gunghap)
-          .catch(() => {});
+          .chargeForContent('sun', SUN_COST_BIG, CHARGE_REASONS.gunghap, `gunghap:${cacheKey}`)
+          .catch(e => console.error('[charge:gunghap] failed', e));
       }
       // 보관함 저장 — 카테고리/역할/상대방 메타 포함. archiveService 가 sourceBirth 로 자동 프로필 매칭.
       archiveSaju({

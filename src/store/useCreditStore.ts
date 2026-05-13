@@ -27,19 +27,22 @@ interface CreditState {
 
   fetchBalance: (userId?: string, opts?: { force?: boolean }) => Promise<void>;
   fetchTransactions: (userId?: string) => Promise<void>;
-  consumeCredit: (creditType: CreditType, amount: number, reason: string) => Promise<boolean>;
+  /** idempotencyKey: 권장. record_id 등을 넘기면 DB 가 이중 차감 차단. */
+  consumeCredit: (creditType: CreditType, amount: number, reason: string, idempotencyKey?: string) => Promise<boolean>;
 
   /**
    * 크레딧 차감 + 서버 재조회까지 묶은 헬퍼.
    * 낙관적 업데이트 후 서버에서 진짜 잔액을 재조회해 UI를 진실의 원천과 동기화.
+   * idempotencyKey 권장 — record_id 같은 식별자로 이중 차감 차단.
    */
-  chargeForContent: (creditType: CreditType, amount: number, reason: string) => Promise<boolean>;
+  chargeForContent: (creditType: CreditType, amount: number, reason: string, idempotencyKey?: string) => Promise<boolean>;
 
   /**
    * 잘못 차감된 크레딧 환불 — 응답 검증 실패 후 자동 환불 또는 어드민 수동 환불.
    * 잔액 +amount, 'refund' 거래 기록.
+   * idempotencyKey 권장: `refund-${recordId}` 같이.
    */
-  refundCredit: (creditType: CreditType, amount: number, reason: string) => Promise<boolean>;
+  refundCredit: (creditType: CreditType, amount: number, reason: string, idempotencyKey?: string) => Promise<boolean>;
 
   /** 상담소 질문팩 구매 — sun 1 또는 moon 3 */
   purchaseConsultationPack: (payWith: 'sun' | 'moon') => Promise<boolean>;
@@ -105,7 +108,7 @@ export const useCreditStore = create<CreditState>()(
         }
       },
 
-      consumeCredit: async (creditType: CreditType, amount: number, reason: string): Promise<boolean> => {
+      consumeCredit: async (creditType: CreditType, amount: number, reason: string, idempotencyKey?: string): Promise<boolean> => {
         const currentBalance = creditType === 'sun' ? get().sunBalance : get().moonBalance;
 
         if (currentBalance < amount) {
@@ -120,14 +123,18 @@ export const useCreditStore = create<CreditState>()(
 
           if (!user) throw new Error('로그인이 필요합니다');
 
-          const success = await creditDB.consumeCredit(user.id, creditType, amount, reason);
+          // user.id prefix — 다른 사용자가 같은 birth/cacheKey 를 입력해도 idempotency 충돌 없음
+          const fullKey = idempotencyKey ? `${user.id}:${idempotencyKey}` : undefined;
+          const success = await creditDB.consumeCredit(user.id, creditType, amount, reason, fullKey);
 
           if (success) {
+            // 'duplicate' 도 success — 이미 차감됐으니 잔액 재조회만 하면 됨
+            // 낙관적 업데이트는 일단 적용했다가, force fetchBalance 가 진실로 덮어씀
             const newBalance = currentBalance - amount;
             set({
               ...(creditType === 'sun' ? { sunBalance: newBalance } : { moonBalance: newBalance }),
               loading: false,
-              lastFetched: Date.now(), // 소비 후 캐시 갱신
+              lastFetched: Date.now(),
             });
             get().fetchTransactions(user.id);
           }
@@ -142,28 +149,30 @@ export const useCreditStore = create<CreditState>()(
 
       /**
        * 차감 + 서버 재조회. 컨텐츠 페이지에서 consumeCredit 대신 이걸 쓰면
-       * 낙관적 업데이트와 DB 진실 사이 불일치가 생겨도 UI가 5초 안에 바로잡힘.
+       * 낙관적 업데이트와 DB 진실 사이 불일치가 생겨도 UI가 즉시 바로잡힘.
+       * idempotencyKey: 권장 — record_id 등을 넘기면 DB 가 이중 차감 차단.
        */
-      chargeForContent: async (creditType, amount, reason) => {
-        const ok = await get().consumeCredit(creditType, amount, reason);
+      chargeForContent: async (creditType, amount, reason, idempotencyKey) => {
+        const ok = await get().consumeCredit(creditType, amount, reason, idempotencyKey);
         if (ok) {
-          // 서버 진실로 덮어쓰기 (RLS 거부·이중차감 등 감지)
+          // 서버 진실로 덮어쓰기 — duplicate 였다면 낙관적 -amount 가 잘못된 거니 force fetch 가 보정
           try {
             const user = await auth.getCurrentUser();
             if (user) await get().fetchBalance(user.id, { force: true });
           } catch {
-            // 재조회 실패는 무시 — 낙관적 업데이트는 이미 반영됨
+            // 재조회 실패는 무시
           }
         }
         return ok;
       },
 
       /** 환불 — 잔액 +amount, 'refund' 거래 기록. */
-      refundCredit: async (creditType, amount, reason) => {
+      refundCredit: async (creditType, amount, reason, idempotencyKey) => {
         try {
           const user = await auth.getCurrentUser();
           if (!user) return false;
-          const ok = await creditDB.refundCredit(user.id, creditType, amount, reason);
+          const fullKey = idempotencyKey ? `${user.id}:refund:${idempotencyKey}` : undefined;
+          const ok = await creditDB.refundCredit(user.id, creditType, amount, reason, fullKey);
           if (ok) {
             // 잔액 즉시 반영 (낙관적 업데이트)
             const currentBalance = creditType === 'sun' ? get().sunBalance : get().moonBalance;

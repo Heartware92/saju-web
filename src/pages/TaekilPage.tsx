@@ -223,8 +223,8 @@ export default function TaekilPage() {
       if (!cache.isCharged('taekil', taekilCacheKey)) {
         cache.markCharged('taekil', taekilCacheKey);
         useCreditStore.getState()
-          .chargeForContent('sun', SUN_COST_BIG, CHARGE_REASONS.taekil)
-          .catch(() => {});
+          .chargeForContent('sun', SUN_COST_BIG, CHARGE_REASONS.taekil, `taekil:${taekilCacheKey}`)
+          .catch(e => console.error('[charge:taekil] failed', e));
       }
       // archive 성공 시 결과 페이지로 navigate, 실패 시 에러
       if (r.archivedRecordId) {

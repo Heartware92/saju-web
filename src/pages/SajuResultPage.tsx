@@ -321,7 +321,8 @@ export default function SajuResultPage() {
             cache.setReport('jungtong', cacheKey, r);
             if (!cache.isCharged('jungtong', cacheKey)) {
               cache.markCharged('jungtong', cacheKey);
-              chargeRef.current('sun', SUN_COST_BIG, CHARGE_REASONS.traditional).catch(() => {});
+              chargeRef.current('sun', SUN_COST_BIG, CHARGE_REASONS.traditional, `jungtong:${cacheKey}`)
+                .catch(e => console.error('[charge:traditional] failed', e));
             }
           } else if (r.error) {
             cache.setError('jungtong', cacheKey, r.error);

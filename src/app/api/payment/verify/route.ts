@@ -197,70 +197,46 @@ export async function grantCreditsForOrder(
     return { ok: true, credits: { sun: sunTotal, moon: moonTotal } };
   }
 
-  // 2) 잔액 읽기
-  const { data: userCredit, error: balErr } = await supabaseAdmin
-    .from('user_credits')
-    .select('*')
-    .eq('user_id', order.user_id)
-    .maybeSingle();
-
-  if (balErr) {
-    return { ok: false, error: balErr.message };
-  }
-
-  const currentSun = userCredit?.sun_balance ?? 0;
-  const currentMoon = userCredit?.moon_balance ?? 0;
-  const totalSunPurchased = userCredit?.total_sun_purchased ?? 0;
-  const totalMoonPurchased = userCredit?.total_moon_purchased ?? 0;
-
-  const newSun = currentSun + sunTotal;
-  const newMoon = currentMoon + moonTotal;
-
-  // 3) 잔액 upsert
-  const { error: upsertErr } = await supabaseAdmin.from('user_credits').upsert(
-    {
-      user_id: order.user_id,
-      sun_balance: newSun,
-      moon_balance: newMoon,
-      total_sun_purchased: totalSunPurchased + sunTotal,
-      total_moon_purchased: totalMoonPurchased + moonTotal,
-      total_sun_consumed: userCredit?.total_sun_consumed ?? 0,
-      total_moon_consumed: userCredit?.total_moon_consumed ?? 0,
-      updated_at: new Date().toISOString(),
-    },
-    { onConflict: 'user_id' }
-  );
-
-  if (upsertErr) {
-    return { ok: false, error: upsertErr.message };
-  }
-
-  // 4) 거래 기록 (해/달 각각)
-  const txRows = [];
+  // 2) 잔액 추가 — 원자적 RPC (read-modify-write race 차단, idempotency_key=order.id)
+  //    동시 두 결제가 같은 currentSun 을 읽고 각자 더해서 한 쪽이 손실되던 사고 방지.
   if (sunTotal > 0) {
-    txRows.push({
-      user_id: order.user_id,
-      credit_type: 'sun',
-      type: 'purchase',
-      amount: sunTotal,
-      balance_after: newSun,
-      reason: `${pkg.name} 구매`,
-      order_id: order.id,
+    const { data: rSun, error: errSun } = await supabaseAdmin.rpc('grant_credit_atomic', {
+      p_user_id: order.user_id,
+      p_credit_type: 'sun',
+      p_amount: sunTotal,
+      p_reason: `${pkg.name} 구매`,
+      p_idempotency_key: `purchase-sun-${order.id}`,
     });
+    if (errSun) {
+      return { ok: false, error: `sun 적립 실패: ${errSun.message}` };
+    }
+    if (rSun !== 'ok' && rSun !== 'duplicate') {
+      return { ok: false, error: `sun 적립 거부: ${rSun}` };
+    }
   }
   if (moonTotal > 0) {
-    txRows.push({
-      user_id: order.user_id,
-      credit_type: 'moon',
-      type: 'purchase',
-      amount: moonTotal,
-      balance_after: newMoon,
-      reason: `${pkg.name} 구매`,
-      order_id: order.id,
+    const { data: rMoon, error: errMoon } = await supabaseAdmin.rpc('grant_credit_atomic', {
+      p_user_id: order.user_id,
+      p_credit_type: 'moon',
+      p_amount: moonTotal,
+      p_reason: `${pkg.name} 구매`,
+      p_idempotency_key: `purchase-moon-${order.id}`,
     });
+    if (errMoon) {
+      return { ok: false, error: `moon 적립 실패: ${errMoon.message}` };
+    }
+    if (rMoon !== 'ok' && rMoon !== 'duplicate') {
+      return { ok: false, error: `moon 적립 거부: ${rMoon}` };
+    }
   }
-  if (txRows.length > 0) {
-    await supabaseAdmin.from('credit_transactions').insert(txRows);
+
+  // 3) total_*_purchased 통계 누적 (atomic SQL increment — 단일 컬럼이라 단순 update OK)
+  if (sunTotal > 0 || moonTotal > 0) {
+    await supabaseAdmin.rpc('increment_purchase_totals', {
+      p_user_id: order.user_id,
+      p_sun_amount: sunTotal,
+      p_moon_amount: moonTotal,
+    }).then(() => undefined, () => undefined);
   }
 
   return { ok: true, credits: { sun: sunTotal, moon: moonTotal } };

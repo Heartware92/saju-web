@@ -177,74 +177,59 @@ export const creditDB = {
     if (error) throw error;
   },
 
-  // 크레딧 소비 (잔액 확인 + 차감 + 거래 기록)
-  consumeCredit: async (userId: string, creditType: CreditType, amount: number, reason: string): Promise<boolean> => {
-    const userCredit = await creditDB.getBalance(userId);
-    if (!userCredit) return false;
-
-    const currentBalance = creditType === 'sun' ? userCredit.sun_balance : userCredit.moon_balance;
-    if (currentBalance < amount) return false;
-
-    const newBalance = currentBalance - amount;
-    const balanceField = creditType === 'sun' ? 'sun_balance' : 'moon_balance';
-    const consumedField = creditType === 'sun' ? 'total_sun_consumed' : 'total_moon_consumed';
-
-    const { error: updateError } = await supabase
-      .from('user_credits')
-      .update({
-        [balanceField]: newBalance,
-        [consumedField]: (creditType === 'sun' ? userCredit.total_sun_consumed : userCredit.total_moon_consumed) + amount
-      })
-      .eq('user_id', userId);
-
-    if (updateError) throw updateError;
-
-    await creditDB.addTransaction({
-      user_id: userId,
-      credit_type: creditType,
-      type: 'consume',
-      amount: -amount,
-      balance_after: newBalance,
-      reason
+  /**
+   * 크레딧 차감 (원자적 RPC).
+   * - 잔액 조회·차감·transaction 기록·idempotency 체크가 단일 트랜잭션 내에서 실행
+   * - race condition·partial failure·이중 차감 모두 DB 레벨 차단
+   * - idempotencyKey 권장: 같은 key 재호출 시 DB가 'duplicate' 반환 → 이중 차감 0
+   *   일반적으로 recordId 또는 `${kind}:${recordId}` 형태 사용
+   */
+  consumeCredit: async (
+    userId: string,
+    creditType: CreditType,
+    amount: number,
+    reason: string,
+    idempotencyKey?: string,
+  ): Promise<boolean> => {
+    const { data, error } = await supabase.rpc('consume_credit_atomic', {
+      p_user_id: userId,
+      p_credit_type: creditType,
+      p_amount: amount,
+      p_reason: reason,
+      p_idempotency_key: idempotencyKey ?? null,
     });
-
-    return true;
+    if (error) {
+      console.error('[consumeCredit] RPC failed', error);
+      return false;
+    }
+    // 'ok' / 'duplicate' 모두 사용자 입장에선 성공 (duplicate = 이미 차감됨)
+    return data === 'ok' || data === 'duplicate';
   },
 
   /**
-   * 크레딧 환불 — 차감했던 크레딧을 잔액에 되돌리고 'refund' 거래로 기록.
-   * 자동 환불(응답 검증 실패 후 즉시) + 어드민 수동 환불 양쪽에서 사용.
-   * total_consumed 도 차감해 통계 일관성을 유지한다.
+   * 크레딧 환불 (원자적 RPC).
+   * idempotencyKey 권장 (예: `refund-${recordId}`) — 같은 사유로 두 번 환불 차단.
    */
-  refundCredit: async (userId: string, creditType: CreditType, amount: number, reason: string): Promise<boolean> => {
+  refundCredit: async (
+    userId: string,
+    creditType: CreditType,
+    amount: number,
+    reason: string,
+    idempotencyKey?: string,
+  ): Promise<boolean> => {
     if (amount <= 0) return false;
-    const userCredit = await creditDB.getBalance(userId);
-    if (!userCredit) return false;
-
-    const currentBalance = creditType === 'sun' ? userCredit.sun_balance : userCredit.moon_balance;
-    const currentConsumed = creditType === 'sun' ? userCredit.total_sun_consumed : userCredit.total_moon_consumed;
-    const newBalance = currentBalance + amount;
-    const newConsumed = Math.max(0, currentConsumed - amount);
-    const balanceField = creditType === 'sun' ? 'sun_balance' : 'moon_balance';
-    const consumedField = creditType === 'sun' ? 'total_sun_consumed' : 'total_moon_consumed';
-
-    const { error: updateError } = await supabase
-      .from('user_credits')
-      .update({ [balanceField]: newBalance, [consumedField]: newConsumed })
-      .eq('user_id', userId);
-
-    if (updateError) throw updateError;
-
-    await creditDB.addTransaction({
-      user_id: userId,
-      credit_type: creditType,
-      type: 'refund',
-      amount, // 양수 — 환불은 잔액 증가
-      balance_after: newBalance,
-      reason: `[환불] ${reason}`,
+    const { data, error } = await supabase.rpc('refund_credit_atomic', {
+      p_user_id: userId,
+      p_credit_type: creditType,
+      p_amount: amount,
+      p_reason: reason,
+      p_idempotency_key: idempotencyKey ?? null,
     });
-
-    return true;
+    if (error) {
+      console.error('[refundCredit] RPC failed', error);
+      return false;
+    }
+    return data === 'ok' || data === 'duplicate';
   },
 
   // 크레딧 거래 기록 추가

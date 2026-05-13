@@ -482,8 +482,8 @@ export default function TarotPage() {
         if (!cache.isCharged('tarot', cacheKey)) {
           cache.markCharged('tarot', cacheKey);
           useCreditStore.getState()
-            .chargeForContent('moon', MOON_COST_TAROT, `${CHARGE_REASONS.tarotHybrid}:${currentMode}`)
-            .catch(() => {});
+            .chargeForContent('moon', MOON_COST_TAROT, `${CHARGE_REASONS.tarotHybrid}:${currentMode}`, `tarot:${cacheKey}`)
+            .catch(e => console.error('[charge:tarot] failed', e));
         }
       } else {
         const msg = res.error || '해석을 불러오지 못했습니다.';

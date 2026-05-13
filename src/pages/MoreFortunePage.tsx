@@ -391,9 +391,19 @@ export default function MoreFortunePage({ category }: Props) {
   };
 
   // 카테고리/입력 바뀔 때 캐시 silent restore — 탭 이동·새로고침 후 다시 와도 재호출 X
+  // ★ fresh=1 URL 진입 (모달 "새로 풀이받기" 클릭 후) 에선 캐시 복원 완전 차단:
+  //   기존엔 fresh=1 이어도 silent restore 가 메모리·persist 캐시 hit 으로 setResult 를
+  //   호출해, auto-start useEffect 가 result 있으니 skip → AI 호출이 안 일어나
+  //   이전 결과가 그대로 표시되는 사고가 있었음. 사용자 신고 "A 시나리오 만 발생" 의 원인.
   useEffect(() => {
     if (isArchiveMode) return;
     if (cacheGate) return;
+    if (freshParam) {
+      // fresh=1 진입 — 캐시 무시하고 result/sections 비워둠 → auto-start useEffect 가 새 AI 호출 트리거
+      setResult(null);
+      setResultSections(null);
+      return;
+    }
     const cacheKey = buildCacheKey();
     const kindKey = category ? (`more:${category}` as const) : null;
     if (cacheKey && kindKey) {
@@ -419,7 +429,7 @@ export default function MoreFortunePage({ category }: Props) {
     setResult(null);
     setResultSections(null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [category, saju, koreanName, charMeanings, dreamText, isArchiveMode]);
+  }, [category, saju, koreanName, charMeanings, dreamText, isArchiveMode, freshParam]);
 
   // auto-start: 모달에서 "새로 풀이 받기" 클릭 후 소개 페이지 건너뛰고 바로 풀이
   useEffect(() => {

@@ -789,7 +789,8 @@ export default function TodayFortunePage() {
             cache.setReport('today', cacheKey, r);
             if (!cache.isCharged('today', cacheKey)) {
               cache.markCharged('today', cacheKey);
-              chargeRef.current('sun', SUN_COST_BIG, CHARGE_REASONS.today).catch(() => {});
+              chargeRef.current('sun', SUN_COST_BIG, CHARGE_REASONS.today, `today:${cacheKey}`)
+                .catch(e => console.error('[charge:today] failed', e));
             }
           } else if (r.error) {
             cache.setError('today', cacheKey, r.error);

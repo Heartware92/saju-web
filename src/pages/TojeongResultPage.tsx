@@ -305,7 +305,8 @@ export default function TojeongResultPage() {
           cache.setReport('tojeong', cacheKey, r.content);
           if (!cache.isCharged('tojeong', cacheKey)) {
             cache.markCharged('tojeong', cacheKey);
-            chargeRef.current('sun', SUN_COST_BIG, CHARGE_REASONS.tojeong).catch(() => {});
+            chargeRef.current('sun', SUN_COST_BIG, CHARGE_REASONS.tojeong, `tojeong:${cacheKey}`)
+              .catch(e => console.error('[charge:tojeong] failed', e));
           }
           setAiLoading(false);
           return;
@@ -414,7 +415,8 @@ export default function TojeongResultPage() {
           cache.setReport('tojeong', cacheKey, r.content);
           if (!cache.isCharged('tojeong', cacheKey)) {
             cache.markCharged('tojeong', cacheKey);
-            chargeRef.current('sun', SUN_COST_BIG, CHARGE_REASONS.tojeong).catch(() => {});
+            chargeRef.current('sun', SUN_COST_BIG, CHARGE_REASONS.tojeong, `tojeong:${cacheKey}`)
+              .catch(e => console.error('[charge:tojeong] failed', e));
           }
         }
         setAiLoading(false);

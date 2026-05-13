@@ -355,7 +355,8 @@ export default function ZamidusuResultPage() {
             cache.setReport('zamidusu', cacheKey, r);
             if (!cache.isCharged('zamidusu', cacheKey)) {
               cache.markCharged('zamidusu', cacheKey);
-              chargeRef.current('sun', SUN_COST_BIG, CHARGE_REASONS.zamidusu).catch(() => {});
+              chargeRef.current('sun', SUN_COST_BIG, CHARGE_REASONS.zamidusu, `zamidusu:${cacheKey}`)
+                .catch(e => console.error('[charge:zamidusu] failed', e));
             }
           } else if (r.error) {
             cache.setError('zamidusu', cacheKey, r.error);

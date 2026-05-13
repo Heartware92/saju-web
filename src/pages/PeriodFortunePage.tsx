@@ -550,7 +550,8 @@ export default function PeriodFortunePage({ scope }: { scope: FortuneScope | 'da
             cache.setReport('newyear', cacheKey, r);
             if (!cache.isCharged('newyear', cacheKey)) {
               cache.markCharged('newyear', cacheKey);
-              chargeRef.current('sun', SUN_COST_BIG, CHARGE_REASONS.newyear).catch(() => {});
+              chargeRef.current('sun', SUN_COST_BIG, CHARGE_REASONS.newyear, `newyear:${cacheKey}`)
+                .catch(e => console.error('[charge:newyear] failed', e));
             }
           } else if (r.error) {
             cache.setError('newyear', cacheKey, r.error);
@@ -594,7 +595,8 @@ export default function PeriodFortunePage({ scope }: { scope: FortuneScope | 'da
             cache.setReport('period_date', cacheKey, r);
             if (!cache.isCharged('period_date', cacheKey)) {
               cache.markCharged('period_date', cacheKey);
-              chargeRef.current('sun', SUN_COST_BIG, CHARGE_REASONS.date).catch(() => {});
+              chargeRef.current('sun', SUN_COST_BIG, CHARGE_REASONS.date, `period_date:${cacheKey}`)
+                .catch(e => console.error('[charge:period_date] failed', e));
             }
           } else if (r.error) {
             cache.setError('period_date', cacheKey, r.error);
@@ -654,7 +656,8 @@ export default function PeriodFortunePage({ scope }: { scope: FortuneScope | 'da
           cache.setReport(kind, cacheKey, r.descriptions);
           if (!cache.isCharged(kind, cacheKey)) {
             cache.markCharged(kind, cacheKey);
-            chargeRef.current('sun', SUN_COST_BIG, CHARGE_REASONS.today).catch(() => {});
+            chargeRef.current('sun', SUN_COST_BIG, CHARGE_REASONS.today, `${kind}:${cacheKey}`)
+              .catch(e => console.error('[charge:period_day] failed', e));
           }
         } else if (r.error) {
           cache.setError(kind, cacheKey, r.error);
