@@ -6810,8 +6810,8 @@ export const PERSONALITY_SECTION_KEYS = [
 export type PersonalitySectionKey = typeof PERSONALITY_SECTION_KEYS[number];
 
 export const PERSONALITY_SECTION_LABELS: Record<PersonalitySectionKey, string> = {
-  daymaster:    '일주 60갑자 핵심',
-  gyeokguk:     '격국이 만드는 인생 기조',
+  daymaster:    '타고난 성격의 핵심',
+  gyeokguk:     '성격이 이끄는 삶의 방향',
   strengths:    '상황별 모습 (직장·연애·친구)',
   outside_view: '외부 시선',
   desire:       '되고 싶은 나, 피하고 싶은 나',
