@@ -51,6 +51,12 @@ import { useLoadingGuard } from '../hooks/useLoadingGuard';
 import { useScrollToTopOnLoad } from '../hooks/useScrollToTopOnLoad';
 import styles from './SajuResultPage.module.css';
 import { ShareBar } from '@/components/share/ShareBar';
+import {
+  STUDY_SECTION_KEYS, STUDY_SECTION_LABELS,
+  CHILDREN_SECTION_KEYS, CHILDREN_SECTION_LABELS,
+  PERSONALITY_SECTION_KEYS, PERSONALITY_SECTION_LABELS,
+} from '../constants/prompts';
+import { SectionCollapsible } from '@/components/saju/SectionCollapsible';
 
 interface Props {
   /** 카테고리 id. /saju/more/[category] 동적 라우트에서 주입된다. */
@@ -116,6 +122,8 @@ export default function MoreFortunePage({ category }: Props) {
   // 결과 state
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<string | null>(null);
+  // 섹션 마커 기반 파싱 결과 (학업·자녀·성격에서 사용)
+  const [resultSections, setResultSections] = useState<Record<string, string> | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [savedRecordId, setSavedRecordId] = useState<string | null>(null);
 
@@ -208,6 +216,28 @@ export default function MoreFortunePage({ category }: Props) {
         // 저장된 interpretation 을 결과로 바로 주입 (AI 호출 없이)
         const content = record.interpretation_detailed ?? record.interpretation_basic ?? '';
         setResult(content);
+        // 학업·자녀·성격이면 섹션 마커 파싱 시도
+        if (record.category === 'study') {
+          const out: Record<string, string> = {};
+          const keysPattern = STUDY_SECTION_KEYS.join('|');
+          const parts = content.split(new RegExp(`^\\s*\\[(${keysPattern})\\]\\s*$`, 'm'));
+          for (let i = 1; i < parts.length; i += 2) out[parts[i]] = (parts[i + 1] || '').trim();
+          setResultSections(Object.keys(out).length > 0 ? out : null);
+        } else if (record.category === 'children') {
+          const out: Record<string, string> = {};
+          const keysPattern = CHILDREN_SECTION_KEYS.join('|');
+          const parts = content.split(new RegExp(`^\\s*\\[(${keysPattern})\\]\\s*$`, 'm'));
+          for (let i = 1; i < parts.length; i += 2) out[parts[i]] = (parts[i + 1] || '').trim();
+          setResultSections(Object.keys(out).length > 0 ? out : null);
+        } else if (record.category === 'personality') {
+          const out: Record<string, string> = {};
+          const keysPattern = PERSONALITY_SECTION_KEYS.join('|');
+          const parts = content.split(new RegExp(`^\\s*\\[(${keysPattern})\\]\\s*$`, 'm'));
+          for (let i = 1; i < parts.length; i += 2) out[parts[i]] = (parts[i + 1] || '').trim();
+          setResultSections(Object.keys(out).length > 0 ? out : null);
+        } else {
+          setResultSections(null);
+        }
         setArchivedAt(record.created_at);
         // 이름 풀이면 저장된 한글 이름 + 글자별 뜻 복원 (읽기 전용으로 표시)
         if (record.category === 'name' && record.engine_result) {
@@ -361,10 +391,23 @@ export default function MoreFortunePage({ category }: Props) {
       const cached = useReportCacheStore.getState().getReport<string>(kindKey, cacheKey);
       if (cached?.data) {
         setResult(cached.data);
+        // 캐시 복원 시 학업·자녀·성격이면 섹션 재파싱
+        if (category === 'study' || category === 'children' || category === 'personality') {
+          const keys = category === 'study' ? STUDY_SECTION_KEYS
+            : category === 'children' ? CHILDREN_SECTION_KEYS
+            : PERSONALITY_SECTION_KEYS;
+          const out: Record<string, string> = {};
+          const parts = cached.data.split(new RegExp(`^\\s*\\[(${keys.join('|')})\\]\\s*$`, 'm'));
+          for (let i = 1; i < parts.length; i += 2) out[parts[i]] = (parts[i + 1] || '').trim();
+          setResultSections(Object.keys(out).length > 0 ? out : null);
+        } else {
+          setResultSections(null);
+        }
         return;
       }
     }
     setResult(null);
+    setResultSections(null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [category, saju, koreanName, charMeanings, dreamText, isArchiveMode]);
 
@@ -416,6 +459,7 @@ export default function MoreFortunePage({ category }: Props) {
 
     setError(null);
     setResult(null);
+    setResultSections(null);
     setLoading(true);
 
     // ★ 로딩 화면 최소 표시 시간 — AI 응답이 너무 빨라(<5s) 로딩 화면이
@@ -425,7 +469,7 @@ export default function MoreFortunePage({ category }: Props) {
     const MIN_LOADING_MS = 2000;
 
     try {
-      type FortuneResp = { success: boolean; content?: string; error?: string };
+      type FortuneResp = { success: boolean; content?: string; error?: string; sections?: Record<string, string> };
       let resp: FortuneResp = { success: false, error: '알 수 없는 카테고리' };
 
       if (category === 'dream') {
@@ -470,6 +514,12 @@ export default function MoreFortunePage({ category }: Props) {
       }
 
       setResult(resp!.content);
+      // 섹션 마커 기반 파싱 결과 (학업·자녀·성격에서 카드별 렌더링에 사용)
+      if (resp!.sections && Object.keys(resp!.sections).length > 0) {
+        setResultSections(resp!.sections);
+      } else {
+        setResultSections(null);
+      }
 
       if (cacheKey) {
         const cache = useReportCacheStore.getState();
@@ -674,9 +724,20 @@ export default function MoreFortunePage({ category }: Props) {
           </div>
         )}
 
-        {/* 결과 — 정통사주와 동일한 카드 패턴 (레이블 + 은유 제목 + 본문) */}
+        {/* 결과 — 학업·자녀·성격은 섹션별 카드 / 그 외는 단일 카드 */}
         <AnimatePresence>
-          {result && (
+          {result && resultSections && (category === 'study' || category === 'children' || category === 'personality') && (
+            <MoreFortuneSectionedCard
+              title={`${cfg.title} 풀이`}
+              sections={resultSections}
+              category={category}
+              isArchiveMode={isArchiveMode}
+              onReset={() => {
+                handleRefetch();
+              }}
+            />
+          )}
+          {result && (!resultSections || !(category === 'study' || category === 'children' || category === 'personality')) && (
             <MoreFortuneResultCard
               title={`${cfg.title} 풀이`}
               text={result}
@@ -1007,6 +1068,109 @@ function MoreFortuneResultCard({
           </button>
         )}
       </div>
+    </motion.div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 섹션 기반 결과 카드 (학업·자녀·성격 전용)
+//   각 섹션을 SectionCollapsible 로 분리 표시. 첫 섹션의 첫 줄은 은유 제목으로
+//   카드 헤더에 노출하고 본문은 그 다음부터.
+// ─────────────────────────────────────────────────────────────────────────────
+function MoreFortuneSectionedCard({
+  title,
+  sections,
+  category,
+  isArchiveMode,
+  onReset,
+}: {
+  title: string;
+  sections: Record<string, string>;
+  category: 'study' | 'children' | 'personality';
+  isArchiveMode: boolean;
+  onReset: () => void;
+}) {
+  const keys =
+    category === 'study' ? STUDY_SECTION_KEYS
+    : category === 'children' ? CHILDREN_SECTION_KEYS
+    : PERSONALITY_SECTION_KEYS;
+  const labels =
+    category === 'study' ? STUDY_SECTION_LABELS as Record<string, string>
+    : category === 'children' ? CHILDREN_SECTION_LABELS as Record<string, string>
+    : PERSONALITY_SECTION_LABELS as Record<string, string>;
+
+  // 첫 섹션 본문에서 은유 제목 분리 (첫 비어있지 않은 줄 = 은유, 그 다음부터 = 본문)
+  const firstKey = keys[0];
+  const firstRaw = (sections[firstKey] || '').replace(/\r/g, '');
+  const firstLines = firstRaw.split('\n');
+  const metaphorIdx = firstLines.findIndex(l => l.trim().length > 0);
+  const metaphor = metaphorIdx >= 0 ? firstLines[metaphorIdx].trim() : '';
+  const firstBody = metaphorIdx >= 0 ? firstLines.slice(metaphorIdx + 1).join('\n').trim() : firstRaw.trim();
+
+  return (
+    <motion.div
+      key="sectioned"
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.35 }}
+      className={styles.section}
+      style={{ paddingTop: 4 }}
+    >
+      {/* 헤더 — 카테고리 제목 + 은유 부제 */}
+      <div style={{ marginBottom: 18 }}>
+        <h2 className="text-[18px] font-bold text-text-primary mb-2" style={{ fontFamily: 'var(--font-serif)' }}>
+          {title}
+        </h2>
+        {metaphor && (
+          <p className="text-[15px] text-text-secondary italic leading-relaxed" style={{ fontFamily: 'var(--font-serif)' }}>
+            {metaphor}
+          </p>
+        )}
+      </div>
+
+      {/* 섹션별 collapsible 카드 */}
+      <div className="flex flex-col gap-3">
+        {keys.map((key, idx) => {
+          const body = key === firstKey ? firstBody : (sections[key] || '').trim();
+          if (!body) return null;
+          return (
+            <SectionCollapsible
+              key={key}
+              title={labels[key]}
+              defaultOpen={idx === 0}
+              enterDelay={idx * 0.05}
+            >
+              <p className="text-[15.5px] text-text-secondary leading-[1.8] tracking-[-0.005em] whitespace-pre-line">
+                {body}
+              </p>
+            </SectionCollapsible>
+          );
+        })}
+      </div>
+
+      {/* 다시 풀이 버튼 */}
+      {!isArchiveMode && (
+        <div style={{ marginTop: 22 }}>
+          <button
+            type="button"
+            onClick={onReset}
+            style={{
+              width: '100%',
+              padding: '14px',
+              background: 'var(--cta-primary)',
+              border: 'none',
+              borderRadius: 12,
+              color: 'white',
+              fontSize: 14,
+              fontWeight: 700,
+              cursor: 'pointer',
+            }}
+          >
+            다시 풀이 받기
+          </button>
+        </div>
+      )}
     </motion.div>
   );
 }

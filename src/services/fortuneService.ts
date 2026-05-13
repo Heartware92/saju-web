@@ -52,6 +52,12 @@ import {
   type NewyearSectionKey,
   type JungtongsajuSectionKey,
   type TodayGanZhi,
+  STUDY_SECTION_KEYS,
+  type StudySectionKey,
+  CHILDREN_SECTION_KEYS,
+  type ChildrenSectionKey,
+  PERSONALITY_SECTION_KEYS,
+  type PersonalitySectionKey,
 } from '../constants/prompts';
 import type { TaekilResult } from '../engine/taekil';
 import { Solar } from 'lunar-javascript';
@@ -75,6 +81,8 @@ interface FortuneResponse {
   success: boolean;
   content?: string;
   error?: string;
+  /** 섹션 마커 [key] 기반 파싱 결과 (있을 때만). MoreFortuneResultCard 가 카드별 렌더링에 사용 */
+  sections?: Record<string, string>;
 }
 
 /**
@@ -1476,11 +1484,38 @@ export const getHybridReading = async (
 //   } catch (e: any) { return { success: false, error: e.message }; }
 // };
 
+/** 섹션 마커 [key] 기반 본문 파싱 — 학업·자녀·성격 공용 */
+function parseMarkerSections<K extends string>(raw: string, keys: readonly K[]): Partial<Record<K, string>> {
+  const out: Partial<Record<K, string>> = {};
+  if (!raw) return out;
+  const keysPattern = keys.join('|');
+  // AI 가 마커 주변에 markdown bold/prefix 기호를 끼우는 케이스 흡수
+  const normalized = raw.replace(
+    new RegExp(`^[\\s*#▶■·•\\-]*\\[(${keysPattern})\\][\\s*#]*$`, 'gm'),
+    '[$1]',
+  );
+  const parts = normalized.split(new RegExp(`^\\s*\\[(${keysPattern})\\]\\s*$`, 'm'));
+  for (let i = 1; i < parts.length; i += 2) {
+    const key = parts[i] as K;
+    const body = (parts[i + 1] || '').trim();
+    if (body) out[key] = body;
+  }
+  return out;
+}
+
+export const parseStudySections = (raw: string): Partial<Record<StudySectionKey, string>> =>
+  parseMarkerSections(raw, STUDY_SECTION_KEYS);
+export const parseChildrenSections = (raw: string): Partial<Record<ChildrenSectionKey, string>> =>
+  parseMarkerSections(raw, CHILDREN_SECTION_KEYS);
+export const parsePersonalitySections = (raw: string): Partial<Record<PersonalitySectionKey, string>> =>
+  parseMarkerSections(raw, PERSONALITY_SECTION_KEYS);
+
 export const getStudyShort = async (result: SajuResult, profileId?: string): Promise<FortuneResponse> => {
   try {
     const content = await callGPT(generateStudyShortPrompt(result), MORE_FORTUNE_CONFIGS.study.maxTokens);
+    const sections = parseStudySections(content);
     archiveSaju({ profileId, sourceBirth: sourceBirthFromSaju(result), category: 'study', resultData: result as unknown as Record<string, unknown>, interpretation: content, creditType: 'moon', creditUsed: 1 });
-    return { success: true, content };
+    return { success: true, content, sections };
   } catch (e: any) { return { success: false, error: e.message }; }
 };
 
@@ -1496,16 +1531,18 @@ export const getStudyShort = async (result: SajuResult, profileId?: string): Pro
 export const getChildrenShort = async (result: SajuResult, profileId?: string): Promise<FortuneResponse> => {
   try {
     const content = await callGPT(generateChildrenShortPrompt(result), MORE_FORTUNE_CONFIGS.children.maxTokens);
+    const sections = parseChildrenSections(content);
     archiveSaju({ profileId, sourceBirth: sourceBirthFromSaju(result), category: 'children', resultData: result as unknown as Record<string, unknown>, interpretation: content, creditType: 'moon', creditUsed: 1 });
-    return { success: true, content };
+    return { success: true, content, sections };
   } catch (e: any) { return { success: false, error: e.message }; }
 };
 
 export const getPersonalityShort = async (result: SajuResult, profileId?: string): Promise<FortuneResponse> => {
   try {
     const content = await callGPT(generatePersonalityShortPrompt(result), MORE_FORTUNE_CONFIGS.personality.maxTokens);
+    const sections = parsePersonalitySections(content);
     archiveSaju({ profileId, sourceBirth: sourceBirthFromSaju(result), category: 'personality', resultData: result as unknown as Record<string, unknown>, interpretation: content, creditType: 'moon', creditUsed: 1 });
-    return { success: true, content };
+    return { success: true, content, sections };
   } catch (e: any) { return { success: false, error: e.message }; }
 };
 
