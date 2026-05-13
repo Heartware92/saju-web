@@ -49,7 +49,9 @@ function LinkIcon({ size = 20 }: { size?: number }) {
   );
 }
 
-function CopyModal({ modal, onClose }: { modal: { message: string; success: boolean } | null; onClose: () => void }) {
+type CopyModalState = { message: string; success: boolean; manualUrl?: string };
+
+function CopyModal({ modal, onClose }: { modal: CopyModalState | null; onClose: () => void }) {
   return (
     <AnimatePresence>
       {modal && (
@@ -65,14 +67,27 @@ function CopyModal({ modal, onClose }: { modal: { message: string; success: bool
             animate={{ scale: 1, opacity: 1 }}
             exit={{ scale: 0.9, opacity: 0 }}
             onClick={(e) => e.stopPropagation()}
-            className="mx-6 w-full max-w-[300px] rounded-2xl bg-space-elevated border border-[var(--border-subtle)] p-6 text-center shadow-2xl"
+            className="mx-6 w-full max-w-[320px] rounded-2xl bg-space-elevated border border-[var(--border-subtle)] p-6 text-center shadow-2xl"
           >
-            <div className={`text-3xl mb-3 ${modal.success ? '' : ''}`}>
+            <div className="text-3xl mb-3">
               {modal.success ? '✓' : '✕'}
             </div>
-            <p className="text-[16px] font-medium text-text-primary mb-5">
+            <p className="text-[16px] font-medium text-text-primary mb-4">
               {modal.message}
             </p>
+            {modal.manualUrl && (
+              <>
+                <p className="text-[13px] text-text-tertiary mb-2 leading-relaxed">
+                  아래 링크를 길게 눌러 복사해주세요
+                </p>
+                <input
+                  readOnly
+                  value={modal.manualUrl}
+                  onFocus={(e) => e.currentTarget.select()}
+                  className="w-full px-3 py-2 mb-5 rounded-lg bg-[rgba(0,0,0,0.3)] border border-[var(--border-subtle)] text-[12.5px] text-text-secondary font-mono break-all select-all"
+                />
+              </>
+            )}
             <button
               onClick={onClose}
               className="w-full py-2.5 rounded-xl bg-cta/20 border border-cta/40 text-cta font-bold text-[15px] active:scale-[0.98] transition-all"
@@ -86,6 +101,39 @@ function CopyModal({ modal, onClose }: { modal: { message: string; success: bool
   );
 }
 
+async function copyTextToClipboard(text: string): Promise<boolean> {
+  if (typeof window === 'undefined') return false;
+
+  if (window.isSecureContext && navigator.clipboard?.writeText) {
+    try {
+      await navigator.clipboard.writeText(text);
+      return true;
+    } catch {
+      // fall through to legacy fallback
+    }
+  }
+
+  try {
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.setAttribute('readonly', '');
+    ta.style.position = 'fixed';
+    ta.style.top = '0';
+    ta.style.left = '0';
+    ta.style.opacity = '0';
+    ta.style.pointerEvents = 'none';
+    document.body.appendChild(ta);
+    ta.focus();
+    ta.select();
+    ta.setSelectionRange(0, text.length);
+    const ok = document.execCommand('copy');
+    document.body.removeChild(ta);
+    return ok;
+  } catch {
+    return false;
+  }
+}
+
 export function ShareBar({
   recordId,
   type = 'saju',
@@ -95,7 +143,7 @@ export function ShareBar({
   shareDescription,
 }: ShareBarProps) {
   const [loading, setLoading] = useState(false);
-  const [modal, setModal] = useState<{ message: string; success: boolean } | null>(null);
+  const [modal, setModal] = useState<CopyModalState | null>(null);
 
   const getShareLink = async (): Promise<string | null> => {
     setLoading(true);
@@ -138,11 +186,15 @@ export function ShareBar({
     const url = await getShareLink();
     if (!url) return;
 
-    try {
-      await navigator.clipboard.writeText(url);
+    const ok = await copyTextToClipboard(url);
+    if (ok) {
       setModal({ message: '링크가 복사되었어요', success: true });
-    } catch {
-      setModal({ message: '복사에 실패했어요', success: false });
+    } else {
+      setModal({
+        message: '자동 복사가 막힌 환경이에요',
+        success: false,
+        manualUrl: url,
+      });
     }
   };
 
