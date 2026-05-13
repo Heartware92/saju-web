@@ -153,9 +153,16 @@ export default function ConsultationChatPage() {
     return () => clearTimeout(timer);
   }, [conversations, activeConversationId, pid, ready, loading, syncToDb]);
 
-  // 자동 스크롤
+  // 자동 스크롤 — 단, 사용자가 위로 스크롤해서 이전 답변을 읽고 있으면 따라가지 않음.
+  // 사용 케이스: 답변 스트리밍 끝난 뒤 "이어서 물어볼까요" followups 가 setMessages 로 추가되면
+  // messages 변경 트리거되어 스크롤이 또 바닥으로 점프 → 사용자가 위에서 읽다가 화면이 튐.
+  // bottom 으로부터 120px 이내(거의 바닥) 일 때만 자동 스크롤 유지.
   useEffect(() => {
-    scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' });
+    const el = scrollRef.current;
+    if (!el) return;
+    const distanceFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
+    if (distanceFromBottom > 120) return;
+    el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' });
   }, [messages, loading]);
 
   // 이탈 경고
