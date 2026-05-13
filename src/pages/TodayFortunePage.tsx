@@ -178,7 +178,9 @@ function InputForm({
   const [hobbies, setHobbies] = useState<TodayHobby[]>([]);
   const [customHobby, setCustomHobby] = useState('');
   const [jobState, setJobState] = useState<TodayJobState | null>(null);
+  const [customJobState, setCustomJobState] = useState('');
   const [loveState, setLoveState] = useState<TodayLoveState | null>(null);
+  const [customLoveState, setCustomLoveState] = useState('');
   const [q1Answer, setQ1Answer] = useState('');
   const [q2Answer, setQ2Answer] = useState('');
   // '직접 입력'을 골랐을 때만 노출되는 보조 입력값
@@ -190,8 +192,8 @@ function InputForm({
 
   const canSubmit =
     (hobbies.length > 0 || customHobby.trim().length > 0) &&
-    jobState !== null &&
-    loveState !== null;
+    (jobState !== null || customJobState.trim().length > 0) &&
+    (loveState !== null || customLoveState.trim().length > 0);
 
   const toggleHobby = (h: TodayHobby) => {
     setHobbies((prev) => (prev.includes(h) ? prev.filter((x) => x !== h) : [...prev, h]));
@@ -205,8 +207,12 @@ function InputForm({
     onSubmit({
       hobbies,
       customHobby: customHobby.trim() || undefined,
-      jobState: jobState!,
-      loveState: loveState!,
+      // 칩 미선택 + 직접 입력만 한 경우 '기타' / '공개 안 함' 으로 fallback.
+      // 프롬프트 헤더·인용은 customJobState/customLoveState 가 있으면 그 값을 우선 사용.
+      jobState: jobState ?? '기타',
+      customJobState: customJobState.trim() || undefined,
+      loveState: loveState ?? '공개 안 함',
+      customLoveState: customLoveState.trim() || undefined,
       timeSlot: initialSlot,
       q1Text: q1.q,
       q2Text: q2.q,
@@ -291,6 +297,13 @@ function InputForm({
             );
           })}
         </div>
+        <input
+          type="text"
+          value={customJobState}
+          onChange={(e) => setCustomJobState(e.target.value.slice(0, 30))}
+          placeholder="그 외 직접 입력 (선택)"
+          className="mt-3 w-full px-3 py-2.5 rounded-lg bg-[rgba(255,255,255,0.04)] border border-[rgba(255,255,255,0.12)] text-[14px] text-text-primary placeholder-text-tertiary"
+        />
       </div>
 
       {/* 3. 연애 상태 */}
@@ -320,6 +333,13 @@ function InputForm({
             );
           })}
         </div>
+        <input
+          type="text"
+          value={customLoveState}
+          onChange={(e) => setCustomLoveState(e.target.value.slice(0, 30))}
+          placeholder="그 외 직접 입력 (선택)"
+          className="mt-3 w-full px-3 py-2.5 rounded-lg bg-[rgba(255,255,255,0.04)] border border-[rgba(255,255,255,0.12)] text-[14px] text-text-primary placeholder-text-tertiary"
+        />
       </div>
 
       {/* 4. 시간대별 질문 2개 */}
@@ -925,7 +945,9 @@ function hashUserCtx(ctx: TodayUserContext): string {
     [...ctx.hobbies].sort().join(','),
     (ctx.customHobby ?? '').trim(),
     ctx.jobState,
+    (ctx.customJobState ?? '').trim(),
     ctx.loveState,
+    (ctx.customLoveState ?? '').trim(),
     (ctx.q1Answer ?? '').trim().slice(0, 40),
     (ctx.q2Answer ?? '').trim().slice(0, 40),
   ];
