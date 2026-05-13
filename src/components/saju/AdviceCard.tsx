@@ -136,26 +136,37 @@ export function AdviceCard({ yongSinElement, meta }: AdviceCardProps) {
         </div>
       </div>
 
-      {/* 시간대 + 음식 + 행운 숫자 — 좌측 정렬·폰트 통일 (LuckyVisualCard 와 동일 스펙) */}
-      <div className="grid grid-cols-3 gap-2">
-        <div className="rounded-xl px-3 py-3 bg-white/5 border border-white/10 min-h-[78px]">
+      {/* 시간대 + 행운 숫자 (2-col 첫 행) + 보강 음식 (full-width 둘째 행) — 음식 N개 칩 wrap */}
+      <div className="grid grid-cols-2 gap-2">
+        <div className="rounded-xl px-3 py-3 bg-white/5 border border-white/10">
           <div className="text-[13px] text-text-tertiary mb-1.5">유리한 시간대</div>
           <div className="text-[16px] text-text-primary font-semibold leading-snug">
             {annotateTimeSlot(meta.timeSlot)}
           </div>
         </div>
-        <div className="rounded-xl px-3 py-3 bg-white/5 border border-white/10 min-h-[78px]">
-          <div className="text-[13px] text-text-tertiary mb-1.5">보강 음식</div>
-          <div className="text-[16px] text-text-primary font-semibold leading-snug">
-            {meta.foods.length > 0 ? meta.foods.join(', ') : '—'}
-          </div>
-        </div>
-        <div className="rounded-xl px-3 py-3 bg-white/5 border border-white/10 min-h-[78px]">
+        <div className="rounded-xl px-3 py-3 bg-white/5 border border-white/10">
           <div className="text-[13px] text-text-tertiary mb-1.5">행운 숫자</div>
           <div className="text-[20px] text-text-primary font-bold leading-snug tracking-wider">
             {mapData.numbers[0]} · {mapData.numbers[1]}
           </div>
         </div>
+      </div>
+      <div className="rounded-xl px-3 py-3 bg-white/5 border border-white/10">
+        <div className="text-[13px] text-text-tertiary mb-2">보강 음식</div>
+        {meta.foods.length > 0 ? (
+          <div className="flex flex-wrap gap-1.5">
+            {meta.foods.map((f, i) => (
+              <span
+                key={`${f}-${i}`}
+                className="text-[14px] text-text-primary font-medium px-2.5 py-1 rounded-md bg-white/8 border border-white/10"
+              >
+                {f}
+              </span>
+            ))}
+          </div>
+        ) : (
+          <div className="text-[16px] text-text-primary font-semibold">—</div>
+        )}
       </div>
 
       {/* 본문 — 정통사주 다른 섹션 본문과 동일 스펙(17px / 1.85 / -0.005em) */}

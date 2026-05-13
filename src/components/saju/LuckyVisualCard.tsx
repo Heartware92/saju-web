@@ -199,21 +199,35 @@ export function LuckyVisualCard({
         </div>
       </div>
 
-      {/* 보석 + 활동 (있을 때만) */}
-      {(gem || activity) && (
-        <div className="grid grid-cols-2 gap-2">
-          {gem && (
-            <div className="rounded-xl p-3 bg-white/5 border border-white/10">
-              <div className="text-[13px] text-text-tertiary mb-1.5">행운 보석·소품</div>
-              <div className="text-[16px] text-text-primary font-semibold leading-snug">{gem}</div>
-            </div>
-          )}
-          {activity && (
-            <div className="rounded-xl p-3 bg-white/5 border border-white/10">
-              <div className="text-[13px] text-text-tertiary mb-1.5">추천 활동</div>
-              <div className="text-[16px] text-text-primary font-semibold leading-snug">{activity}</div>
-            </div>
-          )}
+      {/* 보석 + 활동 — N개 항목 chip wrap, full-width 카드로 분리 */}
+      {gem && (
+        <div className="rounded-xl p-3 bg-white/5 border border-white/10">
+          <div className="text-[13px] text-text-tertiary mb-2">행운 보석·소품</div>
+          <div className="flex flex-wrap gap-1.5">
+            {gem.split(/[·,、，]/).map(s => s.trim()).filter(Boolean).map((item, i) => (
+              <span
+                key={`gem-${item}-${i}`}
+                className="text-[14px] text-text-primary font-medium px-2.5 py-1 rounded-md bg-white/8 border border-white/10"
+              >
+                {item}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+      {activity && (
+        <div className="rounded-xl p-3 bg-white/5 border border-white/10">
+          <div className="text-[13px] text-text-tertiary mb-2">추천 활동</div>
+          <div className="flex flex-wrap gap-1.5">
+            {activity.split(/[·,、，]/).map(s => s.trim()).filter(Boolean).map((item, i) => (
+              <span
+                key={`act-${item}-${i}`}
+                className="text-[14px] text-text-primary font-medium px-2.5 py-1 rounded-md bg-white/8 border border-white/10"
+              >
+                {item}
+              </span>
+            ))}
+          </div>
         </div>
       )}
 
