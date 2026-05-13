@@ -418,6 +418,12 @@ export default function MoreFortunePage({ category }: Props) {
     setResult(null);
     setLoading(true);
 
+    // ★ 로딩 화면 최소 표시 시간 — AI 응답이 너무 빨라(<5s) 로딩 화면이
+    //   안 보이고 결과로 바로 넘어가는 사고 방지. 사용자에게 "새 풀이 진행 중"
+    //   임을 시각적으로 명확히 전달.
+    const loadingStart = Date.now();
+    const MIN_LOADING_MS = 2000;
+
     try {
       type FortuneResp = { success: boolean; content?: string; error?: string };
       let resp: FortuneResp = { success: false, error: '알 수 없는 카테고리' };
@@ -455,6 +461,12 @@ export default function MoreFortunePage({ category }: Props) {
 
       if (!resp || !resp.success || !resp.content) {
         throw new Error(resp?.error || '풀이 생성에 실패했어요.');
+      }
+
+      // 로딩 화면 최소 표시 시간 보장
+      const elapsed = Date.now() - loadingStart;
+      if (elapsed < MIN_LOADING_MS) {
+        await new Promise(r => setTimeout(r, MIN_LOADING_MS - elapsed));
       }
 
       setResult(resp!.content);
