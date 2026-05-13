@@ -1094,14 +1094,6 @@ function MoreFortuneSectionedCard({
     : category === 'children' ? CHILDREN_SECTION_LABELS as Record<string, string>
     : PERSONALITY_SECTION_LABELS as Record<string, string>;
 
-  // 첫 섹션 본문에서 은유 제목 분리 (첫 비어있지 않은 줄 = 은유, 그 다음부터 = 본문)
-  const firstKey = keys[0];
-  const firstRaw = (sections[firstKey] || '').replace(/\r/g, '');
-  const firstLines = firstRaw.split('\n');
-  const metaphorIdx = firstLines.findIndex(l => l.trim().length > 0);
-  const metaphor = metaphorIdx >= 0 ? firstLines[metaphorIdx].trim() : '';
-  const firstBody = metaphorIdx >= 0 ? firstLines.slice(metaphorIdx + 1).join('\n').trim() : firstRaw.trim();
-
   return (
     <motion.div
       key="sectioned"
@@ -1109,36 +1101,35 @@ function MoreFortuneSectionedCard({
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0 }}
       transition={{ duration: 0.35 }}
-      className={styles.section}
       style={{ paddingTop: 4 }}
     >
-      {/* 헤더 — 카테고리 제목 + 은유 부제 */}
-      <div style={{ marginBottom: 18 }}>
-        <h2 className="text-[18px] font-bold text-text-primary mb-2" style={{ fontFamily: 'var(--font-serif)' }}>
+      {/* 카테고리 제목 — 간단한 헤더 */}
+      <div style={{ marginBottom: 16, padding: '0 4px' }}>
+        <h2 className="text-[18px] font-bold text-text-primary" style={{ fontFamily: 'var(--font-serif)' }}>
           {title}
         </h2>
-        {metaphor && (
-          <p className="text-[15px] text-text-secondary italic leading-relaxed" style={{ fontFamily: 'var(--font-serif)' }}>
-            {metaphor}
-          </p>
-        )}
       </div>
 
-      {/* 섹션별 collapsible 카드 */}
+      {/* 섹션별 collapsible 카드 — 정통사주와 동일 스펙 (extractMetaphor + metaphorTitle prop + 17px 본문) */}
       <div className="flex flex-col gap-3">
         {keys.map((key, idx) => {
-          const body = key === firstKey ? firstBody : (sections[key] || '').trim();
-          if (!body) return null;
+          const raw = (sections[key] || '').trim();
+          if (!raw) return null;
+          // 본문 안의 [은유]·【은유】·**[은유]** 등 변형 마커 strip + 첫 줄 은유 추출
+          const { metaphorTitle, bodyText } = extractMetaphor(raw);
           return (
             <SectionCollapsible
               key={key}
               title={labels[key]}
+              metaphorTitle={metaphorTitle}
               defaultOpen={idx === 0}
               enterDelay={idx * 0.05}
             >
-              <p className="text-[15.5px] text-text-secondary leading-[1.8] tracking-[-0.005em] whitespace-pre-line">
-                {body}
-              </p>
+              <div className="text-[17px] text-text-secondary leading-[1.85] tracking-[-0.005em] space-y-3">
+                {bodyText.split(/\n\n+/).map((para, pi) => (
+                  <p key={pi} className="whitespace-pre-line">{para.trim()}</p>
+                ))}
+              </div>
             </SectionCollapsible>
           );
         })}
@@ -1146,7 +1137,7 @@ function MoreFortuneSectionedCard({
 
       {/* 다시 풀이 버튼 */}
       {!isArchiveMode && (
-        <div style={{ marginTop: 22 }}>
+        <div style={{ marginTop: 22, padding: '0 4px' }}>
           <button
             type="button"
             onClick={onReset}
