@@ -814,7 +814,7 @@ export default function TaekilPage() {
                       >
                         <span className="flex items-center gap-2 min-w-0">
                           {catLabel && (
-                            <span className="text-[12px] font-bold text-cta bg-cta/10 px-2 py-0.5 rounded-md whitespace-nowrap flex-shrink-0">
+                            <span className="text-[12px] font-bold text-cta bg-cta/10 px-2 py-0.5 rounded-md whitespace-nowrap flex-shrink-0 text-center w-[120px]">
                               {catLabel}
                             </span>
                           )}
