@@ -282,7 +282,15 @@ export function PeriodResultBlock({ record }: Props) {
                 rawBody = parsed.bodyText;
                 metaphorTitle = '';
               }
-              const bodyText = key === 'monthly' ? rawBody : rawBody.replace(/\n(?!\n)/g, ' ');
+              // lucky: 5개 불릿("- 라벨: 내용") 앞에 빈 줄 강제 삽입 (PeriodFortunePage 와 동일 룰)
+              const bodyText = key === 'monthly'
+                ? rawBody
+                : key === 'lucky'
+                  ? rawBody
+                      .replace(/\n(?!\n)/g, ' ')
+                      .replace(/\s+-\s+(?=[가-힣]+(?:[·\s][가-힣]+)*\s*:)/g, '\n\n- ')
+                      .trim()
+                  : rawBody.replace(/\n(?!\n)/g, ' ');
               return (
                 <motion.div key={key}
                   initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }}

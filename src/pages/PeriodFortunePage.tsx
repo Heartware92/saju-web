@@ -1096,10 +1096,18 @@ export default function PeriodFortunePage({ scope }: { scope: FortuneScope | 'da
                   metaphorTitle = '';
                 }
 
-                // monthly: 월 사이 빈 줄 유지, 기타 섹션: 단락 내 불필요 줄바꿈 제거
+                // monthly: 월 사이 빈 줄 유지
+                // lucky: "- 라벨: 내용" 5개 불릿 구조 — 각 불릿 앞에 빈 줄 강제 삽입해 단락 분리
+                // 그 외: 단락 내 불필요 줄바꿈 제거
                 const bodyText = key === 'monthly'
                   ? rawBody
-                  : rawBody.replace(/\n(?!\n)/g, ' ');
+                  : key === 'lucky'
+                    ? rawBody
+                        .replace(/\n(?!\n)/g, ' ')
+                        // " - 한글: " 패턴(불릿) 앞에 빈 줄 삽입. AI 가 줄바꿈 빼먹어도 안전.
+                        .replace(/\s+-\s+(?=[가-힣]+(?:[·\s][가-힣]+)*\s*:)/g, '\n\n- ')
+                        .trim()
+                    : rawBody.replace(/\n(?!\n)/g, ' ');
 
                 return (
                   <SectionCollapsible
