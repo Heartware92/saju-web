@@ -198,12 +198,12 @@
    더 specific 해야 override 되므로 같은 selector 안에 묶어둠. */
 .leading-\[1\.85\] {
   font-family: var(--font-body);
-  letter-spacing: 0.14em !important;
+  letter-spacing: 0.16em !important;
 }
 .whitespace-pre-line.text-text-secondary,
 p.whitespace-pre-line {
   font-family: var(--font-body);
-  letter-spacing: 0.14em !important;
+  letter-spacing: 0.16em !important;
 }
 
 /* ============================================
