@@ -977,7 +977,7 @@ export type TodayV3SectionKey = typeof TODAY_V3_SECTION_KEYS[number];
 
 export const TODAY_V3_SECTION_LABELS: Record<TodayV3SectionKey, string> = {
   today_basis:         '명리적 근거',
-  today_hobby_method:  '운용법',  // 헤더는 카드 렌더 시 취미명을 동적으로 prefix
+  today_hobby_method:  '관심 있는 것에 대한 운용법',
   today_timeflow:      '시간대별 흐름',
   today_sleep:         '수면 루틴',
   today_meal:          '식사 가이드',
@@ -1155,13 +1155,26 @@ export const generateTodayFortuneV3Prompt = (
     '자기계발':    `오늘 자기계발 5포인트로 구체화: (1) 새 시도 vs 익숙한 것 정리 중 추천 1가지 — 인성(印星)·식상(食傷) 흐름 + 일진 십성 근거. (2) 인풋(독서·강의·정보 수집) vs 아웃풋(실행·기록·발행) 중 효과적인 쪽 1가지. (3) 회피 자기소비 패턴 1가지(SNS·자기계발 영상 폭식·완벽한 계획에만 시간 쓰기). (4) 권장 학습/실행 시간대 1구간 + 어떤 행동에 쓸지. (5) 자기 전 5분 기록 행동(오늘 1줄 회고·내일 1가지 작은 시도 메모). 마지막 1문장 오늘 1개 작은 시도 단정.`,
     '휴식·재충전': `오늘 휴식·재충전 5포인트로 구체화: (1) 권장 휴식 형태 1가지(혼자 조용히 / 가까운 1명과 / 자연 / 실내 중) — 신강신약(${result.strengthStatus}) + 일주 12운성(특히 쇠·병·사·묘·절·태·양 단계인지) + 일진 십성(인성·식신 호응 시 회복 흐름) 근거. (2) 피하면 좋은 자극 1가지(SNS·뉴스·과식·과음·격한 운동·새 자리·즉흥 약속). (3) 회복에 가장 좋은 시간대 1구간(일진 지지 ${todayGz.zhi} 와 육합·삼합 시간) + 그 시간 권장 회복 행동 1가지(낮잠 20~30분·따뜻한 차·짧은 산책 15분·종이책·욕조). (4) 신체 회복 행동 1가지 + 정신 회복 행동 1가지(스트레칭·호흡·일기·식물 돌보기 등). (5) 자기 전 60분 회복 의식 시퀀스(따뜻한 샤워 → 어두운 조명 → 종이책 → 호흡 5분). 마지막 1문장 "오늘은 ~만 하고 푹 쉬어라" 단정 명령형. ★ 새 시도·확장·신규 학습·신규 미팅·고강도 운동 일체 금지로 명시.`,
   };
-  const hobbyGuide = hobbyMethodGuide[primaryHobby] ?? hobbyMethodGuide['자기계발'];
+  // ── 사용자가 선택한 N개 취미 + 직접 입력 모두 본문에 반영 ──
+  // 라벨은 "관심 있는 것에 대한 운용법" 고정. N개 모두 별도 미니 가이드.
+  const allHobbies = [
+    ...ctx.hobbies,
+    ...(customHobbyRaw ? [customHobbyRaw] : []),
+  ];
+  const perHobbyGuides = allHobbies.map((h, i) => {
+    // 직접 입력은 매핑 분야 가이드를 fallback 으로 사용하되 원본 단어 그대로 본문에 인용
+    const isCustom = h === customHobbyRaw;
+    const mapped = isCustom ? (customHobbyMapped ?? '자기계발') : h;
+    const baseGuide = hobbyMethodGuide[mapped] ?? hobbyMethodGuide['자기계발'];
+    return `  ${i + 1}) 「${h}」${isCustom ? ' (사용자 직접 입력 — 본문에 이 단어 그대로 자연 호칭으로 인용)' : ''}
+${baseGuide}`;
+  }).join('\n\n');
 
-  // ── 멀티 취미 보조 가이드 (2~3개 선택 시 해당 분야들도 본문에 자연스럽게 녹임)
-  const secondaryHobbies = ctx.hobbies.slice(1, 3);
-  const secondaryGuide = secondaryHobbies.length > 0
-    ? `또한 보조 취미(${secondaryHobbies.join(', ')})도 ${primaryHobby} 본문 마지막 1~2문장에 짧게 녹여 다층적으로 풀이.`
-    : '';
+  const hobbyGuide = allHobbies.length > 0
+    ? `사용자가 선택한 ${allHobbies.length}개 관심사 (${allHobbies.join(' / ')}) — 각각에 대해 3~5개 핵심 포인트를 미니 가이드로 풀이. 한 분야로 압축 금지. N개 모두 본문에 명시 인용.\n\n${perHobbyGuides}`
+    : hobbyMethodGuide['자기계발'];
+  const secondaryGuide = '';
+  void primaryHobby; // 마커 변수 — 다른 섹션에서 ${primaryHobby} 인용 호환용으로 유지
 
   return `당신은 35년 경력의 사주명리·생활처방 전문가입니다. 사용자의 오늘 하루를 만세력 전체 데이터(4기둥·신살·합충·격국·신강·일주특성·운기 4층) + 사용자가 입력한 현재 상황에 근거해 깊고 구체적으로 풀이합니다.
 
@@ -1222,7 +1235,22 @@ ${WRITING_RULES_BLOCK.replace('${todayGz_label}', `${todayGz.gan}${todayGz.zhi}`
 · 분량 하한: 14섹션 합산 3300자 이상 목표 (today_persona_extra 추가 + 분기 적용으로 일부 섹션 +25~40%이므로 상향. 토큰 더 쓰더라도 각 섹션을 풍부히).
 · 문단 나누기: 서로 다른 주제·항목·시간대는 반드시 빈 줄(줄바꿈 2회)로 문단을 나눈다.
 · 사용자 입력값 인용 강제: 취미(${primaryHobby})·직업(${ctx.customJobState || ctx.jobState})·연애(${ctx.customLoveState || ctx.loveState})·시간대(${slotLabel})를 본문에서 각각 한 번씩 명시 언급.
-· ★★★ 사용자 입력 자연 호칭 변환 룰: 사용자가 직접 입력한 단어/문장(예: "건설업에 일함", "이직 준비중", "필라테스")을 원형 그대로 박지 말고 한국어 자연 호칭·서술로 변환해서 본문 첫 1~2 문장 내에 반드시 한 번 사용. 예: "건설업에 일함" → "건설 일을 하고 계시는군요" 또는 "건설 현장에 계신 분께", "이직 준비중" → "이직을 준비하시는 중이군요", "필라테스" → "필라테스를 좋아하시는 분께". 이때 사용자 단어의 핵심 키워드는 반드시 보존(예: '건설', '이직', '필라테스'). 어색한 직역·따옴표 인용 금지.
+· ★★★ 사용자 직접 입력 자연 호칭 인용 — 위반 시 사고로 간주
+  사용자가 직접 입력한 단어/문장 (있는 경우만):
+  - 취미 직접 입력: ${customHobbyRaw || '없음'}
+  - 직업 직접 입력: ${ctx.customJobState || '없음'}
+  - 연애 직접 입력: ${ctx.customLoveState || '없음'}
+  위 직접 입력 값이 "없음"이 아니면 다음 룰 적용:
+  (1) 원형 그대로 박지 말 것. 따옴표·괄호 인용도 금지.
+  (2) 한국어 자연 호칭/서술로 변환하여 본문 1~2 문장 내에 반드시 1회 사용.
+  (3) 핵심 키워드는 반드시 보존.
+  변환 예시:
+    · "건설업에 일함" → "건설 일을 하고 계시는군요" / "건설 현장에 계신 분께"
+    · "이직 준비중" → "이직을 준비하시는 중이군요" / "이직을 준비하는 시기"
+    · "필라테스" → "필라테스를 좋아하시는 분께" / "필라테스로 몸을 다듬는 분께"
+    · "공무원 준비" → "공무원 시험을 준비하시는 중이군요"
+    · "스타트업 운영" → "스타트업을 운영하시는 분께"
+  특히 직업·연애 직접 입력은 today_persona_extra·today_relationship 카드에서 반드시 자연 호칭으로 1회 이상 인용. 일반 분기(직장인/주부 등)로 우회하지 말 것.
 · 만세력 수치(격국·용신·신강·오행%·십성·신살·합충)는 임의로 뒤집거나 변경 금지.
 · ★★ 동적 분기 강제: [답변 자동 분류 결과](${allGroupsCode})에 매칭되는 그룹의 [섹션별 비중·강조점 분기 가이드]를 9개 본문 섹션(today_basis ~ today_persona_extra ~ today_oneliner)에 모두 적용. 그룹이 여럿이면 누적 적용. 같은 사주라도 답변이 다르면 풀이가 확연히 달라야 한다. 분기 미적용 = 사고로 간주.
 · ★★ 직업 맞춤 카드 강제: [today_persona_extra] 카드는 jobState=${ctx.jobState} 에 해당하는 [today_persona_extra 직업/상황 맞춤 포인트 카드] 가이드를 그대로 따름. 학생/직장인/자영업/구직중/주부/기타 6종 중 jobState 에 따라 카드 라벨·콘텐츠가 완전히 달라야 한다.
@@ -1294,12 +1322,13 @@ ${METAPHOR_KB}
 5) 신강신약(${result.strengthStatus}) 관점에서 오늘이 일간에 유리/불리한지 + 한 줄 정리(오늘의 명리적 결).
 ★ 분기 적용(${allGroupsCode}): [섹션 분기 가이드]의 today_basis 항목대로 강조점·관점 변형. 기본 320~420자, 분기에 따라 ±20%.
 
-[today_hobby_method] — 분기 분량(아래 ★ 참조) (취미·역할 운용법: ${primaryHobby})
+[today_hobby_method] — 분기 분량(아래 ★ 참조) (관심 있는 것에 대한 운용법 — 사용자가 선택한 N개 분야 모두 풀이)
 첫 줄: 은유 제목.
 본문: ${hobbyGuide}
 ${secondaryGuide}
-${q1Filled || q2Filled ? `사용자 답변(${q1Filled ? `Q1 "${q1Filled}"` : ''}${q1Filled && q2Filled ? ' / ' : ''}${q2Filled ? `Q2 "${q2Filled}"` : ''}) 중 본 섹션(${primaryHobby} 운용법)과 직접 관련 있는 답변이 있으면, 그 키워드를 본문에 1회 노출하고 일진 ${todayGz.gan}${todayGz.zhi} 십성(${todayGz.tenGodGan}/${todayGz.tenGodZhi})과 어떻게 맞물리는지 1~2문장으로 풀이. 관련성이 약한 답변(예: 사람·관계·컨디션)은 여기서 다루지 말고 해당 매핑 섹션(today_relationship/today_sleep 등)에서 처리.` : '시간대 질문 답변이 없으므로, 입력하지 않은 부분을 추정해 만들지 말고 일반 가이드로.'}
-★ 위 5포인트 가이드를 모두 본문에 반영(자연스러운 3~4 문단으로 풀어쓰되 5개 항목 누락 금지). 각 포인트는 1~2 문장으로 구체화.
+${q1Filled || q2Filled ? `사용자 답변(${q1Filled ? `Q1 "${q1Filled}"` : ''}${q1Filled && q2Filled ? ' / ' : ''}${q2Filled ? `Q2 "${q2Filled}"` : ''}) 중 본 섹션과 직접 관련 있는 답변이 있으면, 그 키워드를 본문에 1회 노출하고 일진 ${todayGz.gan}${todayGz.zhi} 십성(${todayGz.tenGodGan}/${todayGz.tenGodZhi})과 어떻게 맞물리는지 1~2문장으로 풀이. 관련성이 약한 답변은 여기서 다루지 말고 해당 매핑 섹션에서 처리.` : '시간대 질문 답변이 없으므로, 입력하지 않은 부분을 추정해 만들지 말고 일반 가이드로.'}
+★★ 분야 N개 모두 풀이 강제: 사용자가 선택한 모든 관심사 (${allHobbies.length > 0 ? allHobbies.join(', ') : '없음'}) 를 본문에 각각 1개 미니 단락(2~3문장)으로 풀이. 한 분야만 길게 쓰고 나머지를 줄여서 마지막에 한 줄 언급하는 방식 금지. 분야별 미니 단락 N개 → 마지막 종합 1문장 형식으로 구성.
+★ 각 분야별 미니 가이드의 5포인트는 자연스럽게 압축해 2~3문장으로. 단 핵심 행동·시간대·회피 항목은 누락 금지.
 마지막 1문장은 오늘 한 가지 실천 행동을 단정 명령형 문장으로 마무리.
 ★ 분기 적용(${allGroupsCode}): [섹션 분기 가이드]의 today_hobby_method 항목대로 강도·작업 방식 변형. 기본 420~540자, 분기에 따라 ±25% (rest 그룹 시 +20%, condition_low 시 +15%, 작업 좁히면서 회복 행동까지).
 

@@ -1087,13 +1087,9 @@ export default function TodayFortunePage() {
               bodyText = hasMetaphor ? lines.slice(1).join('\n').trim() : bodyText;
             }
 
-            // 5번 운용법 헤더는 사용자 취미에 맞춰 동적
+            // 5번 운용법 헤더는 "관심 있는 것에 대한 운용법" 고정 (N개 취미 모두 본문에 포함)
             // 13번 맞춤 포인트 헤더는 jobState에 맞춰 동적 (학생→"오늘의 학습 습관 한 가지" 등)
             const headerLabel = (() => {
-              if (key === 'today_hobby_method' && report.userContext) {
-                const primary = report.userContext.hobbies[0] ?? report.userContext.customHobby ?? '자기계발';
-                return `${primary} 운용법`;
-              }
               if (key === 'today_persona_extra' && report.userContext?.jobState) {
                 return TODAY_PERSONA_EXTRA_LABEL[report.userContext.jobState] ?? TODAY_V3_SECTION_LABELS[key];
               }
