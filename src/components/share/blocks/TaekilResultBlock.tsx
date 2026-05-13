@@ -268,32 +268,37 @@ export function TaekilResultBlock({ record }: Props) {
                           })}
                         </div>
                         <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 4, padding: '0 2px' }}>
-                          {timeSlots.map(slot => (
-                            <span key={slot.zhi} style={{
-                              flex: 1, textAlign: 'center',
-                              fontSize: 9, fontWeight: slot.energy >= 7 ? 800 : 500,
-                              color: slot.energy >= 7 ? '#34D399' : 'var(--text-tertiary)',
-                            }}>{slot.zhi}</span>
-                          ))}
+                          {timeSlots.map(slot => {
+                            const startHour = slot.hours.split('~')[0].slice(0, 2);
+                            const isPeak = slot.energy >= 7;
+                            return (
+                              <div key={slot.zhi} style={{
+                                flex: 1, textAlign: 'center',
+                                display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1,
+                              }}>
+                                <span style={{
+                                  fontSize: 9, fontWeight: isPeak ? 800 : 500,
+                                  color: isPeak ? '#34D399' : 'var(--text-tertiary)',
+                                  lineHeight: 1,
+                                }}>{slot.zhi}</span>
+                                <span style={{
+                                  fontSize: 7.5, fontWeight: 500,
+                                  color: isPeak ? 'rgba(52,211,153,0.75)' : 'var(--text-tertiary)',
+                                  lineHeight: 1, letterSpacing: '-0.02em',
+                                }}>{startHour}</span>
+                              </div>
+                            );
+                          })}
                         </div>
                         {peakSlots.length > 0 && (
-                          <div style={{ marginTop: 10, paddingTop: 8, borderTop: '1px solid rgba(255,255,255,0.06)' }}>
-                            <div style={{ color: '#34D399', fontWeight: 700, fontSize: 12, marginBottom: 6 }}>
-                              에너지 집중 구간
-                            </div>
-                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
-                              {peakSlots.map((s, idx) => (
-                                <span key={`${s.name}-${idx}`} style={{
-                                  padding: '3px 7px', borderRadius: 6,
-                                  background: 'rgba(52,211,153,0.10)',
-                                  border: '1px solid rgba(52,211,153,0.28)',
-                                  fontSize: 11, color: 'var(--text-secondary)',
-                                  lineHeight: 1.4, whiteSpace: 'nowrap',
-                                }}>
-                                  {s.name}({s.hours})
-                                </span>
-                              ))}
-                            </div>
+                          <div style={{
+                            marginTop: 10, paddingTop: 8,
+                            borderTop: '1px solid rgba(255,255,255,0.06)',
+                            fontSize: 11, color: 'var(--text-tertiary)',
+                            textAlign: 'center', lineHeight: 1.5,
+                          }}>
+                            <span style={{ color: '#34D399', fontWeight: 700 }}>녹색 시간대</span>
+                            가 에너지가 강한 구간이에요
                           </div>
                         )}
                       </div>

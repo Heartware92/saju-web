@@ -7,12 +7,10 @@
  * Step 3: "택일 풀이보기" → AI 분석 결과 (포디움 + 상세 카드)
  */
 
-import { useEffect, useMemo, useState, useCallback, useRef } from 'react';
+import { useEffect, useMemo, useState, useCallback } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { sajuDB } from '../services/supabase';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useProfileStore } from '../store/useProfileStore';
-import { extractMetaphor } from '../utils/parseMetaphor';
 import { useUserStore } from '../store/useUserStore';
 import { useCreditStore } from '../store/useCreditStore';
 import { useReportCacheStore, sajuKey } from '../store/useReportCacheStore';
@@ -24,81 +22,16 @@ import { BackButton } from '../components/ui/BackButton';
 import {
   calculateTaekil,
   TAEKIL_CATEGORIES,
-  migrateLegacyCategory,
   type TaekilCategory,
-  type TaekilGrade,
   type TaekilDay,
   type TaekilResult,
-  type TimeSlotEnergy,
 } from '../engine/taekil';
 import { getTaekilAdvice } from '../services/fortuneService';
 import { useLoadingGuard } from '../hooks/useLoadingGuard';
-import { useScrollToTopOnLoad } from '../hooks/useScrollToTopOnLoad';
 import styles from './SajuResultPage.module.css';
-import { ShareBar } from '@/components/share/ShareBar';
-
-const GRADE_COLOR: Record<TaekilGrade, string> = {
-  '대길': '#34D399',
-  '길': '#86EFAC',
-  '평': '#94A3B8',
-  '흉': '#F87171',
-};
-
-const GRADE_BG: Record<TaekilGrade, string> = {
-  '대길': 'rgba(52,211,153,0.2)',
-  '길': 'rgba(134,239,172,0.15)',
-  '평': 'rgba(148,163,184,0.08)',
-  '흉': 'rgba(248,113,113,0.15)',
-};
 
 const WEEKDAYS = ['일', '월', '화', '수', '목', '금', '토'];
 const MAX_PICKS = 5;
-
-interface TaekilDateAdvice {
-  rank: number;
-  summary: string;
-  keywords: string[];
-}
-
-function parseTaekilStructuredAdvice(raw: string): { dates: TaekilDateAdvice[]; avoid: string } {
-  const dates: TaekilDateAdvice[] = [];
-  const topRe = /\[top(\d)\]/g;
-  const parts = raw.split(topRe);
-  for (let i = 1; i < parts.length; i += 2) {
-    const rank = parseInt(parts[i], 10);
-    const content = (parts[i + 1] ?? '').split(/\[(?:top\d|avoid)\]/)[0].trim();
-
-    // New format: 종합 + 키워드
-    const summaryMatch = content.match(/종합[:：]\s*([\s\S]*?)(?=\n키워드[:：]|$)/);
-    const keywordMatch = content.match(/키워드[:：]\s*(.+)/);
-
-    if (summaryMatch) {
-      dates.push({
-        rank,
-        summary: summaryMatch[1].trim(),
-        keywords: keywordMatch
-          ? keywordMatch[1].split(/[,，]/).map(k => k.trim()).filter(Boolean)
-          : [],
-      });
-    } else {
-      // Legacy format fallback: 분석 + 시간대 + 개운법 + 주의 → merge into summary
-      const extract = (label: string): string => {
-        const re = new RegExp(`${label}[:：]\\s*([\\s\\S]*?)(?=\\n(?:분석|시간대|개운법|주의|종합|키워드)[:：]|$)`);
-        const m = content.match(re);
-        return m ? m[1].trim() : '';
-      };
-      const analysis = extract('분석');
-      const times = extract('시간대');
-      const luck = extract('개운법');
-      const caution = extract('주의');
-      const merged = [analysis, times && `추천 시간대: ${times}`, luck && `개운법: ${luck}`, caution && `주의: ${caution}`].filter(Boolean).join('\n');
-      dates.push({ rank, summary: merged || content, keywords: [] });
-    }
-  }
-  const avoidMatch = raw.match(/\[avoid\]\s*([\s\S]*?)$/);
-  const avoid = avoidMatch ? avoidMatch[1].trim() : '';
-  return { dates, avoid };
-}
 
 function daysInMonth(year: number, month: number) {
   return new Date(year, month, 0).getDate();
@@ -113,7 +46,6 @@ export default function TaekilPage() {
   const needsProfileSelect = !profileId && !isArchiveMode;
   const { user } = useUserStore();
   const { profiles, fetchProfiles, hydrated, loading: profilesLoading, lastFetchedAt } = useProfileStore();
-  const resultRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (user) fetchProfiles();
@@ -150,25 +82,18 @@ export default function TaekilPage() {
   // 사용자가 선택한 후보 날짜 (최대 5개)
   const [pickedDates, setPickedDates] = useState<string[]>([]);
 
-  // AI 결과
-  const [aiAdvice, setAiAdvice] = useState<string | null>(null);
-  const [parsedAdvice, setParsedAdvice] = useState<{ dates: TaekilDateAdvice[]; avoid: string } | null>(null);
+  // AI 호출 상태 (결과 자체는 새 페이지로 navigate 하므로 보관 안 함)
   const [aiLoading, setAiLoading] = useState(false);
   const [aiError, setAiError] = useState<string | null>(null);
-  const [showResult, setShowResult] = useState(false);
-
-  // 결과 페이지 진입 시 스크롤 최상단
-  useScrollToTopOnLoad(showResult && !aiLoading);
 
   const [aiTimedOut] = useLoadingGuard(aiLoading, 140_000);
   useEffect(() => {
     if (aiTimedOut) {
       setAiLoading(false);
-      if (!aiAdvice) setAiError('응답이 너무 오래 걸려요. 새로고침 후 다시 시도해주세요.');
+      setAiError('응답이 너무 오래 걸려요. 새로고침 후 다시 시도해주세요.');
     }
-  }, [aiTimedOut, aiAdvice]);
+  }, [aiTimedOut]);
 
-  const [savedRecordId, setSavedRecordId] = useState<string | null>(null);
   const [archiveItems, setArchiveItems] = useState<ArchiveListItem[]>([]);
   const [showArchiveList, setShowArchiveList] = useState(false);
   const [refetchNonce, setRefetchNonce] = useState(0);
@@ -201,10 +126,7 @@ export default function TaekilPage() {
   useEffect(() => {
     if (isArchiveMode) return;
     setPickedDates([]);
-    setAiAdvice(null);
-    setParsedAdvice(null);
     setAiError(null);
-    setShowResult(false);
     if (category !== 'custom') setCustomLabel('');
   }, [category, isArchiveMode]);
 
@@ -212,39 +134,14 @@ export default function TaekilPage() {
   useEffect(() => {
     if (isArchiveMode) return;
     setPickedDates([]);
-    setAiAdvice(null);
-    setParsedAdvice(null);
     setAiError(null);
-    setShowResult(false);
   }, [viewYear, viewMonth, isArchiveMode]);
 
-  // ── 보관함 재생 모드 ──
+  // ── URL 에 recordId 가 있으면 결과 페이지로 즉시 redirect (legacy 진입 호환) ──
   useEffect(() => {
     if (!recordId) return;
-    let cancelled = false;
-    sajuDB.getRecordById(recordId)
-      .then((record) => {
-        if (cancelled || !record) return;
-        const engine = record.engine_result as unknown as TaekilResult | null;
-        if (engine) {
-          // legacy id (marriage/moving/business/contract/travel/surgery) → 신 묶음으로 변환
-          const migrated = migrateLegacyCategory(engine.category as string) ?? engine.category;
-          setCategory(migrated);
-          if (engine.subItem) setSubItem(engine.subItem);
-          if (engine.customLabel) setCustomLabel(engine.customLabel);
-          setResult({ ...engine, category: migrated });
-          setPickedDates(engine.days.map(d => d.date));
-        }
-        const content = record.interpretation_detailed ?? record.interpretation_basic ?? '';
-        if (content) {
-          setAiAdvice(content);
-          setParsedAdvice(parseTaekilStructuredAdvice(content));
-          setShowResult(true);
-        }
-      })
-      .catch((e) => console.error('[archive replay] taekil load failed', e));
-    return () => { cancelled = true; };
-  }, [recordId]);
+    router.replace(`/saju/taekil/result?recordId=${recordId}`);
+  }, [recordId, router]);
 
   // ── 보관함 DB 확인 (리스트) ──
   useEffect(() => {
@@ -260,11 +157,10 @@ export default function TaekilPage() {
     }).then(list => {
       if (cancelled || list.length === 0) return;
       setArchiveItems(list);
-      setSavedRecordId(list[0].id);
       setShowArchiveList(true);
     }).catch(() => {});
     return () => { cancelled = true; };
-  }, [targetProfile, isArchiveMode, refetchNonce]);
+  }, [targetProfile, isArchiveMode, refetchNonce, searchParams]);
 
   const prevYear = () => { if (viewYear > MIN_YEAR) setViewYear(y => y - 1); };
   const nextYear = () => { if (viewYear < MAX_YEAR) setViewYear(y => y + 1); };
@@ -280,7 +176,6 @@ export default function TaekilPage() {
   }, [result, pickedDates]);
 
   const togglePick = (date: string) => {
-    if (showResult) return;
     setPickedDates(prev => {
       if (prev.includes(date)) return prev.filter(d => d !== date);
       if (prev.length >= MAX_PICKS) return prev;
@@ -290,9 +185,6 @@ export default function TaekilPage() {
 
   const removePick = (date: string) => {
     setPickedDates(prev => prev.filter(d => d !== date));
-    setAiAdvice(null);
-    setParsedAdvice(null);
-    setShowResult(false);
   };
 
   // ── AI 호출 ──
@@ -309,13 +201,8 @@ export default function TaekilPage() {
       setAiError(cached.error);
       return;
     }
-    if (cached?.data) {
-      setAiAdvice(cached.data);
-      setParsedAdvice(parseTaekilStructuredAdvice(cached.data));
-      setShowResult(true);
-      setTimeout(() => resultRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100);
-      return;
-    }
+    // 캐시된 결과가 있으면 fortuneService 가 archive 재사용 (자동 dedup)
+    // 결과는 어쨌든 새 페이지로 navigate
 
     const payload: TaekilResult = {
       ...result,
@@ -330,11 +217,6 @@ export default function TaekilPage() {
       if (!r.success || !r.advice) {
         throw new Error(r.error || '길일 분석을 가져오지 못했어요.');
       }
-      setAiAdvice(r.advice);
-      setParsedAdvice(parseTaekilStructuredAdvice(r.advice));
-      setShowResult(true);
-      // archive 저장이 완료된 경우 ShareBar 즉시 노출
-      if (r.archivedRecordId) setSavedRecordId(r.archivedRecordId);
       const cache = useReportCacheStore.getState();
       cache.setReport('taekil', taekilCacheKey, r.advice);
       if (!cache.isCharged('taekil', taekilCacheKey)) {
@@ -343,12 +225,16 @@ export default function TaekilPage() {
           .chargeForContent('sun', SUN_COST_BIG, CHARGE_REASONS.taekil)
           .catch(() => {});
       }
-      setTimeout(() => resultRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100);
+      // archive 성공 시 결과 페이지로 navigate, 실패 시 에러
+      if (r.archivedRecordId) {
+        router.push(`/saju/taekil/result?recordId=${r.archivedRecordId}`);
+      } else {
+        throw new Error('결과 저장에 실패했어요. 잠시 후 다시 시도해주세요.');
+      }
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : '오류가 발생했어요.';
       setAiError(msg);
       useReportCacheStore.getState().setError('taekil', taekilCacheKey, msg);
-    } finally {
       setAiLoading(false);
     }
   };
@@ -703,8 +589,8 @@ export default function TaekilPage() {
                       return (
                         <button
                           key={cell.date}
-                          onClick={() => d && !showResult && togglePick(cell.date)}
-                          disabled={!d || (isFull && !showResult)}
+                          onClick={() => d && togglePick(cell.date)}
+                          disabled={!d || isFull}
                           style={{
                             aspectRatio: '1',
                             display: 'flex', flexDirection: 'column',
@@ -716,11 +602,11 @@ export default function TaekilPage() {
                             background: isPicked
                               ? 'rgba(124,92,252,0.22)'
                               : 'var(--space-elevated)',
-                            cursor: (!d || showResult || isFull) ? 'default' : 'pointer',
+                            cursor: (!d || isFull) ? 'default' : 'pointer',
                             transition: 'all 0.15s',
                             padding: '2px',
                             position: 'relative',
-                            opacity: (isFull && !showResult) ? 0.4 : 1,
+                            opacity: isFull ? 0.4 : 1,
                           }}
                         >
                           {isPicked && (
@@ -771,19 +657,16 @@ export default function TaekilPage() {
                             <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)' }}>
                               {mon}/{dayNum}({dow})
                             </span>
-                            {/* 등급(평·길)은 풀이 결과 영역에서만 노출 — 후보 단계에선 날짜만 */}
-                            {!showResult && (
-                              <button
-                                onClick={() => removePick(date)}
-                                style={{
-                                  background: 'none', border: 'none',
-                                  color: 'var(--text-tertiary)', cursor: 'pointer',
-                                  fontSize: 14, lineHeight: 1, padding: 0,
-                                }}
-                              >
-                                ×
-                              </button>
-                            )}
+                            <button
+                              onClick={() => removePick(date)}
+                              style={{
+                                background: 'none', border: 'none',
+                                color: 'var(--text-tertiary)', cursor: 'pointer',
+                                fontSize: 14, lineHeight: 1, padding: 0,
+                              }}
+                            >
+                              ×
+                            </button>
                           </div>
                         );
                       })}
@@ -792,7 +675,7 @@ export default function TaekilPage() {
                 )}
 
                 {/* ═══ STEP 3: 풀이 요청 버튼 ═══ */}
-                {pickedDates.length > 0 && !showResult && !aiLoading && (
+                {pickedDates.length > 0 && !aiLoading && (
                   <div className={styles.section} style={{ paddingTop: 12, paddingBottom: 16 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
                       <span style={{
@@ -870,429 +753,12 @@ export default function TaekilPage() {
 
                 </>)}
 
-                {/* ═══ RESULT: 포디움 + 상세 카드 ═══ */}
-                {showResult && aiAdvice && (
-                  <div ref={resultRef}>
-                    {/* 포디움 — 점수순 Top 3 */}
-                    {pickedDays.length > 0 && (
-                      <div className={styles.section}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
-                          <span style={{ display: 'inline-block', width: 4, height: 20, borderRadius: 2, background: '#34D399' }} />
-                          <h2 style={{ margin: 0, fontSize: 17, fontFamily: 'var(--font-serif)' }}>
-                            {catLabel} 추천 순위
-                          </h2>
-                        </div>
-
-                        <div style={{
-                          display: 'flex', alignItems: 'flex-end', justifyContent: 'center',
-                          gap: 8, padding: '0 4px',
-                        }}>
-                          {(() => {
-                            const top = pickedDays.slice(0, 3);
-                            const podiumOrder = top.length >= 3
-                              ? [{ d: top[1], rank: 2, h: 120 }, { d: top[0], rank: 1, h: 155 }, { d: top[2], rank: 3, h: 100 }]
-                              : top.length === 2
-                              ? [{ d: top[0], rank: 1, h: 155 }, { d: top[1], rank: 2, h: 120 }]
-                              : [{ d: top[0], rank: 1, h: 155 }];
-                            const rankBadge = ['', '1st', '2nd', '3rd'];
-                            const rankColor = ['', '#FFD700', '#C0C0C0', '#CD7F32'];
-                            return podiumOrder.map(({ d, rank, h }) => {
-                              const dayNum = parseInt(d.date.split('-')[2]);
-                              const mon = parseInt(d.date.split('-')[1]);
-                              const dow = WEEKDAYS[new Date(d.date).getDay()];
-                              return (
-                                <div
-                                  key={d.date}
-                                  style={{
-                                    flex: rank === 1 ? '1.2' : '1',
-                                    minHeight: h,
-                                    padding: '14px 6px 12px',
-                                    background: rank === 1
-                                      ? 'linear-gradient(180deg, rgba(255,215,0,0.15) 0%, rgba(124,92,252,0.12) 100%)'
-                                      : 'var(--space-elevated)',
-                                    border: rank === 1
-                                      ? '1.5px solid rgba(255,215,0,0.4)'
-                                      : '1px solid var(--border-subtle)',
-                                    borderRadius: 16,
-                                    textAlign: 'center',
-                                    display: 'flex', flexDirection: 'column',
-                                    alignItems: 'center', justifyContent: 'center',
-                                    gap: 4,
-                                  }}
-                                >
-                                  <span style={{
-                                    fontSize: rank === 1 ? 13 : 11,
-                                    fontWeight: 800, color: rankColor[rank],
-                                    letterSpacing: '0.05em',
-                                  }}>
-                                    {rankBadge[rank]}
-                                  </span>
-                                  <span style={{
-                                    fontSize: rank === 1 ? 28 : 22,
-                                    fontWeight: 900, color: 'var(--text-primary)',
-                                    lineHeight: 1.1,
-                                  }}>
-                                    {dayNum}
-                                  </span>
-                                  <span style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>
-                                    {mon}월 ({dow})
-                                  </span>
-                                  <span style={{
-                                    marginTop: 4,
-                                    padding: '3px 10px', borderRadius: 99,
-                                    fontSize: 11, fontWeight: 700,
-                                    color: GRADE_COLOR[d.grade],
-                                    background: GRADE_BG[d.grade],
-                                    border: `1px solid ${GRADE_COLOR[d.grade]}40`,
-                                  }}>
-                                    {d.grade} · {d.score}점
-                                  </span>
-                                </div>
-                              );
-                            });
-                          })()}
-                        </div>
-
-                        {/* 점수 바 그래프 — 전체 선택 날짜 */}
-                        {pickedDays.length > 1 && (
-                          <div style={{ marginTop: 18 }}>
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
-                              {pickedDays.map((d) => (
-                                <div key={d.date} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                                  <span style={{ fontSize: 11, width: 50, color: 'var(--text-secondary)', flexShrink: 0 }}>
-                                    {d.date.slice(5).replace('-', '/')}
-                                  </span>
-                                  <div style={{
-                                    flex: 1, height: 16, borderRadius: 6,
-                                    background: 'rgba(255,255,255,0.05)',
-                                    position: 'relative', overflow: 'hidden',
-                                  }}>
-                                    <div style={{
-                                      width: `${d.score}%`, height: '100%',
-                                      background: GRADE_COLOR[d.grade],
-                                      opacity: 0.85, borderRadius: 6,
-                                      transition: 'width 0.4s ease',
-                                    }} />
-                                    <span style={{
-                                      position: 'absolute', right: 6, top: 0,
-                                      fontSize: 10, fontWeight: 700,
-                                      color: 'var(--text-primary)',
-                                      textShadow: '0 0 4px rgba(0,0,0,0.6)',
-                                    }}>
-                                      {d.score}
-                                    </span>
-                                  </div>
-                                  <span style={{
-                                    fontSize: 10, fontWeight: 700, width: 28, textAlign: 'right',
-                                    color: GRADE_COLOR[d.grade], flexShrink: 0,
-                                  }}>
-                                    {d.grade}
-                                  </span>
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    )}
-
-                    {/* AI 상세 카드 — 오행 에너지 + 시간 에너지 + 종합 풀이 */}
-                    <div className={styles.section}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
-                        <span style={{ display: 'inline-block', width: 4, height: 20, borderRadius: 2, background: 'var(--cta-primary)' }} />
-                        <h2 style={{ margin: 0, fontSize: 17, fontFamily: 'var(--font-serif)' }}>
-                          날짜별 상세 풀이
-                        </h2>
-                      </div>
-
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-                        {parsedAdvice && parsedAdvice.dates.length > 0 ? (
-                          <>
-                            {parsedAdvice.dates.map((adv, idx) => {
-                              const topDay = pickedDays[idx];
-                              const rankLabel = [`1위`, `2위`, `3위`][idx] ?? `${idx + 1}위`;
-                              const rankColor = ['#FFD700', '#C0C0C0', '#CD7F32'][idx] ?? 'var(--text-secondary)';
-                              const ELEMENT_COLORS: Record<string, string> = {
-                                '목': '#2D8659', '화': '#E63946', '토': '#F4A261', '금': '#94A3B8', '수': '#3B82F6',
-                              };
-                              const elEnergy = topDay?.elementEnergy;
-                              const timeSlots = topDay?.timeSlots;
-                              const peakSlots = timeSlots?.filter(t => t.energy >= 7) ?? [];
-                              const maxTimeEnergy = timeSlots ? Math.max(...timeSlots.map(t => t.energy)) : 10;
-
-                              return (
-                                <div
-                                  key={idx}
-                                  style={{
-                                    padding: 16,
-                                    background: idx === 0
-                                      ? 'linear-gradient(135deg, rgba(255,215,0,0.08) 0%, rgba(20,12,38,0.55) 40%)'
-                                      : 'rgba(20,12,38,0.55)',
-                                    borderRadius: 14,
-                                    border: idx === 0
-                                      ? '1px solid rgba(255,215,0,0.25)'
-                                      : '1px solid var(--border-subtle)',
-                                  }}
-                                >
-                                  {/* Header */}
-                                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
-                                    <span style={{
-                                      display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                                      width: 28, height: 28, borderRadius: '50%',
-                                      background: `${rankColor}22`,
-                                      border: `1.5px solid ${rankColor}`,
-                                      fontSize: 11, fontWeight: 800, color: rankColor,
-                                    }}>
-                                      {rankLabel}
-                                    </span>
-                                    {topDay && (
-                                      <span style={{ fontSize: 15, fontWeight: 800, color: 'var(--text-primary)' }}>
-                                        {topDay.date} ({WEEKDAYS[new Date(topDay.date).getDay()]})
-                                      </span>
-                                    )}
-                                    {topDay && (
-                                      <span style={{
-                                        padding: '2px 8px', borderRadius: 99,
-                                        fontSize: 11, fontWeight: 700,
-                                        color: GRADE_COLOR[topDay.grade],
-                                        background: GRADE_BG[topDay.grade],
-                                      }}>
-                                        {topDay.grade}
-                                      </span>
-                                    )}
-                                  </div>
-
-                                  {/* 키워드 태그 */}
-                                  {adv.keywords.length > 0 && (
-                                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 14 }}>
-                                      {adv.keywords.map((kw, ki) => (
-                                        <span key={ki} style={{
-                                          padding: '4px 10px', borderRadius: 99,
-                                          fontSize: 12, fontWeight: 700, letterSpacing: '0.02em',
-                                          color: 'var(--cta-primary)',
-                                          background: 'rgba(124,92,252,0.12)',
-                                          border: '1px solid rgba(124,92,252,0.25)',
-                                        }}>
-                                          {kw}
-                                        </span>
-                                      ))}
-                                    </div>
-                                  )}
-
-                                  {/* 오행 에너지 바 */}
-                                  {elEnergy && (
-                                    <div style={{
-                                      marginBottom: 14, padding: '12px 14px',
-                                      background: 'rgba(255,255,255,0.03)', borderRadius: 12,
-                                      border: '1px solid rgba(255,255,255,0.06)',
-                                    }}>
-                                      <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-tertiary)', marginBottom: 10 }}>
-                                        오행 에너지
-                                      </div>
-                                      <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
-                                        {(['목', '화', '토', '금', '수'] as const).map((el) => (
-                                          <div key={el} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                                            <span style={{
-                                              width: 16, fontSize: 12, fontWeight: 800,
-                                              color: ELEMENT_COLORS[el], textAlign: 'center',
-                                            }}>{el}</span>
-                                            <div style={{
-                                              flex: 1, height: 10, borderRadius: 5,
-                                              background: 'rgba(255,255,255,0.05)',
-                                              overflow: 'hidden',
-                                            }}>
-                                              <div style={{
-                                                width: `${(elEnergy[el] ?? 1) * 10}%`, height: '100%',
-                                                borderRadius: 5,
-                                                background: `linear-gradient(90deg, ${ELEMENT_COLORS[el]}88, ${ELEMENT_COLORS[el]})`,
-                                                transition: 'width 0.5s ease',
-                                              }} />
-                                            </div>
-                                            <span style={{
-                                              width: 16, fontSize: 10, fontWeight: 700,
-                                              color: 'var(--text-tertiary)', textAlign: 'right',
-                                            }}>{elEnergy[el]}</span>
-                                          </div>
-                                        ))}
-                                      </div>
-                                    </div>
-                                  )}
-
-                                  {/* 종합 분석 */}
-                                  {adv.summary && (
-                                    <div style={{ marginBottom: 14 }}>
-                                      <p style={{ fontSize: 14, color: 'var(--text-secondary)', lineHeight: 1.85, margin: 0, whiteSpace: 'pre-line', fontFamily: 'var(--font-body)' }}>
-                                        {adv.summary}
-                                      </p>
-                                    </div>
-                                  )}
-
-                                  {/* 시간 에너지 맵 */}
-                                  {timeSlots && timeSlots.length > 0 && (
-                                    <div style={{
-                                      padding: '16px 14px',
-                                      background: 'rgba(255,255,255,0.03)', borderRadius: 12,
-                                      border: '1px solid rgba(255,255,255,0.06)',
-                                    }}>
-                                      <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-secondary)', marginBottom: 14 }}>
-                                        시간 에너지 흐름
-                                      </div>
-                                      <div style={{
-                                        display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between',
-                                        gap: 3, height: 68, padding: '0 2px',
-                                      }}>
-                                        {timeSlots.map((slot) => {
-                                          const isPeak = slot.energy >= 7;
-                                          const barH = Math.max(8, (slot.energy / maxTimeEnergy) * 68);
-                                          return (
-                                            <div key={slot.zhi} style={{
-                                              display: 'flex', flexDirection: 'column', alignItems: 'center',
-                                              flex: 1, gap: 3,
-                                            }}>
-                                              <div style={{
-                                                width: '100%', maxWidth: 24,
-                                                height: barH, borderRadius: 4,
-                                                background: isPeak
-                                                  ? 'linear-gradient(180deg, #34D399, rgba(52,211,153,0.4))'
-                                                  : slot.energy <= 3
-                                                    ? 'rgba(248,113,113,0.3)'
-                                                    : 'rgba(148,163,184,0.2)',
-                                                transition: 'height 0.4s ease',
-                                              }} />
-                                            </div>
-                                          );
-                                        })}
-                                      </div>
-                                      <div style={{
-                                        display: 'flex', justifyContent: 'space-between',
-                                        marginTop: 8, padding: '0 2px',
-                                      }}>
-                                        {timeSlots.map((slot) => (
-                                          <span key={slot.zhi} style={{
-                                            flex: 1, textAlign: 'center',
-                                            fontSize: 14, fontWeight: slot.energy >= 7 ? 800 : 600,
-                                            color: slot.energy >= 7 ? '#34D399' : 'var(--text-secondary)',
-                                            letterSpacing: '-0.01em',
-                                          }}>
-                                            {slot.zhi}
-                                          </span>
-                                        ))}
-                                      </div>
-                                      {peakSlots.length > 0 && (
-                                        <div style={{
-                                          marginTop: 14,
-                                          paddingTop: 12,
-                                          borderTop: '1px solid rgba(255,255,255,0.06)',
-                                        }}>
-                                          <div style={{
-                                            color: '#34D399', fontWeight: 700, fontSize: 14,
-                                            marginBottom: 8,
-                                          }}>
-                                            에너지 집중 구간
-                                          </div>
-                                          <div style={{
-                                            display: 'flex', flexWrap: 'wrap', gap: 6,
-                                          }}>
-                                            {peakSlots.map((s, idx) => (
-                                              <span key={`${s.name}-${idx}`} style={{
-                                                padding: '4px 9px', borderRadius: 7,
-                                                background: 'rgba(52,211,153,0.10)',
-                                                border: '1px solid rgba(52,211,153,0.28)',
-                                                fontSize: 13, color: 'var(--text-secondary)',
-                                                lineHeight: 1.4, whiteSpace: 'nowrap',
-                                              }}>
-                                                {s.name}({s.hours})
-                                              </span>
-                                            ))}
-                                          </div>
-                                        </div>
-                                      )}
-                                    </div>
-                                  )}
-                                </div>
-                              );
-                            })}
-
-                            {parsedAdvice.avoid && (
-                              <div style={{
-                                padding: 14,
-                                background: 'rgba(248,113,113,0.06)',
-                                borderRadius: 14,
-                                border: '1px solid rgba(248,113,113,0.25)',
-                              }}>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}>
-                                  <span style={{
-                                    display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                                    width: 22, height: 22, borderRadius: '50%',
-                                    background: 'rgba(248,113,113,0.15)',
-                                    fontSize: 11, fontWeight: 800, color: '#F87171',
-                                  }}>!</span>
-                                  <span style={{ fontSize: 13, fontWeight: 700, color: '#F87171' }}>피해야 할 날</span>
-                                </div>
-                                <p style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.7, margin: 0, whiteSpace: 'pre-line' }}>
-                                  {parsedAdvice.avoid}
-                                </p>
-                              </div>
-                            )}
-                          </>
-                        ) : (
-                          <div style={{
-                            padding: 16,
-                            background: 'rgba(20,12,38,0.55)',
-                            borderRadius: 14,
-                            border: '1px solid var(--border-subtle)',
-                            fontSize: 15,
-                            color: 'var(--text-secondary)',
-                            lineHeight: 1.85,
-                            whiteSpace: 'pre-line',
-                            fontFamily: 'var(--font-body)',
-                          }}>
-                            {/* [top1]/[avoid] 자체 마커 strip 후 [은유] 마커도 안전망으로 제거 */}
-                            {extractMetaphor(
-                              aiAdvice.replace(/^\s*\[(?:top\d|avoid)\].*$/gm, '')
-                            ).bodyText}
-                          </div>
-                        )}
-                      </div>
-
-                      {/* 다시하기 (보관함 모드에서는 숨김) */}
-                      {!isArchiveMode && (
-                        <button
-                          onClick={() => {
-                            setPickedDates([]);
-                            setAiAdvice(null);
-                            setParsedAdvice(null);
-                            setAiError(null);
-                            setShowResult(false);
-                          }}
-                          style={{
-                            width: '100%', marginTop: 16,
-                            padding: '14px', borderRadius: 12,
-                            background: 'transparent',
-                            border: '1px solid var(--border-subtle)',
-                            color: 'var(--text-secondary)',
-                            fontWeight: 600, fontSize: 14,
-                            cursor: 'pointer',
-                          }}
-                        >
-                          다른 날짜로 다시 풀이받기
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                )}
               </motion.div>
             )}
           </AnimatePresence>
 
         </motion.div>
       </div>
-
-      {(recordId || savedRecordId) && (
-        <div style={{ marginTop: 24, padding: '0 16px' }}>
-          <ShareBar recordId={(recordId || savedRecordId)!} type="saju" category="taekil" />
-        </div>
-      )}
 
       {/* 보관함 리스트 모달 */}
       <AnimatePresence>
@@ -1338,9 +804,7 @@ export default function TaekilPage() {
                         type="button"
                         onClick={() => {
                           setShowArchiveList(false);
-                          const params = new URLSearchParams(window.location.search);
-                          params.set('recordId', item.id);
-                          router.replace(`${window.location.pathname}?${params.toString()}`);
+                          router.push(`/saju/taekil/result?recordId=${item.id}`);
                         }}
                         className="w-full min-h-10 py-2 px-3 rounded-lg border border-[var(--border-subtle)] text-[14px] text-text-primary font-medium hover:bg-cta/10 hover:border-cta/40 transition-all flex items-center justify-between gap-2"
                       >
