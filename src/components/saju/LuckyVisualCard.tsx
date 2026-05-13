@@ -36,8 +36,8 @@ export const ELEMENT_LUCKY: Record<string, {
     direction: '동쪽',
     directionDeg: 90,
     timeSlot: '오전 5~7시 (인·묘시)',
-    gem: '에메랄드·옥',
-    activity: '숲 산책·독서·글쓰기',
+    gem: '에메랄드·옥·페리도트·말라카이트·녹수정·아벤츄린·그린토르말린·자드',
+    activity: '숲 산책·식물 키우기·가드닝·아침 명상·요가·등산·글쓰기·독서',
   },
   '화': {
     colors: ['빨강', '주황'],
@@ -46,8 +46,8 @@ export const ELEMENT_LUCKY: Record<string, {
     direction: '남쪽',
     directionDeg: 180,
     timeSlot: '오전 11시~오후 1시 (사·오시)',
-    gem: '루비·석류석',
-    activity: '사교 모임·발표·운동',
+    gem: '루비·석류석·홍옥수·산호·로즈쿼츠·카닐리언·홍자수정·태양석',
+    activity: '사교 모임·발표·요리·일출 감상·태양 산책·운동·댄스·캠프파이어',
   },
   '토': {
     colors: ['노랑', '황토'],
@@ -56,8 +56,8 @@ export const ELEMENT_LUCKY: Record<string, {
     direction: '중앙',
     directionDeg: -1,
     timeSlot: '오전 9~11시 (진·미시)',
-    gem: '황수정·호박',
-    activity: '정원 가꾸기·요리·명상',
+    gem: '황수정·호박·황옥·시트린·황철석·황룡정·올리브 자수정·황금석',
+    activity: '정원 가꾸기·요리·도자기·필사·정리정돈·달항아리 감상·고대 유물 관람·명상',
   },
   '금': {
     colors: ['화이트', '실버'],
@@ -66,8 +66,8 @@ export const ELEMENT_LUCKY: Record<string, {
     direction: '서쪽',
     directionDeg: 270,
     timeSlot: '오후 3~7시 (신·유시)',
-    gem: '다이아몬드·백수정',
-    activity: '악기 연주·정리정돈·금속 소품',
+    gem: '다이아몬드·백수정·진주·문스톤·셀레나이트·헤마타이트·은제 액세서리·하얀 칼세도니',
+    activity: '악기 연주·정리정돈·금속 소품 손질·차 마시기·캘리그라피·도구 다듬기·고전 음악 감상·은제 장식 닦기',
   },
   '수': {
     colors: ['파랑', '네이비'],
@@ -76,8 +76,8 @@ export const ELEMENT_LUCKY: Record<string, {
     direction: '북쪽',
     directionDeg: 0,
     timeSlot: '밤 11시~새벽 3시 (자·축시)',
-    gem: '사파이어·청금석',
-    activity: '수영·독서·명상·물 가까운 환경',
+    gem: '사파이어·청금석·아쿠아마린·라피스라줄리·소달라이트·블루토파즈·블루칼세도니·아주라이트',
+    activity: '수영·독서·명상·차 마시기·해변 산책·물 감상·낚시·아쿠아리움 방문',
   },
 };
 
