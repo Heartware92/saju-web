@@ -71,6 +71,71 @@ const TODAY_MESSAGES = [
 // 점수 시각화
 // ─────────────────────────────────────────────────────────────────────────────
 
+// ─── 사용자 입력 요약 카드 — 사주아이 스타일 행 단위 리스트 ───
+// 결과 페이지 상단에 사용자가 입력한 정보를 그대로 보여줌 → 본문 인용 변형되어도
+// "내 입력이 풀이에 반영됐다" 가 시각적으로 명확.
+type SummaryRow = { icon: React.ReactNode; label: string; value: string };
+
+function UserInputSummary({ rows }: { rows: SummaryRow[] }) {
+  if (rows.length === 0) return null;
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: 0.03 }}
+      className="rounded-2xl px-5 py-2 mb-3 bg-[rgba(20,12,38,0.55)] border border-[var(--border-subtle)]"
+    >
+      {rows.map((r, i) => (
+        <div
+          key={i}
+          className="flex items-center gap-3 py-3"
+          style={{
+            borderBottom: i < rows.length - 1 ? '1px solid rgba(244,194,161,0.10)' : 'none',
+          }}
+        >
+          <span className="shrink-0 w-5 h-5 flex items-center justify-center">{r.icon}</span>
+          <span className="text-[13px] text-text-tertiary w-12 shrink-0">{r.label}</span>
+          <span className="text-[15px] text-text-primary flex-1 break-words" style={{ fontFamily: 'var(--font-body)', letterSpacing: '0.02em' }}>
+            {r.value}
+          </span>
+        </div>
+      ))}
+    </motion.div>
+  );
+}
+
+// 아이콘 helper — 외부 라이브러리 없이 인라인 SVG (lucide-react 의존성 최소화)
+const Icon = {
+  Heart: ({ color }: { color: string }) => (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
+    </svg>
+  ),
+  Briefcase: ({ color }: { color: string }) => (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <rect width="20" height="14" x="2" y="7" rx="2" ry="2" />
+      <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16" />
+    </svg>
+  ),
+  Sparkles: ({ color }: { color: string }) => (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z" />
+      <path d="M20 3v4M22 5h-4M4 17v2M5 18H3" />
+    </svg>
+  ),
+  Clock: ({ color }: { color: string }) => (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="10" />
+      <polyline points="12 6 12 12 16 14" />
+    </svg>
+  ),
+  Star: ({ color }: { color: string }) => (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+    </svg>
+  ),
+};
+
 function ScoreRing({ score, size = 132 }: { score: number; size?: number }) {
   const r = size * 0.4;
   const C = 2 * Math.PI * r;
@@ -869,6 +934,67 @@ export default function TodayFortunePage() {
           )}
         </div>
       </motion.div>
+
+      {/* 1.5. 입력하신 정보 — 사주아이 스타일 행 단위 리스트 (취미·직업·연애·시간대·답변1·2) */}
+      {report?.userContext && (() => {
+        const uc = report.userContext;
+        const rows: SummaryRow[] = [];
+
+        // 취미 (요즘 시간 쏟는 분야)
+        const hobbyList = [...(uc.hobbies ?? []), uc.customHobby].filter(Boolean) as string[];
+        if (hobbyList.length > 0) {
+          rows.push({
+            icon: <Icon.Sparkles color="#C4B5FD" />,
+            label: '관심',
+            value: hobbyList.join(', '),
+          });
+        }
+
+        // 직업
+        const jobVal = (uc.customJobState && uc.customJobState.trim()) || uc.jobState;
+        if (jobVal) {
+          rows.push({
+            icon: <Icon.Briefcase color="#93C5FD" />,
+            label: '직업',
+            value: jobVal,
+          });
+        }
+
+        // 연애
+        const loveVal = (uc.customLoveState && uc.customLoveState.trim()) || uc.loveState;
+        if (loveVal && loveVal !== '공개 안 함') {
+          rows.push({
+            icon: <Icon.Heart color="#FCA5A5" />,
+            label: '연애',
+            value: loveVal,
+          });
+        }
+
+        // 시간대
+        rows.push({
+          icon: <Icon.Clock color="#FCD34D" />,
+          label: '시간',
+          value: TODAY_TIME_SLOT_LABELS[uc.timeSlot] ?? uc.timeSlot,
+        });
+
+        // 시간대 질문 답변 1·2 — 답변이 있을 때만
+        if (uc.q1Answer && uc.q1Answer.trim()) {
+          rows.push({
+            icon: <Icon.Star color="#F4C2A1" />,
+            label: '답변',
+            value: uc.q1Answer,
+          });
+        }
+        if (uc.q2Answer && uc.q2Answer.trim()) {
+          rows.push({
+            icon: <Icon.Star color="#E8A490" />,
+            label: '답변',
+            value: uc.q2Answer,
+          });
+        }
+
+        return <UserInputSummary rows={rows} />;
+      })()}
 
       {/* 2. 종합 점수 ring */}
       {report?.domainScores && (
