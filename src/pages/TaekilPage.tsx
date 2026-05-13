@@ -1183,12 +1183,28 @@ export default function TaekilPage() {
                                           marginTop: 14,
                                           paddingTop: 12,
                                           borderTop: '1px solid rgba(255,255,255,0.06)',
-                                          fontSize: 14, color: 'var(--text-secondary)', lineHeight: 1.75,
-                                          wordBreak: 'keep-all',
                                         }}>
-                                          <span style={{ color: '#34D399', fontWeight: 700 }}>에너지 집중 구간</span>
-                                          {' · '}
-                                          {peakSlots.map(s => `${s.name}(${s.hours})`).join(', ')}
+                                          <div style={{
+                                            color: '#34D399', fontWeight: 700, fontSize: 14,
+                                            marginBottom: 8,
+                                          }}>
+                                            에너지 집중 구간
+                                          </div>
+                                          <div style={{
+                                            display: 'flex', flexWrap: 'wrap', gap: 6,
+                                          }}>
+                                            {peakSlots.map((s, idx) => (
+                                              <span key={`${s.name}-${idx}`} style={{
+                                                padding: '4px 9px', borderRadius: 7,
+                                                background: 'rgba(52,211,153,0.10)',
+                                                border: '1px solid rgba(52,211,153,0.28)',
+                                                fontSize: 13, color: 'var(--text-secondary)',
+                                                lineHeight: 1.4, whiteSpace: 'nowrap',
+                                              }}>
+                                                {s.name}({s.hours})
+                                              </span>
+                                            ))}
+                                          </div>
                                         </div>
                                       )}
                                     </div>

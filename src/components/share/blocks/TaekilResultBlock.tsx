@@ -277,8 +277,23 @@ export function TaekilResultBlock({ record }: Props) {
                           ))}
                         </div>
                         {peakSlots.length > 0 && (
-                          <div style={{ marginTop: 8, fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.6 }}>
-                            {peakSlots.map(s => `${s.name}(${s.hours})`).join(', ')} 에너지 집중 구간
+                          <div style={{ marginTop: 10, paddingTop: 8, borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+                            <div style={{ color: '#34D399', fontWeight: 700, fontSize: 12, marginBottom: 6 }}>
+                              에너지 집중 구간
+                            </div>
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
+                              {peakSlots.map((s, idx) => (
+                                <span key={`${s.name}-${idx}`} style={{
+                                  padding: '3px 7px', borderRadius: 6,
+                                  background: 'rgba(52,211,153,0.10)',
+                                  border: '1px solid rgba(52,211,153,0.28)',
+                                  fontSize: 11, color: 'var(--text-secondary)',
+                                  lineHeight: 1.4, whiteSpace: 'nowrap',
+                                }}>
+                                  {s.name}({s.hours})
+                                </span>
+                              ))}
+                            </div>
                           </div>
                         )}
                       </div>
