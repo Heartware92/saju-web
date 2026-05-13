@@ -141,6 +141,8 @@ export default function MoreFortunePage({ category }: Props) {
   // handleRead 의 stale closure 회피 — handleRefetch 같은 외부 콜백에서
   // 항상 최신 handleRead 를 호출하도록 ref 동기화
   const handleReadRef = useRef<((force?: boolean) => Promise<void>) | null>(null);
+  // SajuResultPage 패턴: refetchNonce 증가 → useEffect 가 force AI 호출 트리거
+  const [refetchNonce, setRefetchNonce] = useState(0);
   const shouldAutoStart = freshParam && !isArchiveMode && !manualMode &&
     (category === 'study' || category === 'children' || category === 'personality');
 
@@ -156,27 +158,54 @@ export default function MoreFortunePage({ category }: Props) {
   const [cacheGate, setCacheGate] = useState<{ kind: 'today' | 'jungtong' | 'zamidusu' | 'tojeong' | 'newyear' | 'period_date' | 'period_day' | 'taekil' | 'gunghap' | 'tarot' | `more:${string}`; key: string; restore: () => void } | null>(null);
   const handleUseCached = () => { cacheGate?.restore(); setCacheGate(null); };
   const handleRefetch = () => {
-    // ★★★ 핵심 해결책: SPA 라우터(router.replace) + in-page state refetch 조합이
-    //   모달 컨텍스트에서 stale state·재마운트 사고를 일으켜 새 AI 호출이 트리거되지
-    //   않거나 이전 결과가 잔존하는 사고가 반복됨. (Next.js App Router 의 잘 알려진
-    //   클라이언트 state·서버 컴포넌트 재계산 충돌 이슈)
+    // ★★★ SajuResultPage 패턴 그대로 적용:
+    //   다른 페이지(정통사주·신년·자미두수 등) 는 refetchNonce state 를
+    //   useEffect dependency 로 두고, handleRefetch 가 increment 하여
+    //   AI 호출 useEffect 가 자동 재실행되는 구조로 잘 작동 중.
     //
-    // 가장 확실한 해결 — window.location.href 로 페이지 전체 강제 리로드:
-    //   · 모든 React state·ref 초기화 (캐시·result·loading 등 잔여물 없음)
-    //   · 새 컴포넌트 마운트 → 모든 useEffect 처음부터 실행
-    //   · fresh=1 URL → 보관함 체크 useEffect skip (모달 안 뜸)
-    //   · invalidate 후 silent restore 캐시 미스 → setResult(null)
-    //   · auto-start useEffect → handleRead() → 로딩 화면 → AI 호출
+    // MoreFortunePage 는 AI 호출이 handleRead 함수 안이라 별도 useEffect 가
+    // 필요 — refetchNonce 변경 시 handleReadRef.current(true) 직접 호출.
+    //
+    // 추가: zustand persist 의 localStorage 비동기 저장 사고 차단을 위해
+    //   localStorage 직접 삭제 (다음 마운트·hydrate 에서 옛 캐시 복원 차단)
     setCacheGate(null);
     if (category) {
       useReportCacheStore.getState().invalidate(`more:${category}` as const);
+      // localStorage 직접 정리 — persist 비동기 저장 race 차단
+      if (typeof window !== 'undefined') {
+        try {
+          const raw = window.localStorage.getItem('report-cache');
+          if (raw) {
+            const parsed = JSON.parse(raw);
+            if (parsed?.state?.entries) {
+              const prefix = `more:${category}::`;
+              for (const key of Object.keys(parsed.state.entries)) {
+                if (key.startsWith(prefix)) delete parsed.state.entries[key];
+              }
+              window.localStorage.setItem('report-cache', JSON.stringify(parsed));
+            }
+          }
+        } catch { /* ignore — invalidate 만으로 fallback */ }
+      }
     }
+    setResult(null);
+    setResultSections(null);
+    setError(null);
+    setSavedRecordId(null);
+    setManualMode(false);
+    autoStartedRef.current = false;
+    setLoading(true);
+    // recordId 가 URL 에 있다면 보관함 모드 해제용으로만 제거 (in-page refetch, fresh=1 안 씀)
     if (typeof window !== 'undefined') {
       const params = new URLSearchParams(window.location.search);
-      params.set('fresh', '1');
-      params.delete('recordId'); // 보관함 모드 해제
-      window.location.href = `${window.location.pathname}?${params.toString()}`;
+      if (params.has('recordId')) {
+        params.delete('recordId');
+        const rest = params.toString();
+        router.replace(`${window.location.pathname}${rest ? `?${rest}` : ''}`);
+      }
     }
+    // ★ refetchNonce 증가 → 아래 useEffect 가 handleReadRef.current(true) 호출
+    setRefetchNonce(n => n + 1);
   };
 
   // 보관함 재생 메타 (원본 기록 시각 표시용)
@@ -414,6 +443,16 @@ export default function MoreFortunePage({ category }: Props) {
     handleRead();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [shouldAutoStart, canSubmit, loading, result, error]);
+
+  // ★ refetchNonce 변경 → 강제 새 AI 호출 (SajuResultPage 패턴)
+  //   handleRefetch 가 increment 하면 이 useEffect 가 handleReadRef.current(true) 직접 호출
+  //   force=true 로 캐시·loading 상태 모두 우회
+  useEffect(() => {
+    if (refetchNonce === 0) return; // 초기 마운트 무시
+    // handleReadRef 는 매 render 마다 최신 handleRead 로 동기화되므로 stale closure 없음
+    void handleReadRef.current?.(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [refetchNonce]);
 
   const handleRead = async (force: boolean = false) => {
     // 꿈 해몽은 saju 없이도 실행 가능
