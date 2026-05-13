@@ -948,8 +948,10 @@ export type TodayLoveState = typeof TODAY_LOVE_STATES[number];
 export interface TodayUserContext {
   hobbies: TodayHobby[];           // 1+ 선택 (필수)
   customHobby?: string;            // 자유 입력 (선택)
-  jobState: TodayJobState;         // 단일 (필수)
-  loveState: TodayLoveState;       // 단일 (필수)
+  jobState: TodayJobState;         // 단일 (필수, 칩 미선택 시 '기타' fallback)
+  customJobState?: string;         // 자유 입력 — 있으면 풀이에 이 값을 우선 사용
+  loveState: TodayLoveState;       // 단일 (필수, 칩 미선택 시 '공개 안 함' fallback)
+  customLoveState?: string;        // 자유 입력 — 있으면 풀이에 이 값을 우선 사용
   timeSlot: TodayTimeSlot;         // 진입 시점 자동 판정
   q1Text?: string;                 // 랜덤 선택된 질문 1 텍스트
   q2Text?: string;                 // 랜덤 선택된 질문 2 텍스트
@@ -1129,8 +1131,8 @@ export const generateTodayFortuneV3Prompt = (
   const userInputBlock = `[사용자 현재 상황 — 모든 섹션 풀이에 강제 반영]
 - 진입 시간대: ${slotLabel} (${ctx.timeSlot} 시간 구간)
 - 가장 많은 시간을 쏟는 분야: ${hobbiesStr}  (5번 섹션의 분야 분기 기준: ${primaryHobby})${customHobbyNote}
-- 직업 상태: ${ctx.jobState}
-- 연애 상태: ${ctx.loveState}
+- 직업 상태: ${ctx.customJobState || ctx.jobState}
+- 연애 상태: ${ctx.customLoveState || ctx.loveState}
 - 질문 1 ("${q1}"): ${q1Filled || '(미답 — 추정 금지, 답변 인용 없이 일반 풀이)'}
 - 질문 2 ("${q2}"): ${q2Filled || '(미답 — 추정 금지, 답변 인용 없이 일반 풀이)'}
 
@@ -1219,7 +1221,7 @@ ${WRITING_RULES_BLOCK.replace('${todayGz_label}', `${todayGz.gan}${todayGz.zhi}`
 [추가 — 분량·문단·동적 분기 룰]
 · 분량 하한: 14섹션 합산 3300자 이상 목표 (today_persona_extra 추가 + 분기 적용으로 일부 섹션 +25~40%이므로 상향. 토큰 더 쓰더라도 각 섹션을 풍부히).
 · 문단 나누기: 서로 다른 주제·항목·시간대는 반드시 빈 줄(줄바꿈 2회)로 문단을 나눈다.
-· 사용자 입력값 인용 강제: 취미(${primaryHobby})·직업(${ctx.jobState})·연애(${ctx.loveState})·시간대(${slotLabel})를 본문에서 각각 한 번씩 명시 언급.
+· 사용자 입력값 인용 강제: 취미(${primaryHobby})·직업(${ctx.customJobState || ctx.jobState})·연애(${ctx.customLoveState || ctx.loveState})·시간대(${slotLabel})를 본문에서 각각 한 번씩 명시 언급.
 · 만세력 수치(격국·용신·신강·오행%·십성·신살·합충)는 임의로 뒤집거나 변경 금지.
 · ★★ 동적 분기 강제: [답변 자동 분류 결과](${allGroupsCode})에 매칭되는 그룹의 [섹션별 비중·강조점 분기 가이드]를 9개 본문 섹션(today_basis ~ today_persona_extra ~ today_oneliner)에 모두 적용. 그룹이 여럿이면 누적 적용. 같은 사주라도 답변이 다르면 풀이가 확연히 달라야 한다. 분기 미적용 = 사고로 간주.
 · ★★ 직업 맞춤 카드 강제: [today_persona_extra] 카드는 jobState=${ctx.jobState} 에 해당하는 [today_persona_extra 직업/상황 맞춤 포인트 카드] 가이드를 그대로 따름. 학생/직장인/자영업/구직중/주부/기타 6종 중 jobState 에 따라 카드 라벨·콘텐츠가 완전히 달라야 한다.
@@ -1880,7 +1882,7 @@ ${KEY_SENTENCE_EMPHASIS_RULE}
 작성 순서:
 첫 줄: 은유 제목 (지지 사이의 합/충/형/파/해 관계를 자연 현상이나 인간관계 구도로 비유)
 빈 줄
-본문 작성 지침:
+본문 작성 지침: 단락들은 분리된 항목 나열이 아니라 한 편의 글처럼 흐를 것 — "그래서", "그 결과", "이 충돌이 만드는 것은" 같은 연결어로 합·충·형·파·해 마디를 이어 붙여 읽는 사람이 한 호흡으로 따라가게 할 것. 첫 줄 제목 은유를 본문 전체에서 일관되게 풀어내고, 각 관계 묘사는 그 은유의 같은 계열 이미지로 연결.
 - 입력 데이터의 "합충형파해: ${interactionStr}" 필드의 모든 관계를 빠짐없이 본문에서 명시
 - 합(三合·六合·방합): 어떤 에너지가 결합해 어떤 강점을 만드는지 + 그 결합이 인생에서 발현되는 구체 장면 2개 + "이 합의 기운을 살리려면 ~하라" 실천 조언 1가지
 - 충(沖): 두 기둥이 부딪히는 구조 + 일상에서 반복되는 갈등 패턴 2가지(직업/관계 각 1개) + "이런 상황에서는 ~하고 ~은 피하라" 구체 행동 지침
@@ -1891,6 +1893,12 @@ ${KEY_SENTENCE_EMPHASIS_RULE}
 - 관계가 없는 항목은 "없음" 명시 후 다음으로
 마무리: 모든 관계를 종합해 "이 사주의 내부 역학이 만드는 삶의 리듬" 2~3문장 정리 + 가장 주의할 점 1가지 재강조.
 마지막 문장에서 제목 은유 회수.
+
+중복 회피(중요):
+- 이 섹션은 **사주 전체의 합·충·형·파·해 지도**가 본업. 일주(일간·일지)에 직접 결합되는 합 1~2가지는 [daymaster] 에서 이미 다뤘으므로, 여기서는 일주 영역과 다른 기둥(연주↔월주, 월주↔시주 등) 의 관계도 빠짐없이 보강할 것. 단, 일주 직결 합·충은 [daymaster] 와 정확히 같은 표현 반복 금지 — 다른 관점(전체 구도 안에서의 의미)으로 풀어낼 것
+- 격국·신강신약·용신·오행 분포는 [general]·[element] 섹션 전담 — 여기서는 사용 금지
+- 일주의 양면·기질·신살 본질은 [daymaster] 전담 — 여기서는 일주 단독 묘사 금지, 합·충 안에서 일주가 어떻게 작용하는지만
+- 처방·색·방위·숫자·행운 키워드는 [advice] 섹션 전담 — 금지
 
 출력은 [general] 마커부터 시작. 마커 이전 텍스트 없어야 함.
 4개 섹션 모두 빠짐없이 작성하고 [interaction] 까지 완료한 직후 응답을 끝낸다.`;
