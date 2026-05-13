@@ -3,6 +3,8 @@
 // 행운 시각 카드 — 오늘의 운세 / 신년운세 / 정통사주 공통 사용
 // 나침반(compass) + 색상 스와치 + 숫자 + 시간대 + 보조 텍스트
 
+import { annotateTimeSlot } from '../../utils/annotateTimeSlot';
+
 const COLOR_CSS: Record<string, string> = {
   '초록': '#22c55e', '연두': '#84cc16', '민트': '#10b981',
   '빨강': '#ef4444', '주황': '#f97316', '핑크': '#ec4899',
@@ -193,7 +195,7 @@ export function LuckyVisualCard({
         </div>
         <div className="rounded-xl p-3 bg-white/5 border border-white/10">
           <div className="text-[13px] text-text-tertiary mb-1.5">유리한 시간대</div>
-          <div className="text-[16px] text-text-primary font-semibold leading-snug">{timeSlot || '—'}</div>
+          <div className="text-[16px] text-text-primary font-semibold leading-snug">{annotateTimeSlot(timeSlot)}</div>
         </div>
       </div>
 

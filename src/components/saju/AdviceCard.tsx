@@ -2,6 +2,7 @@
 
 import { motion } from 'framer-motion';
 import type { AdviceMeta } from '../../services/fortuneService';
+import { annotateTimeSlot } from '../../utils/annotateTimeSlot';
 
 // 용신 오행 → 색상·방향·행운 숫자 결정론적 매핑
 const YONGSIN_MAP: Record<string, {
@@ -106,25 +107,6 @@ interface AdviceCardProps {
   meta: AdviceMeta;
 }
 
-// 12지지 → 실제 시간 매핑 (사용자가 한자만 보고 시간 모르는 케이스 해결)
-const ZHI_HOUR: Record<string, string> = {
-  '자': '23-01시', '축': '01-03시', '인': '03-05시', '묘': '05-07시',
-  '진': '07-09시', '사': '09-11시', '오': '11-13시', '미': '13-15시',
-  '신': '15-17시', '유': '17-19시', '술': '19-21시', '해': '21-23시',
-};
-// timeSlot 안의 "X시" 또는 "X·Y시" 패턴에 시간 병기 — 이미 "(...시)" 가 있으면 그대로 둠
-function annotateTimeSlot(s: string): string {
-  if (!s) return '—';
-  if (/\d{1,2}/.test(s)) return s; // 이미 숫자 시간 포함
-  return s.replace(/([자축인묘진사오미신유술해])(·([자축인묘진사오미신유술해]))?시/g, (_m, a, _b, c) => {
-    const aHour = ZHI_HOUR[a];
-    if (c) {
-      const cHour = ZHI_HOUR[c];
-      return `${a}시 (${aHour}) · ${c}시 (${cHour})`;
-    }
-    return `${a}시 (${aHour})`;
-  });
-}
 
 export function AdviceCard({ yongSinElement, meta }: AdviceCardProps) {
   // 한자 포함된 경우 매핑
