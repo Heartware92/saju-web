@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-// Vercel Serverless — 2-pass 호출(토정비결 등) 시 총 소요 시간 대응
-export const maxDuration = 120;
+// Vercel Pro 플랜 maxDuration 한도 활용 — 300s 무료
+// 정통사주 2차(8섹션 동시) + Gemini stall + retry + OpenAI 폴백 모두 수용
+export const maxDuration = 300;
 
 interface AIResult {
   content: string;
