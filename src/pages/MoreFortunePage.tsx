@@ -146,35 +146,34 @@ export default function MoreFortunePage({ category }: Props) {
   const handleUseCached = () => { cacheGate?.restore(); setCacheGate(null); };
   const handleRefetch = () => {
     setCacheGate(null);
-    // ★ 사용자 신고:
-    //   1) "새로 풀이받기" 눌러도 이전 풀이 그대로 나옴
-    //   2) 로딩창 없이 소개 페이지로 떨어짐
-    // 원인:
-    //   1) setCacheGate(null) 만 호출하면 메모리 캐시·보관함 record 가 다시 복원됨
-    //   2) manualMode 가 true 상태이면 shouldAutoStart=false → 소개 화면
-    // 픽스: 캐시 무효화 + 결과 초기화 + manualMode 리셋 + fresh URL 라우팅
+    // ★ 모달의 "새로 풀이받기" / 결과 화면의 "다시 풀이받기" 공통 핸들러.
+    // 모달 호출 시 router.replace 가 컴포넌트 재마운트를 일으키면
+    //   setTimeout 안의 handleReadRef 가 이전 인스턴스 ref 를 가리켜
+    //   호출이 무효화되는 사고가 있어 URL 라우팅을 제거하고 in-page 처리만.
+    // 보관함 잔여물은 fresh=1 URL 없이도 invalidate + state 리셋 + force AI 호출로 차단.
     if (category) {
       useReportCacheStore.getState().invalidate(`more:${category}` as const);
+    }
+    // recordId 만 URL 에 남아있다면 보관함 모드 해제용으로 제거
+    // (fresh=1 은 더 이상 트리거에 사용 안 함 — 재마운트 회피)
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      if (params.has('recordId')) {
+        params.delete('recordId');
+        const rest = params.toString();
+        router.replace(`${window.location.pathname}${rest ? `?${rest}` : ''}`);
+      }
     }
     setResult(null);
     setError(null);
     setSavedRecordId(null);
-    setManualMode(false); // ★ 핵심: 이전에 "다시 풀이"를 눌렀던 흔적 제거 → auto-start 가능
+    setManualMode(false);
     autoStartedRef.current = false;
-    setLoading(true); // ★ 즉시 로딩 화면 표시 — auto-start 트리거 사이의 깜빡임 방지
-    if (typeof window !== 'undefined') {
-      const params = new URLSearchParams(window.location.search);
-      params.set('fresh', '1');
-      // recordId 가 있다면 새 풀이로 진입하므로 제거
-      params.delete('recordId');
-      router.replace(`${window.location.pathname}?${params.toString()}`);
-    }
-    // ★ auto-start useEffect 에만 의존하지 않고 직접 handleRead(force=true) 호출
-    //   캐시 우회 강제 + 즉시 새 AI 호출 보장 (메모리 캐시·보관함 잔여물이
-    //   silent restore useEffect 등 다른 분기에 의해 result 를 다시 채우는 사고 차단)
+    setLoading(true); // 즉시 로딩 화면 표시
+    // ★ 직접 handleRead(force=true) 호출 — auto-start useEffect 의존 X
     setTimeout(() => {
-      handleReadRef.current?.(true);
-    }, 0);
+      void handleReadRef.current?.(true);
+    }, 80);
   };
 
   // 보관함 재생 메타 (원본 기록 시각 표시용)
