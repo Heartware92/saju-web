@@ -181,6 +181,10 @@ function InputForm({
   const [hobbyCustomOpen, setHobbyCustomOpen] = useState(false);
   const [jobCustomOpen, setJobCustomOpen] = useState(false);
   const [loveCustomOpen, setLoveCustomOpen] = useState(false);
+  const [jobState, setJobState] = useState<TodayJobState | null>(null);
+  const [customJobState, setCustomJobState] = useState('');
+  const [loveState, setLoveState] = useState<TodayLoveState | null>(null);
+  const [customLoveState, setCustomLoveState] = useState('');
 
   // Progressive disclosure — 각 섹션 완료 시 다음 섹션 노출
   const hobbyDone = hobbies.length > 0 || customHobby.trim().length > 0;
@@ -191,10 +195,6 @@ function InputForm({
   const loveDone =
     loveState !== null ||
     (loveCustomOpen && customLoveState.trim().length > 0);
-  const [jobState, setJobState] = useState<TodayJobState | null>(null);
-  const [customJobState, setCustomJobState] = useState('');
-  const [loveState, setLoveState] = useState<TodayLoveState | null>(null);
-  const [customLoveState, setCustomLoveState] = useState('');
   const [q1Answer, setQ1Answer] = useState('');
   const [q2Answer, setQ2Answer] = useState('');
   // '직접 입력'을 골랐을 때만 노출되는 보조 입력값
