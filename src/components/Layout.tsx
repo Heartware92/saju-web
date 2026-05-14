@@ -6,7 +6,6 @@ import { usePathname, useRouter } from 'next/navigation';
 import { CreditDisplay } from './ui/CreditDisplay';
 import { useCreditStore } from '../store/useCreditStore';
 import StarfallBackground from './StarfallBackground';
-import { Footer } from './Footer';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -188,7 +187,19 @@ export default function Layout({ children }: LayoutProps) {
                   <p>대구광역시 북구 동북로 117</p>
                   <p>고객센터 010-5960-0920</p>
                   <p>이메일 heojinwoo@heartware.co.kr</p>
-                  <p className="mt-1">&copy; 2026 이천점</p>
+                </div>
+                {/* 민원 책임 고지 — KG이니시스 환금성 업종 입점 필수 문구 */}
+                <div className="mt-3 pt-3 border-t border-[var(--border-subtle)] w-full px-2 text-center">
+                  <p className="text-[11px] leading-snug text-text-tertiary">
+                    본 서비스의 모든 거래에 대한 책임과 환불, 민원 등은{' '}
+                    <span className="text-text-secondary">(주)하트웨어</span>에서 진행합니다.
+                  </p>
+                  <p className="mt-1 text-[11px] leading-snug text-text-tertiary">
+                    민원 담당자: 허진우 (대표자 겸임)
+                    <br />
+                    010-5960-0920 · heojinwoo@heartware.co.kr
+                  </p>
+                  <p className="mt-2 text-[11px] text-text-tertiary/70">&copy; 2026 이천점</p>
                 </div>
               </div>
             </div>
@@ -198,8 +209,6 @@ export default function Layout({ children }: LayoutProps) {
         {/* Main Content */}
         <main className="relative z-10 flex-1 w-full overflow-y-auto pb-[calc(64px+env(safe-area-inset-bottom,0px))]">
           {children}
-          {/* Footer — 사업자 정보·민원 책임 고지·정책 링크 (KG이니시스 환금성 업종 입점 필수) */}
-          <Footer />
         </main>
 
         {/* Bottom Tab Bar - always visible */}
