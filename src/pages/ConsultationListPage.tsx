@@ -3,16 +3,11 @@
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { motion, AnimatePresence } from 'framer-motion';
 import { useProfileStore } from '../store/useProfileStore';
 import { useUserStore } from '../store/useUserStore';
-import { type ConsultationStatus } from '../constants/prompts';
 import { BackButton } from '../components/ui/BackButton';
 import {
   type StoredConversation,
-  STATUS_KEY,
-  RELATIONSHIP_PRESETS,
-  CONCERN_PRESETS,
   loadConversations,
   formatRelativeTime,
   newConversation,
@@ -26,13 +21,6 @@ export default function ConsultationListPage() {
 
   const [selectedProfileId, setSelectedProfileId] = useState('');
   const [conversations, setConversations] = useState<StoredConversation[]>([]);
-  const [status, setStatus] = useState<ConsultationStatus>({});
-  const [statusModalOpen, setStatusModalOpen] = useState(false);
-  const [jobInput, setJobInput] = useState('');
-  const [relationshipSelect, setRelationshipSelect] = useState('');
-  const [customRelationship, setCustomRelationship] = useState('');
-  const [concernSelect, setConcernSelect] = useState('');
-  const [customConcern, setCustomConcern] = useState('');
 
   useEffect(() => {
     if (user) fetchProfiles();
@@ -51,60 +39,14 @@ export default function ConsultationListPage() {
     [profiles, selectedProfileId],
   );
 
-  // 프로필 전환 시 대화목록·상태 로드
+  // 프로필 전환 시 대화목록 로드
   useEffect(() => {
     if (!selectedProfileId) return;
     if (typeof window === 'undefined') return;
 
-    try {
-      const raw = localStorage.getItem(STATUS_KEY(selectedProfileId));
-      setStatus(raw ? JSON.parse(raw) : {});
-    } catch { setStatus({}); }
-
     const { conversations: loaded } = loadConversations(selectedProfileId);
     setConversations(loaded);
   }, [selectedProfileId]);
-
-  const saveStatus = () => {
-    if (!selectedProfileId) return;
-    const finalRelationship = relationshipSelect === '기타' ? customRelationship.trim() : relationshipSelect;
-    const finalConcern = concernSelect === '기타' ? customConcern.trim() : concernSelect;
-    const next: ConsultationStatus = {
-      relationshipStatus: finalRelationship || undefined,
-      job: jobInput.trim() || undefined,
-      concern: finalConcern || undefined,
-    };
-    setStatus(next);
-    try { localStorage.setItem(STATUS_KEY(selectedProfileId), JSON.stringify(next)); } catch { /* ignore */ }
-    setStatusModalOpen(false);
-  };
-
-  const openStatusModal = () => {
-    const current = status.relationshipStatus || '';
-    if (RELATIONSHIP_PRESETS.includes(current)) {
-      setRelationshipSelect(current);
-      setCustomRelationship('');
-    } else if (current) {
-      setRelationshipSelect('기타');
-      setCustomRelationship(current);
-    } else {
-      setRelationshipSelect('');
-      setCustomRelationship('');
-    }
-    setJobInput(status.job || '');
-    const currentConcern = status.concern || '';
-    if (CONCERN_PRESETS.includes(currentConcern)) {
-      setConcernSelect(currentConcern);
-      setCustomConcern('');
-    } else if (currentConcern) {
-      setConcernSelect('기타');
-      setCustomConcern(currentConcern);
-    } else {
-      setConcernSelect('');
-      setCustomConcern('');
-    }
-    setStatusModalOpen(true);
-  };
 
   const handleOpenChat = (conversationId: string) => {
     router.push(`/sangdamso/chat?pid=${selectedProfileId}&cid=${conversationId}`);
@@ -193,35 +135,6 @@ export default function ConsultationListPage() {
 
       {selectedProfile && (
         <>
-          {/* 상태 + 수정 */}
-          <div className="px-5 mb-4">
-            <div className="flex items-center justify-between">
-              <div className="flex flex-wrap gap-1.5 text-[12px]">
-                {status.relationshipStatus && (
-                  <span className="px-2 py-0.5 rounded-full bg-rose-500/15 border border-rose-500/30 text-rose-300">
-                    연애 · {status.relationshipStatus}
-                  </span>
-                )}
-                {status.job && (
-                  <span className="px-2 py-0.5 rounded-full bg-blue-500/15 border border-blue-500/30 text-blue-300">
-                    직업 · {status.job}
-                  </span>
-                )}
-                {status.concern && (
-                  <span className="px-2 py-0.5 rounded-full bg-amber-500/15 border border-amber-500/30 text-amber-300">
-                    고민 · {status.concern}
-                  </span>
-                )}
-                {!status.relationshipStatus && !status.job && !status.concern && (
-                  <span className="text-text-tertiary text-[13px]">상태를 설정하면 더 정확한 답변을 받아요</span>
-                )}
-              </div>
-              <button onClick={openStatusModal} className="text-[13px] text-cta hover:text-cta/80 font-medium flex-shrink-0 ml-2">
-                상태 수정
-              </button>
-            </div>
-          </div>
-
           {/* 새 대화 시작 */}
           <div className="px-4 mb-3">
             <button
@@ -293,102 +206,6 @@ export default function ConsultationListPage() {
           <Link href="/saju/input?mode=profile-only&from=sangdamso" className="text-cta font-semibold underline">프로필 등록</Link>
         </div>
       )}
-
-      {/* 상태 수정 모달 */}
-      <AnimatePresence>
-        {statusModalOpen && (
-          <>
-            <motion.div
-              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-              onClick={() => setStatusModalOpen(false)}
-              className="fixed inset-0 z-[80] bg-black/60"
-            />
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: 20 }}
-              className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-[81] w-[min(420px,calc(100vw-32px))] max-h-[calc(100dvh-80px)] overflow-y-auto bg-[rgba(20,12,38,0.98)] border border-white/15 rounded-2xl p-5 shadow-2xl"
-            >
-              <div className="flex items-start justify-between mb-4">
-                <div>
-                  <p className="text-[16px] font-bold text-text-primary">현재 상태 수정</p>
-                  <p className="text-[13px] text-text-tertiary mt-0.5">답변 개인화를 위한 참고 정보</p>
-                </div>
-                <button onClick={() => setStatusModalOpen(false)} className="w-7 h-7 rounded-lg flex items-center justify-center text-text-tertiary hover:text-text-primary">
-                  ✕
-                </button>
-              </div>
-
-              <div className="mb-4">
-                <p className="text-[13px] font-semibold text-text-secondary mb-2 uppercase tracking-wider">연애상태</p>
-                <div className="flex flex-wrap gap-1.5">
-                  {RELATIONSHIP_PRESETS.map(r => (
-                    <button
-                      key={r}
-                      onClick={() => setRelationshipSelect(r)}
-                      className={`px-3 py-1.5 rounded-full text-[14px] font-medium border transition-all
-                        ${relationshipSelect === r ? 'bg-cta/25 border-cta/60 text-cta' : 'bg-white/5 border-white/10 text-text-secondary hover:border-white/20'}`}
-                    >
-                      {r}
-                    </button>
-                  ))}
-                </div>
-                {relationshipSelect === '기타' && (
-                  <input
-                    type="text" value={customRelationship}
-                    onChange={e => setCustomRelationship(e.target.value)}
-                    placeholder="직접 입력 (예: 장거리 연애중)" maxLength={30}
-                    className="w-full mt-2 px-3 py-2 rounded-lg bg-white/5 border border-white/15 text-text-primary text-[15px] placeholder-text-tertiary focus:border-cta/50 focus:outline-none"
-                  />
-                )}
-              </div>
-
-              <div className="mb-4">
-                <p className="text-[13px] font-semibold text-text-secondary mb-2 uppercase tracking-wider">직업 / 일</p>
-                <input
-                  type="text" value={jobInput}
-                  onChange={e => setJobInput(e.target.value)}
-                  placeholder="예: IT 회사 대표, 대학생, 취업 준비중" maxLength={50}
-                  className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/15 text-text-primary text-[15px] placeholder-text-tertiary focus:border-cta/50 focus:outline-none"
-                />
-              </div>
-
-              <div className="mb-5">
-                <p className="text-[13px] font-semibold text-text-secondary mb-2 uppercase tracking-wider">요즘 고민 키워드</p>
-                <div className="flex flex-wrap gap-1.5">
-                  {CONCERN_PRESETS.map(c => (
-                    <button
-                      key={c}
-                      onClick={() => setConcernSelect(concernSelect === c ? '' : c)}
-                      className={`px-3 py-1.5 rounded-full text-[14px] font-medium border transition-all
-                        ${concernSelect === c ? 'bg-cta/25 border-cta/60 text-cta' : 'bg-white/5 border-white/10 text-text-secondary hover:border-white/20'}`}
-                    >
-                      {c}
-                    </button>
-                  ))}
-                </div>
-                {concernSelect === '기타' && (
-                  <input
-                    type="text" value={customConcern}
-                    onChange={e => setCustomConcern(e.target.value)}
-                    placeholder="직접 입력 (예: 부동산 투자, 자녀 교육)" maxLength={30}
-                    className="w-full mt-2 px-3 py-2 rounded-lg bg-white/5 border border-white/15 text-text-primary text-[15px] placeholder-text-tertiary focus:border-cta/50 focus:outline-none"
-                  />
-                )}
-              </div>
-
-              <div className="flex gap-2">
-                <button onClick={() => setStatusModalOpen(false)} className="flex-1 py-2.5 rounded-xl border border-white/15 text-text-secondary font-medium text-[15px]">
-                  취소
-                </button>
-                <button onClick={saveStatus} className="flex-1 py-2.5 rounded-xl bg-cta text-white font-bold text-[15px]">
-                  저장
-                </button>
-              </div>
-            </motion.div>
-          </>
-        )}
-      </AnimatePresence>
     </div>
   );
 }

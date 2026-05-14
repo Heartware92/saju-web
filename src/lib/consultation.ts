@@ -19,7 +19,8 @@ export interface StoredConversation {
 }
 
 // localStorage 키 (기존 호환)
-export const STATUS_KEY = (pid: string) => `sangdamso:status:${pid}`;
+// 참고: 'sangdamso:status:${pid}' 키는 상태 수정 기능 제거 후 더 이상 쓰지 않음.
+//       기존 사용자 localStorage 에 남아있던 값은 무시되며 별도 정리 없이 dead key 로 둠.
 export const CONVERSATIONS_KEY = (pid: string) => `sangdamso:conversations:${pid}`;
 export const ACTIVE_KEY = (pid: string) => `sangdamso:active:${pid}`;
 export const LEGACY_HISTORY_KEY = (pid: string) => `sangdamso:history:${pid}`;
@@ -27,10 +28,6 @@ export const STORAGE_NOTICE_KEY = 'sangdamso:storage-notice-dismissed';
 
 export const MAX_CONVERSATIONS_PER_PROFILE = 20;
 export const MAX_MESSAGES_PER_CONVERSATION = 50;
-
-export const RELATIONSHIP_PRESETS = ['솔로', '썸타는 중', '연애중', '결혼했어요', '새로운 출발', '기타'];
-
-export const CONCERN_PRESETS = ['재물·돈', '이직·취업', '연애·결혼', '건강', '학업·시험', '대인관계', '사업·창업', '기타'];
 
 export const QUICK_QUESTIONS = [
   '올해 재물운은 어떤가요?',

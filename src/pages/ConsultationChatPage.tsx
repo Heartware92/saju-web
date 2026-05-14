@@ -7,7 +7,7 @@ import { useProfileStore } from '../store/useProfileStore';
 import { useUserStore } from '../store/useUserStore';
 import { useCreditStore } from '../store/useCreditStore';
 import { computeSajuFromProfile } from '../utils/profileSaju';
-import { buildConsultationSystemPrompt, type ConsultationStatus } from '../constants/prompts';
+import { buildConsultationSystemPrompt } from '../constants/prompts';
 import { sanitizeAIOutput } from '../services/fortuneService';
 import { supabase } from '../services/supabase';
 import {
@@ -19,7 +19,6 @@ import {
   type ChatMessage,
   type StoredConversation,
   CONVERSATIONS_KEY,
-  STATUS_KEY,
   QUICK_QUESTIONS,
   newConversation,
   deriveTitle,
@@ -48,7 +47,6 @@ export default function ConsultationChatPage() {
   const [error, setError] = useState('');
   const [showPackModal, setShowPackModal] = useState(false);
   const [packBuying, setPackBuying] = useState(false);
-  const [status, setStatus] = useState<ConsultationStatus>({});
   const [ready, setReady] = useState(false);
 
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -88,11 +86,6 @@ export default function ConsultationChatPage() {
       router.replace('/sangdamso');
       return;
     }
-
-    try {
-      const raw = localStorage.getItem(STATUS_KEY(pid));
-      setStatus(raw ? JSON.parse(raw) : {});
-    } catch { setStatus({}); }
 
     const { conversations: loaded, activeId } = loadConversations(pid);
 
@@ -233,7 +226,7 @@ export default function ConsultationChatPage() {
         birth_date: selectedProfile.birth_date,
         gender: selectedProfile.gender,
         calendar_type: selectedProfile.calendar_type,
-      }, status);
+      });
 
       const history = messages.map(m => ({
         role: m.role === 'user' ? 'user' as const : 'model' as const,
