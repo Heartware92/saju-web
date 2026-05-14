@@ -91,12 +91,15 @@ export function SpinningEarth({ size = 320, className = '' }: SpinningEarthProps
           />
         ))}
 
-        {/* 가로 궤도 가이드 — 45도 기울어진 타원 (ry/rx ≈ 0.7) + 폭 확장 */}
-        <g opacity="0.16">
-          <ellipse cx="50" cy="50" rx="22" ry="15" fill="none" stroke="#fcd5b4" strokeWidth="0.3" strokeDasharray="1 2" />
-          <ellipse cx="50" cy="50" rx="34" ry="24" fill="none" stroke="#fcd5b4" strokeWidth="0.3" strokeDasharray="1 2" />
-          <ellipse cx="50" cy="50" rx="44" ry="31" fill="none" stroke="#fcd5b4" strokeWidth="0.3" strokeDasharray="1 2" />
-          <ellipse cx="50" cy="50" rx="52" ry="36" fill="none" stroke="#fcd5b4" strokeWidth="0.3" strokeDasharray="1 2" />
+        {/* 궤도 시스템 전체 — 살짝 회전(-15°)으로 코일 같은 비틀림 부여 */}
+        <g transform="rotate(-15 50 50)">
+          {/* 궤도 가이드 — 45도 기울어진 타원 (ry/rx ≈ 0.7) */}
+          <g opacity="0.18">
+            <ellipse cx="50" cy="50" rx="22" ry="15" fill="none" stroke="#fcd5b4" strokeWidth="0.3" strokeDasharray="1 2" />
+            <ellipse cx="50" cy="50" rx="34" ry="24" fill="none" stroke="#fcd5b4" strokeWidth="0.3" strokeDasharray="1 2" />
+            <ellipse cx="50" cy="50" rx="44" ry="31" fill="none" stroke="#fcd5b4" strokeWidth="0.3" strokeDasharray="1 2" />
+            <ellipse cx="50" cy="50" rx="52" ry="36" fill="none" stroke="#fcd5b4" strokeWidth="0.3" strokeDasharray="1 2" />
+          </g>
         </g>
 
         {/* 태양 코로나 글로우 */}
@@ -122,6 +125,9 @@ export function SpinningEarth({ size = 320, className = '' }: SpinningEarthProps
 
         {/* 태양 본체 */}
         <circle cx="50" cy="50" r="7.5" fill="url(#sunBody2)" style={{ animation: 'sun-pulse 5s ease-in-out infinite' }} />
+
+        {/* 모든 행성 시스템 — 궤도와 함께 -15° 회전으로 코일 비틀림 */}
+        <g transform="rotate(-15 50 50)">
 
         {/* 행성 1 — 가장 안쪽, 페일핑크, 8s 측면 공전 (느림) */}
         <g style={{ animation: 'orbit-side-1 8s linear infinite', transformOrigin: '50px 50px' }}>
@@ -180,6 +186,8 @@ export function SpinningEarth({ size = 320, className = '' }: SpinningEarthProps
             </g>
           </g>
         </g>
+
+        </g>{/* end: 궤도 시스템 -15° 회전 그룹 */}
       </svg>
 
       <style jsx>{`
@@ -204,34 +212,34 @@ export function SpinningEarth({ size = 320, className = '' }: SpinningEarthProps
            오른쪽(보통) → 뒤(작음·흐림) → 왼쪽(보통) → 앞(큼·진함) → 오른쪽
            translate 값은 viewBox 100x100 기준 px */
 
-        /* 45도 기울어진 시점 — ry/rx ≈ 0.7, 폭 확장 */
+        /* 코일 모션 — 깊이감 극대화 (scale 0.3↔1.7, opacity 0.25↔1) */
         @keyframes orbit-side-1 {
-          0%   { transform: translate(22px, 0px) scale(1); opacity: 1; }
-          25%  { transform: translate(0px, -15px) scale(0.55); opacity: 0.55; }
-          50%  { transform: translate(-22px, 0px) scale(1); opacity: 1; }
-          75%  { transform: translate(0px, 15px) scale(1.3); opacity: 1; }
-          100% { transform: translate(22px, 0px) scale(1); opacity: 1; }
+          0%   { transform: translate(22px, 0px) scale(1); opacity: 1; filter: blur(0); }
+          25%  { transform: translate(0px, -15px) scale(0.3); opacity: 0.3; filter: blur(0.6px); }
+          50%  { transform: translate(-22px, 0px) scale(1); opacity: 1; filter: blur(0); }
+          75%  { transform: translate(0px, 15px) scale(1.7); opacity: 1; filter: blur(0); }
+          100% { transform: translate(22px, 0px) scale(1); opacity: 1; filter: blur(0); }
         }
         @keyframes orbit-side-2 {
-          0%   { transform: translate(34px, 0px) scale(1); opacity: 1; }
-          25%  { transform: translate(0px, -24px) scale(0.55); opacity: 0.55; }
-          50%  { transform: translate(-34px, 0px) scale(1); opacity: 1; }
-          75%  { transform: translate(0px, 24px) scale(1.3); opacity: 1; }
-          100% { transform: translate(34px, 0px) scale(1); opacity: 1; }
+          0%   { transform: translate(34px, 0px) scale(1); opacity: 1; filter: blur(0); }
+          25%  { transform: translate(0px, -24px) scale(0.3); opacity: 0.3; filter: blur(0.6px); }
+          50%  { transform: translate(-34px, 0px) scale(1); opacity: 1; filter: blur(0); }
+          75%  { transform: translate(0px, 24px) scale(1.7); opacity: 1; filter: blur(0); }
+          100% { transform: translate(34px, 0px) scale(1); opacity: 1; filter: blur(0); }
         }
         @keyframes orbit-side-3 {
-          0%   { transform: translate(44px, 0px) scale(1); opacity: 1; }
-          25%  { transform: translate(0px, -31px) scale(0.55); opacity: 0.55; }
-          50%  { transform: translate(-44px, 0px) scale(1); opacity: 1; }
-          75%  { transform: translate(0px, 31px) scale(1.3); opacity: 1; }
-          100% { transform: translate(44px, 0px) scale(1); opacity: 1; }
+          0%   { transform: translate(44px, 0px) scale(1); opacity: 1; filter: blur(0); }
+          25%  { transform: translate(0px, -31px) scale(0.3); opacity: 0.3; filter: blur(0.6px); }
+          50%  { transform: translate(-44px, 0px) scale(1); opacity: 1; filter: blur(0); }
+          75%  { transform: translate(0px, 31px) scale(1.7); opacity: 1; filter: blur(0); }
+          100% { transform: translate(44px, 0px) scale(1); opacity: 1; filter: blur(0); }
         }
         @keyframes orbit-side-4 {
-          0%   { transform: translate(52px, 0px) scale(1); opacity: 1; }
-          25%  { transform: translate(0px, -36px) scale(0.55); opacity: 0.55; }
-          50%  { transform: translate(-52px, 0px) scale(1); opacity: 1; }
-          75%  { transform: translate(0px, 36px) scale(1.3); opacity: 1; }
-          100% { transform: translate(52px, 0px) scale(1); opacity: 1; }
+          0%   { transform: translate(52px, 0px) scale(1); opacity: 1; filter: blur(0); }
+          25%  { transform: translate(0px, -36px) scale(0.3); opacity: 0.3; filter: blur(0.6px); }
+          50%  { transform: translate(-52px, 0px) scale(1); opacity: 1; filter: blur(0); }
+          75%  { transform: translate(0px, 36px) scale(1.7); opacity: 1; filter: blur(0); }
+          100% { transform: translate(52px, 0px) scale(1); opacity: 1; filter: blur(0); }
         }
         @keyframes moon-orbit-side {
           0%   { transform: translate(0px, 0px) scale(1); }
