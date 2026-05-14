@@ -351,12 +351,12 @@ export default function ManageProfilesPage() {
               animate={{ y: 0, opacity: 1 }}
               exit={{ y: 40, opacity: 0 }}
               onClick={(e) => e.stopPropagation()}
-              className="relative w-full max-w-[380px] rounded-2xl p-5 bg-[rgba(28,18,50,0.98)] border border-[var(--border-subtle)]"
+              className="relative w-full max-w-[380px] max-h-[calc(100dvh-32px-64px-env(safe-area-inset-bottom,0px))] sm:max-h-[calc(100dvh-32px)] overflow-y-auto overscroll-contain rounded-2xl p-5 bg-[rgba(28,18,50,0.98)] border border-[var(--border-subtle)]"
             >
-              <button type="button" onClick={() => { setEditing(null); setEditForm(null); }} className="absolute top-3 right-3 w-7 h-7 flex items-center justify-center rounded-full bg-white/5 text-[var(--text-tertiary)] hover:bg-white/10 hover:text-[var(--text-primary)] transition-colors" aria-label="닫기">
+              <button type="button" onClick={() => { setEditing(null); setEditForm(null); }} className="absolute top-3 right-3 w-7 h-7 flex items-center justify-center rounded-full bg-white/5 text-[var(--text-tertiary)] hover:bg-white/10 hover:text-[var(--text-primary)] transition-colors z-10" aria-label="닫기">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="6" y1="6" x2="18" y2="18" /><line x1="18" y1="6" x2="6" y2="18" /></svg>
               </button>
-              <h3 className="text-base font-bold text-text-primary mb-4">프로필 수정</h3>
+              <h3 className="text-base font-bold text-text-primary mb-4 sticky top-0 bg-[rgba(28,18,50,0.98)] -mx-5 px-5 pt-1 pb-2 z-[5]">프로필 수정</h3>
 
               <div className="space-y-3">
                 <div>

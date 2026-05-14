@@ -488,6 +488,22 @@ export default function SajuInputPage() {
           </select>
         </div>
 
+        {/* 프로필 저장 전용 모드: 직업·연애 상태 본 화면에서 직접 입력 */}
+        {isProfileOnly && (
+          <div className={styles.section}>
+            <JobLoveStateInput
+              jobState={jobState}
+              customJobState={customJobState}
+              loveState={loveState}
+              customLoveState={customLoveState}
+              onJobStateChange={setJobState}
+              onCustomJobStateChange={setCustomJobState}
+              onLoveStateChange={setLoveState}
+              onCustomLoveStateChange={setCustomLoveState}
+            />
+          </div>
+        )}
+
         {/* 지정일 운세 전용: 날짜 입력 */}
         {categoryId === 'date' && (
           <div className={`${styles.section} ${styles.targetDateSection}`}>

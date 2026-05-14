@@ -325,6 +325,16 @@ function InputForm({
         </p>
       </div>
 
+      {/* 프로필 정보 기준 — 직업·연애 상태는 birth_profiles 에서 자동 사용.
+          취미 입력 전에 노출해 사용자가 어떤 정보가 적용되는지 미리 인지. */}
+      <div className="rounded-xl px-4 py-3 bg-[rgba(20,12,38,0.4)] border border-[var(--border-subtle)] text-[13px] text-text-tertiary leading-relaxed">
+        프로필 정보 기준 — 직업 <span className="text-text-secondary font-semibold">{effectiveJobState}</span>
+        {' · '}
+        연애 <span className="text-text-secondary font-semibold">{effectiveLoveState}</span>
+        <br />
+        <span className="text-[12px] opacity-80">바꾸려면 프로필 관리에서 수정해주세요</span>
+      </div>
+
       {/* 1. 취미·관심사 — "직접 입력" 칩 클릭 시에만 input 노출 (시간대 질문 패턴과 통일) */}
       <div className="rounded-2xl p-5 bg-[rgba(20,12,38,0.55)] border border-[var(--border-subtle)]">
         <div className="flex items-center gap-2 mb-3">
@@ -375,18 +385,6 @@ function InputForm({
           />
         )}
       </div>
-
-      {/* 직업·연애 상태는 프로필 데이터에서 자동 사용 (effectiveJobState/effectiveLoveState).
-          프로필 등록·수정 화면에서 변경 가능. 사용자에게 작은 안내. */}
-      {hobbyDone && (
-        <div className="rounded-xl px-4 py-3 bg-[rgba(20,12,38,0.4)] border border-[var(--border-subtle)] text-[13px] text-text-tertiary leading-relaxed">
-          프로필 정보 기준 — 직업 <span className="text-text-secondary font-semibold">{effectiveJobState}</span>
-          {' · '}
-          연애 <span className="text-text-secondary font-semibold">{effectiveLoveState}</span>
-          <br />
-          <span className="text-[12px] opacity-80">바꾸려면 프로필 관리에서 수정해주세요</span>
-        </div>
-      )}
 
       {/* 2. 지금 상태 — 취미 완료 시 등장 */}
       {hobbyDone && (
