@@ -11,7 +11,6 @@ import { BackButton } from '../components/ui/BackButton';
 import {
   type StoredConversation,
   STATUS_KEY,
-  STORAGE_NOTICE_KEY,
   RELATIONSHIP_PRESETS,
   CONCERN_PRESETS,
   loadConversations,
@@ -34,17 +33,10 @@ export default function ConsultationListPage() {
   const [customRelationship, setCustomRelationship] = useState('');
   const [concernSelect, setConcernSelect] = useState('');
   const [customConcern, setCustomConcern] = useState('');
-  const [storageBannerVisible, setStorageBannerVisible] = useState(false);
 
   useEffect(() => {
     if (user) fetchProfiles();
   }, [user, fetchProfiles]);
-
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    const dismissed = localStorage.getItem(STORAGE_NOTICE_KEY);
-    if (!dismissed) setStorageBannerVisible(true);
-  }, []);
 
   // 기본 프로필 자동 선택
   useEffect(() => {
@@ -159,30 +151,6 @@ export default function ConsultationListPage() {
           </h1>
         </div>
       </div>
-
-      {/* 기기 저장 안내 배너 */}
-      <AnimatePresence>
-        {storageBannerVisible && (
-          <motion.div
-            initial={{ opacity: 0, y: -8 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -8 }}
-            className="mx-4 mb-3 px-4 py-2.5 rounded-xl bg-amber-500/10 border border-amber-500/25 flex items-start gap-2.5"
-          >
-            <span className="text-amber-400 text-[14px] mt-0.5 flex-shrink-0">⚠</span>
-            <p className="text-[13px] text-amber-200/80 leading-relaxed flex-1">
-              대화 내역은 <span className="font-semibold text-amber-300">이 기기에만</span> 저장됩니다.
-            </p>
-            <button
-              onClick={() => { setStorageBannerVisible(false); localStorage.setItem(STORAGE_NOTICE_KEY, '1'); }}
-              className="flex-shrink-0 text-amber-400/60 hover:text-amber-400 text-[14px] leading-none mt-0.5"
-              aria-label="닫기"
-            >
-              ×
-            </button>
-          </motion.div>
-        )}
-      </AnimatePresence>
 
       {/* 프로필 선택 */}
       <div className="px-4 mb-4">
