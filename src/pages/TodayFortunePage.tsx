@@ -288,8 +288,21 @@ function InputForm({
 
   const canSubmit = hobbies.length > 0 || customHobby.trim().length > 0;
 
-  const toggleHobby = (h: TodayHobby) => {
-    setHobbies((prev) => (prev.includes(h) ? prev.filter((x) => x !== h) : [...prev, h]));
+  // 단일 선택 — 같은 칩 재클릭 시 해제, 다른 칩 클릭 시 교체.
+  // 표준 칩과 직접 입력은 서로 mutually exclusive — 한 쪽 활성 시 다른 쪽 자동 해제.
+  const selectHobby = (h: TodayHobby) => {
+    setHobbies((prev) => (prev[0] === h ? [] : [h]));
+    setHobbyCustomOpen(false);
+    setCustomHobby('');
+  };
+
+  const toggleHobbyCustom = () => {
+    setHobbyCustomOpen((o) => {
+      const next = !o;
+      if (next) setHobbies([]); // 직접 입력 켤 때 표준 선택 해제
+      else setCustomHobby('');
+      return next;
+    });
   };
 
   const submit = () => {
@@ -343,14 +356,13 @@ function InputForm({
             요즘 가장 시간을 쏟는 분야
           </h3>
         </div>
-        <p className="text-[12px] text-text-tertiary mb-3">하나 이상 선택. 직접 입력도 가능해요.</p>
         <div className="flex flex-wrap gap-2 mb-3">
           {TODAY_HOBBY_OPTIONS.map((h) => {
             const on = hobbies.includes(h);
             return (
               <button
                 key={h}
-                onClick={() => toggleHobby(h)}
+                onClick={() => selectHobby(h)}
                 className="px-3.5 py-2 rounded-full text-[13px] font-medium"
                 style={{
                   border: `1.5px solid ${on ? 'var(--cta-primary)' : 'rgba(255,255,255,0.18)'}`,
@@ -363,7 +375,7 @@ function InputForm({
             );
           })}
           <button
-            onClick={() => setHobbyCustomOpen((o) => !o)}
+            onClick={toggleHobbyCustom}
             className="px-3.5 py-2 rounded-full text-[13px] font-medium"
             style={{
               border: `1.5px solid ${hobbyCustomOpen ? 'var(--cta-primary)' : 'rgba(255,255,255,0.18)'}`,
