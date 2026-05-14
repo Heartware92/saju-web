@@ -1,15 +1,19 @@
 'use client';
 
 /**
- * 태양계 9행성 일자 배열 — 로딩 화면용 우주 시각화
+ * 태양계 9행성 일자 배열 — 로딩 화면용 우주 시각화 (몽환 톤)
  *
  * 디자인:
- *  - 태양 + 수성·금성·지구·화성·목성·토성·천왕성·해왕성·명왕성 (10개)
- *  - 좌상(태양) → 우하(명왕성) 약 25도 비스듬한 일자 배열
- *  - 각 행성 실제 크기 비례 (시각적 압축, 0.8 ~ 5.5)
- *  - 행성 자체 자전 (각자 다른 속도) + 미세 부유 (공전 흉내)
- *  - 태양 반짝임 (코로나 펄스·광선 회전·작은 별빛 입자)
- *  - 페이지 톤 매칭 — 라일락·살구·페일핑크·보라 코스믹
+ *  - 좌상(태양) → 우하(명왕성) 25° 대각선 일자 배열
+ *  - 각 행성: 자전(rotate) + 공전(작은 원 궤도 부유)
+ *  - 행성 본체: radial gradient + drop-shadow glow (몽환적)
+ *  - 자전 가시화: 줄무늬 + 작은 표식 점 (도는 게 명확히 보임)
+ *  - 태양 반짝임 5중 (코로나·광선·펄스·sparkle·후광)
+ *
+ * SVG transform-origin 호환성 문제 회피:
+ *  - 각 행성을 `<g transform="translate(cx, cy)">` 로 위치 옮기고
+ *  - 내부 group 들이 (0, 0) 기준으로 회전/부유
+ *  - 이러면 transform-origin 없이도 모든 브라우저에서 회전 정상 작동
  */
 
 interface SpinningEarthProps {
@@ -17,39 +21,38 @@ interface SpinningEarthProps {
   className?: string;
 }
 
-// 좌상 → 우하 일자 배열 — 각도 25°
 const ANGLE_RAD = (25 * Math.PI) / 180;
 const COS = Math.cos(ANGLE_RAD);
 const SIN = Math.sin(ANGLE_RAD);
 const X0 = 8;
 const Y0 = 28;
 
-// 행성 데이터 — 위치 거리(d) · 실제 비례 크기(r) · 색 · 자전 속도 · 부유 속도
 type Planet = {
   key: string;
-  d: number;        // 태양 기준 거리 (viewBox 단위)
-  r: number;        // 크기 (시각적 압축)
-  color: string;    // 본체 색
-  stripe?: string;  // 표면 무늬 색 (자전 시각화)
-  shadow: string;   // 음영 한 면 색
-  spin: number;     // 자전 1바퀴 (초)
-  float: number;    // 미세 부유 (초)
+  d: number;
+  r: number;
+  color: string;
+  glow: string;   // radial gradient 중심부 (밝은 색)
+  stripe?: string;
+  shadow: string;
+  spin: number;   // 자전 (초)
+  orbit: number;  // 공전 (초)
+  orbitR: number; // 공전 반경
 };
 
 const planets: Planet[] = [
-  { key: 'mercury', d: 12, r: 1.2, color: '#a899c2', shadow: '#6b5d85', spin: 8, float: 5 },
-  { key: 'venus',   d: 19, r: 2.2, color: '#fcd5b4', stripe: '#f0a880', shadow: '#a8784e', spin: 15, float: 6.5 },
-  { key: 'earth',   d: 27, r: 2.3, color: '#7dd3c0', stripe: '#c9a6ff', shadow: '#3a6e6b', spin: 6, float: 7 },
-  { key: 'mars',    d: 34, r: 1.5, color: '#f0a880', stripe: '#fcd5b4', shadow: '#a85e3f', spin: 7, float: 5.5 },
-  { key: 'jupiter', d: 47, r: 5.5, color: '#c9a6ff', stripe: '#f8bbd0', shadow: '#6e4ca0', spin: 4, float: 9 },
-  { key: 'saturn',  d: 62, r: 4.6, color: '#f8bbd0', stripe: '#fcd5b4', shadow: '#a96b85', spin: 5, float: 8.5 },
-  { key: 'uranus',  d: 75, r: 3.0, color: '#9bc4d4', stripe: '#c9a6ff', shadow: '#5a8294', spin: 5, float: 7.5 },
-  { key: 'neptune', d: 85, r: 2.9, color: '#7d6db5', stripe: '#a899c2', shadow: '#3d3475', spin: 5, float: 7.2 },
-  { key: 'pluto',   d: 94, r: 0.8, color: '#b8a8b8', shadow: '#6e6070', spin: 12, float: 6 },
+  { key: 'mercury', d: 12, r: 1.2, color: '#a899c2', glow: '#d0c2e0', shadow: '#6b5d85', spin: 6, orbit: 8, orbitR: 0.8 },
+  { key: 'venus',   d: 19, r: 2.2, color: '#fcd5b4', glow: '#fff0d8', stripe: '#f0a880', shadow: '#a8784e', spin: 10, orbit: 11, orbitR: 1.0 },
+  { key: 'earth',   d: 27, r: 2.3, color: '#7dd3c0', glow: '#c8ece4', stripe: '#c9a6ff', shadow: '#3a6e6b', spin: 5, orbit: 13, orbitR: 1.2 },
+  { key: 'mars',    d: 34, r: 1.5, color: '#f0a880', glow: '#fcd5b4', stripe: '#fff0d8', shadow: '#a85e3f', spin: 6, orbit: 16, orbitR: 1.1 },
+  { key: 'jupiter', d: 47, r: 5.5, color: '#c9a6ff', glow: '#e9d5ff', stripe: '#f8bbd0', shadow: '#6e4ca0', spin: 4, orbit: 20, orbitR: 1.8 },
+  { key: 'saturn',  d: 62, r: 4.6, color: '#f8bbd0', glow: '#fdd9e4', stripe: '#fcd5b4', shadow: '#a96b85', spin: 5, orbit: 24, orbitR: 1.6 },
+  { key: 'uranus',  d: 75, r: 3.0, color: '#9bc4d4', glow: '#cee6ee', stripe: '#c9a6ff', shadow: '#5a8294', spin: 5, orbit: 28, orbitR: 1.4 },
+  { key: 'neptune', d: 85, r: 2.9, color: '#7d6db5', glow: '#b8aae0', stripe: '#a899c2', shadow: '#3d3475', spin: 5, orbit: 31, orbitR: 1.4 },
+  { key: 'pluto',   d: 94, r: 0.8, color: '#b8a8b8', glow: '#d8c8d8', shadow: '#6e6070', spin: 10, orbit: 35, orbitR: 0.7 },
 ];
 
 export function SpinningEarth({ size = 380, className = '' }: SpinningEarthProps) {
-  // 배경 별 — 정적 트윙클
   const stars = [
     { cx: 6, cy: 10, r: 0.8, delay: 0 },
     { cx: 95, cy: 12, r: 1.0, delay: 2 },
@@ -61,21 +64,20 @@ export function SpinningEarth({ size = 380, className = '' }: SpinningEarthProps
     { cx: 18, cy: 70, r: 0.6, delay: 4.5 },
   ];
 
-  // 태양 광선 (반짝임)
   const sunRays = Array.from({ length: 12 }, (_, i) => i * 30);
 
   return (
     <div className={`relative inline-flex items-center justify-center ${className}`} style={{ width: size, height: size }}>
-      {/* 외곽 후광 — 태양 위치 기준 */}
+      {/* 태양 외곽 후광 */}
       <div
         className="absolute"
         style={{
-          left: `${(X0 / 100) * size - 60}px`,
-          top: `${(Y0 / 100) * size - 60}px`,
-          width: 160,
-          height: 160,
+          left: `${(X0 / 100) * size - 70}px`,
+          top: `${(Y0 / 100) * size - 70}px`,
+          width: 180,
+          height: 180,
           borderRadius: '50%',
-          background: 'radial-gradient(circle, rgba(252,213,180,0.30) 0%, rgba(240,168,128,0.10) 45%, transparent 70%)',
+          background: 'radial-gradient(circle, rgba(252,213,180,0.32) 0%, rgba(240,168,128,0.10) 45%, transparent 70%)',
           filter: 'blur(28px)',
           animation: 'sol-breathe 5s ease-in-out infinite',
         }}
@@ -101,6 +103,24 @@ export function SpinningEarth({ size = 380, className = '' }: SpinningEarthProps
             <stop offset="60%" stopColor="rgba(240,168,128,0.15)" />
             <stop offset="100%" stopColor="rgba(240,168,128,0)" />
           </radialGradient>
+
+          {/* 행성별 radial gradient — 몽환적 표면 */}
+          {planets.map((p) => (
+            <radialGradient key={p.key} id={`planet-${p.key}`} cx="35%" cy="32%" r="65%">
+              <stop offset="0%" stopColor={p.glow} stopOpacity="1" />
+              <stop offset="55%" stopColor={p.color} stopOpacity="1" />
+              <stop offset="100%" stopColor={p.shadow} stopOpacity="1" />
+            </radialGradient>
+          ))}
+
+          {/* 외곽 글로우 필터 (몽환적 빛 번짐) */}
+          <filter id="planet-glow" x="-50%" y="-50%" width="200%" height="200%">
+            <feGaussianBlur stdDeviation="0.4" result="blur" />
+            <feMerge>
+              <feMergeNode in="blur" />
+              <feMergeNode in="SourceGraphic" />
+            </feMerge>
+          </filter>
         </defs>
 
         {/* 배경 별 */}
@@ -116,7 +136,7 @@ export function SpinningEarth({ size = 380, className = '' }: SpinningEarthProps
           />
         ))}
 
-        {/* 행성 배열 안내선 — 매우 옅게 */}
+        {/* 일자 안내선 */}
         <line
           x1={X0}
           y1={Y0}
@@ -125,132 +145,152 @@ export function SpinningEarth({ size = 380, className = '' }: SpinningEarthProps
           stroke="#fcd5b4"
           strokeWidth="0.2"
           strokeDasharray="0.5 1.5"
-          opacity="0.12"
+          opacity="0.10"
         />
 
-        {/* 태양 — 좌상단, 반짝임 */}
-        <g style={{ animation: 'sol-float 7s ease-in-out infinite' }}>
+        {/* 태양 — 좌상단 */}
+        <g transform={`translate(${X0} ${Y0})`}>
           {/* 코로나 글로우 */}
-          <circle cx={X0} cy={Y0} r="12" fill="url(#sun-corona)" style={{ animation: 'sol-pulse 3s ease-in-out infinite' }} />
-          {/* 광선 12개 (회전) */}
-          <g style={{ transformOrigin: `${X0}px ${Y0}px`, animation: 'sol-rays-spin 40s linear infinite' }}>
+          <circle cx="0" cy="0" r="12" fill="url(#sun-corona)" style={{ animation: 'sol-pulse 3s ease-in-out infinite' }} />
+          {/* 광선 12개 — 천천히 회전 */}
+          <g style={{ animation: 'sol-rays-spin 40s linear infinite' }}>
             {sunRays.map((angle, i) => (
               <line
                 key={i}
-                x1={X0}
-                y1={Y0 - 8}
-                x2={X0}
-                y2={Y0 - 11.5}
+                x1="0"
+                y1="-8"
+                x2="0"
+                y2="-11.5"
                 stroke="#fcd5b4"
                 strokeWidth="0.9"
                 strokeLinecap="round"
-                transform={`rotate(${angle} ${X0} ${Y0})`}
+                transform={`rotate(${angle})`}
                 opacity="0.85"
                 style={{ animation: `sol-ray-blink 2.5s ease-in-out ${(i % 4) * 0.3}s infinite` }}
               />
             ))}
           </g>
-          {/* 태양 본체 (펄스) */}
-          <circle cx={X0} cy={Y0} r="6.5" fill="url(#sun-body)" style={{ animation: 'sol-pulse 3s ease-in-out infinite' }} />
-          {/* 본체 위 반짝임 */}
-          <circle cx={X0 - 1.5} cy={Y0 - 2} r="1.2" fill="rgba(255,255,255,0.7)" style={{ animation: 'sol-sparkle 2s ease-in-out infinite' }} />
+          {/* 태양 본체 + 펄스 */}
+          <g style={{ animation: 'sol-pulse 3s ease-in-out infinite' }}>
+            <circle cx="0" cy="0" r="6.5" fill="url(#sun-body)" />
+            <circle cx="-1.5" cy="-2" r="1.2" fill="rgba(255,255,255,0.7)" style={{ animation: 'sol-sparkle 2s ease-in-out infinite' }} />
+          </g>
         </g>
 
-        {/* 9행성 일렬 배치 */}
+        {/* 9행성 일렬 배치 — 각각 (cx,cy) 로 옮긴 뒤 (0,0) 기준 자전·공전 */}
         {planets.map((p) => {
           const cx = X0 + p.d * COS;
           const cy = Y0 + p.d * SIN;
           return (
-            <g
-              key={p.key}
-              style={{ animation: `sol-planet-float-${p.key} ${p.float}s ease-in-out infinite` }}
-            >
-              {/* 토성 고리 — 뒤쪽 */}
-              {p.key === 'saturn' && (
-                <g transform={`translate(${cx} ${cy}) rotate(-12)`}>
-                  <path
-                    d={`M ${-p.r * 1.9} 0 A ${p.r * 1.9} ${p.r * 0.55} 0 0 1 ${p.r * 1.9} 0`}
-                    fill="none"
-                    stroke="#c9a6ff"
-                    strokeWidth="0.7"
-                    strokeLinecap="round"
-                  />
-                </g>
-              )}
+            <g key={p.key} transform={`translate(${cx} ${cy})`}>
+              {/* 외곽 글로우 — 행성 뒤쪽 부드러운 빛 번짐 (몽환 톤) */}
+              <circle
+                cx="0"
+                cy="0"
+                r={p.r * 1.8}
+                fill={p.glow}
+                opacity="0.18"
+                style={{ filter: 'blur(2px)' }}
+              />
 
-              {/* 행성 본체 + 자전 무늬 그룹 (자전) */}
-              <g
-                style={{
-                  transformOrigin: `${cx}px ${cy}px`,
-                  animation: `sol-spin-${p.key} ${p.spin}s linear infinite`,
-                }}
-              >
-                <circle cx={cx} cy={cy} r={p.r} fill={p.color} />
+              {/* 공전 — 작은 원 궤도 부유 */}
+              <g style={{ animation: `sol-orbit-${p.key} ${p.orbit}s linear infinite` }}>
 
-                {/* 자전 표시용 표면 무늬 */}
-                {p.stripe && (
-                  <>
+                {/* 토성 고리 뒤쪽 (자전 영향 안 받음) */}
+                {p.key === 'saturn' && (
+                  <g transform="rotate(-12)">
                     <path
-                      d={`M ${cx - p.r * 0.85} ${cy - p.r * 0.2} Q ${cx} ${cy - p.r * 0.5}, ${cx + p.r * 0.85} ${cy - p.r * 0.2}`}
+                      d={`M ${-p.r * 1.9} 0 A ${p.r * 1.9} ${p.r * 0.55} 0 0 1 ${p.r * 1.9} 0`}
                       fill="none"
-                      stroke={p.stripe}
-                      strokeWidth={p.r * 0.18}
+                      stroke="#c9a6ff"
+                      strokeWidth="0.7"
                       strokeLinecap="round"
-                      opacity="0.7"
                     />
-                    <path
-                      d={`M ${cx - p.r * 0.9} ${cy + p.r * 0.35} Q ${cx} ${cy + p.r * 0.1}, ${cx + p.r * 0.9} ${cy + p.r * 0.35}`}
-                      fill="none"
-                      stroke={p.stripe}
-                      strokeWidth={p.r * 0.14}
-                      strokeLinecap="round"
-                      opacity="0.55"
-                    />
-                  </>
+                  </g>
                 )}
 
-                {/* 음영 한 면 (Monument Valley 풍) */}
-                <path
-                  d={`M ${cx} ${cy + p.r} A ${p.r} ${p.r} 0 0 1 ${cx - p.r * 0.85} ${cy + p.r * 0.2} Q ${cx - p.r * 0.4} ${cy}, ${cx} ${cy} Q ${cx + p.r * 0.4} ${cy}, ${cx + p.r * 0.85} ${cy + p.r * 0.2} A ${p.r} ${p.r} 0 0 1 ${cx} ${cy + p.r} Z`}
-                  fill={p.shadow}
-                  opacity="0.38"
-                />
+                {/* 자전 — 행성 본체 회전 그룹 */}
+                <g style={{ animation: `sol-spin-${p.key} ${p.spin}s linear infinite` }}>
+                  {/* 본체 — radial gradient (몽환 표면) */}
+                  <circle cx="0" cy="0" r={p.r} fill={`url(#planet-${p.key})`} filter="url(#planet-glow)" />
+
+                  {/* 자전 가시화 — 줄무늬 (있는 행성만) */}
+                  {p.stripe && (
+                    <>
+                      <path
+                        d={`M ${-p.r * 0.9} ${-p.r * 0.2} Q 0 ${-p.r * 0.55}, ${p.r * 0.9} ${-p.r * 0.2}`}
+                        fill="none"
+                        stroke={p.stripe}
+                        strokeWidth={p.r * 0.22}
+                        strokeLinecap="round"
+                        opacity="0.75"
+                      />
+                      <path
+                        d={`M ${-p.r * 0.95} ${p.r * 0.3} Q 0 ${p.r * 0.05}, ${p.r * 0.95} ${p.r * 0.3}`}
+                        fill="none"
+                        stroke={p.stripe}
+                        strokeWidth={p.r * 0.16}
+                        strokeLinecap="round"
+                        opacity="0.6"
+                      />
+                    </>
+                  )}
+
+                  {/* 자전 표식 점 — 회전이 보이도록 한쪽에 작은 점 */}
+                  <circle
+                    cx={p.r * 0.5}
+                    cy={-p.r * 0.4}
+                    r={Math.max(0.18, p.r * 0.13)}
+                    fill={p.shadow}
+                    opacity="0.55"
+                  />
+
+                  {/* 하이라이트 — 좌상단 빛 반사 (몽환) */}
+                  <ellipse
+                    cx={-p.r * 0.35}
+                    cy={-p.r * 0.45}
+                    rx={p.r * 0.4}
+                    ry={p.r * 0.25}
+                    fill="rgba(255,255,255,0.4)"
+                    style={{ filter: 'blur(0.3px)' }}
+                  />
+                </g>
+
+                {/* 토성 고리 앞쪽 (자전 그룹 밖) */}
+                {p.key === 'saturn' && (
+                  <g transform="rotate(-12)">
+                    <path
+                      d={`M ${-p.r * 1.9} 0 A ${p.r * 1.9} ${p.r * 0.55} 0 0 0 ${p.r * 1.9} 0`}
+                      fill="none"
+                      stroke="#c9a6ff"
+                      strokeWidth="0.7"
+                      strokeLinecap="round"
+                    />
+                  </g>
+                )}
+
+                {/* 천왕성 세로 고리 */}
+                {p.key === 'uranus' && (
+                  <g transform="rotate(75)">
+                    <path
+                      d={`M ${-p.r * 1.7} 0 A ${p.r * 1.7} ${p.r * 0.4} 0 0 1 ${p.r * 1.7} 0`}
+                      fill="none"
+                      stroke="#c9a6ff"
+                      strokeWidth="0.4"
+                      strokeLinecap="round"
+                      opacity="0.6"
+                    />
+                    <path
+                      d={`M ${-p.r * 1.7} 0 A ${p.r * 1.7} ${p.r * 0.4} 0 0 0 ${p.r * 1.7} 0`}
+                      fill="none"
+                      stroke="#c9a6ff"
+                      strokeWidth="0.4"
+                      strokeLinecap="round"
+                      opacity="0.6"
+                    />
+                  </g>
+                )}
               </g>
-
-              {/* 토성 고리 — 앞쪽 */}
-              {p.key === 'saturn' && (
-                <g transform={`translate(${cx} ${cy}) rotate(-12)`}>
-                  <path
-                    d={`M ${-p.r * 1.9} 0 A ${p.r * 1.9} ${p.r * 0.55} 0 0 0 ${p.r * 1.9} 0`}
-                    fill="none"
-                    stroke="#c9a6ff"
-                    strokeWidth="0.7"
-                    strokeLinecap="round"
-                  />
-                </g>
-              )}
-
-              {/* 천왕성 세로 고리 (실제 천왕성 특징) */}
-              {p.key === 'uranus' && (
-                <g transform={`translate(${cx} ${cy}) rotate(75)`}>
-                  <path
-                    d={`M ${-p.r * 1.7} 0 A ${p.r * 1.7} ${p.r * 0.4} 0 0 1 ${p.r * 1.7} 0`}
-                    fill="none"
-                    stroke="#c9a6ff"
-                    strokeWidth="0.4"
-                    strokeLinecap="round"
-                    opacity="0.6"
-                  />
-                  <path
-                    d={`M ${-p.r * 1.7} 0 A ${p.r * 1.7} ${p.r * 0.4} 0 0 0 ${p.r * 1.7} 0`}
-                    fill="none"
-                    stroke="#c9a6ff"
-                    strokeWidth="0.4"
-                    strokeLinecap="round"
-                    opacity="0.6"
-                  />
-                </g>
-              )}
             </g>
           );
         })}
@@ -266,8 +306,8 @@ export function SpinningEarth({ size = 380, className = '' }: SpinningEarthProps
           50% { opacity: 0.9; }
         }
         @keyframes sol-pulse {
-          0%, 100% { transform: scale(1); transform-origin: ${X0}px ${Y0}px; }
-          50% { transform: scale(1.1); transform-origin: ${X0}px ${Y0}px; }
+          0%, 100% { transform: scale(1); }
+          50% { transform: scale(1.1); }
         }
         @keyframes sol-rays-spin {
           from { transform: rotate(0deg); }
@@ -278,12 +318,8 @@ export function SpinningEarth({ size = 380, className = '' }: SpinningEarthProps
           50% { opacity: 1; }
         }
         @keyframes sol-sparkle {
-          0%, 100% { opacity: 0.4; transform: scale(0.9); transform-origin: ${X0 - 1.5}px ${Y0 - 2}px; }
-          50% { opacity: 1; transform: scale(1.3); transform-origin: ${X0 - 1.5}px ${Y0 - 2}px; }
-        }
-        @keyframes sol-float {
-          0%, 100% { transform: translate(0, 0); }
-          50% { transform: translate(0.5px, -0.8px); }
+          0%, 100% { opacity: 0.4; transform: scale(0.9); }
+          50% { opacity: 1; transform: scale(1.3); }
         }
 
         ${planets.map((p) => `
@@ -291,9 +327,16 @@ export function SpinningEarth({ size = 380, className = '' }: SpinningEarthProps
             from { transform: rotate(0deg); }
             to { transform: rotate(360deg); }
           }
-          @keyframes sol-planet-float-${p.key} {
-            0%, 100% { transform: translate(0, 0); }
-            50% { transform: translate(${(parseInt(p.key.charCodeAt(0).toString()) % 2 === 0 ? '0.4' : '-0.4')}px, -${0.5 + p.r * 0.08}px); }
+          @keyframes sol-orbit-${p.key} {
+            0%   { transform: translate(${p.orbitR}px, 0); }
+            12.5% { transform: translate(${(p.orbitR * 0.707).toFixed(2)}px, ${(p.orbitR * 0.707).toFixed(2)}px); }
+            25%  { transform: translate(0, ${p.orbitR}px); }
+            37.5% { transform: translate(-${(p.orbitR * 0.707).toFixed(2)}px, ${(p.orbitR * 0.707).toFixed(2)}px); }
+            50%  { transform: translate(-${p.orbitR}px, 0); }
+            62.5% { transform: translate(-${(p.orbitR * 0.707).toFixed(2)}px, -${(p.orbitR * 0.707).toFixed(2)}px); }
+            75%  { transform: translate(0, -${p.orbitR}px); }
+            87.5% { transform: translate(${(p.orbitR * 0.707).toFixed(2)}px, -${(p.orbitR * 0.707).toFixed(2)}px); }
+            100% { transform: translate(${p.orbitR}px, 0); }
           }
         `).join('\n')}
       `}</style>
