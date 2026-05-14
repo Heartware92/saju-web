@@ -469,10 +469,13 @@ export default function ManageProfilesPage() {
                   customJobState={editForm.customJobState}
                   loveState={editForm.loveState}
                   customLoveState={editForm.customLoveState}
-                  onJobStateChange={(v) => setEditForm({ ...editForm, jobState: v })}
-                  onCustomJobStateChange={(v) => setEditForm({ ...editForm, customJobState: v })}
-                  onLoveStateChange={(v) => setEditForm({ ...editForm, loveState: v })}
-                  onCustomLoveStateChange={(v) => setEditForm({ ...editForm, customLoveState: v })}
+                  // ★ 함수 업데이트 패턴 필수 — JobLoveStateInput 이 클릭마다 2개 onChange 를
+                  // 연속 호출(예: onJobStateChange + onCustomJobStateChange). 두 setEditForm 이
+                  // batch 되면서 같은 stale editForm 참조 시 첫번째 변경 손실.
+                  onJobStateChange={(v) => setEditForm(prev => prev ? { ...prev, jobState: v } : null)}
+                  onCustomJobStateChange={(v) => setEditForm(prev => prev ? { ...prev, customJobState: v } : null)}
+                  onLoveStateChange={(v) => setEditForm(prev => prev ? { ...prev, loveState: v } : null)}
+                  onCustomLoveStateChange={(v) => setEditForm(prev => prev ? { ...prev, customLoveState: v } : null)}
                 />
               </div>
               </div>
