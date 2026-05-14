@@ -79,10 +79,11 @@ export default function SajuInputPage() {
     name: '',
     memo: '',
   })
-  // 직업·연애 상태 (DB DEFAULT 와 동일)
-  const [jobState, setJobState] = useState('직장인')
+  // 직업·연애 상태 — 새 프로필 추가 시 칩 미선택 상태로 시작.
+  // 사용자가 명시적으로 고르지 않으면 저장 시 DB DEFAULT('직장인'/'연애 중') 으로 fallback.
+  const [jobState, setJobState] = useState('')
   const [customJobState, setCustomJobState] = useState('')
-  const [loveState, setLoveState] = useState('연애 중')
+  const [loveState, setLoveState] = useState('')
   const [customLoveState, setCustomLoveState] = useState('')
 
   useEffect(() => {
@@ -191,6 +192,9 @@ export default function SajuInputPage() {
 
     const customJobTrim = customJobState.trim()
     const customLoveTrim = customLoveState.trim()
+    // 칩 미선택('') + 직접 입력 없으면 DB DEFAULT 값으로 fallback
+    const finalJobState = customJobTrim ? '직접 입력' : (jobState || '직장인')
+    const finalLoveState = customLoveTrim ? '직접 입력' : (loveState || '연애 중')
 
     if (editingProfile) {
       await updateProfile(editingProfile.id, {
@@ -202,9 +206,9 @@ export default function SajuInputPage() {
         gender,
         calendar_type: calendarType,
         memo: profileForm.memo || undefined,
-        job_state: customJobTrim ? '직접 입력' : jobState,
+        job_state: finalJobState,
         custom_job_state: customJobTrim || null,
-        love_state: customLoveTrim ? '직접 입력' : loveState,
+        love_state: finalLoveState,
         custom_love_state: customLoveTrim || null,
       })
     } else {
@@ -217,9 +221,9 @@ export default function SajuInputPage() {
         gender,
         calendar_type: calendarType,
         is_primary: profiles.length === 0,
-        job_state: customJobTrim ? '직접 입력' : jobState,
+        job_state: finalJobState,
         custom_job_state: customJobTrim || null,
-        love_state: customLoveTrim ? '직접 입력' : loveState,
+        love_state: finalLoveState,
         custom_love_state: customLoveTrim || null,
         memo: profileForm.memo || undefined,
       })
@@ -229,9 +233,9 @@ export default function SajuInputPage() {
     setShowProfileModal(false)
     setEditingProfile(null)
     setProfileForm({ name: '', memo: '' })
-    setJobState('직장인')
+    setJobState('')
     setCustomJobState('')
-    setLoveState('연애 중')
+    setLoveState('')
     setCustomLoveState('')
 
     if (isProfileOnly) {

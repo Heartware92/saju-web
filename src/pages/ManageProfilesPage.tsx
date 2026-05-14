@@ -168,9 +168,9 @@ export default function ManageProfilesPage() {
       birth_place: editForm.birth_place,
       longitude,
       memo: editForm.memo.trim() || undefined,
-      job_state: customJobTrim ? '직접 입력' : editForm.jobState,
+      job_state: customJobTrim ? '직접 입력' : (editForm.jobState || '직장인'),
       custom_job_state: customJobTrim || null,
-      love_state: customLoveTrim ? '직접 입력' : editForm.loveState,
+      love_state: customLoveTrim ? '직접 입력' : (editForm.loveState || '연애 중'),
       custom_love_state: customLoveTrim || null,
     });
     if (ok) {
@@ -351,7 +351,11 @@ export default function ManageProfilesPage() {
               animate={{ y: 0, opacity: 1 }}
               exit={{ y: 40, opacity: 0 }}
               onClick={(e) => e.stopPropagation()}
-              className="relative w-full max-w-[380px] max-h-[calc(100dvh-32px-64px-env(safe-area-inset-bottom,0px))] sm:max-h-[calc(100dvh-32px)] flex flex-col rounded-2xl bg-[rgba(28,18,50,0.98)] border border-[var(--border-subtle)] overflow-hidden"
+              className="relative w-full max-w-[380px] flex flex-col rounded-2xl bg-[rgba(28,18,50,0.98)] border border-[var(--border-subtle)] overflow-hidden"
+              style={{
+                // Tailwind arbitrary calc + env() 인식 실패 회피 — inline style 로 직접 강제
+                maxHeight: 'min(85vh, calc(100dvh - 96px))',
+              }}
             >
               <button type="button" onClick={() => { setEditing(null); setEditForm(null); }} className="absolute top-3 right-3 w-7 h-7 flex items-center justify-center rounded-full bg-white/5 text-[var(--text-tertiary)] hover:bg-white/10 hover:text-[var(--text-primary)] transition-colors z-10" aria-label="닫기">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="6" y1="6" x2="18" y2="18" /><line x1="18" y1="6" x2="6" y2="18" /></svg>
