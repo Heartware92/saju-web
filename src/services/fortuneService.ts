@@ -1161,6 +1161,9 @@ export function stripStrayMarkers(text: string): string {
     // 마크다운 헤더·강조
     .replace(/^#{1,6}\s+/gm, '')
     .replace(/\*\*(.+?)\*\*/g, '$1')
+    // 줄 앞 불릿·세모 기호 제거 (today_lucky_card / today_domains_brief 줄별 라벨 형식 보정)
+    // 사용자 보고: LLM 이 ▶ 같은 기호를 그대로 출력해 결과 가독성 저하
+    .replace(/^[\s]*[▶▷►▸▶︎▷︎]+\s*/gm, '')
     // 연속 빈 줄 정리
     .replace(/\n{3,}/g, '\n\n')
     .trim();
