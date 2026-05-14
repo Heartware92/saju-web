@@ -418,7 +418,7 @@ function InputForm({
                       onClick={() => setValue(on ? '' : opt)}
                       className="px-3.5 py-2 rounded-full text-[13px] font-medium"
                       style={{
-                        border: on ? '1.5px solid var(--cta-primary)' : '1px solid rgba(255,255,255,0.18)',
+                        border: `1.5px solid ${on ? 'var(--cta-primary)' : 'rgba(255,255,255,0.18)'}`,
                         background: on ? 'rgba(139,92,246,0.20)' : 'rgba(255,255,255,0.04)',
                         color: on ? '#E9D5FF' : 'var(--text-primary)',
                       }}
@@ -432,7 +432,7 @@ function InputForm({
                   onClick={() => setValue(value === '__custom__' ? '' : '__custom__')}
                   className="px-3.5 py-2 rounded-full text-[13px] font-medium"
                   style={{
-                    border: value === '__custom__' ? '1.5px solid var(--cta-primary)' : '1px solid rgba(255,255,255,0.18)',
+                    border: `1.5px solid ${value === '__custom__' ? 'var(--cta-primary)' : 'rgba(255,255,255,0.18)'}`,
                     background: value === '__custom__' ? 'rgba(139,92,246,0.20)' : 'rgba(255,255,255,0.04)',
                     color: value === '__custom__' ? '#E9D5FF' : 'var(--text-tertiary)',
                   }}

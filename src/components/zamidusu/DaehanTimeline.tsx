@@ -89,7 +89,7 @@ export function DaehanTimeline({ segments, currentAge }: DaehanTimelineProps) {
                   background: seg.isCurrent
                     ? `linear-gradient(180deg, ${color}, rgba(167,139,250,0.5))`
                     : `${color}55`,
-                  border: seg.isCurrent ? `1.5px solid ${color}` : `1px solid ${color}33`,
+                  border: `1.5px solid ${seg.isCurrent ? color : `${color}33`}`,
                   boxShadow: seg.isCurrent ? `0 0 12px ${color}66` : 'none',
                   position: 'relative',
                 }}

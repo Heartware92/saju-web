@@ -545,7 +545,7 @@ export default function TaekilPage() {
                           disabled={isPast}
                           style={{
                             padding: '8px 4px', borderRadius: 8,
-                            border: isCurrent ? '1.5px solid var(--cta-primary)' : '1px solid var(--border-subtle)',
+                            border: `1.5px solid ${isCurrent ? 'var(--cta-primary)' : 'var(--border-subtle)'}`,
                             background: isCurrent ? 'rgba(232,164,144,0.18)' : isPast ? 'rgba(20,12,38,0.3)' : 'var(--space-elevated)',
                             color: isCurrent ? 'var(--cta-primary)' : isPast ? 'var(--text-tertiary)' : 'var(--text-primary)',
                             fontSize: 13, fontWeight: isCurrent ? 700 : 500,
@@ -600,9 +600,10 @@ export default function TaekilPage() {
                             display: 'flex', flexDirection: 'column',
                             alignItems: 'center', justifyContent: 'center',
                             borderRadius: '10px',
-                            border: isPicked ? '2px solid var(--cta-primary)'
-                              : isToday ? '1px solid rgba(255,255,255,0.3)'
-                              : '1px solid transparent',
+                            border: `2px solid ${isPicked
+                              ? 'var(--cta-primary)'
+                              : isToday ? 'rgba(255,255,255,0.3)'
+                              : 'transparent'}`,
                             background: isPicked
                               ? 'rgba(124,92,252,0.22)'
                               : 'var(--space-elevated)',

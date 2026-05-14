@@ -268,7 +268,7 @@ function chipStyle(active: boolean): React.CSSProperties {
   return {
     padding: '10px 16px',
     borderRadius: 999,
-    border: active ? '1.5px solid var(--cta-primary)' : '1px solid rgba(255,255,255,0.18)',
+    border: `1.5px solid ${active ? 'var(--cta-primary)' : 'rgba(255,255,255,0.18)'}`,
     background: active ? 'rgba(139,92,246,0.20)' : 'rgba(255,255,255,0.05)',
     color: active ? '#E9D5FF' : 'var(--text-primary)',
     fontSize: 14,
@@ -290,7 +290,7 @@ function ModeButton({ active, onClick, title, sub }: {
       style={{
         padding: '18px 14px',
         borderRadius: 14,
-        border: active ? '2px solid var(--cta-primary)' : '1px solid rgba(255,255,255,0.15)',
+        border: `2px solid ${active ? 'var(--cta-primary)' : 'rgba(255,255,255,0.15)'}`,
         background: active ? 'rgba(139,92,246,0.16)' : 'rgba(255,255,255,0.04)',
         color: active ? '#E9D5FF' : 'var(--text-primary)',
         cursor: 'pointer',
