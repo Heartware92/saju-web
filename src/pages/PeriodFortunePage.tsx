@@ -1202,8 +1202,13 @@ export default function PeriodFortunePage({ scope }: { scope: FortuneScope | 'da
                 const isYes = key === 'date_yes';
                 const isNo = key === 'date_no';
                 const isRemedy = key === 'date_remedy';
-                // Dusk 코스믹 팔레트 — 라일락(시도)·피치(피하기)·웜피치(처방)
-                const sectionBarColor = isYes ? '#C4B5FD' : isNo ? '#F4C2A1' : '#e8a490';
+                // 시그널 명확성 우선 — 시도(초록)·피하기(빨강) 좌측 띠 + 카드 외곽 테두리 둘 다 적용.
+                const sectionBarColor = isYes ? '#34D399' : isNo ? '#F87171' : '#e8a490';
+                const sectionBorderColor = isYes
+                  ? 'rgba(52,211,153,0.45)'
+                  : isNo
+                  ? 'rgba(248,113,113,0.45)'
+                  : undefined;
                 return (
                   <SectionCollapsible
                     key={key}
@@ -1212,6 +1217,7 @@ export default function PeriodFortunePage({ scope }: { scope: FortuneScope | 'da
                     defaultOpen={idx === 0}
                     enterDelay={0.05 * idx}
                     barColor={sectionBarColor}
+                    borderColor={sectionBorderColor}
                   >
                     {isRemedy ? (
                       <RemedyCardGrid bodyText={bodyText} />

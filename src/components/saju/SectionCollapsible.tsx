@@ -25,6 +25,8 @@ interface Props {
   barColor?: string;
   /** Bar pulse 시 mid 색상 — 기본 크림 (#fce8b2) */
   barPulseColor?: string;
+  /** 카드 외곽 테두리 색상 — 미지정 시 기본 var(--border-subtle). 시도/피하기처럼 강한 시그널 필요 시 override */
+  borderColor?: string;
 }
 
 const COSMIC_EASE = [0.16, 1, 0.3, 1] as const;
@@ -89,6 +91,7 @@ export function SectionCollapsible({
   enterDelay = 0,
   barColor = '#e8a490',
   barPulseColor = '#fce8b2',
+  borderColor,
 }: Props) {
   const [open, setOpen] = useState(defaultOpen);
   const [burstKey, setBurstKey] = useState(0);
@@ -126,7 +129,8 @@ export function SectionCollapsible({
         y: { duration: 0.4, delay: enterDelay },
         boxShadow: { duration: 1.1, ease: 'easeOut', times: [0, 0.35, 0.65, 1] },
       }}
-      className="relative rounded-2xl bg-[rgba(20,12,38,0.55)] border border-[var(--border-subtle)] overflow-hidden"
+      className="relative rounded-2xl bg-[rgba(20,12,38,0.55)] border overflow-hidden"
+      style={{ borderColor: borderColor ?? 'var(--border-subtle)' }}
     >
       {/* Aurora Sweep — 펼침 시 카드 우상단에서 자수정 빛이 쓸려 지나감 */}
       <AnimatePresence>
