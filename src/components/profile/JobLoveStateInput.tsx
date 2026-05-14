@@ -56,7 +56,8 @@ export function JobLoveStateInput({
                 key={s}
                 type="button"
                 onClick={() => {
-                  onJobStateChange(s);
+                  // 이미 선택된 칩을 다시 클릭하면 선택 해제 (저장 시 DB DEFAULT '직장인' 으로 채워짐)
+                  onJobStateChange(on ? '' : s);
                   onCustomJobStateChange('');
                   setJobCustomOpen(false);
                 }}
@@ -120,7 +121,8 @@ export function JobLoveStateInput({
                 key={s}
                 type="button"
                 onClick={() => {
-                  onLoveStateChange(s);
+                  // 이미 선택된 칩을 다시 클릭하면 선택 해제 (저장 시 DB DEFAULT '연애 중' 으로 채워짐)
+                  onLoveStateChange(on ? '' : s);
                   onCustomLoveStateChange('');
                   setLoveCustomOpen(false);
                 }}
