@@ -41,15 +41,15 @@ type Planet = {
 };
 
 const planets: Planet[] = [
-  { key: 'mercury', d: 12, r: 1.2, color: '#a899c2', glow: '#d0c2e0', shadow: '#6b5d85', spin: 6, orbit: 8, orbitR: 0.8 },
-  { key: 'venus',   d: 19, r: 2.2, color: '#fcd5b4', glow: '#fff0d8', stripe: '#f0a880', shadow: '#a8784e', spin: 10, orbit: 11, orbitR: 1.0 },
-  { key: 'earth',   d: 27, r: 2.3, color: '#7dd3c0', glow: '#c8ece4', stripe: '#c9a6ff', shadow: '#3a6e6b', spin: 5, orbit: 13, orbitR: 1.2 },
-  { key: 'mars',    d: 34, r: 1.5, color: '#f0a880', glow: '#fcd5b4', stripe: '#fff0d8', shadow: '#a85e3f', spin: 6, orbit: 16, orbitR: 1.1 },
-  { key: 'jupiter', d: 47, r: 5.5, color: '#c9a6ff', glow: '#e9d5ff', stripe: '#f8bbd0', shadow: '#6e4ca0', spin: 4, orbit: 20, orbitR: 1.8 },
-  { key: 'saturn',  d: 62, r: 4.6, color: '#f8bbd0', glow: '#fdd9e4', stripe: '#fcd5b4', shadow: '#a96b85', spin: 5, orbit: 24, orbitR: 1.6 },
-  { key: 'uranus',  d: 75, r: 3.0, color: '#9bc4d4', glow: '#cee6ee', stripe: '#c9a6ff', shadow: '#5a8294', spin: 5, orbit: 28, orbitR: 1.4 },
-  { key: 'neptune', d: 85, r: 2.9, color: '#7d6db5', glow: '#b8aae0', stripe: '#a899c2', shadow: '#3d3475', spin: 5, orbit: 31, orbitR: 1.4 },
-  { key: 'pluto',   d: 94, r: 0.8, color: '#b8a8b8', glow: '#d8c8d8', shadow: '#6e6070', spin: 10, orbit: 35, orbitR: 0.7 },
+  { key: 'mercury', d: 12, r: 1.2, color: '#a899c2', glow: '#d0c2e0', shadow: '#6b5d85', spin: 5, orbit: 6, orbitR: 2.2 },
+  { key: 'venus',   d: 19, r: 2.2, color: '#fcd5b4', glow: '#fff0d8', stripe: '#f0a880', shadow: '#a8784e', spin: 8, orbit: 8, orbitR: 2.6 },
+  { key: 'earth',   d: 27, r: 2.3, color: '#7dd3c0', glow: '#c8ece4', stripe: '#c9a6ff', shadow: '#3a6e6b', spin: 4, orbit: 10, orbitR: 2.9 },
+  { key: 'mars',    d: 34, r: 1.5, color: '#f0a880', glow: '#fcd5b4', stripe: '#fff0d8', shadow: '#a85e3f', spin: 5, orbit: 12, orbitR: 2.7 },
+  { key: 'jupiter', d: 47, r: 5.5, color: '#c9a6ff', glow: '#e9d5ff', stripe: '#f8bbd0', shadow: '#6e4ca0', spin: 3, orbit: 15, orbitR: 3.6 },
+  { key: 'saturn',  d: 62, r: 4.6, color: '#f8bbd0', glow: '#fdd9e4', stripe: '#fcd5b4', shadow: '#a96b85', spin: 4, orbit: 18, orbitR: 3.3 },
+  { key: 'uranus',  d: 75, r: 3.0, color: '#9bc4d4', glow: '#cee6ee', stripe: '#c9a6ff', shadow: '#5a8294', spin: 4, orbit: 21, orbitR: 3.0 },
+  { key: 'neptune', d: 85, r: 2.9, color: '#7d6db5', glow: '#b8aae0', stripe: '#a899c2', shadow: '#3d3475', spin: 4, orbit: 24, orbitR: 2.9 },
+  { key: 'pluto',   d: 94, r: 0.8, color: '#b8a8b8', glow: '#d8c8d8', shadow: '#6e6070', spin: 8, orbit: 27, orbitR: 1.8 },
 ];
 
 export function SpinningEarth({ size = 380, className = '' }: SpinningEarthProps) {
@@ -91,17 +91,16 @@ export function SpinningEarth({ size = 380, className = '' }: SpinningEarthProps
         style={{ overflow: 'visible' }}
       >
         <defs>
-          {/* 태양 그라데이션 */}
-          <radialGradient id="sun-body" cx="40%" cy="40%" r="60%">
+          {/* 태양 그라데이션 — 행성과 동일 톤으로 부드러운 파스텔 */}
+          <radialGradient id="sun-body" cx="35%" cy="32%" r="65%">
             <stop offset="0%" stopColor="#fff5e1" stopOpacity="1" />
-            <stop offset="30%" stopColor="#fcd5b4" stopOpacity="1" />
-            <stop offset="70%" stopColor="#f0a880" stopOpacity="1" />
-            <stop offset="100%" stopColor="#d89472" stopOpacity="1" />
+            <stop offset="40%" stopColor="#fdd9b4" stopOpacity="1" />
+            <stop offset="100%" stopColor="#e8a890" stopOpacity="1" />
           </radialGradient>
           <radialGradient id="sun-corona" cx="50%" cy="50%" r="50%">
-            <stop offset="0%" stopColor="rgba(252,213,180,0.7)" />
-            <stop offset="60%" stopColor="rgba(240,168,128,0.15)" />
-            <stop offset="100%" stopColor="rgba(240,168,128,0)" />
+            <stop offset="0%" stopColor="rgba(253,217,180,0.55)" />
+            <stop offset="60%" stopColor="rgba(248,187,208,0.12)" />
+            <stop offset="100%" stopColor="rgba(248,187,208,0)" />
           </radialGradient>
 
           {/* 행성별 radial gradient — 몽환적 표면 */}
@@ -148,32 +147,40 @@ export function SpinningEarth({ size = 380, className = '' }: SpinningEarthProps
           opacity="0.10"
         />
 
-        {/* 태양 — 좌상단 */}
+        {/* 태양 — 좌상단, 행성과 통일된 몽환 톤 */}
         <g transform={`translate(${X0} ${Y0})`}>
+          {/* 외곽 부드러운 글로우 (행성과 동일 패턴) */}
+          <circle cx="0" cy="0" r="11" fill="#fdd9b4" opacity="0.16" style={{ filter: 'blur(2.5px)' }} />
+
           {/* 코로나 글로우 */}
-          <circle cx="0" cy="0" r="12" fill="url(#sun-corona)" style={{ animation: 'sol-pulse 3s ease-in-out infinite' }} />
-          {/* 광선 12개 — 천천히 회전 */}
-          <g style={{ animation: 'sol-rays-spin 40s linear infinite' }}>
+          <circle cx="0" cy="0" r="11" fill="url(#sun-corona)" style={{ animation: 'sol-pulse 3s ease-in-out infinite' }} />
+
+          {/* 광선 12개 — 부드럽고 가늘게, 더 천천히 회전 */}
+          <g style={{ animation: 'sol-rays-spin 60s linear infinite' }}>
             {sunRays.map((angle, i) => (
               <line
                 key={i}
                 x1="0"
                 y1="-8"
                 x2="0"
-                y2="-11.5"
-                stroke="#fcd5b4"
-                strokeWidth="0.9"
+                y2="-10.5"
+                stroke="#fdd9b4"
+                strokeWidth="0.5"
                 strokeLinecap="round"
                 transform={`rotate(${angle})`}
-                opacity="0.85"
-                style={{ animation: `sol-ray-blink 2.5s ease-in-out ${(i % 4) * 0.3}s infinite` }}
+                opacity="0.55"
+                style={{ animation: `sol-ray-blink 3s ease-in-out ${(i % 4) * 0.3}s infinite` }}
               />
             ))}
           </g>
-          {/* 태양 본체 + 펄스 */}
+
+          {/* 태양 본체 — 행성과 동일한 radial gradient + filter glow */}
           <g style={{ animation: 'sol-pulse 3s ease-in-out infinite' }}>
-            <circle cx="0" cy="0" r="6.5" fill="url(#sun-body)" />
-            <circle cx="-1.5" cy="-2" r="1.2" fill="rgba(255,255,255,0.7)" style={{ animation: 'sol-sparkle 2s ease-in-out infinite' }} />
+            <circle cx="0" cy="0" r="6" fill="url(#sun-body)" filter="url(#planet-glow)" />
+            {/* 좌상단 하이라이트 (행성처럼) */}
+            <ellipse cx="-2" cy="-2.5" rx="2.4" ry="1.6" fill="rgba(255,255,255,0.45)" style={{ filter: 'blur(0.4px)' }} />
+            {/* 작은 sparkle */}
+            <circle cx="-1.5" cy="-2" r="0.9" fill="rgba(255,255,255,0.7)" style={{ animation: 'sol-sparkle 2.5s ease-in-out infinite' }} />
           </g>
         </g>
 
