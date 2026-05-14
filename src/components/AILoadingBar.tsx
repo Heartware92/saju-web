@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { SpinningEarth } from './SpinningEarth';
 
 interface AILoadingBarProps {
   label: string;
@@ -93,8 +94,9 @@ export function AILoadingBar({
   }
 
   // ── Full-screen 버전 ──────────────────────────────────
+  // 레이아웃: 상단(텍스트 영역) ⇣ 중하단(코스믹 행성 시각화) — 사용자가 시각적으로 우주를 응시하는 결
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center px-6 gap-8">
+    <div className="min-h-screen flex flex-col items-center px-6 pt-14 pb-20 gap-8">
       {/* 상단 컨텐츠 (연도·일주 등) */}
       {topContent && (
         <motion.div
@@ -150,19 +152,17 @@ export function AILoadingBar({
             </motion.div>
           </AnimatePresence>
         </div>
-
-        {/* 점 인디케이터 */}
-        <div className="flex gap-1.5 justify-center">
-          {[0, 1, 2].map(i => (
-            <motion.div
-              key={i}
-              className="w-1.5 h-1.5 rounded-full bg-cta"
-              animate={{ opacity: [0.2, 1, 0.2] }}
-              transition={{ duration: 1.2, repeat: Infinity, delay: i * 0.3 }}
-            />
-          ))}
-        </div>
       </div>
+
+      {/* 코스믹 행성 — 화면 중하단에 큰 시각 임팩트 */}
+      <motion.div
+        initial={{ opacity: 0, scale: 0.85 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ duration: 1, delay: 0.2, ease: [0.16, 1, 0.3, 1] }}
+        className="mt-6"
+      >
+        <SpinningEarth size={220} />
+      </motion.div>
     </div>
   );
 }
