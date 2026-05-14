@@ -97,25 +97,25 @@ export function TaekilResultBlock({ record }: Props) {
                 const dow = WEEKDAYS[new Date(d.date).getDay()];
                 return (
                   <div key={d.date} style={{
-                    flex: rank === 1 ? '1.2' : '1', minHeight: h,
-                    padding: '14px 6px 12px',
+                    flex: rank === 1 ? '1.2' : '1', minHeight: h + 20,
+                    padding: '18px 8px 16px',
                     background: rank === 1
                       ? 'linear-gradient(180deg, rgba(255,215,0,0.15) 0%, rgba(124,92,252,0.12) 100%)'
                       : 'var(--space-elevated)',
                     border: rank === 1 ? '1.5px solid rgba(255,215,0,0.4)' : '1px solid var(--border-subtle)',
                     borderRadius: 16, textAlign: 'center',
-                    display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 4,
+                    display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 6,
                   }}>
-                    <span style={{ fontSize: rank === 1 ? 13 : 11, fontWeight: 800, color: rankColor[rank], letterSpacing: '0.05em' }}>
+                    <span style={{ fontSize: rank === 1 ? 16 : 14, fontWeight: 800, color: rankColor[rank], letterSpacing: '0.05em' }}>
                       {rankBadge[rank]}
                     </span>
-                    <span style={{ fontSize: rank === 1 ? 28 : 22, fontWeight: 900, color: 'var(--text-primary)', lineHeight: 1.1 }}>
+                    <span style={{ fontSize: rank === 1 ? 36 : 30, fontWeight: 900, color: 'var(--text-primary)', lineHeight: 1.1 }}>
                       {dayNum}
                     </span>
-                    <span style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>{mon}월 ({dow})</span>
+                    <span style={{ fontSize: 15, fontWeight: 600, color: 'var(--text-secondary)' }}>{mon}월 ({dow})</span>
                     <span style={{
-                      marginTop: 4, padding: '3px 10px', borderRadius: 99,
-                      fontSize: 11, fontWeight: 700,
+                      marginTop: 6, padding: '5px 12px', borderRadius: 99,
+                      fontSize: 14, fontWeight: 700,
                       color: GRADE_COLOR[d.grade],
                       background: GRADE_BG[d.grade],
                       border: `1px solid ${GRADE_COLOR[d.grade]}40`,
@@ -126,22 +126,22 @@ export function TaekilResultBlock({ record }: Props) {
             })()}
           </div>
 
-          {/* 점수 바 그래프 */}
+          {/* 점수 바 그래프 — 직관성 위해 폰트·바 높이 모두 키움 */}
           {pickedDays.length > 1 && (
-            <div style={{ marginTop: 18 }}>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+            <div style={{ marginTop: 22 }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                 {pickedDays.map(d => (
-                  <div key={d.date} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <span style={{ fontSize: 11, width: 50, color: 'var(--text-secondary)', flexShrink: 0 }}>
+                  <div key={d.date} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <span style={{ fontSize: 14, fontWeight: 600, width: 60, color: 'var(--text-secondary)', flexShrink: 0 }}>
                       {d.date.slice(5).replace('-', '/')}
                     </span>
-                    <div style={{ flex: 1, height: 16, borderRadius: 6, background: 'rgba(255,255,255,0.05)', position: 'relative', overflow: 'hidden' }}>
-                      <div style={{ width: `${d.score}%`, height: '100%', background: GRADE_COLOR[d.grade], opacity: 0.85, borderRadius: 6 }} />
-                      <span style={{ position: 'absolute', right: 6, top: 0, fontSize: 10, fontWeight: 700, color: 'var(--text-primary)' }}>
+                    <div style={{ flex: 1, height: 26, borderRadius: 8, background: 'rgba(255,255,255,0.05)', position: 'relative', overflow: 'hidden' }}>
+                      <div style={{ width: `${d.score}%`, height: '100%', background: GRADE_COLOR[d.grade], opacity: 0.85, borderRadius: 8 }} />
+                      <span style={{ position: 'absolute', right: 9, top: '50%', transform: 'translateY(-50%)', fontSize: 14, fontWeight: 800, color: 'var(--text-primary)', textShadow: '0 0 4px rgba(0,0,0,0.6)' }}>
                         {d.score}
                       </span>
                     </div>
-                    <span style={{ fontSize: 10, fontWeight: 700, width: 28, textAlign: 'right', color: GRADE_COLOR[d.grade], flexShrink: 0 }}>
+                    <span style={{ fontSize: 14, fontWeight: 800, width: 36, textAlign: 'right', color: GRADE_COLOR[d.grade], flexShrink: 0 }}>
                       {d.grade}
                     </span>
                   </div>
