@@ -353,7 +353,7 @@ function InputForm({
                 onClick={() => toggleHobby(h)}
                 className="px-3.5 py-2 rounded-full text-[13px] font-medium"
                 style={{
-                  border: on ? '1.5px solid var(--cta-primary)' : '1px solid rgba(255,255,255,0.18)',
+                  border: `1.5px solid ${on ? 'var(--cta-primary)' : 'rgba(255,255,255,0.18)'}`,
                   background: on ? 'rgba(139,92,246,0.20)' : 'rgba(255,255,255,0.04)',
                   color: on ? '#E9D5FF' : 'var(--text-primary)',
                 }}
@@ -366,7 +366,7 @@ function InputForm({
             onClick={() => setHobbyCustomOpen((o) => !o)}
             className="px-3.5 py-2 rounded-full text-[13px] font-medium"
             style={{
-              border: hobbyCustomOpen ? '1.5px solid var(--cta-primary)' : '1px solid rgba(255,255,255,0.18)',
+              border: `1.5px solid ${hobbyCustomOpen ? 'var(--cta-primary)' : 'rgba(255,255,255,0.18)'}`,
               background: hobbyCustomOpen ? 'rgba(139,92,246,0.20)' : 'rgba(255,255,255,0.04)',
               color: hobbyCustomOpen ? '#E9D5FF' : 'var(--text-tertiary)',
             }}

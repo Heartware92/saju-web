@@ -63,7 +63,7 @@ export function JobLoveStateInput({
                 }}
                 className="px-3.5 py-2 rounded-full text-[13px] font-medium transition-all"
                 style={{
-                  border: on ? '1.5px solid var(--cta-primary)' : '1px solid rgba(255,255,255,0.18)',
+                  border: `1.5px solid ${on ? 'var(--cta-primary)' : 'rgba(255,255,255,0.18)'}`,
                   background: on ? 'rgba(139,92,246,0.20)' : 'rgba(255,255,255,0.04)',
                   color: on ? '#E9D5FF' : 'var(--text-primary)',
                 }}
@@ -88,7 +88,7 @@ export function JobLoveStateInput({
             }}
             className="px-3.5 py-2 rounded-full text-[13px] font-medium transition-all"
             style={{
-              border: jobCustomOpen ? '1.5px solid var(--cta-primary)' : '1px solid rgba(255,255,255,0.18)',
+              border: `1.5px solid ${jobCustomOpen ? 'var(--cta-primary)' : 'rgba(255,255,255,0.18)'}`,
               background: jobCustomOpen ? 'rgba(139,92,246,0.20)' : 'rgba(255,255,255,0.04)',
               color: jobCustomOpen ? '#E9D5FF' : 'var(--text-tertiary)',
             }}
@@ -128,7 +128,7 @@ export function JobLoveStateInput({
                 }}
                 className="px-3.5 py-2 rounded-full text-[13px] font-medium transition-all"
                 style={{
-                  border: on ? '1.5px solid var(--cta-primary)' : '1px solid rgba(255,255,255,0.18)',
+                  border: `1.5px solid ${on ? 'var(--cta-primary)' : 'rgba(255,255,255,0.18)'}`,
                   background: on ? 'rgba(139,92,246,0.20)' : 'rgba(255,255,255,0.04)',
                   color: on ? '#E9D5FF' : 'var(--text-primary)',
                 }}
@@ -153,7 +153,7 @@ export function JobLoveStateInput({
             }}
             className="px-3.5 py-2 rounded-full text-[13px] font-medium transition-all"
             style={{
-              border: loveCustomOpen ? '1.5px solid var(--cta-primary)' : '1px solid rgba(255,255,255,0.18)',
+              border: `1.5px solid ${loveCustomOpen ? 'var(--cta-primary)' : 'rgba(255,255,255,0.18)'}`,
               background: loveCustomOpen ? 'rgba(139,92,246,0.20)' : 'rgba(255,255,255,0.04)',
               color: loveCustomOpen ? '#E9D5FF' : 'var(--text-tertiary)',
             }}
