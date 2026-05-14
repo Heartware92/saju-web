@@ -961,32 +961,36 @@ export interface TodayUserContext {
 
 /** V3 결과 14 섹션 — 1·2·3은 카드 위 시각화, 4~14는 본문 */
 export const TODAY_V3_SECTION_KEYS = [
-  'today_basis',         // 4. 명리적 근거 (일진·오행·내 사주 관계)
-  'today_hobby_method',  // 5. 취미 운용법 (공부/업무/창작 등으로 분기)
-  'today_timeflow',      // 6. 시간대별 흐름
-  'today_sleep',         // 7. 수면 루틴
-  'today_meal',          // 8. 식사 가이드
-  'today_exercise',      // 9. 운동
-  'today_relationship',  // 10. 대인·이성운
-  'today_caution',       // 11. 주의할 점
-  'today_strength',      // 12. 좋은 포인트
-  'today_persona_extra', // 13. 직업/상황 맞춤 포인트 카드 (jobState 별 라벨·콘텐츠 완전 분기)
-  'today_oneliner',      // 14. 한줄 결론
+  'today_basis',           // 4. 명리적 근거 (일진·오행·내 사주 관계)
+  'today_domains_brief',   // 5. ★신규 9 영역(연애/재물/건강/학습/대인 등) 짧은 본문 — 점수만 있던 항목 보완
+  'today_hobby_method',    // 6. 취미 운용법 (공부/업무/창작 등으로 분기)
+  'today_timeflow',        // 7. 시간대별 흐름 (사용자 진입 시점 이후만, 슬롯 분기)
+  'today_sleep',           // 8. 수면 루틴
+  'today_meal',            // 9. 식사 가이드 (시점 이후 끼니만)
+  'today_exercise',        // 10. 운동 (시점 이후 가능 시간만)
+  'today_relationship',    // 11. 대인·이성운
+  'today_caution',         // 12. 주의할 점
+  'today_strength',        // 13. 좋은 포인트
+  'today_persona_extra',   // 14. 직업/상황 맞춤 포인트 카드 (jobState 별 라벨·콘텐츠 완전 분기)
+  'today_lucky_card',      // 15. ★신규 행운 카드 (컬러/숫자/아이템/스팟/요정/1분컷 즉시행동)
+  'today_fortune_message', // 16. ★신규 행운의 한마디 — 하단 마무리 (위로+격려+내일 예고)
 ] as const;
 export type TodayV3SectionKey = typeof TODAY_V3_SECTION_KEYS[number];
 
 export const TODAY_V3_SECTION_LABELS: Record<TodayV3SectionKey, string> = {
-  today_basis:         '명리적 근거',
-  today_hobby_method:  '관심 있는 것에 대한 운용법',
-  today_timeflow:      '시간대별 흐름',
-  today_sleep:         '수면 루틴',
-  today_meal:          '식사 가이드',
-  today_exercise:      '운동',
-  today_relationship:  '대인·이성',
-  today_caution:       '주의할 점',
-  today_strength:      '좋은 포인트',
-  today_persona_extra: '맞춤 포인트',  // jobState 별 동적 라벨 (UI에서 TODAY_PERSONA_EXTRA_LABEL 참조)
-  today_oneliner:      '한줄 결론',
+  today_basis:           '명리적 근거',
+  today_domains_brief:   '오늘 영역별 한 줄',
+  today_hobby_method:    '관심 있는 것에 대한 운용법',
+  today_timeflow:        '시간대별 흐름',
+  today_sleep:           '수면 루틴',
+  today_meal:            '식사 가이드',
+  today_exercise:        '운동',
+  today_relationship:    '대인·이성',
+  today_caution:         '주의할 점',
+  today_strength:        '좋은 포인트',
+  today_persona_extra:   '맞춤 포인트',  // jobState 별 동적 라벨
+  today_lucky_card:      '오늘의 행운 카드',
+  today_fortune_message: '행운의 한마디',
 };
 
 /** 9 항목 점수 — 각각 0~100 */
@@ -1154,11 +1158,20 @@ export const generateTodayFortuneV3Prompt = (
 사용자가 풀이 보는 시점은 "지금(${slotLabel})". 지나간 시간을 길게 다루면 어색하게 들림.
 > ${slotAhead}
 
-이 원칙은 모든 시간 관련 풀이(today_timeflow / today_hobby_method / today_meal / today_exercise / today_sleep / today_caution / today_persona_extra)에 적용된다.
+이 원칙은 모든 시간 관련 풀이(today_timeflow / today_hobby_method / today_meal / today_exercise / today_sleep / today_caution / today_persona_extra / today_domains_brief / today_lucky_card)에 적용된다.
 - 식사·운동·약속·만남 권장 시간대 = "지금 이후 가능한 시간대"만 제안 (이미 지나간 식사 시간 가이드 금지)
 - 회피 시간대도 "지금부터의 회피"로 표현 (예: 오후에 본 사용자에게 "오전에 ~피하세요"는 의미 없음)
-- 단, today_basis (명리적 근거) 와 today_oneliner (한줄 결론) 는 하루 단위 종합이라 시점 무관
+- 단, today_basis (명리적 근거) 와 today_fortune_message (행운의 한마디) 는 하루 단위 종합이라 시점 무관
 - today_sleep 은 어느 시점에 봐도 "오늘 밤 자기 전 흐름" 이라 모든 시점에서 정상 풀이 가능
+
+[★★★ 시간 anchor 강제 룰 — 모든 본문 섹션 공통]
+"오후엔", "저녁엔", "낮에" 같은 추상 표현 금지. 다음 형식 중 1개 이상 본문에 명시:
+- 절대 시각: "오후 7시 이후", "밤 11시 전", "내일 오전 9시", "21시쯤"
+- 일상 anchor: "점심시간 이후", "퇴근길에", "자기 전 30분", "출근 직전", "오후 미팅 후"
+- 시진(時辰) 기반: "미시(13~15시)에", "유시(17~19시) 즈음", "해시(21~23시)"
+
+각 본문 섹션마다 위 형식 1개 이상 포함 강제. today_domains_brief 는 9줄 중 5줄 이상에 명시.
+시간 anchor 가 없으면 풀이가 추상적·일반론적으로 느껴짐 — 사용자 입장에서 "지금 무엇을 하라"가 안 보이므로 사고임.
 
 [답변 자동 분류 결과 — 위 [섹션별 비중·강조점 분기 가이드] 블록의 분기 규칙을 그대로 적용]
 · 질문 1 답변 → 분류 그룹: ${q1GroupsLabel}
@@ -1418,6 +1431,23 @@ ${METAPHOR_KB}
 5) 신강신약(${result.strengthStatus}) 관점에서 오늘이 일간에 유리/불리한지 + 한 줄 정리(오늘의 명리적 결).
 ★ 분기 적용(${allGroupsCode}): [섹션 분기 가이드]의 today_basis 항목대로 강조점·관점 변형. 기본 320~420자, 분기에 따라 ±20%.
 
+[today_domains_brief] — 9 영역 짧은 본문 (각 영역별 점수 보완 — 점수만으로는 알 수 없는 결을 1~2줄로)
+은유 제목 없이 본문만. 9개 영역(연애·일·재물·건강·학습·대인·횡재·멘탈·이동) 각각 ▶ 라벨 — 한 줄 풀이 형식.
+★ 형식 필수 (9줄, 각 줄 50~100자):
+▶ 연애 — [일진 합·충 또는 정재/정관 흐름 1문장 + 시간 anchor 1개 또는 ${ctx.customLoveState || ctx.loveState} 호명 1회]
+▶ 일·업무 — [일진 십성(${todayGz.tenGodGan}/${todayGz.tenGodZhi})과 ${ctx.customJobState || ctx.jobState} 직업 결합 + 시간 anchor]
+▶ 재물 — [재성(편재·정재) 흐름·일진 충 여부 + 행동 1줄]
+▶ 건강 — [신강신약(${result.strengthStatus})·결핍 오행 + 시점 이후 회복 행동 1줄]
+▶ 학습 — [인성·문창귀인 여부 + 시점 이후 집중 가능 시간대 1줄]
+▶ 대인 — [천을귀인·합·삼합 흐름 + 만남·연락 권장 시점 1줄]
+▶ 횡재 — [편재 흐름·일진 충 여부 + 회피 또는 진입 신호 1줄]
+▶ 멘탈 — [감정·답변 그룹(${allGroupsCode}) 반영 + 회복 또는 추진 1줄]
+▶ 이동 — [역마살·일진 지지(${todayGz.zhi}) 호응 + 외출·이동 권장 시간대 1줄]
+★ 모든 행이 [today_domain] 점수와 일관 — 점수 80+ 면 긍정·추진 톤, 60~79 보통·균형, 60 미만 회피·주의.
+★ 사용자 입력 호명 분산 — 9줄에 jobState / loveState / customJobState / todaySchedule(있으면) 적절히 배분.
+★ 시간 anchor 강제 — 9줄 중 최소 5줄에 구체 시각("오후 7시", "퇴근길에", "점심시간 이후") 명시. 추상 표현("오후엔") 금지.
+★ 분량 총 450~700자.
+
 [today_hobby_method] — 분기 분량(아래 ★ 참조) (관심 있는 것에 대한 운용법 — 사용자가 선택한 N개 분야 모두 풀이)
 첫 줄: 은유 제목.
 본문: ${hobbyGuide}
@@ -1556,9 +1586,26 @@ ${ctx.customJobState?.trim()
 사용자 답변(${q1Filled || '미답'} / ${q2Filled || '미답'})이 있으면 본문에 1회 자연스럽게 인용.
 마지막 1문장은 단정 명령형으로 마무리.
 
-[today_oneliner] — 60~110자 (한줄 결론)
-은유 제목 없이 본문만. 직설적으로, 오늘 하루를 관통하는 핵심 한 문장. 사용자 상황(${primaryHobby}·${ctx.jobState}·${ctx.loveState})을 손에 잡힐 듯 짚어주는 어조.
-★ 분기 적용(${allGroupsCode}): emotion_positive·condition_high 시 추진형·긍정 톤("오늘은 ~하라" 단정 명령). emotion_negative 시 단정하되 따뜻한 톤("오늘은 ~해도 괜찮다" 결). rest 시 회복 톤. 분량 그대로 60~110자.
+[today_lucky_card] — 200~300자 (행운 카드 묶음)
+은유 제목 없이 본문만. 행운 메타데이터 6개를 한 카드로 묶어 풀이.
+★ 형식 필수: 6개 항목 각각 별도 줄로 ▶ 라벨 — 값 (1줄 풀이) 구조:
+▶ 럭키 컬러 — [구체 색상명] ([일진/용신 ${yongSinElement} 근거 1줄])
+▶ 럭키 숫자 — [1~9 중 1개 또는 두 자리] ([1~9 사주 숫자학 또는 일진 지지 근거 1줄])
+▶ 행운 아이템 — [구체 물건명, 예: "따뜻한 보온병"] ([오행 보강 근거 1줄])
+▶ 럭키 스팟 — [구체 장소, 예: "조용한 카페 창가"] ([일진 지지 ${todayGz.zhi}·${todayGz.zhiElement} 와 어울리는 공간 근거 1줄])
+▶ 행운의 요정 — [어떤 사람, 예: "차분한 직장 선배"] (어떤 상황·시간대에 만날지 1줄)
+▶ 1분 컷 즉시 행동 — [지금 바로 5분 안에 할 1개 행동, 예: "책상 위 서류 정리하기"] (오늘 사주 흐름과 어떻게 연결되는지 1줄)
+★ 모든 항목은 사용자 본 시점(${slotLabel}) 이후에 만나거나 행할 수 있는 것만 (지나간 시간 가이드 금지).
+★ 컬러는 한국어 색상명(딥블루·은은한핑크 등) 자연스럽게.
+
+[today_fortune_message] — 100~180자 (행운의 한마디 — 결과 페이지 최하단 마무리)
+은유 제목 없이 본문만. 사주아이 "🤍 마지막 한마디" 패턴 — 다음 3요소 모두 포함:
+1) 사용자 입력 1개 명시 호명 (예: "변호사로서", "야근으로 지친 오늘", "${ctx.customJobState || ctx.jobState} 인 당신") + 위로 1줄
+2) 오늘 명리 흐름의 의미를 따뜻하게 1줄 ("${todayGz.gan}${todayGz.zhi} 일진이 빛나는 무기가 되고 있네요" 같은 결)
+3) 내일 예고 1줄 (희망적, "내일은 오늘보다 더 ~" 어조)
+★ 톤: 친구·언니가 말하는 듯 친근. "~네요", "~예요" 같은 부드러운 종결. 정통사주의 단정형 금지.
+★ 마지막에 작은 이모지 1개 자연스럽게 (✨ 🤍 💫 🌙 중 분위기 맞춰 1개).
+★ 분기 적용(${allGroupsCode}): emotion_negative·condition_low·rest 시 위로 비중 ↑, emotion_positive·condition_high 시 격려·확신 톤 ↑.
 
 [금지 — 한 번 더 강조]
 - 본문 안에 [today_xxx] 마커 노출 (사고).
