@@ -1,25 +1,27 @@
 'use client';
 
 /**
- * 코스믹 행성 — 로딩 화면용 우주 시각화
+ * Monument Valley 풍 이소메트릭 탑 — 로딩 화면용 우주 시각화
  *
- * 디자인 컨셉 (Flaticon-style + Monument Valley 톤):
- *  - 굵은 외곽선 (stroke) + 단색 면 (fill) 분리 — GIF 4종 (asteroid·moon·galaxy·solar-system) 참고
- *  - 십자 별 (+) 장식 — galaxy GIF 모티프
- *  - 단색 면 — 살구·라일락·청록 코스믹 톤
- *  - 다크 배경 위에서 떠 있는 일러스트 느낌
+ * 진짜 Monument Valley 게임 톤:
+ *  - 이소메트릭 투시 (3면 — top·left·right) 평면 색면
+ *  - 외곽선 없음, 면 색만으로 형태
+ *  - 파스텔 그라디언트 (라일락·살구·페일핑크·세이지)
+ *  - 한 면 = 한 색 (그라디언트 X, 단색 평면 톤)
+ *  - 정적이고 명상적 — 거의 움직이지 않음
  *
  * 구성:
- *  - 행성 (토성) — 두꺼운 보라 외곽선 + 살구 면 + 라일락 무늬 곡선
- *  - 고리 — 두꺼운 라이트 라일락 stroke (앞·뒤 분리)
- *  - 위성(달) — 청록 외곽선 + 페일핑크 면 + 분화구 점들
- *  - 십자 별 4개 + 작은 점 별 6개
+ *  - 3층 계단형 큐브 탑 (위로 갈수록 작아짐)
+ *  - 각 큐브: top(밝은 면) / left(중간 면) / right(어두운 면) 3색
+ *  - 꼭대기에 작은 달 (천천히 부유)
+ *  - 배경 별 4개 (정적·미세 트윙클)
+ *  - 외곽 후광 (부드러운 호흡)
  *
  * 애니메이션:
- *  - 행성 자전: 20s linear infinite
- *  - 위성 궤도: 14s linear infinite
- *  - 십자 별 깜빡임: 각각 다른 timing
- *  - 외곽 후광: 5s 펄스
+ *  - 탑: 완전 정적
+ *  - 달 부유: 14s ease-in-out (위·아래 3px)
+ *  - 후광: 8s ease-in-out 호흡
+ *  - 별 트윙클: 12s ease-in-out (정적에 가깝게)
  */
 
 interface SpinningEarthProps {
@@ -28,31 +30,42 @@ interface SpinningEarthProps {
 }
 
 export function SpinningEarth({ size = 220, className = '' }: SpinningEarthProps) {
-  // 별 — 십자 (+) 4개 + 점 6개
-  const crossStars = [
-    { x: 16, y: 14, size: 5, delay: 0, duration: 3 },
-    { x: 86, y: 78, size: 4.5, delay: 1.2, duration: 3.5 },
-    { x: 84, y: 20, size: 4, delay: 2, duration: 4 },
-    { x: 18, y: 84, size: 4, delay: 0.6, duration: 3.2 },
+  // 별 — 정적·미세한 점 4개
+  const stars = [
+    { cx: 14, cy: 22, r: 0.9, delay: 0 },
+    { cx: 86, cy: 18, r: 1.1, delay: 4 },
+    { cx: 88, cy: 78, r: 0.8, delay: 2 },
+    { cx: 12, cy: 80, r: 1.0, delay: 6 },
   ];
-  const dotStars = [
-    { cx: 10, cy: 50, r: 0.9, delay: 0.3 },
-    { cx: 90, cy: 50, r: 1.1, delay: 1.8 },
-    { cx: 50, cy: 5, r: 0.8, delay: 0.9 },
-    { cx: 50, cy: 95, r: 1.0, delay: 2.4 },
-    { cx: 28, cy: 30, r: 0.7, delay: 1.4 },
-    { cx: 76, cy: 70, r: 0.8, delay: 0.5 },
-  ];
+
+  // 이소메트릭 큐브 좌표 계산 헬퍼
+  // cx, cy = 큐브 중심 (윗면 중심 기준), w = 큐브 한 변(이소메트릭 기준 가로 절반), h = 높이
+  function isoCube(cx: number, cy: number, w: number, h: number) {
+    // top face — 다이아몬드 (4점)
+    const top = `M ${cx} ${cy} L ${cx + w} ${cy + w * 0.5} L ${cx} ${cy + w} L ${cx - w} ${cy + w * 0.5} Z`;
+    // left face — 평행사변형 (앞에서 본 왼쪽)
+    const left = `M ${cx - w} ${cy + w * 0.5} L ${cx} ${cy + w} L ${cx} ${cy + w + h} L ${cx - w} ${cy + w * 0.5 + h} Z`;
+    // right face — 평행사변형 (앞에서 본 오른쪽)
+    const right = `M ${cx + w} ${cy + w * 0.5} L ${cx} ${cy + w} L ${cx} ${cy + w + h} L ${cx + w} ${cy + w * 0.5 + h} Z`;
+    return { top, left, right };
+  }
+
+  // 1층 (가장 큰 큐브) — 하부, 라일락 톤
+  const cube1 = isoCube(50, 56, 18, 10);
+  // 2층 — 살구 톤
+  const cube2 = isoCube(50, 46, 13, 8);
+  // 3층 (가장 작은 큐브) — 페일핑크 톤
+  const cube3 = isoCube(50, 39, 9, 6);
 
   return (
     <div className={`relative inline-flex items-center justify-center ${className}`} style={{ width: size, height: size }}>
-      {/* 외곽 후광 — 부드러운 라일락 글로우 */}
+      {/* 외곽 후광 — 부드러운 라일락·살구 호흡 */}
       <div
         className="absolute inset-0 rounded-full"
         style={{
-          background: 'radial-gradient(circle, rgba(167,139,250,0.22) 0%, rgba(252,211,193,0.10) 40%, transparent 65%)',
-          filter: 'blur(28px)',
-          animation: 'orb-pulse 5s ease-in-out infinite',
+          background: 'radial-gradient(circle, rgba(201,166,255,0.20) 0%, rgba(252,189,189,0.10) 38%, transparent 62%)',
+          filter: 'blur(32px)',
+          animation: 'mv-breathe 8s ease-in-out infinite',
         }}
       />
 
@@ -63,127 +76,70 @@ export function SpinningEarth({ size = 220, className = '' }: SpinningEarthProps
         className="relative z-10"
         style={{ overflow: 'visible' }}
       >
-        {/* 점 별 — 다크 배경 위 작은 별빛 */}
-        {dotStars.map((s, i) => (
+        {/* 별 — 매우 미세한 정적 점들 */}
+        {stars.map((s, i) => (
           <circle
             key={i}
             cx={s.cx}
             cy={s.cy}
             r={s.r}
             fill="#fef3c7"
-            opacity="0.85"
-            style={{ animation: `orb-twinkle 4s ease-in-out ${s.delay}s infinite` }}
+            opacity="0.55"
+            style={{ animation: `mv-star 12s ease-in-out ${s.delay}s infinite` }}
           />
         ))}
 
-        {/* 십자 별 (+) — galaxy GIF 모티프 */}
-        {crossStars.map((s, i) => {
-          const half = s.size / 2;
-          return (
-            <g
-              key={i}
-              transform={`translate(${s.x} ${s.y})`}
-              style={{ animation: `orb-cross-twinkle ${s.duration}s ease-in-out ${s.delay}s infinite` }}
-            >
-              <line x1={-half} y1="0" x2={half} y2="0" stroke="#67e8f9" strokeWidth="1.4" strokeLinecap="round" />
-              <line x1="0" y1={-half} x2="0" y2={half} stroke="#67e8f9" strokeWidth="1.4" strokeLinecap="round" />
-            </g>
-          );
-        })}
+        {/* 3층 큐브 탑 — 외곽선 없는 평면 색면 (Monument Valley 톤) */}
 
-        {/* 토성 고리 — 뒤쪽 */}
-        <g transform="translate(50 52) rotate(-18)">
-          <ellipse
-            cx="0"
-            cy="0"
-            rx="34"
-            ry="8"
-            fill="none"
-            stroke="#c9a6ff"
-            strokeWidth="3"
-            strokeLinecap="round"
-            strokeDasharray="58 100"
-            strokeDashoffset="0"
-          />
+        {/* 1층 — 라일락 톤 (가장 큰 큐브) */}
+        <g>
+          {/* right face — 가장 어두운 면 (그림자 쪽) */}
+          <path d={cube1.right} fill="#7c5ca8" />
+          {/* left face — 중간 면 */}
+          <path d={cube1.left} fill="#9b7dc7" />
+          {/* top face — 가장 밝은 면 (빛 받는 쪽) */}
+          <path d={cube1.top} fill="#c9a6ff" />
         </g>
 
-        {/* 회전하는 행성 본체 — 두꺼운 보라 외곽선 + 살구 면 (Flaticon 풍) */}
-        <g style={{ animation: 'orb-spin 20s linear infinite', transformOrigin: '50px 52px' }}>
-          {/* 면 — 살구 단색 */}
-          <circle cx="50" cy="52" r="20" fill="#fdba74" />
+        {/* 2층 — 살구 톤 (중간 큐브) */}
+        <g>
+          <path d={cube2.right} fill="#d89472" />
+          <path d={cube2.left} fill="#f0a880" />
+          <path d={cube2.top} fill="#fcd5b4" />
+        </g>
 
-          {/* 무늬 — 라일락 곡선 (solar-system GIF 의 토성 무늬 참고) */}
+        {/* 3층 — 페일핑크 톤 (가장 작은 큐브) */}
+        <g>
+          <path d={cube3.right} fill="#d68aa3" />
+          <path d={cube3.left} fill="#eaa5bc" />
+          <path d={cube3.top} fill="#f8bbd0" />
+        </g>
+
+        {/* 꼭대기 작은 달 — 부드러운 부유 */}
+        <g style={{ animation: 'mv-moon-float 14s ease-in-out infinite' }}>
+          {/* 달 본체 — 크림 단색 (외곽선 없이) */}
+          <circle cx="50" cy="26" r="4.5" fill="#fff5e1" />
+          {/* 달 음영 — 우측 하단 단색면 (Monument Valley 풍) */}
           <path
-            d="M 32 55 Q 42 50, 50 55 Q 58 60, 68 56"
-            fill="none"
-            stroke="#c084fc"
-            strokeWidth="3"
-            strokeLinecap="round"
-            opacity="0.85"
+            d="M 50 30.5 A 4.5 4.5 0 0 1 45.7 23.7 Q 47.5 23.5, 50 23.5 Q 52.5 23.5, 54.3 23.7 A 4.5 4.5 0 0 1 50 30.5 Z"
+            fill="#e8c8a0"
+            opacity="0.45"
           />
-          <path
-            d="M 36 47 Q 44 44, 52 48"
-            fill="none"
-            stroke="#c084fc"
-            strokeWidth="2.5"
-            strokeLinecap="round"
-            opacity="0.7"
-          />
-
-          {/* 외곽선 — 두꺼운 다크 보라 */}
-          <circle cx="50" cy="52" r="20" fill="none" stroke="#3b2860" strokeWidth="3.5" />
-        </g>
-
-        {/* 토성 고리 — 앞쪽 (행성 위에 겹쳐서 그려야 깊이감) */}
-        <g transform="translate(50 52) rotate(-18)">
-          <ellipse
-            cx="0"
-            cy="0"
-            rx="34"
-            ry="8"
-            fill="none"
-            stroke="#c9a6ff"
-            strokeWidth="3"
-            strokeLinecap="round"
-            strokeDasharray="58 100"
-            strokeDashoffset="-58"
-          />
-        </g>
-
-        {/* 위성(달) — 청록 외곽선 + 페일핑크 면 (moon GIF 참고) */}
-        <g style={{ animation: 'orb-orbit 14s linear infinite', transformOrigin: '50px 52px' }}>
-          <g transform="translate(50 12)">
-            <circle cx="0" cy="0" r="6" fill="#fcd5c0" />
-            {/* 분화구 — 작은 원 */}
-            <circle cx="-1.8" cy="-1.5" r="1.2" fill="none" stroke="#3b2860" strokeWidth="0.8" />
-            <circle cx="2" cy="1.5" r="0.9" fill="none" stroke="#3b2860" strokeWidth="0.7" />
-            <circle cx="-0.5" cy="2.2" r="0.5" fill="#3b2860" />
-            {/* 외곽선 */}
-            <circle cx="0" cy="0" r="6" fill="none" stroke="#3b2860" strokeWidth="2" />
-          </g>
         </g>
       </svg>
 
       <style jsx>{`
-        @keyframes orb-spin {
-          from { transform: rotate(0deg); }
-          to { transform: rotate(360deg); }
+        @keyframes mv-breathe {
+          0%, 100% { opacity: 0.55; transform: scale(1); }
+          50% { opacity: 1; transform: scale(1.06); }
         }
-        @keyframes orb-orbit {
-          from { transform: rotate(0deg); }
-          to { transform: rotate(360deg); }
+        @keyframes mv-star {
+          0%, 100% { opacity: 0.22; }
+          50% { opacity: 0.9; }
         }
-        @keyframes orb-pulse {
-          0%, 100% { opacity: 0.6; transform: scale(1); }
-          50% { opacity: 1; transform: scale(1.08); }
-        }
-        @keyframes orb-twinkle {
-          0%, 100% { opacity: 0.3; }
-          50% { opacity: 1; }
-        }
-        @keyframes orb-cross-twinkle {
-          0%, 100% { opacity: 0.4; transform: scale(0.85); }
-          50% { opacity: 1; transform: scale(1.1); }
+        @keyframes mv-moon-float {
+          0%, 100% { transform: translateY(0px); }
+          50% { transform: translateY(-3px); }
         }
       `}</style>
     </div>
