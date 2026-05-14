@@ -1202,7 +1202,8 @@ export default function PeriodFortunePage({ scope }: { scope: FortuneScope | 'da
                 const isYes = key === 'date_yes';
                 const isNo = key === 'date_no';
                 const isRemedy = key === 'date_remedy';
-                const sectionBarColor = isYes ? '#34D399' : isNo ? '#F87171' : '#e8a490';
+                // Dusk 코스믹 팔레트 — 라일락(시도)·피치(피하기)·웜피치(처방)
+                const sectionBarColor = isYes ? '#C4B5FD' : isNo ? '#F4C2A1' : '#e8a490';
                 return (
                   <SectionCollapsible
                     key={key}
@@ -1214,18 +1215,9 @@ export default function PeriodFortunePage({ scope }: { scope: FortuneScope | 'da
                   >
                     {isRemedy ? (
                       <RemedyCardGrid bodyText={bodyText} />
-                    ) : (isYes || isNo) ? (
-                      <div className="space-y-2.5">
-                        {bodyText.split(/\n\n+/).map((para, pi) => (
-                          <div key={pi} className="flex gap-2.5 items-start">
-                            <span className={`shrink-0 mt-0.5 text-[16px] ${isYes ? 'text-emerald-400' : 'text-red-400'}`}>
-                              {isYes ? '●' : '▲'}
-                            </span>
-                            <p className="text-[17px] text-text-secondary leading-[1.85] tracking-[-0.005em] whitespace-pre-line">{para.trim()}</p>
-                          </div>
-                        ))}
-                      </div>
                     ) : (
+                      // 시그널은 SectionCollapsible 의 좌측 색띠(barColor) 로 전달.
+                      // 본문 앞 ● / ▲ 마커는 번호 매겨진 리스트와 중복 시그널 + 안구 흐름 방해 → 제거.
                       <div className="text-[17px] text-text-secondary leading-[1.85] tracking-[-0.005em] space-y-3">
                         {bodyText.split(/\n\n+/).map((para, pi) => (
                           <p key={pi} className="whitespace-pre-line">{para.trim()}</p>
