@@ -1067,6 +1067,9 @@ export interface TodayFortuneV3AIResult {
   userContext?: TodayUserContext;
   /** archive 저장 후 record id — ShareBar 표시에 사용 */
   archivedRecordId?: string;
+  /** 3회 retry 후에도 13 섹션 모두 채우지 못한 경우 true */
+  partial?: boolean;
+  partialMessage?: string;
 }
 
 /** [today_scores] 종합:XX 시험:XX 공부:XX 멘탈:XX 대인:XX 이성:XX 금전:XX 운동:XX 회복:XX 횡재:XX
@@ -1188,12 +1191,59 @@ export const getTodayFortuneV3Report = async (
     const date = isoDate ?? new Date().toISOString().slice(0, 10);
     const todayGz = calcTodayGanZhi(result, date);
     const prompt = generateTodayFortuneV3Prompt(result, todayGz, date, ctx);
-    // 만세력 풍부화 + 분량 하한 상향(3300자+) + 분기별 가이드 풍부화 → 토큰·타임아웃 더 확장
-    // 13 섹션 합산 3300자+ 목표 → 9500 토큰 여유 / 120초 timeout
-    const content = await callGPT(prompt, 9500, undefined, { allowTruncated: true, timeoutMs: 120_000 });
+
+    // ── 13 섹션 모두 있는 응답을 받기 위한 retry 안전망 ──
+    // 사용자 보고: "큰 섹션은 동일해야지 않나?" — 13개 섹션 항상 노출 보장.
+    // LLM 이 한두 섹션 빼먹으면 재시도. 정통사주의 MAX_APP_ATTEMPTS=3 패턴 적용.
+    const REQUIRED_KEYS: ReadonlyArray<TodayV3SectionKey> = TODAY_V3_SECTION_KEYS;
+    const MAX_TODAY_ATTEMPTS = 3;
+    /** 13개 중 누락 허용 임계치 — 12~13 OK, 10~11 재시도, 9 이하 재시도(마지막엔 partial 인정) */
+    const ACCEPT_THRESHOLD = 12;
+
+    let content = '';
+    let sections: Partial<Record<TodayV3SectionKey, string>> = {};
+    let lastError: string | null = null;
+
+    for (let attempt = 1; attempt <= MAX_TODAY_ATTEMPTS; attempt++) {
+      try {
+        content = await callGPT(prompt, 9500, undefined, { allowTruncated: true, timeoutMs: 120_000 });
+        sections = parseTodayV3Sections(content);
+        const parsedCount = Object.keys(sections).length;
+        const missing = REQUIRED_KEYS.filter(k => !sections[k]);
+
+        if (parsedCount >= ACCEPT_THRESHOLD) {
+          if (attempt > 1) console.log(`[today_v3] retry ${attempt}회차 성공 (${parsedCount}/13)`);
+          lastError = null;
+          break;
+        }
+
+        // 핵심 섹션(today_basis / today_domains_brief / today_lucky_card / today_fortune_message) 누락 시 무조건 재시도
+        const coreKeys: TodayV3SectionKey[] = ['today_basis', 'today_domains_brief', 'today_lucky_card', 'today_fortune_message'];
+        const missingCore = coreKeys.filter(k => !sections[k]);
+
+        lastError = `PARTIAL: 13 섹션 중 ${parsedCount}개만 파싱됨 (누락: ${missing.join(',')}${missingCore.length ? ` / 핵심 누락: ${missingCore.join(',')}` : ''})`;
+        console.warn(`[today_v3] 호출 ${attempt}회차 미흡:`, lastError);
+
+        if (attempt < MAX_TODAY_ATTEMPTS) {
+          // 점진 백오프: 1500ms, 2500ms
+          await new Promise((r) => setTimeout(r, 1500 + (attempt - 1) * 1000));
+          continue;
+        }
+        // 마지막 시도면 partial 인정 — 사용자가 풀이는 받지만 일부 섹션 누락 가능
+        if (attempt > 1) console.warn(`[today_v3] retry ${MAX_TODAY_ATTEMPTS}회 모두 미흡 — partial 인정 (${parsedCount}/13)`);
+        break;
+      } catch (e: any) {
+        lastError = e?.message || 'callGPT 호출 실패';
+        console.warn(`[today_v3] 호출 ${attempt}회차 에러:`, lastError);
+        if (attempt < MAX_TODAY_ATTEMPTS) {
+          await new Promise((r) => setTimeout(r, 1500 + (attempt - 1) * 1000));
+          continue;
+        }
+      }
+    }
+
     const domainScores = parseTodayV3DomainScores(content);
     const flowScores = parseTodayV3FlowScores(content);
-    const sections = parseTodayV3Sections(content);
 
     const archivedRecordId = await archiveSaju({
       profileId,
@@ -1205,9 +1255,20 @@ export const getTodayFortuneV3Report = async (
     }).catch(() => null);
 
     if (Object.keys(sections).length === 0) {
+      // 3회 retry 후에도 파싱 0건이면 rawText fallback
       return { success: true, rawText: content, domainScores, flowScores, todayGz, isoDate: date, userContext: ctx, ...(archivedRecordId ? { archivedRecordId } : {}) };
     }
-    return { success: true, sections, domainScores, flowScores, todayGz, isoDate: date, userContext: ctx, ...(archivedRecordId ? { archivedRecordId } : {}) };
+    return {
+      success: true,
+      sections,
+      domainScores,
+      flowScores,
+      todayGz,
+      isoDate: date,
+      userContext: ctx,
+      ...(archivedRecordId ? { archivedRecordId } : {}),
+      ...(lastError ? { partial: true, partialMessage: '일부 섹션이 누락되어 다시 시도했어요. 보이는 섹션은 정상 분석된 내용이에요.' } : {}),
+    };
   } catch (error: any) {
     return { success: false, error: error.message };
   }
