@@ -52,12 +52,15 @@ export default function ConsultationChatPage() {
   const scrollRef = useRef<HTMLDivElement>(null);
   const abortRef = useRef<AbortController | null>(null);
   const streamingRef = useRef<{ accumulated: string; botMsgId: string; profileId: string; convId: string } | null>(null);
+  // followups 요청 시 최신 messages 참조 (setMessages 비동기 + fetch closure stale 회피)
+  const messagesRef = useRef<ChatMessage[]>([]);
 
   const activeConv = useMemo(
     () => conversations.find(c => c.id === activeConversationId) ?? null,
     [conversations, activeConversationId],
   );
   const messages = activeConv?.messages ?? [];
+  useEffect(() => { messagesRef.current = messages; }, [messages]);
 
   const setMessages = useCallback((updater: ChatMessage[] | ((prev: ChatMessage[]) => ChatMessage[])) => {
     setConversations(prev => prev.map(c => {
@@ -293,18 +296,35 @@ export default function ConsultationChatPage() {
         setMessages(prev => prev.map(m => m.id === botMsgId ? { ...m, content: cleaned } : m));
       }
 
-      // 후속 질문 제안
+      // 후속 질문 제안 — 이미 보낸 질문은 prevQuestions 로 서버에 알려 LLM 이 중복 회피
       if (pid === profileAtSend && cleaned) {
+        const prevQuestions = [
+          ...messagesRef.current.filter(m => m.role === 'user').map(m => m.content),
+          question, // 현재 막 보낸 질문도 포함
+        ];
         fetch('/api/consultation/followups', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${accessToken}` },
-          body: JSON.stringify({ lastQuestion: question, lastAnswer: cleaned }),
+          body: JSON.stringify({ lastQuestion: question, lastAnswer: cleaned, prevQuestions }),
         })
           .then(r => r.ok ? r.json() : null)
           .then((data: { suggestions?: string[] } | null) => {
             const suggestions = data?.suggestions ?? [];
             if (suggestions.length > 0 && pid === profileAtSend) {
-              setMessages(prev => prev.map(m => m.id === botMsgId ? { ...m, followups: suggestions } : m));
+              setMessages(prev => {
+                // 이미 사용자가 보낸 질문 + QUICK_QUESTIONS(초기 칩) 모두 중복 제외
+                // LLM 이 messages 컨텍스트를 모르므로 클라이언트가 필터링
+                const normalize = (s: string) => s.trim().replace(/\s+/g, ' ').toLowerCase();
+                const sentQuestions = new Set<string>([
+                  ...prev.filter(m => m.role === 'user').map(m => normalize(m.content)),
+                  ...QUICK_QUESTIONS.map(q => normalize(q)),
+                ]);
+                // 새 질문(현재 막 보낸 question) 도 중복 제외
+                sentQuestions.add(normalize(question));
+                const dedup = suggestions.filter(s => !sentQuestions.has(normalize(s)));
+                // 모두 필터링되면 빈 배열 — followups 영역 안 보임 (사용자 입장에선 자연스러움)
+                return prev.map(m => m.id === botMsgId ? { ...m, followups: dedup } : m);
+              });
             }
           })
           .catch(() => {});

@@ -39,10 +39,14 @@ export async function POST(request: NextRequest) {
   // ── 입력 ──
   let lastQuestion = '';
   let lastAnswer = '';
+  let prevQuestions: string[] = [];
   try {
-    const body = await request.json() as { lastQuestion?: string; lastAnswer?: string };
+    const body = await request.json() as { lastQuestion?: string; lastAnswer?: string; prevQuestions?: string[] };
     lastQuestion = (body.lastQuestion ?? '').slice(0, MAX_LEN);
     lastAnswer = (body.lastAnswer ?? '').slice(0, MAX_LEN);
+    prevQuestions = Array.isArray(body.prevQuestions)
+      ? body.prevQuestions.filter((q): q is string => typeof q === 'string').map(q => q.slice(0, 200)).slice(0, 30)
+      : [];
   } catch {
     return NextResponse.json({ error: '요청 형식 오류' }, { status: 400 });
   }
@@ -50,13 +54,18 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'lastQuestion, lastAnswer 필요' }, { status: 400 });
   }
 
+  // 이미 사용자가 이번 세션에서 보낸 질문 목록 — LLM 이 중복 안 만들게
+  const avoidBlock = prevQuestions.length > 0
+    ? `\n[★ 절대 중복 금지 — 유저가 이미 보낸 질문]\n${prevQuestions.map(q => `- ${q}`).join('\n')}\n\n위 질문과 같거나 비슷한 의미의 질문은 절대 제안 금지. 다른 각도·다른 주제로 제안하세요.`
+    : '';
+
   const prompt = `당신은 사주 상담소의 후속 질문 큐레이터입니다. 유저가 방금 다음과 같이 질문하고 답변을 받았습니다.
 
 [유저 질문]
 ${lastQuestion}
 
 [AI 답변]
-${lastAnswer}
+${lastAnswer}${avoidBlock}
 
 이 대화 맥락에서 유저가 이어서 자연스럽게 궁금해할 후속 질문 3개를 제안하세요.
 
@@ -65,7 +74,8 @@ ${lastAnswer}
 - 2번째: 답변에 언급된 다른 요소를 "확장"하는 질문 (파생)
 - 3번째: 완전히 다른 주제로 "전환"하는 제안 (이번엔 이걸 물어봐)
 - 각 질문은 30자 이내, 유저가 실제로 타이핑할 법한 자연스러운 구어체
-- 마크다운·이모지 금지, 질문 그 자체만 (인사말이나 설명 금지)`;
+- 마크다운·이모지 금지, 질문 그 자체만 (인사말이나 설명 금지)
+- 위 [절대 중복 금지] 블록의 질문과 표현·의미 모두 다르게`;
 
   const geminiRes = await fetch(`${GEMINI_URL}?key=${apiKey}`, {
     method: 'POST',
