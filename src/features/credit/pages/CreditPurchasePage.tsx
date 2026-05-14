@@ -77,6 +77,19 @@ export const CreditPurchasePage: React.FC = () => {
           </div>
         </div>
 
+        {/* 소진기한·환불 안내 (PG사 환금성 업종 입점 필수 명시) */}
+        <div className="mb-5 px-4 py-3 rounded-2xl bg-[rgba(124,92,252,0.06)] border border-[rgba(124,92,252,0.15)] text-[12.5px] text-text-secondary leading-relaxed">
+          <p>
+            <strong className="text-text-primary">크레딧 사용 기한 안내</strong>
+          </p>
+          <ul className="mt-1.5 space-y-1 list-disc pl-4 text-text-tertiary">
+            <li>구매하신 크레딧은 <strong className="text-text-secondary">구매일로부터 3개월 이내</strong>에 사용해 주세요.</li>
+            <li>유효 기간 경과 시 미사용 크레딧은 <strong className="text-text-secondary">자동 소멸</strong>됩니다.</li>
+            <li>환불은 <strong className="text-text-secondary">결제 수단(신용카드)으로만</strong> 가능하며, 미사용 상태에서 결제일로부터 7일 이내 청약철회 신청 가능합니다.</li>
+            <li>자세한 내용은 <a href="/terms" className="underline text-cta hover:text-cta-active">이용약관 제14조·제16조</a>를 참고해 주세요.</li>
+          </ul>
+        </div>
+
         {/* Package list */}
         <div className="flex flex-col gap-3 mb-8">
           {CREDIT_PACKAGES.map((pkg) => (

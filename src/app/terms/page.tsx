@@ -199,6 +199,8 @@ export default async function TermsPage({ searchParams }: { searchParams: Promis
               <li>회원은 크레딧을 전혀 사용하지 않은 경우 결제일로부터 7일 이내에 청약철회(환불)를 요청할 수 있습니다.</li>
               <li>이미 크레딧을 사용하여 풀이 결과를 확인한 경우에는 해당 크레딧에 대한 환불이 불가합니다.</li>
               <li>환불 요청은 고객센터를 통해 접수하며, 접수일로부터 3영업일 이내에 처리합니다.</li>
+              <li><strong>환불 처리는 결제 시 사용한 결제 수단(신용카드)으로만 가능하며, 현금 또는 다른 수단으로의 환급(환불)은 불가합니다.</strong></li>
+              <li><strong>충전된 크레딧 자체는 현금 환급 대상이 아니며, 환불은 위 본조 제1항의 청약철회 요건을 충족하는 경우에 한하여 미사용 크레딧에 대해서만 신청 가능합니다.</strong></li>
               <li>환불 시 결제 수수료, 이미 사용한 크레딧에 해당하는 금액 등을 공제한 나머지 금액을 환불합니다.</li>
               <li>무료로 지급된 크레딧은 환불 대상이 아닙니다.</li>
               <li>유료 구매한 크레딧의 유효기간은 구매일로부터 3개월 미만이며, 유효기간이 경과한 크레딧은 환불 대상에서 제외됩니다.</li>
@@ -305,6 +307,22 @@ export default async function TermsPage({ searchParams }: { searchParams: Promis
               서비스 이용으로 발생한 분쟁에 대해 소송이 제기될 경우 회사의 본점 소재지를 관할하는
               법원을 전속 관할 법원으로 합니다.
             </p>
+          </Article>
+
+          <Article title="제26조 (민원 처리 및 책임)">
+            <ol className="list-decimal pl-5 space-y-1">
+              <li><strong>본 서비스의 모든 거래에 대한 책임과 환불, 민원 등의 처리는 (주)하트웨어에서 진행합니다.</strong></li>
+              <li>회원은 서비스 이용 중 발생한 불만이나 분쟁 사항에 대해 아래 민원 담당자에게 문의할 수 있습니다.</li>
+            </ol>
+            <div className="mt-2 p-3 rounded-lg bg-[rgba(124,92,252,0.06)] border border-[var(--border-subtle)]">
+              <p className="font-medium text-text-primary">민원 담당자 (대표자 겸임)</p>
+              <ul className="mt-1 space-y-0.5 text-[13px]">
+                <li>회사명: (주)하트웨어</li>
+                <li>대표자: 허진우</li>
+                <li>이메일: heojinwoo@heartware.co.kr</li>
+                <li>연락처: [추후 기재]</li>
+              </ul>
+            </div>
           </Article>
 
           {/* ── 부칙 ── */}

@@ -6,6 +6,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { CreditDisplay } from './ui/CreditDisplay';
 import { useCreditStore } from '../store/useCreditStore';
 import StarfallBackground from './StarfallBackground';
+import { Footer } from './Footer';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -197,6 +198,8 @@ export default function Layout({ children }: LayoutProps) {
         {/* Main Content */}
         <main className="relative z-10 flex-1 w-full overflow-y-auto pb-[calc(64px+env(safe-area-inset-bottom,0px))]">
           {children}
+          {/* Footer — 사업자 정보·민원 책임 고지·정책 링크 (KG이니시스 환금성 업종 입점 필수) */}
+          <Footer />
         </main>
 
         {/* Bottom Tab Bar - always visible */}
