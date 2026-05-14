@@ -78,7 +78,7 @@ export function TaekilResultBlock({ record }: Props) {
         <div className="rounded-2xl p-5 mb-3 bg-[rgba(20,12,38,0.55)] border border-[var(--border-subtle)]">
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
             <span style={{ display: 'inline-block', width: 4, height: 20, borderRadius: 2, background: '#34D399' }} />
-            <h2 style={{ margin: 0, fontSize: 17, fontFamily: 'var(--font-serif)' }}>{catLabel} 추천 순위</h2>
+            <h2 style={{ margin: 0, fontSize: 17, fontFamily: 'var(--font-title)' }}>{catLabel} 추천 순위</h2>
           </div>
 
           <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'center', gap: 8, padding: '0 4px' }}>
@@ -156,7 +156,7 @@ export function TaekilResultBlock({ record }: Props) {
       <div className="rounded-2xl p-5 mb-3 bg-[rgba(20,12,38,0.55)] border border-[var(--border-subtle)]">
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
           <span style={{ display: 'inline-block', width: 4, height: 20, borderRadius: 2, background: 'var(--cta-primary)' }} />
-          <h2 style={{ margin: 0, fontSize: 17, fontFamily: 'var(--font-serif)' }}>날짜별 상세 풀이</h2>
+          <h2 style={{ margin: 0, fontSize: 17, fontFamily: 'var(--font-title)' }}>날짜별 상세 풀이</h2>
         </div>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>

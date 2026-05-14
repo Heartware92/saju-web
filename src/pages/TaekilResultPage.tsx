@@ -260,7 +260,7 @@ export default function TaekilResultPage() {
             <div className={styles.section}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
                 <span style={{ display: 'inline-block', width: 4, height: 20, borderRadius: 2, background: '#34D399' }} />
-                <h2 style={{ margin: 0, fontSize: 17, fontFamily: 'var(--font-serif)' }}>
+                <h2 style={{ margin: 0, fontSize: 17, fontFamily: 'var(--font-title)' }}>
                   {catLabel} 추천 순위
                 </h2>
               </div>
@@ -356,7 +356,7 @@ export default function TaekilResultPage() {
           <div className={styles.section}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
               <span style={{ display: 'inline-block', width: 4, height: 20, borderRadius: 2, background: 'var(--cta-primary)' }} />
-              <h2 style={{ margin: 0, fontSize: 17, fontFamily: 'var(--font-serif)' }}>
+              <h2 style={{ margin: 0, fontSize: 17, fontFamily: 'var(--font-title)' }}>
                 날짜별 상세 풀이
               </h2>
             </div>
