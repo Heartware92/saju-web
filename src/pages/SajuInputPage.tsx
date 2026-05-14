@@ -7,6 +7,7 @@ import { CITY_COORDINATES } from '../utils/timeCorrection'
 import { useProfileStore } from '../store/useProfileStore'
 import { useUserStore } from '../store/useUserStore'
 import { BackButton } from '../components/ui/BackButton'
+import { JobLoveStateInput } from '../components/profile/JobLoveStateInput'
 import type { BirthProfile } from '../types/credit'
 import styles from './SajuInputPage.module.css'
 
@@ -78,6 +79,11 @@ export default function SajuInputPage() {
     name: '',
     memo: '',
   })
+  // 직업·연애 상태 (DB DEFAULT 와 동일)
+  const [jobState, setJobState] = useState('직장인')
+  const [customJobState, setCustomJobState] = useState('')
+  const [loveState, setLoveState] = useState('연애 중')
+  const [customLoveState, setCustomLoveState] = useState('')
 
   useEffect(() => {
     if (user) {
@@ -152,6 +158,21 @@ export default function SajuInputPage() {
       setBirthTimeStr('')
       setUnknownTime(true)
     }
+    // 직업·연애 상태 — 직접 입력 값이 있으면 custom 으로 복원, 아니면 칩 값
+    if (profile.custom_job_state && profile.custom_job_state.trim()) {
+      setCustomJobState(profile.custom_job_state)
+      setJobState('')
+    } else {
+      setCustomJobState('')
+      setJobState(profile.job_state || '직장인')
+    }
+    if (profile.custom_love_state && profile.custom_love_state.trim()) {
+      setCustomLoveState(profile.custom_love_state)
+      setLoveState('')
+    } else {
+      setCustomLoveState('')
+      setLoveState(profile.love_state || '연애 중')
+    }
   }
 
   // 프로필 저장
@@ -168,6 +189,9 @@ export default function SajuInputPage() {
 
     const birthLongitude = CITY_COORDINATES[birthPlace]?.lng ?? null;
 
+    const customJobTrim = customJobState.trim()
+    const customLoveTrim = customLoveState.trim()
+
     if (editingProfile) {
       await updateProfile(editingProfile.id, {
         name: profileForm.name.trim(),
@@ -178,6 +202,10 @@ export default function SajuInputPage() {
         gender,
         calendar_type: calendarType,
         memo: profileForm.memo || undefined,
+        job_state: customJobTrim ? '직접 입력' : jobState,
+        custom_job_state: customJobTrim || null,
+        love_state: customLoveTrim ? '직접 입력' : loveState,
+        custom_love_state: customLoveTrim || null,
       })
     } else {
       const created = await addProfile({
@@ -189,6 +217,10 @@ export default function SajuInputPage() {
         gender,
         calendar_type: calendarType,
         is_primary: profiles.length === 0,
+        job_state: customJobTrim ? '직접 입력' : jobState,
+        custom_job_state: customJobTrim || null,
+        love_state: customLoveTrim ? '직접 입력' : loveState,
+        custom_love_state: customLoveTrim || null,
         memo: profileForm.memo || undefined,
       })
       if (created) setSelectedProfileId(created.id)
@@ -197,6 +229,10 @@ export default function SajuInputPage() {
     setShowProfileModal(false)
     setEditingProfile(null)
     setProfileForm({ name: '', memo: '' })
+    setJobState('직장인')
+    setCustomJobState('')
+    setLoveState('연애 중')
+    setCustomLoveState('')
 
     if (isProfileOnly) {
       router.replace(fromPage === 'sangdamso' ? '/sangdamso' : '/saju/profile')
@@ -524,6 +560,19 @@ export default function SajuInputPage() {
             <p className={styles.hint} style={{ marginBottom: 12 }}>
               현재 입력된 생년월일/시간/성별/출생지가 프로필로 저장됩니다
             </p>
+
+            <div className={styles.section} style={{ marginBottom: 12 }}>
+              <JobLoveStateInput
+                jobState={jobState}
+                customJobState={customJobState}
+                loveState={loveState}
+                customLoveState={customLoveState}
+                onJobStateChange={setJobState}
+                onCustomJobStateChange={setCustomJobState}
+                onLoveStateChange={setLoveState}
+                onCustomLoveStateChange={setCustomLoveState}
+              />
+            </div>
 
             {(!dateValidation.ok || !timeValidation.ok) && (
               <p style={{

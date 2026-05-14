@@ -107,6 +107,17 @@ export interface BirthProfile {
   calendar_type: 'solar' | 'lunar';
   is_primary: boolean;
   memo?: string;
+  /**
+   * 직업 상태 — 칩 또는 직접 입력. DB DEFAULT '직장인' 이라 항상 존재하지만
+   * INSERT 시 누락 가능하도록 optional 로 선언 (DB가 보장).
+   */
+  job_state?: string;
+  /** 칩 대신 직접 입력했을 때만 값. 칩 선택 시 NULL */
+  custom_job_state?: string | null;
+  /** 연애 상태 — DB DEFAULT '연애 중' */
+  love_state?: string;
+  /** 칩 대신 직접 입력했을 때만 값 */
+  custom_love_state?: string | null;
   created_at: string;
   updated_at: string;
 }

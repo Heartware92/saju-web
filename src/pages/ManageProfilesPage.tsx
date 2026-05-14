@@ -14,6 +14,7 @@ import { CITY_COORDINATES } from '../utils/timeCorrection';
 import { computeSajuFromProfile } from '../utils/profileSaju';
 import { getCharacterFromStem } from '../lib/character';
 import type { BirthProfile } from '../types/credit';
+import { JobLoveStateInput } from '../components/profile/JobLoveStateInput';
 import { BackButton } from '../components/ui/BackButton';
 
 function preloadCharacterImage(profile: BirthProfile) {
@@ -50,6 +51,10 @@ export default function ManageProfilesPage() {
     calendar_type: 'solar' | 'lunar';
     birth_place: string;
     memo: string;
+    jobState: string;
+    customJobState: string;
+    loveState: string;
+    customLoveState: string;
   } | null>(null);
 
   const currentYear = new Date().getFullYear();
@@ -123,6 +128,8 @@ export default function ManageProfilesPage() {
     setEditing(p);
     const dateStr = p.birth_date.replace(/-/g, '');
     const timeStr = p.birth_time ? p.birth_time.replace(':', '') : '';
+    const hasCustomJob = !!(p.custom_job_state && p.custom_job_state.trim());
+    const hasCustomLove = !!(p.custom_love_state && p.custom_love_state.trim());
     setEditForm({
       name: p.name,
       birthDateStr: dateStr,
@@ -132,6 +139,10 @@ export default function ManageProfilesPage() {
       calendar_type: p.calendar_type ?? 'solar',
       birth_place: p.birth_place || 'seoul',
       memo: p.memo ?? '',
+      jobState: hasCustomJob ? '' : (p.job_state || '직장인'),
+      customJobState: hasCustomJob ? p.custom_job_state! : '',
+      loveState: hasCustomLove ? '' : (p.love_state || '연애 중'),
+      customLoveState: hasCustomLove ? p.custom_love_state! : '',
     });
   };
 
@@ -146,6 +157,8 @@ export default function ManageProfilesPage() {
       : `${editForm.birthTimeStr.slice(0, 2)}:${editForm.birthTimeStr.slice(2, 4)}`;
 
     const longitude = CITY_COORDINATES[editForm.birth_place]?.lng ?? null;
+    const customJobTrim = editForm.customJobState.trim();
+    const customLoveTrim = editForm.customLoveState.trim();
     const ok = await updateProfile(editing.id, {
       name: editForm.name.trim(),
       birth_date: birthDate,
@@ -155,6 +168,10 @@ export default function ManageProfilesPage() {
       birth_place: editForm.birth_place,
       longitude,
       memo: editForm.memo.trim() || undefined,
+      job_state: customJobTrim ? '직접 입력' : editForm.jobState,
+      custom_job_state: customJobTrim || null,
+      love_state: customLoveTrim ? '직접 입력' : editForm.loveState,
+      custom_love_state: customLoveTrim || null,
     });
     if (ok) {
       setEditing(null);
@@ -441,6 +458,17 @@ export default function ManageProfilesPage() {
                     className="w-full px-3 py-2 rounded-lg bg-[rgba(255,255,255,0.04)] border border-[var(--border-subtle)] text-sm text-text-primary focus:border-cta/50 outline-none"
                   />
                 </div>
+
+                <JobLoveStateInput
+                  jobState={editForm.jobState}
+                  customJobState={editForm.customJobState}
+                  loveState={editForm.loveState}
+                  customLoveState={editForm.customLoveState}
+                  onJobStateChange={(v) => setEditForm({ ...editForm, jobState: v })}
+                  onCustomJobStateChange={(v) => setEditForm({ ...editForm, customJobState: v })}
+                  onLoveStateChange={(v) => setEditForm({ ...editForm, loveState: v })}
+                  onCustomLoveStateChange={(v) => setEditForm({ ...editForm, customLoveState: v })}
+                />
               </div>
 
               <div className="flex gap-2 mt-5">

@@ -235,31 +235,30 @@ function FlowChart({ flow, currentSlot }: { flow: Record<TodayTimeSlot, number>;
 
 function InputForm({
   initialSlot,
+  profileJobState,
+  profileCustomJobState,
+  profileLoveState,
+  profileCustomLoveState,
   onSubmit,
 }: {
   initialSlot: TodayTimeSlot;
+  /** 프로필에 저장된 직업·연애 상태 — 매번 선택할 필요 없이 자동 사용 */
+  profileJobState: string;
+  profileCustomJobState: string | null;
+  profileLoveState: string;
+  profileCustomLoveState: string | null;
   onSubmit: (ctx: TodayUserContext) => void;
 }) {
   const [hobbies, setHobbies] = useState<TodayHobby[]>([]);
   const [customHobby, setCustomHobby] = useState('');
-  // "직접 입력" 칩 토글 — 클릭 시 input 노출 (취미·직업·연애 통일 UX)
   const [hobbyCustomOpen, setHobbyCustomOpen] = useState(false);
-  const [jobCustomOpen, setJobCustomOpen] = useState(false);
-  const [loveCustomOpen, setLoveCustomOpen] = useState(false);
-  const [jobState, setJobState] = useState<TodayJobState | null>(null);
-  const [customJobState, setCustomJobState] = useState('');
-  const [loveState, setLoveState] = useState<TodayLoveState | null>(null);
-  const [customLoveState, setCustomLoveState] = useState('');
 
-  // Progressive disclosure — 각 섹션 완료 시 다음 섹션 노출
+  // 직업·연애 상태는 프로필에서 받아 props 로 주입 — 폼 내부 state 제거
+  const effectiveJobState = (profileCustomJobState && profileCustomJobState.trim()) || profileJobState || '직장인';
+  const effectiveLoveState = (profileCustomLoveState && profileCustomLoveState.trim()) || profileLoveState || '연애 중';
+
+  // Progressive disclosure — 취미만 단계 의미. 직업·연애는 프로필 데이터라 자동 done
   const hobbyDone = hobbies.length > 0 || customHobby.trim().length > 0;
-  // job/love 는 칩 선택 OR "직접 입력" 칩 ON + 텍스트 입력 시 done
-  const jobDone =
-    jobState !== null ||
-    (jobCustomOpen && customJobState.trim().length > 0);
-  const loveDone =
-    loveState !== null ||
-    (loveCustomOpen && customLoveState.trim().length > 0);
   const [q1Answer, setQ1Answer] = useState('');
   const [q2Answer, setQ2Answer] = useState('');
   // '직접 입력'을 골랐을 때만 노출되는 보조 입력값
@@ -269,14 +268,10 @@ function InputForm({
   const [[q1, q2]] = useState(() => pickTwoQuestions(initialSlot));
   const slotLabel = TODAY_TIME_SLOT_LABELS[initialSlot];
 
-  // 진행형 노출 — 새 섹션이 열릴 때 화면이 따라 내려가도록 ref + scrollIntoView
-  const jobSectionRef = useRef<HTMLDivElement | null>(null);
-  const loveSectionRef = useRef<HTMLDivElement | null>(null);
+  // 진행형 노출 — 취미 → 질문 시간대 단계
   const timeSectionRef = useRef<HTMLDivElement | null>(null);
   const submitButtonRef = useRef<HTMLButtonElement | null>(null);
   const prevHobbyDone = useRef(false);
-  const prevJobDone = useRef(false);
-  const prevLoveDone = useRef(false);
 
   const scrollIntoCenter = (el: HTMLElement | null) => {
     if (!el) return;
@@ -287,24 +282,11 @@ function InputForm({
   };
 
   useEffect(() => {
-    if (hobbyDone && !prevHobbyDone.current) scrollIntoCenter(jobSectionRef.current);
+    if (hobbyDone && !prevHobbyDone.current) scrollIntoCenter(timeSectionRef.current);
     prevHobbyDone.current = hobbyDone;
   }, [hobbyDone]);
 
-  useEffect(() => {
-    if (jobDone && !prevJobDone.current) scrollIntoCenter(loveSectionRef.current);
-    prevJobDone.current = jobDone;
-  }, [jobDone]);
-
-  useEffect(() => {
-    if (loveDone && !prevLoveDone.current) scrollIntoCenter(timeSectionRef.current);
-    prevLoveDone.current = loveDone;
-  }, [loveDone]);
-
-  const canSubmit =
-    (hobbies.length > 0 || customHobby.trim().length > 0) &&
-    (jobState !== null || customJobState.trim().length > 0) &&
-    (loveState !== null || customLoveState.trim().length > 0);
+  const canSubmit = hobbies.length > 0 || customHobby.trim().length > 0;
 
   const toggleHobby = (h: TodayHobby) => {
     setHobbies((prev) => (prev.includes(h) ? prev.filter((x) => x !== h) : [...prev, h]));
@@ -318,12 +300,11 @@ function InputForm({
     onSubmit({
       hobbies,
       customHobby: customHobby.trim() || undefined,
-      // 칩 미선택 + 직접 입력만 한 경우 chip 기본값으로 fallback.
-      // 프롬프트 헤더·인용은 customJobState/customLoveState 가 있으면 그 값을 우선 사용.
-      jobState: jobState ?? '직장인',
-      customJobState: customJobState.trim() || undefined,
-      loveState: loveState ?? '공개 안 함',
-      customLoveState: customLoveState.trim() || undefined,
+      // 프로필에 저장된 직업·연애 상태를 사용. 사용자가 매번 선택할 필요 없음.
+      jobState: (profileJobState || '직장인') as TodayJobState,
+      customJobState: (profileCustomJobState && profileCustomJobState.trim()) || undefined,
+      loveState: (profileLoveState || '연애 중') as TodayLoveState,
+      customLoveState: (profileCustomLoveState && profileCustomLoveState.trim()) || undefined,
       timeSlot: initialSlot,
       q1Text: q1.q,
       q2Text: q2.q,
@@ -395,122 +376,20 @@ function InputForm({
         )}
       </div>
 
-      {/* 2. 직업 상태 — 1단계 완료 시 등장 */}
+      {/* 직업·연애 상태는 프로필 데이터에서 자동 사용 (effectiveJobState/effectiveLoveState).
+          프로필 등록·수정 화면에서 변경 가능. 사용자에게 작은 안내. */}
       {hobbyDone && (
-      <motion.div
-        ref={jobSectionRef}
-        initial={{ opacity: 0, y: 12 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.4, ease: 'easeOut' }}
-        className="rounded-2xl p-5 bg-[rgba(20,12,38,0.55)] border border-[var(--border-subtle)]">
-        <div className="flex items-center gap-2 mb-3">
-          <span className="inline-block w-1 h-5 rounded-full bg-cta" />
-          <h3 className="text-[16px] font-bold text-text-primary" style={{ fontFamily: 'var(--font-serif)' }}>
-            직업 상태
-          </h3>
+        <div className="rounded-xl px-4 py-3 bg-[rgba(20,12,38,0.4)] border border-[var(--border-subtle)] text-[13px] text-text-tertiary leading-relaxed">
+          프로필 정보 기준 — 직업 <span className="text-text-secondary font-semibold">{effectiveJobState}</span>
+          {' · '}
+          연애 <span className="text-text-secondary font-semibold">{effectiveLoveState}</span>
+          <br />
+          <span className="text-[12px] opacity-80">바꾸려면 프로필 관리에서 수정해주세요</span>
         </div>
-        <div className="flex flex-wrap gap-2">
-          {TODAY_JOB_STATES.map((s) => {
-            const on = jobState === s;
-            return (
-              <button
-                key={s}
-                onClick={() => { setJobState(on ? null : s); setJobCustomOpen(false); }}
-                className="px-3.5 py-2 rounded-full text-[13px] font-medium"
-                style={{
-                  border: on ? '1.5px solid var(--cta-primary)' : '1px solid rgba(255,255,255,0.18)',
-                  background: on ? 'rgba(139,92,246,0.20)' : 'rgba(255,255,255,0.04)',
-                  color: on ? '#E9D5FF' : 'var(--text-primary)',
-                }}
-              >
-                {s}
-              </button>
-            );
-          })}
-          <button
-            onClick={() => { setJobCustomOpen((o) => !o); if (!jobCustomOpen) setJobState(null); }}
-            className="px-3.5 py-2 rounded-full text-[13px] font-medium"
-            style={{
-              border: jobCustomOpen ? '1.5px solid var(--cta-primary)' : '1px solid rgba(255,255,255,0.18)',
-              background: jobCustomOpen ? 'rgba(139,92,246,0.20)' : 'rgba(255,255,255,0.04)',
-              color: jobCustomOpen ? '#E9D5FF' : 'var(--text-tertiary)',
-            }}
-          >
-            직접 입력
-          </button>
-        </div>
-        {jobCustomOpen && (
-          <input
-            type="text"
-            value={customJobState}
-            onChange={(e) => setCustomJobState(e.target.value.slice(0, 10))}
-            maxLength={10}
-            placeholder="10자 이내로 적어주세요"
-            className="mt-3 w-full px-3 py-2.5 rounded-lg bg-[rgba(255,255,255,0.04)] border border-[rgba(255,255,255,0.12)] text-[14px] text-text-primary placeholder-text-tertiary"
-          />
-        )}
-      </motion.div>
       )}
 
-      {/* 3. 연애 상태 — 2단계 완료 시 등장 */}
-      {hobbyDone && jobDone && (
-      <motion.div
-        ref={loveSectionRef}
-        initial={{ opacity: 0, y: 12 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.4, ease: 'easeOut' }}
-        className="rounded-2xl p-5 bg-[rgba(20,12,38,0.55)] border border-[var(--border-subtle)]">
-        <div className="flex items-center gap-2 mb-3">
-          <span className="inline-block w-1 h-5 rounded-full bg-cta" />
-          <h3 className="text-[16px] font-bold text-text-primary" style={{ fontFamily: 'var(--font-serif)' }}>
-            연애 상태
-          </h3>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          {TODAY_LOVE_STATES.map((s) => {
-            const on = loveState === s;
-            return (
-              <button
-                key={s}
-                onClick={() => { setLoveState(on ? null : s); setLoveCustomOpen(false); }}
-                className="px-3.5 py-2 rounded-full text-[13px] font-medium"
-                style={{
-                  border: on ? '1.5px solid var(--cta-primary)' : '1px solid rgba(255,255,255,0.18)',
-                  background: on ? 'rgba(139,92,246,0.20)' : 'rgba(255,255,255,0.04)',
-                  color: on ? '#E9D5FF' : 'var(--text-primary)',
-                }}
-              >
-                {s}
-              </button>
-            );
-          })}
-          <button
-            onClick={() => { setLoveCustomOpen((o) => !o); if (!loveCustomOpen) setLoveState(null); }}
-            className="px-3.5 py-2 rounded-full text-[13px] font-medium"
-            style={{
-              border: loveCustomOpen ? '1.5px solid var(--cta-primary)' : '1px solid rgba(255,255,255,0.18)',
-              background: loveCustomOpen ? 'rgba(139,92,246,0.20)' : 'rgba(255,255,255,0.04)',
-              color: loveCustomOpen ? '#E9D5FF' : 'var(--text-tertiary)',
-            }}
-          >
-            직접 입력
-          </button>
-        </div>
-        {loveCustomOpen && (
-          <input
-            type="text"
-            value={customLoveState}
-            onChange={(e) => setCustomLoveState(e.target.value.slice(0, 10))}
-            maxLength={10}
-            placeholder="10자 이내로 적어주세요"
-            className="mt-3 w-full px-3 py-2.5 rounded-lg bg-[rgba(255,255,255,0.04)] border border-[rgba(255,255,255,0.12)] text-[14px] text-text-primary placeholder-text-tertiary"
-          />
-        )}
-      </motion.div>
-      )}
-
-      {/* 4. 지금 상태 — 3단계 완료 시 등장 */}
-      {hobbyDone && jobDone && loveDone && (
+      {/* 2. 지금 상태 — 취미 완료 시 등장 */}
+      {hobbyDone && (
       <motion.div
         ref={timeSectionRef}
         initial={{ opacity: 0, y: 12 }}
@@ -883,7 +762,14 @@ export default function TodayFortunePage() {
           </div>
           <div className="w-9" />
         </div>
-        <InputForm initialSlot={initialSlot} onSubmit={handleSubmitForm} />
+        <InputForm
+          initialSlot={initialSlot}
+          profileJobState={targetProfile?.job_state || '직장인'}
+          profileCustomJobState={targetProfile?.custom_job_state ?? null}
+          profileLoveState={targetProfile?.love_state || '연애 중'}
+          profileCustomLoveState={targetProfile?.custom_love_state ?? null}
+          onSubmit={handleSubmitForm}
+        />
         <RestoreReportModal
           open={!!cacheGate}
           title="실시간 운세"
