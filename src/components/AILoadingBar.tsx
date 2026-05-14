@@ -161,7 +161,7 @@ export function AILoadingBar({
         transition={{ duration: 1, delay: 0.2, ease: [0.16, 1, 0.3, 1] }}
         className="mt-6"
       >
-        <SpinningEarth size={220} />
+        <SpinningEarth size={380} />
       </motion.div>
     </div>
   );

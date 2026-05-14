@@ -91,12 +91,12 @@ export function SpinningEarth({ size = 320, className = '' }: SpinningEarthProps
           />
         ))}
 
-        {/* 가로 궤도 가이드 — 30도 기울어진 타원 (ry/rx ≈ 0.4) */}
+        {/* 가로 궤도 가이드 — 45도 기울어진 타원 (ry/rx ≈ 0.7) + 폭 확장 */}
         <g opacity="0.16">
-          <ellipse cx="50" cy="50" rx="18" ry="7" fill="none" stroke="#fcd5b4" strokeWidth="0.3" strokeDasharray="1 2" />
-          <ellipse cx="50" cy="50" rx="28" ry="11" fill="none" stroke="#fcd5b4" strokeWidth="0.3" strokeDasharray="1 2" />
-          <ellipse cx="50" cy="50" rx="38" ry="15" fill="none" stroke="#fcd5b4" strokeWidth="0.3" strokeDasharray="1 2" />
-          <ellipse cx="50" cy="50" rx="46" ry="18" fill="none" stroke="#fcd5b4" strokeWidth="0.3" strokeDasharray="1 2" />
+          <ellipse cx="50" cy="50" rx="22" ry="15" fill="none" stroke="#fcd5b4" strokeWidth="0.3" strokeDasharray="1 2" />
+          <ellipse cx="50" cy="50" rx="34" ry="24" fill="none" stroke="#fcd5b4" strokeWidth="0.3" strokeDasharray="1 2" />
+          <ellipse cx="50" cy="50" rx="44" ry="31" fill="none" stroke="#fcd5b4" strokeWidth="0.3" strokeDasharray="1 2" />
+          <ellipse cx="50" cy="50" rx="52" ry="36" fill="none" stroke="#fcd5b4" strokeWidth="0.3" strokeDasharray="1 2" />
         </g>
 
         {/* 태양 코로나 글로우 */}
@@ -204,40 +204,40 @@ export function SpinningEarth({ size = 320, className = '' }: SpinningEarthProps
            오른쪽(보통) → 뒤(작음·흐림) → 왼쪽(보통) → 앞(큼·진함) → 오른쪽
            translate 값은 viewBox 100x100 기준 px */
 
-        /* 30도 기울어진 시점 — ry/rx ≈ 0.4, 사이즈 확장 */
+        /* 45도 기울어진 시점 — ry/rx ≈ 0.7, 폭 확장 */
         @keyframes orbit-side-1 {
-          0%   { transform: translate(18px, 0px) scale(1); opacity: 1; }
-          25%  { transform: translate(0px, -7px) scale(0.55); opacity: 0.55; }
-          50%  { transform: translate(-18px, 0px) scale(1); opacity: 1; }
-          75%  { transform: translate(0px, 7px) scale(1.3); opacity: 1; }
-          100% { transform: translate(18px, 0px) scale(1); opacity: 1; }
+          0%   { transform: translate(22px, 0px) scale(1); opacity: 1; }
+          25%  { transform: translate(0px, -15px) scale(0.55); opacity: 0.55; }
+          50%  { transform: translate(-22px, 0px) scale(1); opacity: 1; }
+          75%  { transform: translate(0px, 15px) scale(1.3); opacity: 1; }
+          100% { transform: translate(22px, 0px) scale(1); opacity: 1; }
         }
         @keyframes orbit-side-2 {
-          0%   { transform: translate(28px, 0px) scale(1); opacity: 1; }
-          25%  { transform: translate(0px, -11px) scale(0.55); opacity: 0.55; }
-          50%  { transform: translate(-28px, 0px) scale(1); opacity: 1; }
-          75%  { transform: translate(0px, 11px) scale(1.3); opacity: 1; }
-          100% { transform: translate(28px, 0px) scale(1); opacity: 1; }
+          0%   { transform: translate(34px, 0px) scale(1); opacity: 1; }
+          25%  { transform: translate(0px, -24px) scale(0.55); opacity: 0.55; }
+          50%  { transform: translate(-34px, 0px) scale(1); opacity: 1; }
+          75%  { transform: translate(0px, 24px) scale(1.3); opacity: 1; }
+          100% { transform: translate(34px, 0px) scale(1); opacity: 1; }
         }
         @keyframes orbit-side-3 {
-          0%   { transform: translate(38px, 0px) scale(1); opacity: 1; }
-          25%  { transform: translate(0px, -15px) scale(0.55); opacity: 0.55; }
-          50%  { transform: translate(-38px, 0px) scale(1); opacity: 1; }
-          75%  { transform: translate(0px, 15px) scale(1.3); opacity: 1; }
-          100% { transform: translate(38px, 0px) scale(1); opacity: 1; }
+          0%   { transform: translate(44px, 0px) scale(1); opacity: 1; }
+          25%  { transform: translate(0px, -31px) scale(0.55); opacity: 0.55; }
+          50%  { transform: translate(-44px, 0px) scale(1); opacity: 1; }
+          75%  { transform: translate(0px, 31px) scale(1.3); opacity: 1; }
+          100% { transform: translate(44px, 0px) scale(1); opacity: 1; }
         }
         @keyframes orbit-side-4 {
-          0%   { transform: translate(46px, 0px) scale(1); opacity: 1; }
-          25%  { transform: translate(0px, -18px) scale(0.55); opacity: 0.55; }
-          50%  { transform: translate(-46px, 0px) scale(1); opacity: 1; }
-          75%  { transform: translate(0px, 18px) scale(1.3); opacity: 1; }
-          100% { transform: translate(46px, 0px) scale(1); opacity: 1; }
+          0%   { transform: translate(52px, 0px) scale(1); opacity: 1; }
+          25%  { transform: translate(0px, -36px) scale(0.55); opacity: 0.55; }
+          50%  { transform: translate(-52px, 0px) scale(1); opacity: 1; }
+          75%  { transform: translate(0px, 36px) scale(1.3); opacity: 1; }
+          100% { transform: translate(52px, 0px) scale(1); opacity: 1; }
         }
         @keyframes moon-orbit-side {
           0%   { transform: translate(0px, 0px) scale(1); }
-          25%  { transform: translate(0px, -2px) scale(0.5); opacity: 0.5; }
+          25%  { transform: translate(0px, -4px) scale(0.5); opacity: 0.5; }
           50%  { transform: translate(0px, 0px) scale(1); opacity: 1; }
-          75%  { transform: translate(0px, 2px) scale(1.25); }
+          75%  { transform: translate(0px, 4px) scale(1.25); }
           100% { transform: translate(0px, 0px) scale(1); }
         }
 
