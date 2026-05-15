@@ -6,17 +6,12 @@ import { SajuResult } from '../utils/sajuCalculator';
 import { archiveSaju, archiveTarot } from './archiveService';
 import {
   SYSTEM_PROMPT,
-  generateBasicPrompt,
-  generateDetailedPrompt,
   generateTodayFortuneV3Prompt,
   TODAY_V3_SECTION_KEYS,
   type TodayV3SectionKey,
   type TodayV3DomainKey,
   type TodayUserContext,
   type TodayTimeSlot,
-  generateTarotPrompt,
-  generateTodayTarotPrompt,
-  generateMonthlyTarotPrompt,
   generateHybridPrompt,
   // [B안] generateLoveFortunePrompt / generateWealthFortunePrompt — 호출처 함수 비활성. 복원 시 같이 풀기.
   // generateLoveFortunePrompt, generateWealthFortunePrompt,
@@ -243,23 +238,6 @@ const callGPT = async (
 };
 
 /**
- * 무료 기본 해석 (0엽전)
- * - 만세력 확인 + 간단한 종합 운세
- */
-export const getBasicInterpretation = async (
-  result: SajuResult
-): Promise<FortuneResponse> => {
-  try {
-    const prompt = generateBasicPrompt(result);
-    const content = await callGPT(prompt, 1500);
-
-    return { success: true, content };
-  } catch (error: any) {
-    return { success: false, error: error.message };
-  }
-};
-
-/**
  * SajuResult → archiveSaju 의 sourceBirth 형태로 변환.
  * 보관함 저장 시 birth_profiles 와 자동 매칭(profile_id, profile_name 채움)에 사용.
  *
@@ -273,25 +251,6 @@ const sourceBirthFromSaju = (result: SajuResult) => ({
   gender: result.gender,
   calendar_type: 'solar' as const,
 });
-
-/**
- * 상세 해석 (무료 공개)
- * - 대운/세운 + 신살 + 종합 상세 분석
- */
-export const getDetailedInterpretation = async (
-  result: SajuResult,
-  profileId?: string,
-): Promise<FortuneResponse> => {
-  try {
-    const prompt = generateDetailedPrompt(result);
-    // 2800~3500자 본문 → 넉넉히 5500 토큰
-    const content = await callGPT(prompt, 5500);
-    archiveSaju({ profileId, sourceBirth: sourceBirthFromSaju(result), category: 'traditional', resultData: result as unknown as Record<string, unknown>, interpretation: content, creditType: 'sun', isDetailed: true });
-    return { success: true, content };
-  } catch (error: any) {
-    return { success: false, error: error.message };
-  }
-};
 
 /**
  * [B안 — 호출처 없음 + 카테고리 비활성으로 동시 정리]
@@ -327,61 +286,6 @@ export const getDetailedInterpretation = async (
 //     return { success: false, error: error.message };
 //   }
 // };
-
-/**
- * 오늘의 타로 (전체 무료) — 하루 1장 고정
- * card는 UI에서 날짜 시드로 뽑아 전달.
- */
-export const getTodayTarotReading = async (
-  card: TarotCardInfo,
-  dateStr: string
-): Promise<FortuneResponse> => {
-  try {
-    const prompt = generateTodayTarotPrompt(card, dateStr);
-    // 본문 1,000~1,300자 — 3,000 안전치
-    const content = await callGPT(prompt, 3000);
-    archiveTarot({ spreadType: 'today', cards: { card, dateStr } as unknown as Record<string, unknown>, interpretation: content });
-    return { success: true, content };
-  } catch (error: any) {
-    return { success: false, error: error.message };
-  }
-};
-
-/**
- * 이달의 타로 (전체 무료) — 3장 스프레드 (상/중/하순)
- */
-export const getMonthlyTarotReading = async (
-  cards: { early: TarotCardInfo; middle: TarotCardInfo; late: TarotCardInfo },
-  monthStr: string
-): Promise<FortuneResponse> => {
-  try {
-    const prompt = generateMonthlyTarotPrompt(cards, monthStr);
-    // 본문 1,800~2,200자 — 5,000 안전치
-    const content = await callGPT(prompt, 5000);
-    archiveTarot({ spreadType: 'monthly-3card', cards: { ...cards, monthStr } as unknown as Record<string, unknown>, interpretation: content });
-    return { success: true, content };
-  } catch (error: any) {
-    return { success: false, error: error.message };
-  }
-};
-
-/**
- * 타로 단독 해석 (전체 무료)
- */
-export const getTarotReading = async (
-  card: TarotCardInfo,
-  question?: string
-): Promise<FortuneResponse> => {
-  try {
-    const prompt = generateTarotPrompt(card, question);
-    // 본문 750~950자 — 2,500 안전치
-    const content = await callGPT(prompt, 2500);
-    archiveTarot({ spreadType: 'single', cards: { card } as unknown as Record<string, unknown>, question, interpretation: content });
-    return { success: true, content };
-  } catch (error: any) {
-    return { success: false, error: error.message };
-  }
-};
 
 /**
  * 토정비결 AI 결과 (2-pass, 섹션 파싱 + 도메인 점수)

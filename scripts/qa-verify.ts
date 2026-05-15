@@ -11,13 +11,7 @@
  */
 
 import { drawOne, drawMany, getTodayKey, getMonthKey } from '../src/utils/tarotSeed';
-import {
-  generateTodayTarotPrompt,
-  generateMonthlyTarotPrompt,
-  generateTarotPrompt,
-} from '../src/constants/prompts';
 import { CREDIT_COST } from '../src/constants/pricing';
-import type { TarotCardInfo } from '../src/services/api';
 import { calculateSaju } from '../src/utils/sajuCalculator';
 
 type Result = { name: string; pass: boolean; detail?: string };
@@ -96,83 +90,8 @@ const record = (name: string, pass: boolean, detail?: string) =>
   );
 }
 
-// ────────────────────────────────────────────────
-// 3) 프롬프트 출력 스키마 sanity
-// ────────────────────────────────────────────────
-const sampleCard: TarotCardInfo = {
-  name: 'The Star',
-  nameKr: '별',
-  element: 'Air',
-  isReversed: false,
-  keywords: ['희망', '영감', '치유'],
-  meaning: '희망, 영감, 치유',
-};
-const sampleCardRev: TarotCardInfo = { ...sampleCard, isReversed: true };
-
-{
-  const p = generateTodayTarotPrompt(sampleCard, '2026년 4월 14일');
-  const headers = ['### 오늘의 카드 한 줄', '### 오늘 잘 풀리는 영역', '### 오늘 주의할 함정', '### 관계·소통 포인트', '### 하루를 빛낼 작은 의식'];
-  const missing = headers.filter(h => !p.includes(h));
-  record(
-    '[prompt] 오늘의 타로 — 5개 섹션 헤더 포함',
-    missing.length === 0,
-    missing.length ? `missing: ${missing.join(', ')}` : `length=${p.length}`
-  );
-  record(
-    '[prompt] 오늘의 타로 — "이모지 금지" 규칙 명시',
-    p.includes('이모지 금지'),
-  );
-  record(
-    '[prompt] 오늘의 타로 — 카드 방향 주입 (정방향)',
-    p.includes('정방향'),
-  );
-}
-
-{
-  const p = generateMonthlyTarotPrompt(
-    { early: sampleCard, middle: sampleCardRev, late: sampleCard },
-    '2026년 4월'
-  );
-  const headers = [
-    '### 이달의 전체 테마',
-    '### 상순(1~10일)',
-    '### 중순(11~20일)',
-    '### 하순(21~말일)',
-    '### 이달의 주력 과제',
-    '### 피해야 할 함정',
-    '### 이달의 실천 의식',
-  ];
-  const missing = headers.filter(h => !p.includes(h));
-  record(
-    '[prompt] 이달의 타로 — 7개 섹션 헤더 포함',
-    missing.length === 0,
-    missing.length ? `missing: ${missing.join(', ')}` : `length=${p.length}`
-  );
-  // 3장 순차 스토리 규칙
-  record(
-    '[prompt] 이달의 타로 — 순차 스토리 규칙 명시',
-    p.includes('순차') || p.includes('상순이 이래서') ,
-  );
-  record(
-    '[prompt] 이달의 타로 — 정/역 방향 주입 (상순 정 + 중순 역 + 하순 정)',
-    p.includes('상순(1~10일): 별') && p.includes('정방향') && p.includes('역방향'),
-  );
-}
-
-{
-  const p = generateTarotPrompt(sampleCard, '이직을 해도 될까요?');
-  const headers = ['### 카드의 현재 메시지', '### 질문에 대한 해석', '### 행동 조언', '### 주의점'];
-  const missing = headers.filter(h => !p.includes(h));
-  record(
-    '[prompt] 질문 타로 — 4개 섹션 헤더 포함',
-    missing.length === 0,
-    missing.length ? `missing: ${missing.join(', ')}` : `length=${p.length}`
-  );
-  record(
-    '[prompt] 질문 타로 — 질문 주입',
-    p.includes('이직을 해도 될까요?'),
-  );
-}
+// [REMOVED] 옛 단독 타로 프롬프트(today/monthly/question) 테스트 + sampleCard 픽스처는 dead 코드 제거와 함께 삭제.
+// 현재는 모든 타로 모드가 generateHybridPrompt 로 통합되어 있어 prompts/service 직접 검증 불필요.
 
 // ────────────────────────────────────────────────
 // 4) pricing 정합성 (신규 엔트리)
