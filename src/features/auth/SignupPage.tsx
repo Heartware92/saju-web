@@ -228,6 +228,7 @@ export const SignupPage: React.FC = () => {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   className={inputClass}
+                  autoComplete="email"
                   required
                 />
               </div>
@@ -305,6 +306,7 @@ export const SignupPage: React.FC = () => {
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     className={`${inputClass} pr-12`}
+                    autoComplete="new-password"
                     required
                   />
                   <button
@@ -355,6 +357,7 @@ export const SignupPage: React.FC = () => {
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
                     className={`${inputClass} pr-12`}
+                    autoComplete="new-password"
                     required
                   />
                   <button
