@@ -72,13 +72,17 @@ export const YeopjeonPackage: React.FC<PackageCardProps> = ({
 };
 
 export const PackageComparison: React.FC = () => {
+  // 실제 차감 정책과 동일 — src/constants/creditCosts.ts 의 SUN_COST_BIG/MOON_COST_MORE/MOON_COST_TAROT 기준
   const items = [
     { name: '만세력 확인 + 기본 해석', cost: '무료', type: 'free' },
-    { name: '실시간 운세', cost: '🌙 1', type: 'moon' },
-    { name: '타로 리딩', cost: '🌙 1', type: 'moon' },
-    { name: '사주 상세 해석', cost: '☀️ 2', type: 'sun' },
-    { name: '애정운 / 재물운 특화', cost: '☀️ 2', type: 'sun' },
-    { name: '사주 × 타로 하이브리드', cost: '☀️ 3', type: 'sun' },
+    { name: '정통사주 (12섹션 풀이)', cost: '☀️ 1', type: 'sun' },
+    { name: '신년운세 / 평생·시기 운세 / 지정일 운세', cost: '☀️ 1', type: 'sun' },
+    { name: '실시간 운세', cost: '☀️ 1', type: 'sun' },
+    { name: '궁합', cost: '☀️ 1', type: 'sun' },
+    { name: '토정비결 · 자미두수 · 택일', cost: '☀️ 1', type: 'sun' },
+    { name: '더 많은 운세 10종', cost: '🌙 1', type: 'moon' },
+    { name: '타로 리딩 (단독·사주 하이브리드)', cost: '🌙 1', type: 'moon' },
+    { name: '상담소 질문팩 (3질문)', cost: '☀️ 1 또는 🌙 3', type: 'sun' },
   ];
 
   return (
