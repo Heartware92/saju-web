@@ -196,7 +196,7 @@ const UsageGuide: React.FC = () => {
     { name: '실시간 운세', cost: '☀️ 1', icon: '' },
     { name: '궁합', cost: '☀️ 1', icon: '' },
     { name: '토정비결 · 자미두수 · 택일', cost: '☀️ 1', icon: '' },
-    { name: '더 많은 운세 10종 (애정·재물·직업·건강·학업·귀인·자녀·성격·이름·꿈)', cost: '🌙 1', icon: '' },
+    { name: '더 많은 운세 10종', cost: '🌙 1', icon: '' },
     { name: '타로 리딩 (단독·사주 하이브리드)', cost: '🌙 1', icon: '' },
     { name: '상담소 질문팩 (3질문 묶음)', cost: '☀️ 1 또는 🌙 3', icon: '' },
   ];
