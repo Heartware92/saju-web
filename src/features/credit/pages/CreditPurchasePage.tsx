@@ -75,7 +75,7 @@ export const CreditPurchasePage: React.FC = () => {
             <strong className="text-text-primary">크레딧 사용 기한 안내</strong>
           </p>
           <ul className="mt-1.5 space-y-1 list-disc pl-4 text-text-tertiary">
-            <li>구매하신 크레딧은 <strong className="text-text-secondary">구매일로부터 3개월 이내</strong>에 사용해 주세요.</li>
+            <li>구매하신 크레딧은 <strong className="text-text-secondary">결제일로부터 1년 이내</strong>에 사용해 주세요.</li>
             <li>유효 기간 경과 시 미사용 크레딧은 <strong className="text-text-secondary">자동 소멸</strong>됩니다.</li>
             <li>환불은 <strong className="text-text-secondary">결제 수단(신용카드)으로만</strong> 가능하며, 미사용 상태에서 결제일로부터 7일 이내 청약철회 신청 가능합니다.</li>
             <li>자세한 내용은 <a href="/terms" className="underline text-cta hover:text-cta-active">이용약관 제14조·제16조</a>를 참고해 주세요.</li>
@@ -185,7 +185,7 @@ const FAQ: React.FC = () => {
     },
     {
       q: '달 크레딧에 유효기간이 있나요?',
-      a: '구매하신 크레딧의 유효기간은 구매일로부터 3개월이며, 기간 경과 시 미사용 크레딧은 자동 소멸됩니다. 자세한 내용은 이용약관 제14조 및 제16조를 참고해주세요.',
+      a: '구매하신 크레딧의 유효기간은 결제일로부터 1년이며, 유효기간은 각 결제 건마다 별도로 적용됩니다. 기간 경과 시 미사용 크레딧은 자동 소멸됩니다. 자세한 내용은 이용약관 제14조 및 제16조를 참고해주세요.',
     },
     {
       q: '어떤 결제 방법을 지원하나요?',
