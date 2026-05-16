@@ -51,7 +51,7 @@ export const CREDIT_PACKAGES: readonly CreditPackage[] = [
     icon: '',
     price: 3900,
     moonCredit: 22,
-    description: '본격 2번 + 자투리 — 단품 2개보다 이득',
+    description: '본격 풀이 2번 — 한 번 더 풍성하게',
     features: ['🌙 22개 (보너스 11%)', '본격 운세 2번 + 가벼운 자투리'],
   },
   {
