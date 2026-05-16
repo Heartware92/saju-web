@@ -152,11 +152,11 @@ export const useReportCacheStore = create<ReportCacheState>()(
     }),
     {
       name: 'report-cache',
-      // version bump 2: 이전 RLS silent-fail 시절에 markCharged 만 true 되고 실제
-      // 차감은 안 된 사용자들이 다수. localStorage 캐시가 새 RPC 코드 적용 후에도
-      // chargeRef 호출 자체를 skip 시키는 상태. 모든 사용자의 entries 를 reset 해
-      // 새 코드 첫 차감을 보장.
-      version: 2,
+      // version bump 3 (2026-05-16): 해/달 이원화 → 단일 달 크레딧 통합.
+      // 옛 sun 단가 시절 캐시의 `charged: true` 를 그대로 들고 있으면 새 moon
+      // chargeForContent 호출 자체가 isCharged 가드에서 차단되어 차감이 일어나지
+      // 않음. 모든 사용자의 entries 를 reset 해 새 단가(10/5/1)로 첫 차감을 보장.
+      version: 3,
       migrate: () => ({ entries: {} }),
     },
   ),

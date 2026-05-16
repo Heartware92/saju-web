@@ -88,24 +88,14 @@ export function CreditsFlowSection({ summary }: { summary: CreditsSummary | null
 
   return (
     <div className="space-y-6">
-      {/* KPI */}
-      <div>
-        <h2 className="text-[15px] font-semibold text-text-secondary mb-3 uppercase tracking-wider">☀️ 해 크레딧</h2>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          <Kpi label="발행" value={fmt(kpi.sunIssued)} />
-          <Kpi label="소비" value={fmt(kpi.sunConsumed)} sub={`소진율 ${kpi.sunConsumeRate}%`} />
-          <Kpi label="잔여" value={fmt(kpi.sunBalance)} sub={`${fmt(kpi.withSun)}명 보유`} color="text-amber-300" />
-          <Kpi label="추정 부채" value={fmtWon(kpi.sunBalance * 3_000)} sub="해 1 ≈ 3,000원 가정" />
-        </div>
-      </div>
-
+      {/* KPI — 단일 달 크레딧 (2026-05-16 통합) */}
       <div>
         <h2 className="text-[15px] font-semibold text-text-secondary mb-3 uppercase tracking-wider">🌙 달 크레딧</h2>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           <Kpi label="발행" value={fmt(kpi.moonIssued)} />
           <Kpi label="소비" value={fmt(kpi.moonConsumed)} sub={`소진율 ${kpi.moonConsumeRate}%`} />
           <Kpi label="잔여" value={fmt(kpi.moonBalance)} sub={`${fmt(kpi.withMoon)}명 보유`} color="text-indigo-300" />
-          <Kpi label="추정 부채" value={fmtWon(kpi.moonBalance * 300)} sub="달 1 ≈ 300원 가정" />
+          <Kpi label="추정 부채" value={fmtWon(kpi.moonBalance * 200)} sub="달 1 = 200원" />
         </div>
       </div>
 
@@ -119,20 +109,8 @@ export function CreditsFlowSection({ summary }: { summary: CreditsSummary | null
         </p>
       </div>
 
-      {/* 12개월 흐름 */}
+      {/* 12개월 흐름 — 단일 달 단위 */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-        <div className="bg-white/5 border border-white/10 rounded-xl p-4">
-          <h3 className="text-[14px] font-semibold text-text-primary mb-3">☀️ 해 월별 발행</h3>
-          <VerticalBarChart bars={sunIssuedBars} color="rgba(251, 191, 36, 0.75)" height={120} />
-        </div>
-        <div className="bg-white/5 border border-white/10 rounded-xl p-4">
-          <h3 className="text-[14px] font-semibold text-text-primary mb-3">☀️ 해 월별 소비</h3>
-          <VerticalBarChart bars={sunConsumedBars} color="rgba(251, 146, 60, 0.75)" height={120} />
-        </div>
-        <div className="bg-white/5 border border-white/10 rounded-xl p-4">
-          <h3 className="text-[14px] font-semibold text-text-primary mb-3">☀️ 해 월별 순증감 (발행-소비)</h3>
-          <VerticalBarChart bars={sunNetBars} color="rgba(52, 211, 153, 0.75)" height={120} />
-        </div>
         <div className="bg-white/5 border border-white/10 rounded-xl p-4">
           <h3 className="text-[14px] font-semibold text-text-primary mb-3">🌙 달 월별 순증감 (발행-소비)</h3>
           <VerticalBarChart bars={moonNetBars} color="rgba(129, 140, 248, 0.75)" height={120} />

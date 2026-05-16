@@ -69,7 +69,7 @@ export function AuditLogSection({
               {logs.map(log => {
                 const s = ACTION_LABEL[log.action] ?? { text: log.action, cls: 'bg-gray-500/20 text-gray-400 border-gray-500/30' };
                 const content = log.action === 'credit_adjust'
-                  ? `${log.credit_type === 'sun' ? '☀' : '🌙'} ${log.amount! > 0 ? '+' : ''}${log.amount}`
+                  ? `🌙 ${log.amount! > 0 ? '+' : ''}${log.amount}`
                   : log.action === 'note_update'
                   ? `"${(log.after_value?.note as string)?.slice(0, 60) ?? ''}${((log.after_value?.note as string) ?? '').length > 60 ? '…' : ''}"`
                   : log.action === 'ban' ? `~${(log.after_value?.bannedUntil as string)?.slice(0, 10) ?? ''}`

@@ -82,7 +82,7 @@ export function MembersTable({ rows, loading, sort, order, onSortChange, onRowCl
             <Th sortable active={sort === 'joined'} order={order} onClick={() => toggleSort('joined')}>가입일</Th>
             <Th sortable active={sort === 'lastSeen'} order={order} onClick={() => toggleSort('lastSeen')}>마지막 접속</Th>
             <Th>프로필</Th>
-            <Th>☀/🌙</Th>
+            <Th>🌙</Th>
             <Th sortable active={sort === 'totalSpent'} order={order} onClick={() => toggleSort('totalSpent')}>누적 결제</Th>
             <Th sortable active={sort === 'orderCount'} order={order} onClick={() => toggleSort('orderCount')}>주문</Th>
             <Th sortable active={sort === 'analysisCount'} order={order} onClick={() => toggleSort('analysisCount')}>분석</Th>
@@ -140,8 +140,6 @@ export function MembersTable({ rows, loading, sort, order, onSortChange, onRowCl
               <td className="px-3 py-2.5 text-center text-text-secondary tabular-nums">{u.profileCount}</td>
 
               <td className="px-3 py-2.5 whitespace-nowrap">
-                <span className="text-amber-300 tabular-nums">☀{u.sunBalance}</span>
-                <span className="text-text-tertiary mx-1">/</span>
                 <span className="text-indigo-300 tabular-nums">🌙{u.moonBalance}</span>
               </td>
 

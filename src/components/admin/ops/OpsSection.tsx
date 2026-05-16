@@ -65,7 +65,7 @@ export function OpsSection({
                 {adjustments.map((a, i) => (
                   <tr key={i} className="border-t border-white/5 hover:bg-white/3 cursor-pointer" onClick={() => onOpenUser(a.user_id)}>
                     <td className="px-2.5 py-2 text-text-secondary max-w-[200px] truncate">{a.userEmail}</td>
-                    <td className="px-2.5 py-2">{a.credit_type === 'sun' ? '☀ 해' : '🌙 달'}</td>
+                    <td className="px-2.5 py-2">🌙 달</td>
                     <td className={`px-2.5 py-2 tabular-nums font-medium ${a.amount > 0 ? 'text-green-300' : 'text-red-300'}`}>
                       {a.amount > 0 ? '+' : ''}{a.amount}
                     </td>

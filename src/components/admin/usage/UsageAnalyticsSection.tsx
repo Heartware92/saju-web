@@ -75,7 +75,6 @@ export function UsageAnalyticsSection({ summary }: { summary: UsageSummary | nul
   }));
 
   const creditSlices = [
-    { key: 'sun', label: '☀️ 해', value: credit.sunConsumed, color: 'rgba(251, 191, 36, 0.85)' },
     { key: 'moon', label: '🌙 달', value: credit.moonConsumed, color: 'rgba(129, 140, 248, 0.85)' },
   ];
 
@@ -89,7 +88,6 @@ export function UsageAnalyticsSection({ summary }: { summary: UsageSummary | nul
           <Kpi label="사주 이용" value={fmt(kpi.sajuTotal)} sub={`${fmt(kpi.uniqueSajuUsers)}명`} />
           <Kpi label="타로 이용" value={fmt(kpi.tarotTotal)} sub={`${fmt(kpi.uniqueTarotUsers)}명`} />
           <Kpi label="상담소 대화" value={fmt(kpi.consultTotal ?? 0)} sub={`${fmt(kpi.uniqueConsultUsers ?? 0)}명 · ${fmt(kpi.consultMessages ?? 0)}메시지`} />
-          <Kpi label="☀️ 해 소비" value={fmt(credit.sunConsumed)} sub={`거래장부 ${fmt(credit.sunTxn)}`} />
           <Kpi label="🌙 달 소비" value={fmt(credit.moonConsumed)} sub={`거래장부 ${fmt(credit.moonTxn)}`} />
         </div>
       </div>
@@ -107,10 +105,10 @@ export function UsageAnalyticsSection({ summary }: { summary: UsageSummary | nul
         </div>
 
         <div className="bg-white/5 border border-white/10 rounded-xl p-4">
-          <h3 className="text-[14px] font-semibold text-text-primary mb-3">해/달 소비 비중</h3>
+          <h3 className="text-[14px] font-semibold text-text-primary mb-3">🌙 달 소비</h3>
           <DonutChart
             slices={creditSlices}
-            centerValue={fmt(credit.sunConsumed + credit.moonConsumed)}
+            centerValue={fmt(credit.moonConsumed)}
             centerLabel="총 소비"
           />
         </div>

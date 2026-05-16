@@ -575,14 +575,14 @@ export default function AdminPage() {
         u.email, PROVIDER_LABEL[u.provider] ?? u.provider,
         GENDER_LABEL[u.gender] ?? u.gender, u.age ?? '', u.birthDate ?? '',
         u.ageBucket, u.segments?.join('|') ?? '',
-        u.sunBalance, u.moonBalance,
+        u.moonBalance,
         u.totalSpent, u.orderCount, u.sajuCount, u.tarotCount,
         u.createdAt, u.lastSignIn ?? '', u.lastAnalysisAt ?? '',
         u.daysSinceLastActivity ?? '',
       ]);
       const csv = toCsv(
         ['이메일', '가입경로', '성별', '나이', '생년월일', '연령대', '세그먼트',
-         '해 잔액', '달 잔액', '누적결제', '주문수', '사주이용', '타로이용',
+         '🌙 잔액', '누적결제', '주문수', '사주이용', '타로이용',
          '가입일', '최종로그인', '최종이용', '미접속일'],
         rows,
       );
@@ -603,11 +603,11 @@ export default function AdminPage() {
         o.id, o.userEmail,
         ORDER_STATUS_LABEL[o.status]?.text ?? o.status,
         o.package_name, o.package_id,
-        o.amount, o.sun_credit_amount, o.moon_credit_amount,
+        o.amount, o.moon_credit_amount,
         o.payment_method ?? '', o.created_at, o.completed_at ?? '',
       ]);
       const csv = toCsv(
-        ['주문ID', '이메일', '상태', '패키지', '패키지ID', '금액', '해', '달', '결제수단', '생성일', '완료일'],
+        ['주문ID', '이메일', '상태', '패키지', '패키지ID', '금액', '🌙', '결제수단', '생성일', '완료일'],
         rows,
       );
       downloadCsv(`orders-${timestampSuffix()}.csv`, csv);
@@ -628,10 +628,9 @@ export default function AdminPage() {
         recordType === 'saju'
           ? (SAJU_CATEGORY_LABEL[r.category ?? ''] ?? r.category ?? '')
           : (TAROT_SPREAD_LABEL[r.spread_type ?? ''] ?? r.spread_type ?? ''),
-        r.credit_type === 'sun' ? '해' : '달',
         r.credit_used, r.created_at,
       ]);
-      const csv = toCsv(['이메일', '서비스', '크레딧', '소비량', '일시'], rows);
+      const csv = toCsv(['이메일', '서비스', '🌙 소비량', '일시'], rows);
       downloadCsv(`${recordType}-records-${timestampSuffix()}.csv`, csv);
     } catch (e: any) { setError(e.message); }
     finally { setExporting(false); }
@@ -759,14 +758,12 @@ export default function AdminPage() {
             </div>
 
             <div>
-              <h2 className="text-[15px] font-semibold text-text-secondary mb-3 uppercase tracking-wider">크레딧 현황</h2>
+              <h2 className="text-[15px] font-semibold text-text-secondary mb-3 uppercase tracking-wider">크레딧 현황 (🌙 단일 단위)</h2>
               <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                <MetricCard label="☀️ 해 발행" value={fmt(stats.credits.sun.issued)} sub={`소비 ${fmt(stats.credits.sun.consumed)} / 잔여 ${fmt(stats.credits.sun.balance)}`} />
                 <MetricCard label="🌙 달 발행" value={fmt(stats.credits.moon.issued)} sub={`소비 ${fmt(stats.credits.moon.consumed)} / 잔여 ${fmt(stats.credits.moon.balance)}`} />
                 <MetricCard
                   label="크레딧 소비율"
-                  value={stats.credits.sun.issued > 0 ? `☀️ ${Math.round(stats.credits.sun.consumed / stats.credits.sun.issued * 100)}%` : '-'}
-                  sub={stats.credits.moon.issued > 0 ? `🌙 ${Math.round(stats.credits.moon.consumed / stats.credits.moon.issued * 100)}%` : undefined}
+                  value={stats.credits.moon.issued > 0 ? `🌙 ${Math.round(stats.credits.moon.consumed / stats.credits.moon.issued * 100)}%` : '-'}
                 />
               </div>
             </div>
@@ -945,7 +942,7 @@ export default function AdminPage() {
               <table className="w-full text-[14px]">
                 <thead>
                   <tr className="border-b border-white/10 bg-white/3">
-                    {['상태', '사용자', '패키지', '결제금액', '해 크레딧', '달 크레딧', '결제수단', '결제일시'].map(h => (
+                    {['상태', '사용자', '패키지', '결제금액', '🌙 크레딧', '결제수단', '결제일시'].map(h => (
                       <th key={h} className="px-3 py-2.5 text-left text-[12px] text-text-tertiary uppercase tracking-wider font-medium">{h}</th>
                     ))}
                   </tr>
@@ -957,14 +954,13 @@ export default function AdminPage() {
                       <td className="px-3 py-2.5 text-text-secondary max-w-[180px] truncate">{o.userEmail}</td>
                       <td className="px-3 py-2.5 text-text-primary">{o.package_name}</td>
                       <td className="px-3 py-2.5 text-text-primary font-medium">{fmtWon(o.amount)}</td>
-                      <td className="px-3 py-2.5 text-amber-300">☀️ {o.sun_credit_amount}</td>
                       <td className="px-3 py-2.5 text-indigo-300">🌙 {o.moon_credit_amount}</td>
                       <td className="px-3 py-2.5 text-text-tertiary">{o.payment_method ?? '-'}</td>
                       <td className="px-3 py-2.5 text-text-tertiary">{fmtDate(o.created_at)}</td>
                     </tr>
                   ))}
                   {orders.length === 0 && !loading && (
-                    <tr><td colSpan={8} className="px-3 py-8 text-center text-text-tertiary">데이터 없음</td></tr>
+                    <tr><td colSpan={7} className="px-3 py-8 text-center text-text-tertiary">데이터 없음</td></tr>
                   )}
                 </tbody>
               </table>
@@ -1052,7 +1048,7 @@ export default function AdminPage() {
               <table className="w-full text-[14px]">
                 <thead>
                   <tr className="border-b border-white/10 bg-white/3">
-                    {['사용자', '프로필', '서비스', '크레딧', '소비', '일시'].map(h => (
+                    {['사용자', '프로필', '서비스', '🌙 소비', '일시'].map(h => (
                       <th key={h} className="px-3 py-2.5 text-left text-[12px] text-text-tertiary uppercase tracking-wider font-medium">{h}</th>
                     ))}
                   </tr>
@@ -1065,17 +1061,12 @@ export default function AdminPage() {
                       <td className="px-3 py-2.5 text-text-primary">
                         {SAJU_CATEGORY_LABEL[r.category ?? ''] ?? TAROT_SPREAD_LABEL[r.spread_type ?? ''] ?? (r.category ?? r.spread_type ?? '-')}
                       </td>
-                      <td className="px-3 py-2.5">
-                        {r.credit_type === 'sun'
-                          ? <span className="text-amber-300">☀️</span>
-                          : <span className="text-indigo-300">🌙</span>}
-                      </td>
-                      <td className="px-3 py-2.5 text-text-secondary tabular-nums">{r.credit_used}</td>
+                      <td className="px-3 py-2.5 text-text-secondary tabular-nums">🌙 {r.credit_used}</td>
                       <td className="px-3 py-2.5 text-text-tertiary">{fmtDate(r.created_at)}</td>
                     </tr>
                   ))}
                   {records.length === 0 && !loading && (
-                    <tr><td colSpan={6} className="px-3 py-8 text-center text-text-tertiary">데이터 없음</td></tr>
+                    <tr><td colSpan={5} className="px-3 py-8 text-center text-text-tertiary">데이터 없음</td></tr>
                   )}
                 </tbody>
               </table>
@@ -1284,10 +1275,8 @@ function DeletedMembersPanel({
                   </td>
                   <td className="px-3 py-2.5 whitespace-nowrap">
                     {totalPurchased > 0 || totalConsumed > 0 ? (
-                      <span className="text-text-secondary tabular-nums">
-                        <span className="text-amber-300">☀️{credit?.total_sun_consumed ?? 0}</span>
-                        {' / '}
-                        <span className="text-indigo-300">🌙{credit?.total_moon_consumed ?? 0}</span>
+                      <span className="text-indigo-300 tabular-nums">
+                        🌙{credit?.total_moon_consumed ?? 0}
                       </span>
                     ) : (
                       <span className="text-text-tertiary">-</span>

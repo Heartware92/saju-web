@@ -198,10 +198,9 @@ function OverviewTab({ data }: { data: DetailData }) {
           <Row label="사주 분석" value={`${aggregates.sajuTotal}회`} />
           <Row label="타로" value={`${aggregates.tarotTotal}회`} />
           <Row label="상담소" value={`${aggregates.consultationTotal ?? 0}건`} />
-          {credit && <>
-            <Row label="☀ 해" value={<>잔액 <b>{credit.sun_balance}</b> · 발행 {credit.total_sun_purchased} · 소비 {credit.total_sun_consumed}</>} />
+          {credit && (
             <Row label="🌙 달" value={<>잔액 <b>{credit.moon_balance}</b> · 발행 {credit.total_moon_purchased} · 소비 {credit.total_moon_consumed}</>} />
-          </>}
+          )}
         </Grid>
       </Section>
 
@@ -308,7 +307,7 @@ function RecordsTab({ data }: { data: DetailData }) {
             <span className="text-text-primary font-medium">{label}</span>
             {r.profile_name && <span className="text-[11px] text-text-tertiary">({r.profile_name})</span>}
             <span className="text-text-tertiary">
-              {r.credit_type === 'sun' ? '☀' : '🌙'}{r.credit_used}
+              🌙{r.credit_used}
             </span>
             <span className="ml-auto text-text-tertiary text-[11px] whitespace-nowrap">{fmtDate(r.created_at)}</span>
           </div>
