@@ -33,40 +33,6 @@ export const supabase = createClient(
   supabaseAnonKey ?? 'placeholder'
 );
 
-// 마이그레이션 후 stale 토큰(옛 프로젝트 JWT) 자동 정리.
-// 브라우저 localStorage 에 다른 프로젝트 ref 의 sb-*-auth-token 이 있으면
-// 새 프로젝트가 거부해 401 무한 루프 발생. 한 번 정리 후 페이지 재로드.
-if (typeof window !== 'undefined' && supabaseUrl) {
-  const currentRef = supabaseUrl.match(/https:\/\/([^.]+)\.supabase\.co/)?.[1];
-  if (currentRef) {
-    try {
-      const keysToRemove: string[] = [];
-      for (let i = 0; i < localStorage.length; i++) {
-        const k = localStorage.key(i);
-        if (k && /^sb-[a-z0-9]+-auth-token/.test(k) && !k.includes(currentRef)) {
-          keysToRemove.push(k);
-        }
-      }
-      if (keysToRemove.length > 0) {
-        console.warn('[supabase] stale auth token 감지 — 정리:', keysToRemove);
-        keysToRemove.forEach((k) => localStorage.removeItem(k));
-      }
-    } catch {
-      /* private mode 등 localStorage 접근 실패 — 무시 */
-    }
-  }
-
-  // 토큰 invalid 로 인한 무한 401 차단 — onAuthStateChange 에서 토큰 만료/거부 감지 시
-  // signOut → 로그인 페이지로 리다이렉트. (마이그레이션·세션 만료 공통 안전망)
-  supabase.auth.onAuthStateChange((event) => {
-    if (event === 'TOKEN_REFRESHED' || event === 'SIGNED_IN' || event === 'INITIAL_SESSION') return;
-    if (event === 'SIGNED_OUT') {
-      // 다른 탭에서 signOut 했을 가능성 — 로그인 페이지가 아니면 부드럽게 안내
-      // (자동 redirect 는 사용자 경험 해칠 수 있어 보류, 향후 필요 시 추가)
-    }
-  });
-}
-
 /**
  * 인증 관련 헬퍼 함수
  */
