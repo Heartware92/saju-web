@@ -13,10 +13,25 @@ import type {
   BirthProfile
 } from '../types/credit';
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? 'https://placeholder.supabase.co';
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? 'placeholder';
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+// 런타임에 env var 누락이면 즉시 명시적 에러. placeholder fallback 으로 인한
+// silent 사고(첫 DB 호출 시점에 정체불명 에러)를 차단.
+// 빌드 타임에는 통과 — Vercel 빌드 환경에 env 가 늘 있는 건 아니므로,
+// import 시점이 아니라 createClient 호출 시점에 검증.
+if (typeof window !== 'undefined' && (!supabaseUrl || !supabaseAnonKey)) {
+  // 클라이언트 사이드 — 명시 에러로 빠른 fail
+  console.error('[supabase] NEXT_PUBLIC_SUPABASE_URL 또는 NEXT_PUBLIC_SUPABASE_ANON_KEY 가 설정되지 않았습니다.');
+  throw new Error(
+    'Supabase 환경변수 누락 — 관리자에게 문의 (.env.local 또는 Vercel 환경변수 점검 필요)'
+  );
+}
+
+export const supabase = createClient(
+  supabaseUrl ?? 'https://placeholder.supabase.co',
+  supabaseAnonKey ?? 'placeholder'
+);
 
 /**
  * 인증 관련 헬퍼 함수

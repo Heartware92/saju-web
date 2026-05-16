@@ -134,59 +134,36 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // 4) 크레딧 회수 + 주문 상태 업데이트
-    const newSun = sunBalance - sunGranted;
-    const newMoon = moonBalance - moonGranted;
+    // 4) 환불 처리 — atomic RPC 로 묶음
+    //   balance/consumed/purchased counters + order status + credit_transactions
+    //   를 단일 트랜잭션 안에서 처리. idempotency 보장 (같은 order 재호출 시 'duplicate').
+    const { data: rpcResult, error: rpcErr } = await supabaseAdmin.rpc(
+      'refund_order_atomic',
+      {
+        p_order_id: orderId,
+        p_user_id: userId,
+        p_sun_granted: sunGranted,
+        p_moon_granted: moonGranted,
+        p_package_name: order.package_name ?? '',
+        p_idempotency_key: `refund-${orderId}`,
+      }
+    );
 
-    await supabaseAdmin
-      .from('user_credits')
-      .update({
-        sun_balance: newSun,
-        moon_balance: newMoon,
-        total_sun_purchased: Math.max(
-          0,
-          (userCredit?.total_sun_purchased ?? 0) - sunGranted
-        ),
-        total_moon_purchased: Math.max(
-          0,
-          (userCredit?.total_moon_purchased ?? 0) - moonGranted
-        ),
-        updated_at: new Date().toISOString(),
-      })
-      .eq('user_id', userId);
-
-    await supabaseAdmin
-      .from('orders')
-      .update({ status: 'refunded' })
-      .eq('id', orderId);
-
-    // 5) 환불 거래 기록
-    const txRows = [];
-    if (sunGranted > 0) {
-      txRows.push({
-        user_id: userId,
-        credit_type: 'sun',
-        type: 'refund',
-        amount: -sunGranted,
-        balance_after: newSun,
-        reason: `환불: ${order.package_name}`,
-        order_id: order.id,
-      });
+    if (rpcErr) {
+      console.error('[payment/refund] RPC error', rpcErr);
+      return NextResponse.json(
+        { success: false, error: '환불 기록 실패. 고객센터에 문의해 주세요.' },
+        { status: 500 }
+      );
     }
-    if (moonGranted > 0) {
-      txRows.push({
-        user_id: userId,
-        credit_type: 'moon',
-        type: 'refund',
-        amount: -moonGranted,
-        balance_after: newMoon,
-        reason: `환불: ${order.package_name}`,
-        order_id: order.id,
-      });
+    if (rpcResult !== 'ok' && rpcResult !== 'duplicate') {
+      console.error('[payment/refund] RPC unexpected result:', rpcResult);
+      return NextResponse.json(
+        { success: false, error: `환불 처리 실패: ${rpcResult}` },
+        { status: 500 }
+      );
     }
-    if (txRows.length > 0) {
-      await supabaseAdmin.from('credit_transactions').insert(txRows);
-    }
+    // 'duplicate' = 이미 환불됨. 멱등 동작이므로 정상 응답.
 
     return NextResponse.json({ success: true, orderId: order.id });
   } catch (e: any) {
