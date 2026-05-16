@@ -84,7 +84,7 @@ export default function ConsultationListPage() {
   return (
     <div className="pb-6">
 
-      {/* 헤더 — 뒤로가기 좌측 + 중앙 정렬 타이틀 */}
+      {/* 헤더 — 뒤로가기 좌측 + 중앙 정렬 타이틀 + 우측 차감 안내 */}
       <div className="flex items-center relative mb-5 pt-3 px-1">
         <BackButton to="/" className="absolute left-0" />
         <div className="flex-1 text-center">
@@ -92,6 +92,7 @@ export default function ConsultationListPage() {
             상담소
           </h1>
         </div>
+        <span className="absolute right-2 text-[12px] text-text-tertiary">🌙 1개 소모</span>
       </div>
 
       {/* 프로필 선택 */}

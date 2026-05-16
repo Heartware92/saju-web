@@ -390,8 +390,8 @@ export default function ConsultationChatPage() {
               {convTitle && <span className="font-normal text-text-tertiary"> · {convTitle}</span>}
             </p>
           </div>
-          <span className="flex-shrink-0 text-right text-[11px] text-text-tertiary tabular-nums whitespace-nowrap">
-            🌙 {moonBalance}
+          <span className="flex-shrink-0 text-right text-[11px] text-text-tertiary whitespace-nowrap">
+            🌙 1개 소모
           </span>
         </div>
 
@@ -534,7 +534,7 @@ export default function ConsultationChatPage() {
           <div className="flex items-center justify-between mt-1.5 px-1">
             <span className="text-[12px] text-text-tertiary">{inputText.length}/300</span>
             <span className="text-[12px] text-text-tertiary">
-              질문 1개당 🌙 {MOON_COST_CONSULTATION_QUESTION} · 보유 {moonBalance}
+              질문 1개당 🌙 {MOON_COST_CONSULTATION_QUESTION}개 소모
               {moonBalance < MOON_COST_CONSULTATION_QUESTION && (
                 <button onClick={() => router.push('/credit')} className="ml-2 text-cta underline font-semibold">
                   충전하기

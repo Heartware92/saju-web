@@ -591,13 +591,14 @@ export default function TarotPage() {
     <div className="w-full px-4 pt-4 pb-10">
       {showNoPrimaryModal && <NoPrimaryModal onClose={() => setShowNoPrimaryModal(false)} />}
 
-      {/* 헤더 — 뒤로가기 좌측 + 중앙 정렬 타이틀 */}
+      {/* 헤더 — 뒤로가기 좌측 + 중앙 정렬 타이틀 + 우측 차감 안내 */}
       <div className="flex items-center mb-4 relative">
         <BackButton to="/" className="absolute left-0" />
         <div className="flex-1 text-center">
           <h1 className="text-[22px] font-bold text-text-primary" style={{ fontFamily: 'var(--font-serif)' }}>타로 상담</h1>
           <p className="text-[15px] text-text-tertiary mt-1">78장 라이더-웨이트 풀덱 · 전문 타로인의 노하우 기반</p>
         </div>
+        <span className="absolute right-2 top-1 text-[12px] text-text-tertiary">🌙 1개 소모</span>
       </div>
 
       {/* 모드 탭 */}

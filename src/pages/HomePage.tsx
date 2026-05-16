@@ -428,6 +428,10 @@ export default function HomePage() {
 
       {/* 상단 서비스 7종 — 지정일·택일 운세 사이즈로 통일 (h-[88], 폰트 19/15) */}
       <section className="px-4 -mt-3 relative z-10">
+        <div className="flex items-center justify-between mb-3 px-1">
+          <h2 className="text-base font-bold text-text-primary">본격 운세</h2>
+          <span className="text-[12px] text-text-tertiary">🌙 10개 소모</span>
+        </div>
         <motion.div
           variants={stagger}
           initial="hidden"
@@ -458,7 +462,7 @@ export default function HomePage() {
       <section className="px-4 mt-5">
         <div className="flex items-center justify-between mb-3 px-1">
           <h2 className="text-base font-bold text-text-primary">더 많은 운세</h2>
-          <span className="text-[12px] text-text-tertiary">🌙 1개 소모</span>
+          <span className="text-[12px] text-text-tertiary">🌙 5개 소모</span>
         </div>
         <motion.div
           variants={stagger}
@@ -483,6 +487,10 @@ export default function HomePage() {
 
       {/* 타로 배너 */}
       <section className="px-4 mt-6 mb-10">
+        <div className="flex items-center justify-between mb-3 px-1">
+          <h2 className="text-base font-bold text-text-primary">타로</h2>
+          <span className="text-[12px] text-text-tertiary">🌙 1개 소모</span>
+        </div>
         <motion.div
           initial={{ opacity: 0, y: 16 }}
           whileInView={{ opacity: 1, y: 0 }}

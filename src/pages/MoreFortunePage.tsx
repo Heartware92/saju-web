@@ -728,7 +728,7 @@ export default function MoreFortunePage({ category }: Props) {
                 {cfg.ctaButton} <span style={{ opacity: 0.85, fontSize: 13 }}>🌙 {MOON_COST_PER_FORTUNE}</span>
               </button>
               <p style={{ fontSize: 11, color: 'var(--text-tertiary)', textAlign: 'center', marginTop: 6 }}>
-                보유 🌙 {moonBalance} · 1회 {MOON_COST_PER_FORTUNE}개 소모
+                1회 🌙 {MOON_COST_PER_FORTUNE}개 소모
               </p>
             </div>
 
