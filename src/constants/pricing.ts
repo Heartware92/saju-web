@@ -3,7 +3,7 @@
  *
  * 단위: 달 🌙 (1달 = ₩200, 옛 해 단위 폐지)
  * 기본 사용 단가:
- *   - 본격 운세 7종 = 달 10개 (₩2,000)
+ *   - 기본 풀이 7종 = 달 10개 (₩2,000)
  *   - 더많은 운세 6종 + 실시간 운세 = 달 5개 (₩1,000)
  *   - 타로 (오늘/이달/질문) = 달 1개 (₩200)
  *   - 상담소 1질문 = 달 1개 (₩200)
@@ -40,8 +40,8 @@ export const CREDIT_PACKAGES: readonly CreditPackage[] = [
     icon: '🌙',
     price: 2000,
     moonCredit: 10,
-    description: '본격 풀이 1번 — 가볍게 시작',
-    features: ['🌙 10개', '본격 운세 1번 가능'],
+    description: '기본 풀이 1번 — 가볍게 시작',
+    features: ['🌙 10개', '기본 풀이 1번 가능'],
   },
   {
     id: 'mars',
@@ -51,28 +51,30 @@ export const CREDIT_PACKAGES: readonly CreditPackage[] = [
     icon: '',
     price: 3900,
     moonCredit: 22,
-    description: '본격 풀이 2번 — 한 번 더 풍성하게',
-    features: ['🌙 22개 (보너스 11%)', '본격 운세 2번 + 가벼운 자투리'],
+    description: '기본 풀이 2번 + 보너스 2개',
+    features: ['🌙 22개 (보너스 11%)', '기본 풀이 2번 + 보너스 2개'],
   },
   {
     id: 'earth',
     name: '지구 세트',
-    planet: '🌍',
-    icon: '🌍',
+    planet: '',
+    iconImage: '/icons/packages/earth.png',
+    icon: '',
     price: 5900,
     moonCredit: 35,
     description: '본인 + 가족 2~3명 풀이',
-    features: ['🌙 35개 (보너스 16%)', '본격 3번 + 가벼운 1번'],
+    features: ['🌙 35개 (보너스 16%)', '기본 풀이 3번 + 가벼운 1번'],
   },
   {
     id: 'saturn',
     name: '토성 세트',
-    planet: '🪐',
-    icon: '🪐',
+    planet: '',
+    iconImage: '/icons/packages/saturn.png',
+    icon: '',
     price: 9900,
     moonCredit: 60,
     description: '가족 모두 풀이',
-    features: ['🌙 60개 (보너스 21%)', '본격 5번 + 가벼운 2번'],
+    features: ['🌙 60개 (보너스 21%)', '기본 풀이 5번 + 가벼운 2번'],
     popular: true,
   },
   {
@@ -84,7 +86,7 @@ export const CREDIT_PACKAGES: readonly CreditPackage[] = [
     price: 19900,
     moonCredit: 125,
     description: '한 달 푹 사용',
-    features: ['🌙 125개 (보너스 26%)', '본격 12번 + 자투리'],
+    features: ['🌙 125개 (보너스 26%)', '기본 풀이 12번 + 가벼운 풀이 1번'],
     bestValue: true,
   },
   {
@@ -95,8 +97,8 @@ export const CREDIT_PACKAGES: readonly CreditPackage[] = [
     icon: '',
     price: 39900,
     moonCredit: 270,
-    description: '분기 단위 마니아',
-    features: ['🌙 270개 (보너스 35%)', '본격 27번'],
+    description: '나는 사주 매니아',
+    features: ['🌙 270개 (보너스 35%)', '기본 풀이 27번'],
   },
   {
     id: 'cosmos',
@@ -106,8 +108,8 @@ export const CREDIT_PACKAGES: readonly CreditPackage[] = [
     icon: '',
     price: 79900,
     moonCredit: 580,
-    description: '1년치 헤비 유저',
-    features: ['🌙 580개 (보너스 45%)', '본격 58번'],
+    description: '사주 헤비 유저',
+    features: ['🌙 580개 (보너스 45%)', '기본 풀이 58번'],
   },
 ] as const;
 
@@ -115,7 +117,7 @@ export const CREDIT_PACKAGES: readonly CreditPackage[] = [
  * 크레딧 소비량 정의 (참고용 — 실제 차감은 creditCosts.ts 상수 사용)
  */
 export const CREDIT_COST = {
-  // 본격 운세 7종
+  // 기본 풀이 7종
   traditional: { type: 'moon' as const, amount: 10 },
   newyear: { type: 'moon' as const, amount: 10 },
   gunghap: { type: 'moon' as const, amount: 10 },
