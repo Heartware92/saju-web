@@ -32,7 +32,7 @@ export const YeopjeonPackage: React.FC<PackageCardProps> = ({
     `}>
       {isHighlighted && (
         <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full text-xs font-bold text-white bg-gradient-to-r from-cta to-cta-active whitespace-nowrap">
-          {pkg.popular ? '인기' : '최고 가성비'}
+          {pkg.popular ? '인기' : 'Best'}
         </div>
       )}
 

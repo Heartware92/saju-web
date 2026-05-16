@@ -129,7 +129,7 @@ const PackageCard: React.FC<{
       {/* Badge */}
       {isHighlighted && (
         <div className="absolute -top-2.5 left-4 px-2.5 py-0.5 rounded-full text-[12px] font-bold text-white bg-gradient-to-r from-cta to-cta-active">
-          {pkg.popular ? '인기' : '최고 가성비'}
+          {pkg.popular ? '인기' : 'Best'}
         </div>
       )}
 
