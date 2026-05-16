@@ -1121,16 +1121,7 @@ export default function PeriodFortunePage({ scope }: { scope: FortuneScope | 'da
                     enterDelay={0.06 * idx}
                   >
                     {key === 'monthly' ? (
-                      <div className="space-y-3">
-                        {(bodyText.includes('\n\n')
-                          ? bodyText.split(/\n\n+/)
-                          : bodyText.split(/(?=\d{1,2}월\s*\()/)
-                        ).filter(Boolean).map((monthBlock, mi) => (
-                          <p key={mi} className="text-[17px] text-text-secondary leading-[1.85] tracking-[-0.005em]">
-                            {monthBlock.replace(/\n/g, ' ').trim()}
-                          </p>
-                        ))}
-                      </div>
+                      <MonthlySectionView bodyText={bodyText} monthlyFlow={fortune?.monthlyFlow ?? []} />
                     ) : (
                       <p className="text-[17px] text-text-secondary leading-[1.85] tracking-[-0.005em] whitespace-pre-line">
                         {bodyText}
@@ -1254,5 +1245,150 @@ export default function PeriodFortunePage({ scope }: { scope: FortuneScope | 'da
         onClose={() => setCacheGate(null)}
       />
     </motion.div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 월별 흐름 섹션 — 12개월 카드 + "이 해의 핵심 시기" 정리 박스
+// ─────────────────────────────────────────────────────────────────────────────
+function MonthlySectionView({
+  bodyText,
+  monthlyFlow,
+}: {
+  bodyText: string;
+  monthlyFlow: PeriodFortune['monthlyFlow'];
+}) {
+  // 본문을 12개월 블록과 정리 단락으로 분리.
+  // 정리 단락은 "── 이 해의 핵심 시기 ──" 헤더로 시작 (AI 출력 기준).
+  // 호환: 헤더 없거나 다른 형태면 정리 단락 X, 12개월만 표시.
+  const SUMMARY_MARKER_RE = /[─━]{2,}\s*이\s*해의\s*핵심\s*시기\s*[─━]{2,}/;
+  let monthsRaw = bodyText;
+  let summaryRaw = '';
+  const splitIdx = bodyText.search(SUMMARY_MARKER_RE);
+  if (splitIdx >= 0) {
+    monthsRaw = bodyText.slice(0, splitIdx).trim();
+    summaryRaw = bodyText.slice(splitIdx).replace(SUMMARY_MARKER_RE, '').trim();
+  }
+
+  // 12개월 블록 파싱 — "N월(...)" 으로 시작하는 단락 split
+  const monthBlocks = (monthsRaw.includes('\n\n')
+    ? monthsRaw.split(/\n\n+/)
+    : monthsRaw.split(/(?=\d{1,2}월\s*\()/)
+  ).map(b => b.trim()).filter(Boolean);
+
+  // 각 블록 파싱 — "N월(등급·키워드) | 영역: ○○·○○" 첫 줄 + 본문
+  const parseMonthBlock = (block: string): {
+    month: number;
+    grade: string;
+    keyword: string;
+    domains: string[];
+    body: string;
+  } | null => {
+    const flat = block.replace(/\n/g, ' ').trim();
+    // 매칭: "5월(길·확장) | 영역: 재물·도전" 또는 "5월(길·확장):"
+    const m = flat.match(/^(\d{1,2})월\s*\(([^·)]+)·([^)]+)\)\s*(?:\|\s*영역\s*:\s*([^\n]+?))?\s*[:|]?\s*(.*)$/);
+    if (!m) return null;
+    const month = parseInt(m[1], 10);
+    const grade = (m[2] ?? '').trim();
+    const keyword = (m[3] ?? '').trim();
+    const domains = (m[4] ?? '').split(/[·,/]/).map(s => s.trim()).filter(Boolean);
+    const body = (m[5] ?? '').trim();
+    return { month, grade, keyword, domains, body };
+  };
+
+  const months = monthBlocks
+    .map(parseMonthBlock)
+    .filter((m): m is NonNullable<ReturnType<typeof parseMonthBlock>> => !!m)
+    .sort((a, b) => a.month - b.month);
+
+  // 정리 단락 — "· " 불릿 항목 split
+  const summaryItems = summaryRaw
+    .split(/\n+/)
+    .map(s => s.replace(/^[·•\-]\s*/, '').trim())
+    .filter(Boolean);
+
+  // 등급 → 색
+  const gradeColor: Record<string, string> = {
+    '대길': '#34D399',
+    '길':   '#86EFAC',
+    '중길': '#FBBF24',
+    '평':   '#CBD5E1',
+    '중흉': '#FB923C',
+    '흉':   '#F87171',
+  };
+
+  return (
+    <div className="space-y-3">
+      {/* 12개월 카드 리스트 */}
+      <div className="flex flex-col gap-2.5">
+        {months.length > 0
+          ? months.map((m) => {
+              const c = gradeColor[m.grade] ?? '#CBD5E1';
+              return (
+                <div
+                  key={m.month}
+                  className="relative pl-4 pr-3 py-3 rounded-xl bg-white/[0.04] border border-white/10"
+                  style={{ borderLeft: `3px solid ${c}` }}
+                >
+                  {/* 헤더 — 월 + 등급 배지 + 키워드 + 영역 태그 */}
+                  <div className="flex flex-wrap items-center gap-2 mb-2">
+                    <span className="text-[16px] font-bold text-text-primary">{m.month}월</span>
+                    <span
+                      className="text-[11px] font-semibold px-2 py-0.5 rounded-full"
+                      style={{ background: `${c}22`, color: c, border: `1px solid ${c}55` }}
+                    >
+                      {m.grade}
+                    </span>
+                    {m.keyword && (
+                      <span className="text-[13px] text-text-secondary">{m.keyword}</span>
+                    )}
+                    {m.domains.length > 0 && (
+                      <span className="ml-auto flex flex-wrap items-center gap-1">
+                        {m.domains.map((d, i) => (
+                          <span
+                            key={i}
+                            className="text-[11px] px-1.5 py-0.5 rounded-md bg-cta/10 text-cta border border-cta/20"
+                          >
+                            {d}
+                          </span>
+                        ))}
+                      </span>
+                    )}
+                  </div>
+                  {/* 본문 */}
+                  <p className="text-[15.5px] text-text-secondary leading-[1.78] tracking-[-0.005em]">
+                    {m.body}
+                  </p>
+                </div>
+              );
+            })
+          : // 파싱 실패 시 fallback — 원본 텍스트 단락 나열
+            monthBlocks.map((mb, mi) => (
+              <p key={mi} className="text-[17px] text-text-secondary leading-[1.85] tracking-[-0.005em]">
+                {mb.replace(/\n/g, ' ').trim()}
+              </p>
+            ))}
+      </div>
+
+      {/* 정리 단락 — "이 해의 핵심 시기" 강조 박스 */}
+      {summaryItems.length > 0 && (
+        <div className="mt-4 p-4 rounded-2xl bg-gradient-to-br from-[rgba(124,92,252,0.10)] to-[rgba(252,189,189,0.06)] border border-[rgba(124,92,252,0.25)]">
+          <div className="flex items-center gap-2 mb-3">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="text-cta">
+              <polygon points="12 2 15 9 22 9 17 14 19 22 12 18 5 22 7 14 2 9 9 9 12 2" />
+            </svg>
+            <span className="text-[14px] font-bold text-text-primary">이 해의 핵심 시기</span>
+          </div>
+          <ul className="space-y-2">
+            {summaryItems.map((item, i) => (
+              <li key={i} className="flex gap-2 text-[14.5px] text-text-secondary leading-[1.65]">
+                <span className="text-cta shrink-0">·</span>
+                <span>{item}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </div>
   );
 }
