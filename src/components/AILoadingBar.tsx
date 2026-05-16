@@ -96,11 +96,15 @@ export function AILoadingBar({
   // ── Full-screen 버전 ──────────────────────────────────
   // 레이아웃: 한 화면(100dvh) 안에 상단 텍스트 + 진행바 + 행성을 자동 분배.
   // 스크롤 막힘 (overflow-hidden + h-[100dvh]) — 다른 페이지 영향 없음 (컴포넌트 unmount 시 자연 해제).
-  // 행성 크기는 작은 화면일수록 줄어들도록 min(380px, 45vh) 적용 — iPhone SE 같은 짧은 뷰포트도 한 화면.
+  // 상단 padding 은 safe-area-inset-top + 16px → status bar 가려져 텍스트 잘리는 현상 방지.
+  // 행성 크기는 작은 화면일수록 줄어들도록 min(320px, 35vh) 적용 — 짧은 뷰포트도 텍스트 우선 확보.
   return (
-    <div className="fixed inset-0 z-50 flex flex-col items-center px-6 pt-8 pb-10 overflow-hidden bg-[var(--space-deep,#0E0820)]">
+    <div
+      className="fixed inset-0 z-50 flex flex-col items-center px-6 pb-6 overflow-hidden bg-[var(--space-deep,#0E0820)]"
+      style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 1rem)' }}
+    >
       {/* 상단 영역 — 타이틀 + 진행바 + 메시지 */}
-      <div className="w-full flex flex-col items-center gap-5">
+      <div className="w-full flex flex-col items-center gap-4">
         {/* 상단 컨텐츠 (연도·일주 등) */}
         {topContent && (
           <motion.div
@@ -112,7 +116,7 @@ export function AILoadingBar({
           </motion.div>
         )}
 
-        <div className="w-full max-w-[300px] flex flex-col gap-4">
+        <div className="w-full max-w-[300px] flex flex-col gap-3.5">
           {/* 타이틀 */}
           <div className="text-center">
             <div className="text-[17px] font-semibold text-text-primary mb-1">{label}</div>
@@ -159,8 +163,7 @@ export function AILoadingBar({
         </div>
       </div>
 
-      {/* 코스믹 행성 — 남은 공간 가운데에 배치, 뷰포트 짧으면 transform: scale 로 자동 축소
-          (SpinningEarth 가 inline style 로 width=size 고정이라 CSS scale 로만 반응형 가능) */}
+      {/* 코스믹 행성 — 남은 공간 가운데, 상단 텍스트 보호 위해 더 작게(320 / 35vh) */}
       <motion.div
         initial={{ opacity: 0, scale: 0.85 }}
         animate={{ opacity: 1, scale: 1 }}
@@ -170,8 +173,8 @@ export function AILoadingBar({
         <div
           style={{
             // 380px 기준으로 그리되 작은 화면일수록 transform: scale 로 축소
-            // 380px ≤ min(80vw, 45vh) 이면 scale(1), 더 작아져야 하면 비율만큼
-            transform: 'scale(min(1, calc(80vw / 380), calc(45vh / 380)))',
+            // 380px ≤ min(70vw, 35vh) 이면 scale(1), 짧은 뷰포트일수록 축소
+            transform: 'scale(min(0.85, calc(70vw / 380), calc(35vh / 380)))',
             transformOrigin: 'center',
           }}
         >
