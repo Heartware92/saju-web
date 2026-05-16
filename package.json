@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "deploy:prod": "rm -f .vercel/.env.production.local && vercel env pull .vercel/.env.production.local --environment=production --yes && rm -rf .next .vercel/output node_modules/.cache && vercel build --prod && vercel deploy --prebuilt --prod"
   },
   "dependencies": {
     "@portone/browser-sdk": "^0.1.3",
