@@ -16,6 +16,11 @@ export interface CreditPackage {
   name: string;
   /** UI 표시용 이모지 (이모지 미지정 시 빈 문자열) */
   planet: string;
+  /**
+   * UI 표시용 이미지 경로 (있으면 이모지 대신 이미지 사용).
+   * public/ 기준 절대 경로 (예: '/icons/packages/mars.png').
+   */
+  iconImage?: string;
   /** @deprecated planet 사용 */
   icon: string;
   price: number;
@@ -41,8 +46,8 @@ export const CREDIT_PACKAGES: readonly CreditPackage[] = [
   {
     id: 'mars',
     name: '화성 세트',
-    // 표준 이모지 없음 — 사용자가 따로 자산 제공 예정
     planet: '',
+    iconImage: '/icons/packages/mars.png',
     icon: '',
     price: 3900,
     moonCredit: 22,
@@ -83,10 +88,11 @@ export const CREDIT_PACKAGES: readonly CreditPackage[] = [
     bestValue: true,
   },
   {
-    id: 'galaxy',
-    name: '은하 세트',
-    planet: '🌌',
-    icon: '🌌',
+    id: 'solar',
+    name: '태양계 세트',
+    planet: '',
+    iconImage: '/icons/packages/solar-system.png',
+    icon: '',
     price: 39900,
     moonCredit: 270,
     description: '분기 단위 마니아',
@@ -95,8 +101,8 @@ export const CREDIT_PACKAGES: readonly CreditPackage[] = [
   {
     id: 'cosmos',
     name: '우주 세트',
-    // 표준 이모지 없음
     planet: '',
+    iconImage: '/icons/packages/galaxy.png',
     icon: '',
     price: 79900,
     moonCredit: 580,

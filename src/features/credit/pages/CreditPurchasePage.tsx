@@ -134,8 +134,15 @@ const PackageCard: React.FC<{
       )}
 
       <div className="flex items-center gap-3">
-        {/* Planet icon */}
-        <div className="text-3xl shrink-0 w-9 text-center">{pkg.planet || ''}</div>
+        {/* Planet icon — 이미지(iconImage) 우선, 없으면 이모지(planet) */}
+        <div className="shrink-0 w-9 h-9 flex items-center justify-center">
+          {pkg.iconImage ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={pkg.iconImage} alt={pkg.name} width={32} height={32} className="object-contain" />
+          ) : (
+            <span className="text-3xl">{pkg.planet || ''}</span>
+          )}
+        </div>
 
         {/* Info */}
         <div className="flex-1 min-w-0">

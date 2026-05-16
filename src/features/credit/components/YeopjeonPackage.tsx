@@ -37,7 +37,14 @@ export const YeopjeonPackage: React.FC<PackageCardProps> = ({
       )}
 
       <div className="text-center mb-4 pt-2">
-        <div className="text-4xl mb-2">{pkg.planet || '🌙'}</div>
+        <div className="h-12 mb-2 flex items-center justify-center">
+          {pkg.iconImage ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={pkg.iconImage} alt={pkg.name} width={40} height={40} className="object-contain" />
+          ) : (
+            <span className="text-4xl">{pkg.planet || '🌙'}</span>
+          )}
+        </div>
         <h3 className="text-lg font-bold text-text-primary">{pkg.name}</h3>
         <p className="text-xs text-text-tertiary mt-1">{pkg.description}</p>
       </div>
