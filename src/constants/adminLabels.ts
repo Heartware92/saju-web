@@ -20,7 +20,7 @@ export const SAJU_CATEGORY_LABEL: Record<string, string> = {
   taekil: '택일',
   tojeong: '토정비결',
   zamidusu: '자미두수',
-  // 더 많은 운세 10종 (달 🌙 1개)
+  // 더 많은 운세 (달 🌙 5개 — 2026-05-16 단일 달 크레딧 통합 후)
   love: '애정운',
   wealth: '재물운',
   career: '직업·진로운',

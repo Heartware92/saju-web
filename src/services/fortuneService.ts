@@ -1414,7 +1414,7 @@ export const getHybridReading = async (
 
 // ============================================================
 // 더 많은 운세 — 카테고리 서비스 함수
-// (모두 달 크레딧 1개 소모, 짧은 형식)
+// (모두 달 크레딧 5개 소모 — 2026-05-16 단일 달 크레딧 통합 후, 짧은 형식)
 //
 // [B안 — 2026-04-27] 메인 8 (신년/정통사주/지정일/자미두수)과 중복되던 5종 비활성:
 //   getLoveShort, getWealthShort, getCareerShort, getHealthShort, getPeopleShort
