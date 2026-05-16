@@ -36,12 +36,30 @@ export const LoginPage: React.FC = () => {
       return;
     }
 
+    // Supabase JS deadlock 우회 — 12초 안에 응답 없으면 강제 reset.
+    // useUserStore.login 의 loading state 가 영원히 true 로 남는 사고 방지.
+    const timeoutPromise = new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new Error('LOGIN_TIMEOUT')), 12000)
+    );
+
     try {
-      await login(email, password);
+      await Promise.race([login(email, password), timeoutPromise]);
       router.replace('/');
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : '';
-      if (msg.includes('Invalid login')) {
+      if (msg === 'LOGIN_TIMEOUT') {
+        // storage 강제 정리 후 안내 — 다음 시도가 깨끗하게 시작되도록
+        try {
+          Object.keys(localStorage)
+            .filter((k) => k.startsWith('sb-') || k.includes('supabase'))
+            .forEach((k) => localStorage.removeItem(k));
+        } catch {
+          /* ignore */
+        }
+        // useUserStore 의 loading 도 명시적으로 reset (store 안에서는 영원히 멈춰있을 수 있음)
+        useUserStore.setState({ loading: false });
+        setError('응답이 너무 오래 걸려요. 다시 시도해주세요. (계속 실패 시 새로고침)');
+      } else if (msg.includes('Invalid login')) {
         setError('이메일 또는 비밀번호가 올바르지 않습니다.');
       } else if (msg.includes('Email not confirmed')) {
         setError('이메일 인증이 완료되지 않았습니다. 메일함을 확인해주세요.');
