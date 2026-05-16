@@ -78,8 +78,8 @@ export const CREDIT_PACKAGES: readonly CreditPackage[] = [
   {
     id: 'jupiter',
     name: '목성 세트',
-    // 표준 이모지 없음
     planet: '',
+    iconImage: '/icons/packages/jupiter.png',
     icon: '',
     price: 19900,
     moonCredit: 125,
