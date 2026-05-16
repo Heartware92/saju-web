@@ -147,7 +147,6 @@ const PackageCard: React.FC<{
         {/* Info */}
         <div className="flex-1 min-w-0">
           <h3 className="text-sm font-bold text-text-primary">{pkg.name}</h3>
-          <p className="text-[13px] text-text-tertiary">{pkg.description}</p>
           <div className="flex items-center gap-1.5 mt-1 text-xs">
             <span className="text-text-primary font-semibold">
               🌙 {pkg.moonCredit}개

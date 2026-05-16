@@ -46,7 +46,6 @@ export const YeopjeonPackage: React.FC<PackageCardProps> = ({
           )}
         </div>
         <h3 className="text-lg font-bold text-text-primary">{pkg.name}</h3>
-        <p className="text-xs text-text-tertiary mt-1">{pkg.description}</p>
       </div>
 
       <div className="text-center mb-4">
