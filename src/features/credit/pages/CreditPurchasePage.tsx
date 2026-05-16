@@ -94,11 +94,6 @@ export const CreditPurchasePage: React.FC = () => {
           ))}
         </div>
 
-        {/* Usage guide */}
-        <div className="mb-6">
-          <UsageGuide />
-        </div>
-
         {/* FAQ */}
         <div className="mb-4">
           <FAQ />
@@ -174,40 +169,6 @@ const PackageCard: React.FC<{
             {loading ? '...' : '구매'}
           </button>
         </div>
-      </div>
-    </div>
-  );
-};
-
-/**
- * 사용 안내 (단일 달 크레딧)
- */
-const UsageGuide: React.FC = () => {
-  const items = [
-    { name: '만세력 확인 + 기본 해석', cost: '무료' },
-    { name: '정통사주 (12섹션 풀이)', cost: '🌙 10' },
-    { name: '신년운세 / 평생·시기 운세 / 지정일 운세', cost: '🌙 10' },
-    { name: '궁합', cost: '🌙 10' },
-    { name: '토정비결 · 자미두수 · 택일', cost: '🌙 10' },
-    { name: '실시간 운세', cost: '🌙 5' },
-    { name: '더 많은 운세 (성격·자녀·학업·이름·꿈)', cost: '🌙 5' },
-    { name: '타로 (오늘 · 이달 · 질문)', cost: '🌙 1' },
-    { name: '상담소 (질문 1개당)', cost: '🌙 1' },
-  ];
-
-  return (
-    <div className="rounded-2xl bg-space-surface/60 border border-[var(--border-subtle)] p-4">
-      <h3 className="text-sm font-bold text-text-primary mb-3">🌙 달로 할 수 있는 일</h3>
-      <div className="space-y-0">
-        {items.map((item, idx) => (
-          <div
-            key={idx}
-            className="flex justify-between items-center py-3 border-b border-[var(--border-subtle)] last:border-0"
-          >
-            <span className="text-text-secondary text-xs">{item.name}</span>
-            <span className="font-semibold text-xs text-text-primary">{item.cost}</span>
-          </div>
-        ))}
       </div>
     </div>
   );
