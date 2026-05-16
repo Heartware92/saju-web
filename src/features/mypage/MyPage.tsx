@@ -24,7 +24,7 @@ type TabType = 'profile' | 'credits' | 'records' | 'orders';
 export const MyPage: React.FC = () => {
   const router = useRouter();
   const { user } = useUserStore();
-  const { sunBalance, moonBalance, transactions, fetchTransactions } = useCreditStore();
+  const { moonBalance, transactions, fetchTransactions } = useCreditStore();
 
   const [activeTab, setActiveTab] = useState<TabType>('profile');
   const [orders, setOrders] = useState<Order[]>([]);
@@ -72,7 +72,7 @@ export const MyPage: React.FC = () => {
 
   const tabs: { id: TabType; label: string; icon: string | React.ReactNode }[] = [
     { id: 'profile', label: '프로필', icon: '👤' },
-    { id: 'credits', label: '크레딧 관리', icon: '☀️' },
+    { id: 'credits', label: '크레딧 관리', icon: '🌙' },
     { id: 'records', label: '분석 기록', icon: '📜' },
     { id: 'orders', label: '구매 내역', icon: '🛒' }
   ];
@@ -110,7 +110,7 @@ export const MyPage: React.FC = () => {
         {/* 탭 콘텐츠 */}
         <div className="space-y-6">
           {activeTab === 'profile' && <ProfileTab user={user} onLogout={handleLogout} />}
-          {activeTab === 'credits' && <CreditsTab sunBalance={sunBalance} moonBalance={moonBalance} transactions={transactions} loading={loading} />}
+          {activeTab === 'credits' && <CreditsTab moonBalance={moonBalance} transactions={transactions} loading={loading} />}
           {activeTab === 'records' && <RecordsTab records={sajuRecords} loading={loading} />}
           {activeTab === 'orders' && <OrdersTab orders={orders} loading={loading} />}
         </div>
@@ -448,11 +448,10 @@ const DeleteAccountModal: React.FC<{ email: string; onClose: () => void; onDelet
  * 크레딧 관리 탭
  */
 const CreditsTab: React.FC<{
-  sunBalance: number;
   moonBalance: number;
   transactions: CreditTransaction[];
   loading: boolean;
-}> = ({ sunBalance, moonBalance, transactions, loading }) => {
+}> = ({ moonBalance, transactions, loading }) => {
   const router = useRouter();
 
   return (
@@ -466,15 +465,10 @@ const CreditsTab: React.FC<{
           </Button>
         </div>
 
-        <div className="flex justify-center gap-8 py-6">
+        <div className="flex justify-center py-6">
           <div className="text-center">
-            <div className="text-3xl mb-2">☀️</div>
-            <div className="text-3xl font-bold text-sun-core mb-1">{sunBalance}</div>
-            <div className="text-text-secondary text-xs">해 크레딧</div>
-          </div>
-          <div className="text-center">
-            <div className="text-3xl mb-2">🌙</div>
-            <div className="text-3xl font-bold text-moon-halo mb-1">{moonBalance}</div>
+            <div className="text-4xl mb-2">🌙</div>
+            <div className="text-4xl font-bold text-text-primary mb-1">{moonBalance}</div>
             <div className="text-text-secondary text-xs">달 크레딧</div>
           </div>
         </div>

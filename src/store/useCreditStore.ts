@@ -1,6 +1,10 @@
 /**
  * 크레딧 상태 관리 (Zustand)
- * 해(☀️)/달(🌙) 이중 크레딧 시스템
+ *
+ * 2026-05-16 단일 달 크레딧 통합:
+ * - 옛 해(sun) 시스템 폐지. sunBalance 는 항상 0 (호환 prop 만 유지)
+ * - 모든 차감/환불은 'moon' 으로 라우팅 — creditType 파라미터는 항상 'moon' 으로 강제
+ * - 옛 호출처가 'sun' 으로 호출해도 내부적으로 'moon' 으로 처리
  */
 
 import { create } from 'zustand';
@@ -11,42 +15,34 @@ import type { CreditType, CreditTransaction } from '../types/credit';
 const STALE_MS = 30_000; // 30초 내 재조회 생략
 
 interface CreditState {
+  /** @deprecated 항상 0. 단일 달 시스템 도입(2026-05-16)으로 폐지. moonBalance 만 사용 */
   sunBalance: number;
   moonBalance: number;
   transactions: CreditTransaction[];
   loading: boolean;
   error: string | null;
-  lastFetched: number; // timestamp
+  lastFetched: number;
 
   /**
-   * 상담소 남은 질문 수 (팩 단위 차감 모델)
-   * - 팩 구매 시 +3
-   * - 질문할 때마다 -1 (로컬만, 크레딧 차감 없음)
+   * @deprecated 상담소 팩 정책 폐지(2026-05-16). 질문마다 직접 chargeForContent('moon', 1, …).
+   * 옛 사용자 잔여분 호환을 위해 state 만 유지.
    */
   consultationRemaining: number;
 
   fetchBalance: (userId?: string, opts?: { force?: boolean }) => Promise<void>;
   fetchTransactions: (userId?: string) => Promise<void>;
-  /** idempotencyKey: 권장. record_id 등을 넘기면 DB 가 이중 차감 차단. */
+  /**
+   * 크레딧 차감. creditType 은 호환 위해 받지만 항상 'moon' 으로 처리됨.
+   * idempotencyKey: 권장 — record_id 등을 넘기면 DB 가 이중 차감 차단.
+   */
   consumeCredit: (creditType: CreditType, amount: number, reason: string, idempotencyKey?: string) => Promise<boolean>;
-
-  /**
-   * 크레딧 차감 + 서버 재조회까지 묶은 헬퍼.
-   * 낙관적 업데이트 후 서버에서 진짜 잔액을 재조회해 UI를 진실의 원천과 동기화.
-   * idempotencyKey 권장 — record_id 같은 식별자로 이중 차감 차단.
-   */
   chargeForContent: (creditType: CreditType, amount: number, reason: string, idempotencyKey?: string) => Promise<boolean>;
-
-  /**
-   * 잘못 차감된 크레딧 환불 — 응답 검증 실패 후 자동 환불 또는 어드민 수동 환불.
-   * 잔액 +amount, 'refund' 거래 기록.
-   * idempotencyKey 권장: `refund-${recordId}` 같이.
-   */
+  /** 환불 — 잔액 +amount, creditType 무시(항상 moon). */
   refundCredit: (creditType: CreditType, amount: number, reason: string, idempotencyKey?: string) => Promise<boolean>;
 
-  /** 상담소 질문팩 구매 — sun 1 또는 moon 3 */
+  /** @deprecated 팩 정책 폐지. ConsultationChatPage 가 직접 chargeForContent 호출. */
   purchaseConsultationPack: (payWith: 'sun' | 'moon') => Promise<boolean>;
-  /** 상담소 질문 1개 사용 (팩에서 차감) */
+  /** @deprecated 팩 정책 폐지. */
   useConsultationQuestion: () => boolean;
 
   reset: () => void;
@@ -64,13 +60,11 @@ export const useCreditStore = create<CreditState>()(
       consultationRemaining: 0,
 
       fetchBalance: async (userId?: string, opts?: { force?: boolean }) => {
-        // stale-time: 30초 내 중복 요청 차단 (force=true 면 무시)
         if (!opts?.force && Date.now() - get().lastFetched < STALE_MS) return;
 
         try {
           set({ loading: true, error: null });
 
-          // userId가 전달되면 getUser() 네트워크 왕복 생략
           const uid = userId ?? (await auth.getCurrentUser())?.id;
           if (!uid) {
             set({ sunBalance: 0, moonBalance: 0, loading: false });
@@ -78,8 +72,10 @@ export const useCreditStore = create<CreditState>()(
           }
 
           const userCredit = await creditDB.getBalance(uid);
+          // 단일 달 시스템 — sun_balance 가 남아있을 수 있으나 항상 moon 으로 통합 표시
+          // (DB 마이그레이션 033 이후 sun_balance 는 0 이어야 정상)
           set({
-            sunBalance: userCredit?.sun_balance ?? 0,
+            sunBalance: 0,
             moonBalance: userCredit?.moon_balance ?? 0,
             loading: false,
             lastFetched: Date.now(),
@@ -93,13 +89,11 @@ export const useCreditStore = create<CreditState>()(
       fetchTransactions: async (userId?: string) => {
         try {
           set({ loading: true, error: null });
-
           const uid = userId ?? (await auth.getCurrentUser())?.id;
           if (!uid) {
             set({ transactions: [], loading: false });
             return;
           }
-
           const transactions = await creditDB.getTransactions(uid);
           set({ transactions, loading: false });
         } catch (error: any) {
@@ -108,31 +102,27 @@ export const useCreditStore = create<CreditState>()(
         }
       },
 
-      consumeCredit: async (creditType: CreditType, amount: number, reason: string, idempotencyKey?: string): Promise<boolean> => {
-        const currentBalance = creditType === 'sun' ? get().sunBalance : get().moonBalance;
+      consumeCredit: async (_creditType, amount, reason, idempotencyKey): Promise<boolean> => {
+        // 단일 달 시스템 — creditType 인자 무시하고 항상 'moon' 으로 처리
+        const currentBalance = get().moonBalance;
 
         if (currentBalance < amount) {
-          const label = creditType === 'sun' ? '해' : '달';
-          set({ error: `${label} 크레딧이 부족합니다` });
+          set({ error: '🌙 크레딧이 부족합니다' });
           return false;
         }
 
         try {
           set({ loading: true, error: null });
           const user = await auth.getCurrentUser();
-
           if (!user) throw new Error('로그인이 필요합니다');
 
-          // user.id prefix — 다른 사용자가 같은 birth/cacheKey 를 입력해도 idempotency 충돌 없음
           const fullKey = idempotencyKey ? `${user.id}:${idempotencyKey}` : undefined;
-          const success = await creditDB.consumeCredit(user.id, creditType, amount, reason, fullKey);
+          const success = await creditDB.consumeCredit(user.id, 'moon', amount, reason, fullKey);
 
           if (success) {
-            // 'duplicate' 도 success — 이미 차감됐으니 잔액 재조회만 하면 됨
-            // 낙관적 업데이트는 일단 적용했다가, force fetchBalance 가 진실로 덮어씀
             const newBalance = currentBalance - amount;
             set({
-              ...(creditType === 'sun' ? { sunBalance: newBalance } : { moonBalance: newBalance }),
+              moonBalance: newBalance,
               loading: false,
               lastFetched: Date.now(),
             });
@@ -147,47 +137,36 @@ export const useCreditStore = create<CreditState>()(
         }
       },
 
-      /**
-       * 차감 + 서버 재조회. 컨텐츠 페이지에서 consumeCredit 대신 이걸 쓰면
-       * 낙관적 업데이트와 DB 진실 사이 불일치가 생겨도 UI가 즉시 바로잡힘.
-       * idempotencyKey: 권장 — record_id 등을 넘기면 DB 가 이중 차감 차단.
-       */
       chargeForContent: async (creditType, amount, reason, idempotencyKey) => {
         const ok = await get().consumeCredit(creditType, amount, reason, idempotencyKey);
         if (ok) {
-          // 서버 진실로 덮어쓰기 — duplicate 였다면 낙관적 -amount 가 잘못된 거니 force fetch 가 보정
           try {
             const user = await auth.getCurrentUser();
             if (user) await get().fetchBalance(user.id, { force: true });
           } catch {
-            // 재조회 실패는 무시
+            /* 재조회 실패 무시 */
           }
         }
         return ok;
       },
 
-      /** 환불 — 잔액 +amount, 'refund' 거래 기록. */
-      refundCredit: async (creditType, amount, reason, idempotencyKey) => {
+      refundCredit: async (_creditType, amount, reason, idempotencyKey) => {
+        // 단일 달 시스템 — _creditType 무시, 항상 moon 으로 환불
         try {
           const user = await auth.getCurrentUser();
           if (!user) return false;
           const fullKey = idempotencyKey ? `${user.id}:refund:${idempotencyKey}` : undefined;
-          const ok = await creditDB.refundCredit(user.id, creditType, amount, reason, fullKey);
+          const ok = await creditDB.refundCredit(user.id, 'moon', amount, reason, fullKey);
           if (ok) {
-            // 잔액 즉시 반영 (낙관적 업데이트)
-            const currentBalance = creditType === 'sun' ? get().sunBalance : get().moonBalance;
             set({
-              ...(creditType === 'sun'
-                ? { sunBalance: currentBalance + amount }
-                : { moonBalance: currentBalance + amount }),
+              moonBalance: get().moonBalance + amount,
               lastFetched: Date.now(),
             });
-            // 서버 진실 재조회
             try {
               await get().fetchBalance(user.id, { force: true });
               await get().fetchTransactions(user.id);
             } catch {
-              // 재조회 실패 무시
+              /* 재조회 실패 무시 */
             }
           }
           return ok;
@@ -198,29 +177,15 @@ export const useCreditStore = create<CreditState>()(
       },
 
       /**
-       * 상담소 질문팩 구매.
-       * - sun: 해 1개 차감 → 3 질문 적립
-       * - moon: 달 3개 차감 → 3 질문 적립
+       * @deprecated 팩 정책 폐지(2026-05-16). 옛 호출처 호환을 위해 잠시 유지.
+       * 실제 동작: 달 차감만 일어남(팩 적립 안 함).
        */
-      purchaseConsultationPack: async (payWith) => {
-        const cost = payWith === 'sun' ? 1 : 3;
-        const ok = await get().chargeForContent(payWith, cost, '상담소 질문팩(3질문)');
-        if (ok) {
-          set(state => ({ consultationRemaining: state.consultationRemaining + 3 }));
-        }
-        return ok;
+      purchaseConsultationPack: async () => {
+        // No-op stub — 새 정책에서는 ConsultationChatPage 가 직접 질문마다 차감
+        return false;
       },
-
-      /**
-       * 상담소 질문 1개 사용. 팩 잔량에서만 차감 (크레딧은 팩 구매 시 이미 차감됨).
-       * @returns false면 팩이 비어있어 구매 필요.
-       */
-      useConsultationQuestion: () => {
-        const remaining = get().consultationRemaining;
-        if (remaining <= 0) return false;
-        set({ consultationRemaining: remaining - 1 });
-        return true;
-      },
+      /** @deprecated 팩 정책 폐지. */
+      useConsultationQuestion: () => false,
 
       reset: () => {
         set({

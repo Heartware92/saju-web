@@ -321,7 +321,7 @@ export default function SajuResultPage() {
             cache.setReport('jungtong', cacheKey, r);
             if (!cache.isCharged('jungtong', cacheKey)) {
               cache.markCharged('jungtong', cacheKey);
-              chargeRef.current('sun', SUN_COST_BIG, CHARGE_REASONS.traditional, `jungtong:${cacheKey}`)
+              chargeRef.current('moon', SUN_COST_BIG, CHARGE_REASONS.traditional, `jungtong:${cacheKey}`)
                 .catch(e => console.error('[charge:traditional] failed', e));
             }
           } else if (r.error) {
@@ -346,7 +346,7 @@ export default function SajuResultPage() {
       <FortuneProfileSelect
         serviceName="정통 사주"
         archiveCategory="traditional"
-        creditType="sun"
+        creditType="moon"
         creditCost={SUN_COST_BIG}
       />
     );

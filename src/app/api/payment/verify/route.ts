@@ -169,8 +169,9 @@ export async function grantCreditsForOrder(
     return { ok: false, error: `알 수 없는 패키지: ${order.package_id}` };
   }
 
-  const sunTotal = pkg.sunCredit + pkg.bonusSun;
-  const moonTotal = pkg.moonCredit + pkg.bonusMoon;
+  // 2026-05-16 단일 달 크레딧 통합 — sun 적립 폐지
+  const sunTotal = 0;
+  const moonTotal = pkg.moonCredit;
 
   // 1) 주문을 completed로 전환 (status='pending'인 경우에만 — 경합 방지)
   const { data: updated, error: updErr } = await supabaseAdmin

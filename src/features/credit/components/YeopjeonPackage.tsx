@@ -1,5 +1,9 @@
 'use client';
 
+/**
+ * 2026-05-16 단일 달 크레딧 통합. 옛 "엽전" 명칭은 legacy 컴포넌트명으로만 유지.
+ */
+
 import React from 'react';
 import { Button } from '../../../components/ui/Button';
 import type { CreditPackage } from '../../../constants/pricing';
@@ -33,7 +37,7 @@ export const YeopjeonPackage: React.FC<PackageCardProps> = ({
       )}
 
       <div className="text-center mb-4 pt-2">
-        <div className="text-4xl mb-2">{pkg.planet}</div>
+        <div className="text-4xl mb-2">{pkg.planet || '🌙'}</div>
         <h3 className="text-lg font-bold text-text-primary">{pkg.name}</h3>
         <p className="text-xs text-text-tertiary mt-1">{pkg.description}</p>
       </div>
@@ -46,16 +50,8 @@ export const YeopjeonPackage: React.FC<PackageCardProps> = ({
 
       <div className="rounded-xl bg-space-elevated/40 p-3 mb-4 space-y-2 text-sm flex-1">
         <div className="flex justify-between items-center">
-          <span className="text-text-secondary">☀️ 해</span>
-          <span className="font-bold text-sun-core">
-            {pkg.sunCredit}{pkg.bonusSun > 0 && <span className="text-sun-corona"> +{pkg.bonusSun}</span>}
-          </span>
-        </div>
-        <div className="flex justify-between items-center">
           <span className="text-text-secondary">🌙 달</span>
-          <span className="font-bold text-moon-halo">
-            {pkg.moonCredit}{pkg.bonusMoon > 0 && <span className="text-moon-shadow"> +{pkg.bonusMoon}</span>}
-          </span>
+          <span className="font-bold text-text-primary">{pkg.moonCredit}개</span>
         </div>
       </div>
 
@@ -72,33 +68,27 @@ export const YeopjeonPackage: React.FC<PackageCardProps> = ({
 };
 
 export const PackageComparison: React.FC = () => {
-  // 실제 차감 정책과 동일 — src/constants/creditCosts.ts 의 SUN_COST_BIG/MOON_COST_MORE/MOON_COST_TAROT 기준
+  // 2026-05-16 단일 달 크레딧 통합 기준 — creditCosts.ts 의 MOON_COST_BIG/MOON_COST_MORE/MOON_COST_TAROT 와 동기화
   const items = [
-    { name: '만세력 확인 + 기본 해석', cost: '무료', type: 'free' },
-    { name: '정통사주 (12섹션 풀이)', cost: '☀️ 1', type: 'sun' },
-    { name: '신년운세 / 평생·시기 운세 / 지정일 운세', cost: '☀️ 1', type: 'sun' },
-    { name: '실시간 운세', cost: '☀️ 1', type: 'sun' },
-    { name: '궁합', cost: '☀️ 1', type: 'sun' },
-    { name: '토정비결 · 자미두수 · 택일', cost: '☀️ 1', type: 'sun' },
-    { name: '더 많은 운세 10종', cost: '🌙 1', type: 'moon' },
-    { name: '타로 리딩 (단독·사주 하이브리드)', cost: '🌙 1', type: 'moon' },
-    { name: '상담소 질문팩 (3질문)', cost: '☀️ 1 또는 🌙 3', type: 'sun' },
+    { name: '만세력 확인 + 기본 해석', cost: '무료' },
+    { name: '정통사주 (12섹션 풀이)', cost: '🌙 10' },
+    { name: '신년운세 / 평생·시기 운세 / 지정일 운세', cost: '🌙 10' },
+    { name: '궁합', cost: '🌙 10' },
+    { name: '토정비결 · 자미두수 · 택일', cost: '🌙 10' },
+    { name: '실시간 운세', cost: '🌙 5' },
+    { name: '더 많은 운세 (성격·자녀·학업·이름·꿈)', cost: '🌙 5' },
+    { name: '타로 (오늘 · 이달 · 질문)', cost: '🌙 1' },
+    { name: '상담소 (질문 1개당)', cost: '🌙 1' },
   ];
 
   return (
     <div className="rounded-2xl bg-space-surface/60 border border-[var(--border-subtle)] p-6 backdrop-blur-sm">
-      <h3 className="text-lg font-bold text-text-primary mb-4">크레딧 사용 안내</h3>
+      <h3 className="text-lg font-bold text-text-primary mb-4">🌙 달로 할 수 있는 일</h3>
       <div className="space-y-3">
         {items.map((item, idx) => (
           <div key={idx} className="flex items-center justify-between py-2 border-b border-[var(--border-subtle)] last:border-0">
             <span className="text-sm text-text-secondary">{item.name}</span>
-            <span className={`text-sm font-bold ${
-              item.type === 'sun' ? 'text-sun-core' :
-              item.type === 'moon' ? 'text-moon-halo' :
-              'text-cta'
-            }`}>
-              {item.cost}
-            </span>
+            <span className="text-sm font-bold text-text-primary">{item.cost}</span>
           </div>
         ))}
       </div>

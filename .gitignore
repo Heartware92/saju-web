@@ -45,3 +45,13 @@ next-env.d.ts
 
 # KASI audit cache (regenerable)
 scripts/.kasi-cache/
+
+# Mumbai → Seoul 마이그레이션 임시 산출물 (10MB pg_dump --data-only)
+supabase/migrations/99999999999999_data_import.sql
+
+# 진단/시드 운영 스크립트 (레포 추적 X)
+scripts/diagnose-credit.mjs
+scripts/seed-test-account.mjs
+
+# .env.local 백업 파일 (자동 백업)
+.env.local.backup_*

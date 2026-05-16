@@ -85,8 +85,9 @@ export const processPayment = async (
       package_id: request.packageId,
       package_name: packageInfo.name,
       amount: request.amount,
-      sun_credit_amount: packageInfo.sunCredit + packageInfo.bonusSun,
-      moon_credit_amount: packageInfo.moonCredit + packageInfo.bonusMoon,
+      // 2026-05-16 단일 달 크레딧 통합 — sun 적립 폐지
+      sun_credit_amount: 0,
+      moon_credit_amount: packageInfo.moonCredit,
       status: 'pending',
     };
 

@@ -31,7 +31,7 @@ export function FortuneProfileSelect({
   const pathname = usePathname();
   const { user } = useUserStore();
   const { profiles, fetchProfiles, loading: profilesLoading } = useProfileStore();
-  const { sunBalance, moonBalance } = useCreditStore();
+  const { moonBalance } = useCreditStore();
 
   const [initialized, setInitialized] = useState(profiles.length > 0);
   const [archiveMap, setArchiveMap] = useState<Record<string, ArchiveInfo | null>>({});
@@ -70,8 +70,10 @@ export function FortuneProfileSelect({
     });
   }, [profiles, archiveCategory, archiveContext]);
 
-  const balance = creditType === 'sun' ? sunBalance : moonBalance;
-  const creditLabel = creditType === 'sun' ? '☀️ 해' : '🌙 달';
+  // 단일 달 크레딧 시스템 — creditType prop 은 호환 위해 유지하지만 항상 moon
+  void creditType;
+  const balance = moonBalance;
+  const creditLabel = '🌙';
 
   const handleProfileClick = useCallback(
     (profile: BirthProfile) => {

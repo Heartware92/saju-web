@@ -305,7 +305,7 @@ export default function TojeongResultPage() {
           cache.setReport('tojeong', cacheKey, r.content);
           if (!cache.isCharged('tojeong', cacheKey)) {
             cache.markCharged('tojeong', cacheKey);
-            chargeRef.current('sun', SUN_COST_BIG, CHARGE_REASONS.tojeong, `tojeong:${cacheKey}`)
+            chargeRef.current('moon', SUN_COST_BIG, CHARGE_REASONS.tojeong, `tojeong:${cacheKey}`)
               .catch(e => console.error('[charge:tojeong] failed', e));
           }
           setAiLoading(false);
@@ -415,7 +415,7 @@ export default function TojeongResultPage() {
           cache.setReport('tojeong', cacheKey, r.content);
           if (!cache.isCharged('tojeong', cacheKey)) {
             cache.markCharged('tojeong', cacheKey);
-            chargeRef.current('sun', SUN_COST_BIG, CHARGE_REASONS.tojeong, `tojeong:${cacheKey}`)
+            chargeRef.current('moon', SUN_COST_BIG, CHARGE_REASONS.tojeong, `tojeong:${cacheKey}`)
               .catch(e => console.error('[charge:tojeong] failed', e));
           }
         }
@@ -432,7 +432,7 @@ export default function TojeongResultPage() {
         serviceName="토정비결"
         description="조선 시대 토정 이지함 선생이 만든 연간 신수 풀이예요. 음력 생년월일과 세는 나이로 144괘 중 하나를 뽑아 올해의 총운, 12개월 흐름, 재물·애정·건강·직장운을 살펴봅니다."
         archiveCategory="tojeong"
-        creditType="sun"
+        creditType="moon"
         creditCost={SUN_COST_BIG}
       />
     );

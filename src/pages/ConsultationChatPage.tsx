@@ -10,11 +10,7 @@ import { computeSajuFromProfile } from '../utils/profileSaju';
 import { buildConsultationSystemPrompt } from '../constants/prompts';
 import { sanitizeAIOutput } from '../services/fortuneService';
 import { supabase } from '../services/supabase';
-import {
-  CONSULTATION_QUESTIONS_PER_PACK,
-  CONSULTATION_PACK_SUN_COST,
-  CONSULTATION_PACK_MOON_COST,
-} from '../constants/creditCosts';
+import { MOON_COST_CONSULTATION_QUESTION, CHARGE_REASONS } from '../constants/creditCosts';
 import {
   type ChatMessage,
   type StoredConversation,
@@ -35,18 +31,14 @@ export default function ConsultationChatPage() {
 
   const { user } = useUserStore();
   const { profiles, fetchProfiles } = useProfileStore();
-  const {
-    sunBalance, moonBalance, fetchBalance,
-    consultationRemaining, purchaseConsultationPack, useConsultationQuestion,
-  } = useCreditStore();
+  const { moonBalance, fetchBalance, chargeForContent } = useCreditStore();
 
   const [conversations, setConversations] = useState<StoredConversation[]>([]);
   const [activeConversationId, setActiveConversationId] = useState('');
   const [inputText, setInputText] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [showPackModal, setShowPackModal] = useState(false);
-  const [packBuying, setPackBuying] = useState(false);
+  const [showInsufficientModal, setShowInsufficientModal] = useState(false);
   const [ready, setReady] = useState(false);
 
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -197,9 +189,10 @@ export default function ConsultationChatPage() {
     const question = (questionOverride ?? inputText).trim();
     if (!question || loading || !saju || !selectedProfile) return;
 
-    if (consultationRemaining <= 0) { setShowPackModal(true); return; }
-    const ok = useConsultationQuestion();
-    if (!ok) { setShowPackModal(true); return; }
+    if (moonBalance < MOON_COST_CONSULTATION_QUESTION) {
+      setShowInsufficientModal(true);
+      return;
+    }
 
     setError('');
     setInputText('');
@@ -211,6 +204,19 @@ export default function ConsultationChatPage() {
       content: question,
       createdAt: Date.now(),
     };
+
+    // 질문 1개당 달 1개 차감 (묻지 않고 즉시 차감, 잔액 0이면 위에서 차단됨)
+    const charged = await chargeForContent(
+      'moon',
+      MOON_COST_CONSULTATION_QUESTION,
+      CHARGE_REASONS.consultation,
+      `consult:${activeConversationId}:${userMsg.id}`,
+    );
+    if (!charged) {
+      setError('크레딧 차감에 실패했어요. 잠시 후 다시 시도해주세요.');
+      return;
+    }
+
     setMessages(prev => [...prev, userMsg]);
     setLoading(true);
 
@@ -384,8 +390,8 @@ export default function ConsultationChatPage() {
               {convTitle && <span className="font-normal text-text-tertiary"> · {convTitle}</span>}
             </p>
           </div>
-          <span className="flex-shrink-0 w-8 text-right text-[11px] text-text-tertiary tabular-nums">
-            {consultationRemaining}
+          <span className="flex-shrink-0 text-right text-[11px] text-text-tertiary tabular-nums whitespace-nowrap">
+            🌙 {moonBalance}
           </span>
         </div>
 
@@ -528,23 +534,23 @@ export default function ConsultationChatPage() {
           <div className="flex items-center justify-between mt-1.5 px-1">
             <span className="text-[12px] text-text-tertiary">{inputText.length}/300</span>
             <span className="text-[12px] text-text-tertiary">
-              남은 질문 {consultationRemaining}
-              {consultationRemaining <= 0 && (
-                <button onClick={() => setShowPackModal(true)} className="ml-2 text-cta underline font-semibold">
-                  질문팩 구매
+              질문 1개당 🌙 {MOON_COST_CONSULTATION_QUESTION} · 보유 {moonBalance}
+              {moonBalance < MOON_COST_CONSULTATION_QUESTION && (
+                <button onClick={() => router.push('/credit')} className="ml-2 text-cta underline font-semibold">
+                  충전하기
                 </button>
               )}
             </span>
           </div>
         </div>
 
-        {/* 질문팩 구매 모달 */}
+        {/* 크레딧 부족 안내 모달 */}
         <AnimatePresence>
-          {showPackModal && (
+          {showInsufficientModal && (
             <>
               <motion.div
                 initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                onClick={() => !packBuying && setShowPackModal(false)}
+                onClick={() => setShowInsufficientModal(false)}
                 className="fixed inset-0 z-[80] bg-black/60"
               />
               <motion.div
@@ -554,42 +560,25 @@ export default function ConsultationChatPage() {
                 className="fixed inset-0 z-[81] flex items-center justify-center px-5 pointer-events-none"
               >
                 <div className="w-full max-w-sm rounded-2xl bg-[rgba(20,12,38,0.98)] border border-cta/40 p-5 pointer-events-auto">
-                  <h3 className="text-lg font-bold text-text-primary mb-1">질문팩 구매</h3>
+                  <h3 className="text-lg font-bold text-text-primary mb-1">🌙 크레딧이 부족해요</h3>
                   <p className="text-[13px] text-text-secondary mb-4 leading-relaxed">
-                    질문팩 1개로 <b className="text-cta">{CONSULTATION_QUESTIONS_PER_PACK}번</b> 연속으로 상담할 수 있어요.
+                    상담소 질문 1개당 🌙 <b className="text-cta">{MOON_COST_CONSULTATION_QUESTION}개</b>가 소모돼요. 충전 후 다시 시도해주세요.
                   </p>
                   <div className="flex flex-col gap-2">
                     <button
-                      disabled={packBuying || sunBalance < CONSULTATION_PACK_SUN_COST}
-                      onClick={async () => {
-                        setPackBuying(true);
-                        const ok = await purchaseConsultationPack('sun');
-                        setPackBuying(false);
-                        if (ok) setShowPackModal(false);
-                        else setError('구매에 실패했어요.');
+                      onClick={() => {
+                        setShowInsufficientModal(false);
+                        router.push('/credit');
                       }}
-                      className="py-3 rounded-xl bg-cta text-white font-semibold text-[15px] disabled:opacity-40 disabled:cursor-not-allowed"
+                      className="py-3 rounded-xl bg-cta text-white font-semibold text-[15px]"
                     >
-                      해 {CONSULTATION_PACK_SUN_COST}개로 구매 ({CONSULTATION_QUESTIONS_PER_PACK}질문)
+                      충전하러 가기
                     </button>
-                    <button
-                      disabled={packBuying || moonBalance < CONSULTATION_PACK_MOON_COST}
-                      onClick={async () => {
-                        setPackBuying(true);
-                        const ok = await purchaseConsultationPack('moon');
-                        setPackBuying(false);
-                        if (ok) setShowPackModal(false);
-                        else setError('구매에 실패했어요.');
-                      }}
-                      className="py-3 rounded-xl bg-white/10 border border-white/20 text-text-primary font-semibold text-[15px] disabled:opacity-40 disabled:cursor-not-allowed"
-                    >
-                      달 {CONSULTATION_PACK_MOON_COST}개로 구매 ({CONSULTATION_QUESTIONS_PER_PACK}질문)
-                    </button>
-                    <button disabled={packBuying} onClick={() => setShowPackModal(false)} className="py-2 text-[13px] text-text-tertiary">
-                      취소
+                    <button onClick={() => setShowInsufficientModal(false)} className="py-2 text-[13px] text-text-tertiary">
+                      나중에
                     </button>
                   </div>
-                  <p className="text-[11px] text-text-tertiary mt-3">보유: 해 {sunBalance} · 달 {moonBalance}</p>
+                  <p className="text-[11px] text-text-tertiary mt-3">현재 잔액: 🌙 {moonBalance}</p>
                 </div>
               </motion.div>
             </>

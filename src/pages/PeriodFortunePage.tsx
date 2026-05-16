@@ -550,7 +550,7 @@ export default function PeriodFortunePage({ scope }: { scope: FortuneScope | 'da
             cache.setReport('newyear', cacheKey, r);
             if (!cache.isCharged('newyear', cacheKey)) {
               cache.markCharged('newyear', cacheKey);
-              chargeRef.current('sun', SUN_COST_BIG, CHARGE_REASONS.newyear, `newyear:${cacheKey}`)
+              chargeRef.current('moon', SUN_COST_BIG, CHARGE_REASONS.newyear, `newyear:${cacheKey}`)
                 .catch(e => console.error('[charge:newyear] failed', e));
             }
           } else if (r.error) {
@@ -595,7 +595,7 @@ export default function PeriodFortunePage({ scope }: { scope: FortuneScope | 'da
             cache.setReport('period_date', cacheKey, r);
             if (!cache.isCharged('period_date', cacheKey)) {
               cache.markCharged('period_date', cacheKey);
-              chargeRef.current('sun', SUN_COST_BIG, CHARGE_REASONS.date, `period_date:${cacheKey}`)
+              chargeRef.current('moon', SUN_COST_BIG, CHARGE_REASONS.date, `period_date:${cacheKey}`)
                 .catch(e => console.error('[charge:period_date] failed', e));
             }
           } else if (r.error) {
@@ -656,7 +656,7 @@ export default function PeriodFortunePage({ scope }: { scope: FortuneScope | 'da
           cache.setReport(kind, cacheKey, r.descriptions);
           if (!cache.isCharged(kind, cacheKey)) {
             cache.markCharged(kind, cacheKey);
-            chargeRef.current('sun', SUN_COST_BIG, CHARGE_REASONS.today, `${kind}:${cacheKey}`)
+            chargeRef.current('moon', SUN_COST_BIG, CHARGE_REASONS.today, `${kind}:${cacheKey}`)
               .catch(e => console.error('[charge:period_day] failed', e));
           }
         } else if (r.error) {
@@ -685,7 +685,7 @@ export default function PeriodFortunePage({ scope }: { scope: FortuneScope | 'da
           serviceName={`${targetYear} 신년운세`}
           archiveCategory="newyear"
           archiveContext={{ key: 'year', value: String(targetYear) }}
-          creditType="sun"
+          creditType="moon"
           creditCost={SUN_COST_BIG}
         />
       );
@@ -694,7 +694,7 @@ export default function PeriodFortunePage({ scope }: { scope: FortuneScope | 'da
       <QuickFortuneGate
         serviceName="지정일 운세"
         archiveCategory="period"
-        creditType="sun"
+        creditType="moon"
         creditCost={SUN_COST_BIG}
       />
     );

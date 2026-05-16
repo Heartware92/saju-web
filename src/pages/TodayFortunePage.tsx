@@ -23,7 +23,7 @@ import { useReportCacheStore, sajuKey, type ReportKind } from '../store/useRepor
 import { RestoreReportModal } from '../components/RestoreReportModal';
 import { QuickFortuneGate } from '../components/QuickFortuneGate';
 import { computeSajuFromProfile } from '../utils/profileSaju';
-import { SUN_COST_BIG, CHARGE_REASONS } from '../constants/creditCosts';
+import { MOON_COST_MORE, CHARGE_REASONS } from '../constants/creditCosts';
 import { calculateSaju, type SajuResult } from '../utils/sajuCalculator';
 import {
   getTodayFortuneV3Report,
@@ -678,7 +678,7 @@ export default function TodayFortunePage() {
             cache.setReport('today', cacheKey, r);
             if (!cache.isCharged('today', cacheKey)) {
               cache.markCharged('today', cacheKey);
-              chargeRef.current('sun', SUN_COST_BIG, CHARGE_REASONS.today, `today:${cacheKey}`)
+              chargeRef.current('moon', MOON_COST_MORE, CHARGE_REASONS.today, `today:${cacheKey}`)
                 .catch(e => console.error('[charge:today] failed', e));
             }
           } else if (r.error) {
@@ -703,8 +703,8 @@ export default function TodayFortunePage() {
       <QuickFortuneGate
         serviceName="실시간 운세"
         archiveCategory="today"
-        creditType="sun"
-        creditCost={SUN_COST_BIG}
+        creditType="moon"
+        creditCost={MOON_COST_MORE}
       />
     );
   }

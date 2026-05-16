@@ -1,20 +1,20 @@
 'use client';
 
 /**
- * 크레딧 충전 페이지 - 코스믹 테마
- * 행성 세트: 별 → 지구 → 화성 → 수성 → 금성
+ * 크레딧 충전 페이지 (2026-05-16 단일 달 크레딧 통합)
+ * 패키지: 달 → 화성 → 지구 → 토성 → 목성 → 은하 → 우주
  */
 
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useCreditStore } from '@/store/useCreditStore';
-import { CREDIT_PACKAGES, CREDIT_COST } from '@/constants/pricing';
+import { CREDIT_PACKAGES } from '@/constants/pricing';
 import { processPayment } from '@/services/payment';
 import type { CreditPackage } from '@/constants/pricing';
 
 export const CreditPurchasePage: React.FC = () => {
   const router = useRouter();
-  const { sunBalance, moonBalance } = useCreditStore();
+  const { moonBalance } = useCreditStore();
   const [loading, setLoading] = useState<string | null>(null);
 
   const handlePurchase = async (pkg: CreditPackage) => {
@@ -23,11 +23,11 @@ export const CreditPurchasePage: React.FC = () => {
       const result = await processPayment({
         packageId: pkg.id,
         amount: pkg.price,
-        creditAmount: pkg.sunCredit + pkg.moonCredit + pkg.bonusSun + pkg.bonusMoon,
+        creditAmount: pkg.moonCredit,
       });
 
       if (result.success) {
-        alert(`${pkg.name} 구매 완료!\n☀️ 해 ${pkg.sunCredit + pkg.bonusSun}개 + 🌙 달 ${pkg.moonCredit + pkg.bonusMoon}개 충전!`);
+        alert(`${pkg.name} 구매 완료! 🌙 ${pkg.moonCredit}개 충전!`);
       } else {
         alert(result.message || '결제에 실패했습니다.');
       }
@@ -54,7 +54,7 @@ export const CreditPurchasePage: React.FC = () => {
 
         {/* Header */}
         <div className="text-center mb-6">
-          <h1 className="text-xl font-bold bg-gradient-to-r from-sun-core via-cta to-moon-halo bg-clip-text text-transparent mb-2">
+          <h1 className="text-xl font-bold bg-gradient-to-r from-[var(--cta-primary)] to-[var(--cta-secondary)] bg-clip-text text-transparent mb-2">
             크레딧 충전
           </h1>
           <p className="text-text-secondary text-sm mb-4">
@@ -62,18 +62,10 @@ export const CreditPurchasePage: React.FC = () => {
           </p>
 
           {/* Current balance */}
-          <div className="inline-flex items-center gap-4 px-5 py-2.5 rounded-2xl bg-space-surface/80 border border-[var(--border-subtle)]">
-            <div className="flex items-center gap-1.5">
-              <span className="text-base">☀️</span>
-              <span className="text-lg font-bold text-sun-core">{sunBalance}</span>
-              <span className="text-[12px] text-text-tertiary">해</span>
-            </div>
-            <div className="w-px h-5 bg-[var(--border-subtle)]" />
-            <div className="flex items-center gap-1.5">
-              <span className="text-base">🌙</span>
-              <span className="text-lg font-bold text-moon-halo">{moonBalance}</span>
-              <span className="text-[12px] text-text-tertiary">달</span>
-            </div>
+          <div className="inline-flex items-center gap-2 px-5 py-2.5 rounded-2xl bg-space-surface/80 border border-[var(--border-subtle)]">
+            <span className="text-base">🌙</span>
+            <span className="text-lg font-bold text-text-primary">{moonBalance}</span>
+            <span className="text-[12px] text-text-tertiary">달</span>
           </div>
         </div>
 
@@ -116,7 +108,7 @@ export const CreditPurchasePage: React.FC = () => {
 };
 
 /**
- * 패키지 카드
+ * 패키지 카드 (단일 달 크레딧)
  */
 const PackageCard: React.FC<{
   pkg: CreditPackage;
@@ -143,18 +135,15 @@ const PackageCard: React.FC<{
 
       <div className="flex items-center gap-3">
         {/* Planet icon */}
-        <div className="text-3xl shrink-0">{pkg.planet}</div>
+        <div className="text-3xl shrink-0 w-9 text-center">{pkg.planet || ''}</div>
 
         {/* Info */}
         <div className="flex-1 min-w-0">
           <h3 className="text-sm font-bold text-text-primary">{pkg.name}</h3>
           <p className="text-[13px] text-text-tertiary">{pkg.description}</p>
-          <div className="flex items-center gap-3 mt-1 text-xs">
-            <span className="text-sun-core font-semibold">
-              ☀️ {pkg.sunCredit}{pkg.bonusSun > 0 && `+${pkg.bonusSun}`}
-            </span>
-            <span className="text-moon-halo font-semibold">
-              🌙 {pkg.moonCredit}{pkg.bonusMoon > 0 && `+${pkg.bonusMoon}`}
+          <div className="flex items-center gap-1.5 mt-1 text-xs">
+            <span className="text-text-primary font-semibold">
+              🌙 {pkg.moonCredit}개
             </span>
           </div>
         </div>
@@ -185,25 +174,24 @@ const PackageCard: React.FC<{
 };
 
 /**
- * 사용 안내
+ * 사용 안내 (단일 달 크레딧)
  */
 const UsageGuide: React.FC = () => {
-  // 실제 차감 정책과 동일 — src/constants/creditCosts.ts 의 SUN_COST_BIG/MOON_COST_MORE/MOON_COST_TAROT 기준
   const items = [
-    { name: '만세력 확인 + 기본 해석', cost: '무료', icon: '🆓' },
-    { name: '정통사주 (12섹션 풀이)', cost: '☀️ 1', icon: '' },
-    { name: '신년운세 / 평생·시기 운세 / 지정일 운세', cost: '☀️ 1', icon: '' },
-    { name: '실시간 운세', cost: '☀️ 1', icon: '' },
-    { name: '궁합', cost: '☀️ 1', icon: '' },
-    { name: '토정비결 · 자미두수 · 택일', cost: '☀️ 1', icon: '' },
-    { name: '더 많은 운세 10종', cost: '🌙 1', icon: '' },
-    { name: '타로 리딩 (단독·사주 하이브리드)', cost: '🌙 1', icon: '' },
-    { name: '상담소 질문팩 (3질문 묶음)', cost: '☀️ 1 또는 🌙 3', icon: '' },
+    { name: '만세력 확인 + 기본 해석', cost: '무료' },
+    { name: '정통사주 (12섹션 풀이)', cost: '🌙 10' },
+    { name: '신년운세 / 평생·시기 운세 / 지정일 운세', cost: '🌙 10' },
+    { name: '궁합', cost: '🌙 10' },
+    { name: '토정비결 · 자미두수 · 택일', cost: '🌙 10' },
+    { name: '실시간 운세', cost: '🌙 5' },
+    { name: '더 많은 운세 (성격·자녀·학업·이름·꿈)', cost: '🌙 5' },
+    { name: '타로 (오늘 · 이달 · 질문)', cost: '🌙 1' },
+    { name: '상담소 (질문 1개당)', cost: '🌙 1' },
   ];
 
   return (
     <div className="rounded-2xl bg-space-surface/60 border border-[var(--border-subtle)] p-4">
-      <h3 className="text-sm font-bold text-text-primary mb-3">해와 달로 할 수 있는 일</h3>
+      <h3 className="text-sm font-bold text-text-primary mb-3">🌙 달로 할 수 있는 일</h3>
       <div className="space-y-0">
         {items.map((item, idx) => (
           <div
@@ -225,11 +213,11 @@ const UsageGuide: React.FC = () => {
 const FAQ: React.FC = () => {
   const faqs = [
     {
-      q: '해와 달은 환불이 가능한가요?',
+      q: '달 크레딧은 환불이 가능한가요?',
       a: '구매 후 7일 이내, 미사용 크레딧에 한해 전액 환불이 가능합니다. 마이페이지 → 결제 내역에서 환불 요청을 진행해주세요.',
     },
     {
-      q: '해와 달에 유효기간이 있나요?',
+      q: '달 크레딧에 유효기간이 있나요?',
       a: '구매하신 크레딧의 유효기간은 구매일로부터 3개월이며, 기간 경과 시 미사용 크레딧은 자동 소멸됩니다. 자세한 내용은 이용약관 제14조 및 제16조를 참고해주세요.',
     },
     {

@@ -355,7 +355,7 @@ export default function ZamidusuResultPage() {
             cache.setReport('zamidusu', cacheKey, r);
             if (!cache.isCharged('zamidusu', cacheKey)) {
               cache.markCharged('zamidusu', cacheKey);
-              chargeRef.current('sun', SUN_COST_BIG, CHARGE_REASONS.zamidusu, `zamidusu:${cacheKey}`)
+              chargeRef.current('moon', SUN_COST_BIG, CHARGE_REASONS.zamidusu, `zamidusu:${cacheKey}`)
                 .catch(e => console.error('[charge:zamidusu] failed', e));
             }
           } else if (r.error) {
@@ -454,7 +454,7 @@ export default function ZamidusuResultPage() {
         serviceName="자미두수"
         description="중국 송나라 진희이가 창시한 별자리 명리학이에요. 생년월일시를 기반으로 자미성을 비롯한 108개 성(星)의 배치를 분석하여 성격, 재물, 관계, 건강 등 삶의 큰 그림을 읽어냅니다."
         archiveCategory="zamidusu"
-        creditType="sun"
+        creditType="moon"
         creditCost={SUN_COST_BIG}
       />
     );

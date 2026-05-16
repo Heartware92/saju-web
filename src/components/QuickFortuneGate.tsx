@@ -37,7 +37,7 @@ export function QuickFortuneGate({
   const pathname = usePathname();
   const { user } = useUserStore();
   const { profiles, fetchProfiles } = useProfileStore();
-  const { sunBalance, moonBalance } = useCreditStore();
+  const { moonBalance } = useCreditStore();
 
   const [initialized, setInitialized] = useState(profiles.length > 0);
   const [checking, setChecking] = useState(true);
@@ -45,8 +45,10 @@ export function QuickFortuneGate({
   const [archiveList, setArchiveList] = useState<ArchiveListItem[]>([]);
   const [modalType, setModalType] = useState<'credit' | 'existing' | 'date-list' | 'insufficient' | null>(null);
 
-  const balance = creditType === 'sun' ? sunBalance : moonBalance;
-  const creditLabel = creditType === 'sun' ? '☀️ 해' : '🌙 달';
+  // 단일 달 크레딧 시스템 — creditType prop 은 호환 위해 유지하지만 항상 moon
+  void creditType;
+  const balance = moonBalance;
+  const creditLabel = '🌙';
   const primaryProfile = profiles.find(p => p.is_primary) ?? profiles[0] ?? null;
   const navPath = targetPath ?? pathname;
 

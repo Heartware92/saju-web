@@ -1,19 +1,26 @@
 /**
- * 크레딧 패키지 정의
- * 행성 세트: 별 → 지구 → 화성 → 수성 → 금성
- * 크레딧 단위: 해(☀️) = 프리미엄, 달(🌙) = 스탠다드
+ * 크레딧 패키지 정의 (2026-05-16 단일 달 크레딧 통합)
+ *
+ * 단위: 달 🌙 (1달 = ₩200, 옛 해 단위 폐지)
+ * 기본 사용 단가:
+ *   - 본격 운세 7종 = 달 10개 (₩2,000)
+ *   - 더많은 운세 6종 + 실시간 운세 = 달 5개 (₩1,000)
+ *   - 타로 (오늘/이달/질문) = 달 1개 (₩200)
+ *   - 상담소 1질문 = 달 1개 (₩200)
+ *
+ * 패키지 톤: 행성/우주 점층 (작은 천체 → 큰 천체)
  */
 
 export interface CreditPackage {
   id: string;
   name: string;
+  /** UI 표시용 이모지 (이모지 미지정 시 빈 문자열) */
   planet: string;
+  /** @deprecated planet 사용 */
   icon: string;
   price: number;
-  sunCredit: number;
+  /** 충전되는 달(🌙) 개수 (옛 sun/moon 분리 폐지) */
   moonCredit: number;
-  bonusSun: number;
-  bonusMoon: number;
   description: string;
   features: string[];
   popular?: boolean;
@@ -22,99 +29,110 @@ export interface CreditPackage {
 
 export const CREDIT_PACKAGES: readonly CreditPackage[] = [
   {
-    id: 'star',
-    name: '별 세트',
-    planet: '⭐',
-    icon: '⭐',
+    id: 'moon',
+    name: '달 세트',
+    planet: '🌙',
+    icon: '🌙',
     price: 2000,
-    sunCredit: 1,
-    moonCredit: 2,
-    bonusSun: 0,
-    bonusMoon: 0,
-    description: '가볍게 시작하기',
-    features: ['☀️ 해 1개', '🌙 달 2개'],
+    moonCredit: 10,
+    description: '본격 풀이 1번 — 가볍게 시작',
+    features: ['🌙 10개', '본격 운세 1번 가능'],
+  },
+  {
+    id: 'mars',
+    name: '화성 세트',
+    // 표준 이모지 없음 — 사용자가 따로 자산 제공 예정
+    planet: '',
+    icon: '',
+    price: 3900,
+    moonCredit: 22,
+    description: '본격 2번 + 자투리 — 단품 2개보다 이득',
+    features: ['🌙 22개 (보너스 11%)', '본격 운세 2번 + 가벼운 자투리'],
   },
   {
     id: 'earth',
     name: '지구 세트',
     planet: '🌍',
     icon: '🌍',
-    price: 5000,
-    sunCredit: 3,
-    moonCredit: 5,
-    bonusSun: 0,
-    bonusMoon: 1,
-    description: '기본 분석 여러 번',
-    features: ['☀️ 해 3개', '🌙 달 5+1개', '보너스 달 1개'],
+    price: 5900,
+    moonCredit: 35,
+    description: '본인 + 가족 2~3명 풀이',
+    features: ['🌙 35개 (보너스 16%)', '본격 3번 + 가벼운 1번'],
+  },
+  {
+    id: 'saturn',
+    name: '토성 세트',
+    planet: '🪐',
+    icon: '🪐',
+    price: 9900,
+    moonCredit: 60,
+    description: '가족 모두 풀이',
+    features: ['🌙 60개 (보너스 21%)', '본격 5번 + 가벼운 2번'],
     popular: true,
   },
   {
-    id: 'mars',
-    name: '화성 세트',
-    planet: '🔴',
-    icon: '🔴',
-    price: 10000,
-    sunCredit: 7,
-    moonCredit: 10,
-    bonusSun: 1,
-    bonusMoon: 2,
-    description: '깊이 있는 운세 탐색',
-    features: ['☀️ 해 7+1개', '🌙 달 10+2개', '보너스 해 1 + 달 2'],
-  },
-  {
-    id: 'mercury',
-    name: '수성 세트',
-    planet: '🪐',
-    icon: '🪐',
-    price: 20000,
-    sunCredit: 15,
-    moonCredit: 20,
-    bonusSun: 3,
-    bonusMoon: 5,
-    description: '온 가족 운세 보기',
-    features: ['☀️ 해 15+3개', '🌙 달 20+5개', '보너스 해 3 + 달 5'],
+    id: 'jupiter',
+    name: '목성 세트',
+    // 표준 이모지 없음
+    planet: '',
+    icon: '',
+    price: 19900,
+    moonCredit: 125,
+    description: '한 달 푹 사용',
+    features: ['🌙 125개 (보너스 26%)', '본격 12번 + 자투리'],
     bestValue: true,
   },
   {
-    id: 'venus',
-    name: '금성 세트',
-    planet: '✨',
-    icon: '✨',
-    price: 50000,
-    sunCredit: 40,
-    moonCredit: 50,
-    bonusSun: 10,
-    bonusMoon: 15,
-    description: '최대 혜택 프리미엄',
-    features: ['☀️ 해 40+10개', '🌙 달 50+15개', '보너스 해 10 + 달 15'],
+    id: 'galaxy',
+    name: '은하 세트',
+    planet: '🌌',
+    icon: '🌌',
+    price: 39900,
+    moonCredit: 270,
+    description: '분기 단위 마니아',
+    features: ['🌙 270개 (보너스 35%)', '본격 27번'],
+  },
+  {
+    id: 'cosmos',
+    name: '우주 세트',
+    // 표준 이모지 없음
+    planet: '',
+    icon: '',
+    price: 79900,
+    moonCredit: 580,
+    description: '1년치 헤비 유저',
+    features: ['🌙 580개 (보너스 45%)', '본격 58번'],
   },
 ] as const;
 
 /**
- * 크레딧 소비량 정의
+ * 크레딧 소비량 정의 (참고용 — 실제 차감은 creditCosts.ts 상수 사용)
  */
 export const CREDIT_COST = {
-  // 사주 분석
-  basicInterpretation: { type: 'free' as const, amount: 0 },
-  detailedInterpretation: { type: 'sun' as const, amount: 2 },
-  todayFortune: { type: 'moon' as const, amount: 1 },
-  loveFortune: { type: 'sun' as const, amount: 2 },
-  wealthFortune: { type: 'sun' as const, amount: 2 },
+  // 본격 운세 7종
+  traditional: { type: 'moon' as const, amount: 10 },
+  newyear: { type: 'moon' as const, amount: 10 },
+  gunghap: { type: 'moon' as const, amount: 10 },
+  pickedDate: { type: 'moon' as const, amount: 10 },
+  taekil: { type: 'moon' as const, amount: 10 },
+  tojeong: { type: 'moon' as const, amount: 10 },
+  zamidusu: { type: 'moon' as const, amount: 10 },
+
+  // 더많은 운세 + 실시간
+  realtimeFortune: { type: 'moon' as const, amount: 5 },
+  studyFortune: { type: 'moon' as const, amount: 5 },
+  childrenFortune: { type: 'moon' as const, amount: 5 },
+  personalityFortune: { type: 'moon' as const, amount: 5 },
+  nameFortune: { type: 'moon' as const, amount: 5 },
+  dreamFortune: { type: 'moon' as const, amount: 5 },
 
   // 타로
-  tarotReading: { type: 'moon' as const, amount: 1 },      // 질문 타로 (1장)
-  todayTarot: { type: 'moon' as const, amount: 1 },        // 오늘의 타로 (1장, 하루 고정)
-  monthlyTarot: { type: 'sun' as const, amount: 1 },       // 이달의 타로 (3장 스프레드, 월단위 고정)
+  tarotToday: { type: 'moon' as const, amount: 1 },
+  tarotMonthly: { type: 'moon' as const, amount: 1 },
+  tarotQuestion: { type: 'moon' as const, amount: 1 },
 
-  // 하이브리드
-  hybridReading: { type: 'sun' as const, amount: 3 },
-
-  // 기타 풀이법
-  tojeongReading: { type: 'sun' as const, amount: 2 },     // 토정비결
-  zamidusuReading: { type: 'sun' as const, amount: 3 },    // 자미두수
-
-  // 기타
-  pdfDownload: { type: 'moon' as const, amount: 1 },
+  // 상담소
+  consultationQuestion: { type: 'moon' as const, amount: 1 },
 } as const;
 
 /**

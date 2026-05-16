@@ -1,5 +1,6 @@
 /**
  * 크레딧 잔액 표시 위젯 - 코스믹 테마
+ * 2026-05-16 단일 달 크레딧으로 통합
  */
 
 'use client';
@@ -17,7 +18,7 @@ export const CreditBalance: React.FC<CreditBalanceProps> = ({
   showAddButton = true,
   size = 'md'
 }) => {
-  const { sunBalance, moonBalance } = useCreditStore();
+  const { moonBalance } = useCreditStore();
   const router = useRouter();
 
   const sizeConfig = {
@@ -33,17 +34,8 @@ export const CreditBalance: React.FC<CreditBalanceProps> = ({
         className="flex items-center rounded-lg bg-space-elevated/60 border border-[var(--border-subtle)]"
         style={{ gap: config.gap, padding: config.padding }}
       >
-        <span style={{ fontSize: config.text }}>☀️</span>
-        <span className="font-bold text-sun-core" style={{ fontSize: config.text }}>
-          {sunBalance}
-        </span>
-      </div>
-      <div
-        className="flex items-center rounded-lg bg-space-elevated/60 border border-[var(--border-subtle)]"
-        style={{ gap: config.gap, padding: config.padding }}
-      >
         <span style={{ fontSize: config.text }}>🌙</span>
-        <span className="font-bold text-moon-halo" style={{ fontSize: config.text }}>
+        <span className="font-bold text-text-primary" style={{ fontSize: config.text }}>
           {moonBalance}
         </span>
       </div>
@@ -62,27 +54,23 @@ export const CreditBalance: React.FC<CreditBalanceProps> = ({
 };
 
 /**
- * 크레딧 필요 알림 (인라인)
+ * 크레딧 필요 알림 (인라인) — 단일 달 단위
  */
 interface CreditRequiredProps {
   amount: number;
-  creditType: 'sun' | 'moon';
   description?: string;
+  /** @deprecated 단일 달 시스템 — prop 무시 (호환용) */
+  creditType?: 'sun' | 'moon';
 }
 
 export const CreditRequired: React.FC<CreditRequiredProps> = ({
   amount,
-  creditType,
-  description
+  description,
 }) => {
-  const icon = creditType === 'sun' ? '☀️' : '🌙';
-  const label = creditType === 'sun' ? '해' : '달';
-  const colorClass = creditType === 'sun' ? 'text-sun-core' : 'text-moon-halo';
-
   return (
     <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-space-elevated/60 border border-[var(--border-subtle)] rounded-full">
-      <span>{icon}</span>
-      <span className={`font-bold ${colorClass}`}>{amount} {label}</span>
+      <span>🌙</span>
+      <span className="font-bold text-text-primary">{amount}</span>
       {description && (
         <span className="text-sm text-text-secondary">· {description}</span>
       )}

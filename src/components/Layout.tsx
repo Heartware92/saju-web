@@ -63,7 +63,7 @@ function NavIcon({ name, active }: { name: string; active: boolean }) {
 export default function Layout({ children }: LayoutProps) {
   const pathname = usePathname();
   const router = useRouter();
-  const { sunBalance, moonBalance } = useCreditStore();
+  const { moonBalance } = useCreditStore();
   const [menuOpen, setMenuOpen] = useState(false);
 
   const isActive = (path: string) => {
@@ -95,7 +95,6 @@ export default function Layout({ children }: LayoutProps) {
 
           {/* Center: Credit Display */}
           <CreditDisplay
-            sunBalance={sunBalance}
             moonBalance={moonBalance}
             compact
             onClick={() => router.push('/credit')}

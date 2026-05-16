@@ -94,27 +94,27 @@ const record = (name: string, pass: boolean, detail?: string) =>
 // 현재는 모든 타로 모드가 generateHybridPrompt 로 통합되어 있어 prompts/service 직접 검증 불필요.
 
 // ────────────────────────────────────────────────
-// 4) pricing 정합성 (신규 엔트리)
+// 4) pricing 정합성 (2026-05-16 단일 달 크레딧 통합 후)
 // ────────────────────────────────────────────────
 record(
-  '[pricing] todayTarot = 달1',
-  CREDIT_COST.todayTarot.type === 'moon' && CREDIT_COST.todayTarot.amount === 1,
-  JSON.stringify(CREDIT_COST.todayTarot)
+  '[pricing] tarotToday = 달1',
+  CREDIT_COST.tarotToday.type === 'moon' && CREDIT_COST.tarotToday.amount === 1,
+  JSON.stringify(CREDIT_COST.tarotToday)
 );
 record(
-  '[pricing] monthlyTarot = 해1',
-  CREDIT_COST.monthlyTarot.type === 'sun' && CREDIT_COST.monthlyTarot.amount === 1,
-  JSON.stringify(CREDIT_COST.monthlyTarot)
+  '[pricing] tarotMonthly = 달1',
+  CREDIT_COST.tarotMonthly.type === 'moon' && CREDIT_COST.tarotMonthly.amount === 1,
+  JSON.stringify(CREDIT_COST.tarotMonthly)
 );
 record(
-  '[pricing] tojeongReading = 해2',
-  CREDIT_COST.tojeongReading.type === 'sun' && CREDIT_COST.tojeongReading.amount === 2,
-  JSON.stringify(CREDIT_COST.tojeongReading)
+  '[pricing] tojeong = 달10',
+  CREDIT_COST.tojeong.type === 'moon' && CREDIT_COST.tojeong.amount === 10,
+  JSON.stringify(CREDIT_COST.tojeong)
 );
 record(
-  '[pricing] zamidusuReading = 해3',
-  CREDIT_COST.zamidusuReading.type === 'sun' && CREDIT_COST.zamidusuReading.amount === 3,
-  JSON.stringify(CREDIT_COST.zamidusuReading)
+  '[pricing] zamidusu = 달10',
+  CREDIT_COST.zamidusu.type === 'moon' && CREDIT_COST.zamidusu.amount === 10,
+  JSON.stringify(CREDIT_COST.zamidusu)
 );
 
 // ────────────────────────────────────────────────

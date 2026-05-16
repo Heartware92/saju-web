@@ -101,7 +101,7 @@ export default function AuthCallbackPage() {
             <h1 className="text-lg font-bold mb-2 text-text-primary">로그인 실패</h1>
             <p className="text-sm text-text-secondary mb-6 leading-relaxed">{message}</p>
             <button
-              onClick={() => router.push('/login')}
+              onClick={() => router.replace('/login')}
               className="px-4 py-2 rounded-lg bg-cta text-white text-sm font-bold"
             >
               로그인 페이지로
