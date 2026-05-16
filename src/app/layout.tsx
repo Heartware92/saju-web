@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Gowun_Batang, Noto_Sans_KR } from "next/font/google";
 import "./globals.css";
 import { Providers } from "./providers";
+import { VersionWatcher } from "../components/VersionWatcher";
 
 const gowunBatang = Gowun_Batang({
   weight: ['400', '700'],
@@ -45,6 +46,7 @@ export default function RootLayout({
         <Providers>
           {children}
         </Providers>
+        <VersionWatcher />
       </body>
     </html>
   );
