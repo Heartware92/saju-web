@@ -1566,25 +1566,38 @@ function TimeFlowSectionView({
   const SLOT_ORDER: SlotKey[] = ['morning', 'afternoon', 'evening', 'night'];
 
   // bodyText 파싱 — 각 시간대로 시작하는 단락 추출
-  // 형식: "아침(06~12시) — ..." / "아침 — ..." / "아침: ..."
+  // AI 출력 변형 흡수: "아침(06~12시) — ..." / "아침 — ..." / "아침: ..." /
+  // "아침(06~12시)는 ..." / "낮(12~18시)은 ..." / "저녁에 ..." / "밤이 ..." 등
   const paragraphs = bodyText.split(/\n\n+/).map(p => p.trim()).filter(Boolean);
   const slotBodies: Partial<Record<SlotKey, string>> = {};
   const otherParas: string[] = [];
 
-  const slotRe: Record<SlotKey, RegExp> = {
-    morning:   /^아침(?:\s*\([^)]*\))?\s*[—\-:：·]\s*([\s\S]+)$/,
-    afternoon: /^낮(?:\s*\([^)]*\))?\s*[—\-:：·]\s*([\s\S]+)$/,
-    evening:   /^저녁(?:\s*\([^)]*\))?\s*[—\-:：·]\s*([\s\S]+)$/,
-    night:     /^밤(?:\s*\([^)]*\))?\s*[—\-:：·]\s*([\s\S]+)$/,
+  const SLOT_LABEL: Record<SlotKey, string> = {
+    morning: '아침',
+    afternoon: '낮',
+    evening: '저녁',
+    night: '밤',
+  };
+
+  // 라벨로 시작하는 단락에서 prefix(시간 괄호·조사·구분자) 제거 후 본문 반환
+  const stripSlotPrefix = (para: string, label: string): string | null => {
+    const trimmed = para.trimStart();
+    if (!trimmed.startsWith(label)) return null;
+    let rest = trimmed.slice(label.length);
+    rest = rest.replace(/^\s*\([^)]*\)/, '');
+    rest = rest.replace(/^\s*(?:에는|에서는|에서|은|는|이|가|에|을|를)?\s*[—\-–·:：]?\s*/, '');
+    const body = rest.trim();
+    if (body.length < 2) return null;
+    return body;
   };
 
   for (const para of paragraphs) {
     let matched = false;
     for (const slot of SLOT_ORDER) {
       if (slotBodies[slot]) continue;
-      const m = para.match(slotRe[slot]);
-      if (m) {
-        slotBodies[slot] = m[1].trim();
+      const body = stripSlotPrefix(para, SLOT_LABEL[slot]);
+      if (body) {
+        slotBodies[slot] = body;
         matched = true;
         break;
       }
