@@ -5,21 +5,24 @@ import { useEffect } from 'react';
 /**
  * Monument Valley 톤 측면 태양계 — 로딩 화면용 우주 시각화
  *
- * 2026-05-17 궤도 정확화 — cos/sin 36단계 keyframes + transform 분리.
+ * 2026-05-17 (재수정) — (1) 행성 2, 3 사이즈 비주기 변동 해결 (2) 달 제거.
  *
- * 핵심 수정: 이전엔 outer g 에 translate + scale 동시 적용했는데, scale 가
- * 자식의 translate(50,50) 좌표까지 줄여버려서 t=0.25 (앞), t=0.75 (뒤) 위치가
- * viewBox 중심 (50,50) 에서 벗어남.
- * 해결: translate 와 scale 을 서로 다른 g 에 분리 적용.
- *  - outer g: orbit-translate-N (translate 만)
- *  - middle g: SVG attribute transform="translate(50 50)"
- *  - inner g: orbit-scale-fade (scale·opacity 만, 모든 행성 공유)
- *  - innermost: planet-spin (rotate 자전)
+ * (1) sync 문제: 직전 dc39956 은 translate / scale 을 별도 g 에 분리했는데, 두 CSS
+ * animation 이 서로 다른 element 에 적용돼 같은 duration 이어도 startTime drift 가
+ * 누적. 행성 2(14s) / 3(22s) 처럼 긴 주기일수록 두드러짐.
+ *  → translate + scale + opacity 를 단일 keyframes 로 합쳐 동일 element 에 적용해 sync
+ *    무조건 보장. dc39956 의 핵심(부모 scale 이 자식 정적 좌표에 영향 X)은 정적
+ *    transform="translate(50 50)" 을 outer parent g 로 옮겨 유지. 자식 도형이 cx=0 cy=0
+ *    이라 scale 가 위치를 깎지 않음.
+ *
+ * (2) 달 제거: 궤도 가이드는 4 개인데 행성 2 옆 작은 위성(달)까지 5 개가 돌아 시각적
+ * 불일치. 달 궤도(rx=6 ry=2.4)가 너무 작아 "행성 2 의 위성" 으로 안 읽히고 동일 큰
+ * 궤도에서 또 다른 행성이 도는 것처럼 보임. 가이드 4 = 행성 4 로 정합.
  *
  * 시각화:
  *  - 측면 시점, ry/rx ≈ 0.7
- *  - y > 0 (앞): scale 1 → 1.4, opacity 1
- *  - y < 0 (뒤): scale 1 → 0.6, opacity 1 → 0.55
+ *  - 앞쪽(sin>0): scale 1 → 1.4, opacity 1
+ *  - 뒤쪽(sin<0): scale 1 → 0.6, opacity 1 → 0.55
  */
 
 interface SpinningEarthProps {
@@ -27,55 +30,37 @@ interface SpinningEarthProps {
   className?: string;
 }
 
-// ── translate keyframes (위치만) ──
-function buildTranslateKeyframes(name: string, rx: number, ry: number): string {
-  const STEPS = 36;
+const STEPS = 36;
+
+// translate + scale + opacity 통합 — 같은 element 에 적용돼 sync 보장
+function buildOrbitKeyframes(name: string, rx: number, ry: number): string {
   const frames: string[] = [];
   for (let i = 0; i <= STEPS; i++) {
     const t = i / STEPS;
     const theta = 2 * Math.PI * t;
     const x = rx * Math.cos(theta);
     const y = ry * Math.sin(theta);
-    frames.push(
-      `${(t * 100).toFixed(2)}% { transform: translate(${x.toFixed(3)}px, ${y.toFixed(3)}px); }`,
-    );
-  }
-  return `@keyframes ${name} {\n  ${frames.join('\n  ')}\n}`;
-}
-
-// ── scale·opacity keyframes (크기·투명도만, 모든 행성 공유) ──
-// y 부호로 판단: 앞쪽(sin>0)은 크고 진하게, 뒤쪽(sin<0)은 작고 흐리게
-function buildScaleFadeKeyframes(name: string): string {
-  const STEPS = 36;
-  const frames: string[] = [];
-  for (let i = 0; i <= STEPS; i++) {
-    const t = i / STEPS;
-    const theta = 2 * Math.PI * t;
-    const sinT = Math.sin(theta);                       // -1 (뒤) ~ +1 (앞)
+    const sinT = Math.sin(theta);
     const scale = 1 + sinT * 0.4;                       // 0.6 ~ 1.4
-    const opacity = sinT >= 0 ? 1 : 1 + sinT * 0.45;    // 앞·측면=1, 뒤=0.55
+    const opacity = sinT >= 0 ? 1 : 1 + sinT * 0.45;    // 1.0 ~ 0.55
     frames.push(
-      `${(t * 100).toFixed(2)}% { transform: scale(${scale.toFixed(3)}); opacity: ${opacity.toFixed(3)}; }`,
+      `${(t * 100).toFixed(2)}% { transform: translate(${x.toFixed(3)}px, ${y.toFixed(3)}px) scale(${scale.toFixed(3)}); opacity: ${opacity.toFixed(3)}; }`,
     );
   }
   return `@keyframes ${name} {\n  ${frames.join('\n  ')}\n}`;
 }
 
 const ORBIT_RADII = [
-  { rx: 22, ry: 15 },  // 행성1 (안쪽)
-  { rx: 34, ry: 24 },  // 행성2 (지구·달)
-  { rx: 44, ry: 31 },  // 행성3
-  { rx: 52, ry: 36 },  // 행성4 (바깥)
+  { rx: 22, ry: 15 },  // 행성 1 (안쪽)
+  { rx: 34, ry: 24 },  // 행성 2
+  { rx: 44, ry: 31 },  // 행성 3
+  { rx: 52, ry: 36 },  // 행성 4 (토성)
 ];
 
 const ALL_KEYFRAMES_CSS = [
-  // 행성 4개의 translate keyframes
-  ...ORBIT_RADII.map((r, i) => buildTranslateKeyframes(`orbit-translate-${i + 1}`, r.rx, r.ry)),
-  // 달의 translate
-  buildTranslateKeyframes('moon-translate', 6, 2.4),
-  // 공유 scale·fade keyframes — duration 만 각자 부여
-  buildScaleFadeKeyframes('orbit-scale-fade'),
-  // 정적 keyframes
+  // 행성 4개 통합 keyframes
+  ...ORBIT_RADII.map((r, i) => buildOrbitKeyframes(`orbit-${i + 1}`, r.rx, r.ry)),
+  // 태양 / 별 / 회전 키프레임
   `@keyframes solar-breathe { 0%, 100% { opacity: 0.6; transform: scale(1); } 50% { opacity: 1; transform: scale(1.06); } }`,
   `@keyframes solar-star { 0%, 100% { opacity: 0.25; } 50% { opacity: 0.95; } }`,
   `@keyframes sun-pulse { 0%, 100% { transform: scale(1); transform-origin: 50px 50px; } 50% { transform: scale(1.08); transform-origin: 50px 50px; } }`,
@@ -90,7 +75,6 @@ const STYLE_ID = 'spinning-earth-keyframes';
 
 function injectKeyframesOnce() {
   if (typeof document === 'undefined') return;
-  // 이전 버전 잔존 시 교체
   const existing = document.getElementById(STYLE_ID);
   if (existing && existing.textContent === ALL_KEYFRAMES_CSS) return;
   if (existing) existing.remove();
@@ -201,68 +185,53 @@ export function SpinningEarth({ size = 320, className = '' }: SpinningEarthProps
         {/* 태양 본체 */}
         <circle cx="50" cy="50" r="7.5" fill="url(#sunBody2)" style={{ animation: 'sun-pulse 5s ease-in-out infinite' }} />
 
-        {/* ── 행성 1 (rx=22, ry=15, 8s) — 4계층: orbit-translate / middle translate(50,50) / scale-fade / spin ── */}
-        <g style={{ animation: 'orbit-translate-1 8s linear infinite' }}>
-          <g transform="translate(50 50)">
-            <g style={{ animation: 'orbit-scale-fade 8s linear infinite' }}>
-              <g style={{ animation: 'planet-spin-fast 7s linear infinite' }}>
-                <circle cx="0" cy="0" r="2.2" fill="#f8bbd0" />
-                <path d="M 0 2.2 A 2.2 2.2 0 0 1 -1.8 0 Q -0.9 -0.5, 0 -0.5 Q 0.9 -0.5, 1.8 0 A 2.2 2.2 0 0 1 0 2.2 Z" fill="#d68aa3" opacity="0.5" />
-              </g>
+        {/* ── 행성 1 — 3계층: 정적 translate(50,50) / orbit 통합 / spin ── */}
+        <g transform="translate(50 50)">
+          <g style={{ animation: 'orbit-1 8s linear infinite' }}>
+            <g style={{ animation: 'planet-spin-fast 7s linear infinite' }}>
+              <circle cx="0" cy="0" r="2.2" fill="#f8bbd0" />
+              <path d="M 0 2.2 A 2.2 2.2 0 0 1 -1.8 0 Q -0.9 -0.5, 0 -0.5 Q 0.9 -0.5, 1.8 0 A 2.2 2.2 0 0 1 0 2.2 Z" fill="#d68aa3" opacity="0.5" />
             </g>
           </g>
         </g>
 
-        {/* ── 행성 2 (rx=34, ry=24, 14s) + 달 ── */}
-        <g style={{ animation: 'orbit-translate-2 14s linear infinite' }}>
-          <g transform="translate(50 50)">
-            {/* 행성 2 본체 — scale·fade 적용 */}
-            <g style={{ animation: 'orbit-scale-fade 14s linear infinite' }}>
-              <g style={{ animation: 'planet-spin-mid 10s linear infinite' }}>
-                <circle cx="0" cy="0" r="3.2" fill="#c9a6ff" />
-                <path d="M -1.5 -0.8 Q -0.5 -1.5, 0.8 -1 Q 1 -0.2, 0.3 0.4 Q -0.8 0.2, -1.5 -0.8 Z" fill="#7dd3c0" opacity="0.7" />
-                <path d="M 0 3.2 A 3.2 3.2 0 0 1 -2.6 0.5 Q -1.3 0.2, 0 0.2 Q 1.3 0.2, 2.6 0.5 A 3.2 3.2 0 0 1 0 3.2 Z" fill="#7c5ca8" opacity="0.4" />
-              </g>
-            </g>
-            {/* 달 — 행성 2 위치에서 별도 궤도 (rx=6, ry=2.4) + 자체 scale·fade (5s) */}
-            <g style={{ animation: 'moon-translate 5s linear infinite' }}>
-              <g style={{ animation: 'orbit-scale-fade 5s linear infinite' }}>
-                <circle cx="0" cy="0" r="1.2" fill="#fff5e1" />
-              </g>
+        {/* ── 행성 2 ── */}
+        <g transform="translate(50 50)">
+          <g style={{ animation: 'orbit-2 14s linear infinite' }}>
+            <g style={{ animation: 'planet-spin-mid 10s linear infinite' }}>
+              <circle cx="0" cy="0" r="3.2" fill="#c9a6ff" />
+              <path d="M -1.5 -0.8 Q -0.5 -1.5, 0.8 -1 Q 1 -0.2, 0.3 0.4 Q -0.8 0.2, -1.5 -0.8 Z" fill="#7dd3c0" opacity="0.7" />
+              <path d="M 0 3.2 A 3.2 3.2 0 0 1 -2.6 0.5 Q -1.3 0.2, 0 0.2 Q 1.3 0.2, 2.6 0.5 A 3.2 3.2 0 0 1 0 3.2 Z" fill="#7c5ca8" opacity="0.4" />
             </g>
           </g>
         </g>
 
-        {/* ── 행성 3 (rx=44, ry=31, 22s) ── */}
-        <g style={{ animation: 'orbit-translate-3 22s linear infinite' }}>
-          <g transform="translate(50 50)">
-            <g style={{ animation: 'orbit-scale-fade 22s linear infinite' }}>
-              <g style={{ animation: 'planet-spin-rev 16s linear infinite reverse' }}>
-                <circle cx="0" cy="0" r="2.6" fill="#f0a880" />
-                <path d="M -1 -0.5 Q 0.5 -0.8, 1.2 -0.2 Q 0.8 0.3, 0 0.4 Q -1 0.1, -1 -0.5 Z" fill="#fcd5b4" opacity="0.65" />
-                <path d="M 0 2.6 A 2.6 2.6 0 0 1 -2.1 0.3 Q -1.05 0, 0 0 Q 1.05 0, 2.1 0.3 A 2.6 2.6 0 0 1 0 2.6 Z" fill="#a85e3f" opacity="0.4" />
-              </g>
+        {/* ── 행성 3 ── */}
+        <g transform="translate(50 50)">
+          <g style={{ animation: 'orbit-3 22s linear infinite' }}>
+            <g style={{ animation: 'planet-spin-rev 16s linear infinite reverse' }}>
+              <circle cx="0" cy="0" r="2.6" fill="#f0a880" />
+              <path d="M -1 -0.5 Q 0.5 -0.8, 1.2 -0.2 Q 0.8 0.3, 0 0.4 Q -1 0.1, -1 -0.5 Z" fill="#fcd5b4" opacity="0.65" />
+              <path d="M 0 2.6 A 2.6 2.6 0 0 1 -2.1 0.3 Q -1.05 0, 0 0 Q 1.05 0, 2.1 0.3 A 2.6 2.6 0 0 1 0 2.6 Z" fill="#a85e3f" opacity="0.4" />
             </g>
           </g>
         </g>
 
-        {/* ── 행성 4 — 토성형 (rx=52, ry=36, 32s) ── */}
-        <g style={{ animation: 'orbit-translate-4 32s linear infinite' }}>
-          <g transform="translate(50 50)">
-            <g style={{ animation: 'orbit-scale-fade 32s linear infinite' }}>
-              <g style={{ animation: 'planet-spin-slow 22s linear infinite' }}>
-                {/* 고리 뒤 */}
-                <g transform="rotate(-12)">
-                  <path d="M -7 0 A 7 1.8 0 0 1 7 0" fill="none" stroke="#c9a6ff" strokeWidth="0.8" strokeLinecap="round" />
-                </g>
-                <circle cx="0" cy="0" r="3.8" fill="#fcd5b4" />
-                <path d="M -2.8 0.3 Q 0 -0.3, 2.8 0.3" fill="none" stroke="#f0a880" strokeWidth="0.8" strokeLinecap="round" opacity="0.8" />
-                <path d="M -3 1.5 Q 0 1, 3 1.5" fill="none" stroke="#f0a880" strokeWidth="0.6" strokeLinecap="round" opacity="0.6" />
-                <path d="M 0 3.8 A 3.8 3.8 0 0 1 -3.1 0.5 Q -1.55 0.2, 0 0.2 Q 1.55 0.2, 3.1 0.5 A 3.8 3.8 0 0 1 0 3.8 Z" fill="#d89472" opacity="0.35" />
-                {/* 고리 앞 */}
-                <g transform="rotate(-12)">
-                  <path d="M -7 0 A 7 1.8 0 0 0 7 0" fill="none" stroke="#c9a6ff" strokeWidth="0.8" strokeLinecap="round" />
-                </g>
+        {/* ── 행성 4 — 토성형 ── */}
+        <g transform="translate(50 50)">
+          <g style={{ animation: 'orbit-4 32s linear infinite' }}>
+            <g style={{ animation: 'planet-spin-slow 22s linear infinite' }}>
+              {/* 고리 뒤 */}
+              <g transform="rotate(-12)">
+                <path d="M -7 0 A 7 1.8 0 0 1 7 0" fill="none" stroke="#c9a6ff" strokeWidth="0.8" strokeLinecap="round" />
+              </g>
+              <circle cx="0" cy="0" r="3.8" fill="#fcd5b4" />
+              <path d="M -2.8 0.3 Q 0 -0.3, 2.8 0.3" fill="none" stroke="#f0a880" strokeWidth="0.8" strokeLinecap="round" opacity="0.8" />
+              <path d="M -3 1.5 Q 0 1, 3 1.5" fill="none" stroke="#f0a880" strokeWidth="0.6" strokeLinecap="round" opacity="0.6" />
+              <path d="M 0 3.8 A 3.8 3.8 0 0 1 -3.1 0.5 Q -1.55 0.2, 0 0.2 Q 1.55 0.2, 3.1 0.5 A 3.8 3.8 0 0 1 0 3.8 Z" fill="#d89472" opacity="0.35" />
+              {/* 고리 앞 */}
+              <g transform="rotate(-12)">
+                <path d="M -7 0 A 7 1.8 0 0 0 7 0" fill="none" stroke="#c9a6ff" strokeWidth="0.8" strokeLinecap="round" />
               </g>
             </g>
           </g>
