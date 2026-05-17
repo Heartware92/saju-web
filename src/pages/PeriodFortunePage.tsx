@@ -1291,7 +1291,17 @@ function MonthlySectionView({
     const month = parseInt(m[1], 10);
     const grade = (m[2] ?? '').trim();
     const keyword = (m[3] ?? '').trim();
-    const domains = (m[4] ?? '').split(/[·,/]/).map(s => s.trim()).filter(Boolean);
+    // 영역 1글자 약자 → 풀어 표기 (AI 가 가끔 휴/직 단축 출력)
+    const DOMAIN_EXPAND: Record<string, string> = {
+      '재': '재물', '직': '직장', '연': '연애', '건': '건강',
+      '이': '이동', '관': '관계', '결': '결정', '휴': '휴식',
+      '기': '기회', '도': '도전', '학': '학업', '가': '가족',
+    };
+    const domains = (m[4] ?? '')
+      .split(/[·,/]/)
+      .map(s => s.trim())
+      .filter(Boolean)
+      .map(d => (d.length === 1 && DOMAIN_EXPAND[d]) ? DOMAIN_EXPAND[d] : d);
     const body = (m[5] ?? '').trim();
     return { month, grade, keyword, domains, body };
   };
@@ -1307,7 +1317,7 @@ function MonthlySectionView({
     .map(s => s.replace(/^[·•\-]\s*/, '').trim())
     .filter(Boolean);
 
-  // 등급 → 색
+  // 등급 → 색 (그라데이션·글로우용)
   const gradeColor: Record<string, string> = {
     '대길': '#34D399',
     '길':   '#86EFAC',
@@ -1316,74 +1326,214 @@ function MonthlySectionView({
     '중흉': '#FB923C',
     '흉':   '#F87171',
   };
+  // 월 → 한자 (사주 컨셉 강화)
+  const HANJA_MONTH = ['一', '二', '三', '四', '五', '六', '七', '八', '九', '十', '十一', '十二'];
+  // 등급 → 별 개수 (시각 시그널)
+  const gradeStars: Record<string, number> = {
+    '대길': 5, '길': 4, '중길': 3, '평': 3, '중흉': 2, '흉': 1,
+  };
 
   return (
-    <div className="space-y-3">
-      {/* 12개월 카드 리스트 */}
-      <div className="flex flex-col gap-2.5">
+    <div className="space-y-1">
+      {/* 12개월 — 큰 한자·숫자 + 코스믹 카드 + 카드 간 연결점 */}
+      <div className="relative flex flex-col">
         {months.length > 0
-          ? months.map((m) => {
+          ? months.map((m, idx) => {
               const c = gradeColor[m.grade] ?? '#CBD5E1';
+              const starCount = gradeStars[m.grade] ?? 3;
+              const isLast = idx === months.length - 1;
               return (
-                <div
-                  key={m.month}
-                  className="relative pl-4 pr-3 py-3 rounded-xl bg-white/[0.04] border border-white/10"
-                  style={{ borderLeft: `3px solid ${c}` }}
-                >
-                  {/* 헤더 — 월 + 등급 배지 + 키워드 + 영역 태그 */}
-                  <div className="flex flex-wrap items-center gap-2 mb-2">
-                    <span className="text-[16px] font-bold text-text-primary">{m.month}월</span>
+                <div key={m.month} className="relative">
+                  {/* 카드 */}
+                  <div
+                    className="relative overflow-hidden rounded-2xl border"
+                    style={{
+                      background: `linear-gradient(135deg, rgba(20,12,38,0.65) 0%, ${c}11 50%, rgba(20,12,38,0.55) 100%)`,
+                      borderColor: `${c}33`,
+                      boxShadow: `0 0 24px ${c}10, inset 0 0 1px ${c}40`,
+                    }}
+                  >
+                    {/* 배경 워터마크 — 큰 한자 월 표기 (좌측으로 당겨 잘 보이게) */}
                     <span
-                      className="text-[11px] font-semibold px-2 py-0.5 rounded-full"
-                      style={{ background: `${c}22`, color: c, border: `1px solid ${c}55` }}
+                      aria-hidden
+                      className="absolute -top-4 left-2 text-[110px] font-bold leading-none select-none pointer-events-none"
+                      style={{
+                        fontFamily: 'var(--font-title)',
+                        color: c,
+                        opacity: 0.10,
+                        letterSpacing: '-0.05em',
+                      }}
                     >
-                      {m.grade}
+                      {HANJA_MONTH[m.month - 1] ?? `${m.month}`}
                     </span>
-                    {m.keyword && (
-                      <span className="text-[13px] text-text-secondary">{m.keyword}</span>
-                    )}
-                    {m.domains.length > 0 && (
-                      <span className="ml-auto flex flex-wrap items-center gap-1">
-                        {m.domains.map((d, i) => (
+
+                    {/* 상단 — 월 번호(serif 큰 글씨) + 별점 + 영역 태그 */}
+                    <div className="relative flex items-start justify-between gap-3 px-5 pt-4 pb-2">
+                      <div className="flex items-baseline gap-2.5 flex-wrap">
+                        <span
+                          className="font-bold leading-none"
+                          style={{
+                            fontFamily: 'var(--font-title)',
+                            fontSize: '32px',
+                            color: c,
+                            textShadow: `0 0 18px ${c}55`,
+                            letterSpacing: '-0.04em',
+                          }}
+                        >
+                          {m.month}
+                        </span>
+                        {/* 月 자 — 숫자와 동일 크기로 통일감 */}
+                        <span
+                          className="font-bold leading-none"
+                          style={{
+                            fontFamily: 'var(--font-title)',
+                            fontSize: '28px',
+                            color: c,
+                            opacity: 0.85,
+                            letterSpacing: '-0.04em',
+                          }}
+                        >
+                          月
+                        </span>
+                        {m.keyword && (
                           <span
-                            key={i}
-                            className="text-[11px] px-1.5 py-0.5 rounded-md bg-cta/10 text-cta border border-cta/20"
+                            className="text-[18px] font-semibold text-text-primary ml-2"
+                            style={{ fontFamily: 'var(--font-title)', letterSpacing: '-0.01em' }}
+                          >
+                            {m.keyword}
+                          </span>
+                        )}
+                      </div>
+                      {/* 별점 + 등급 라벨 */}
+                      <div className="flex flex-col items-end gap-1 shrink-0">
+                        <div className="flex gap-0.5">
+                          {Array.from({ length: 5 }, (_, si) => (
+                            <svg
+                              key={si}
+                              width="10"
+                              height="10"
+                              viewBox="0 0 24 24"
+                              fill={si < starCount ? c : 'transparent'}
+                              stroke={si < starCount ? c : 'rgba(255,255,255,0.18)'}
+                              strokeWidth="2"
+                            >
+                              <polygon points="12 2 15 9 22 9 17 14 19 22 12 18 5 22 7 14 2 9 9 9 12 2" />
+                            </svg>
+                          ))}
+                        </div>
+                        <span
+                          className="text-[10.5px] font-semibold tracking-[0.08em]"
+                          style={{ color: c }}
+                        >
+                          {m.grade.toUpperCase()}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* 영역 태그 (구분선 위) */}
+                    {m.domains.length > 0 && (
+                      <div className="relative flex flex-wrap gap-1.5 px-5 pb-2.5">
+                        {m.domains.map((d, di) => (
+                          <span
+                            key={di}
+                            className="text-[10.5px] px-2 py-0.5 rounded-full"
+                            style={{
+                              background: `${c}1a`,
+                              color: c,
+                              border: `1px solid ${c}3a`,
+                              fontFamily: 'var(--font-body)',
+                              letterSpacing: '0.02em',
+                            }}
                           >
                             {d}
                           </span>
                         ))}
-                      </span>
+                      </div>
                     )}
+
+                    {/* 구분선 */}
+                    <div
+                      className="relative mx-5 h-px"
+                      style={{
+                        background: `linear-gradient(90deg, transparent, ${c}55, transparent)`,
+                      }}
+                    />
+
+                    {/* 본문 — SUIT 폰트 + 다른 섹션과 동일한 줄바꿈 패턴 */}
+                    <div className="relative px-4 pt-3 pb-4">
+                      <p
+                        className="text-[16px] text-text-secondary"
+                        style={{
+                          fontFamily: 'var(--font-body)',
+                          lineHeight: 1.85,
+                          letterSpacing: '-0.005em',
+                        }}
+                      >
+                        {m.body}
+                      </p>
+                    </div>
                   </div>
-                  {/* 본문 */}
-                  <p className="text-[15.5px] text-text-secondary leading-[1.78] tracking-[-0.005em]">
-                    {m.body}
-                  </p>
+
+                  {/* 카드 간 연결 점선 (마지막 제외) */}
+                  {!isLast && (
+                    <div className="flex justify-start pl-9 py-1.5">
+                      <div className="flex flex-col items-center gap-1">
+                        <span className="w-px h-1.5 bg-white/15" />
+                        <span className="w-1 h-1 rounded-full bg-white/25" />
+                        <span className="w-px h-1.5 bg-white/15" />
+                      </div>
+                    </div>
+                  )}
                 </div>
               );
             })
-          : // 파싱 실패 시 fallback — 원본 텍스트 단락 나열
+          : // 파싱 실패 시 fallback
             monthBlocks.map((mb, mi) => (
-              <p key={mi} className="text-[17px] text-text-secondary leading-[1.85] tracking-[-0.005em]">
+              <p key={mi} className="text-[16px] text-text-secondary leading-[1.85] tracking-[0.012em] py-1.5"
+                 style={{ fontFamily: 'var(--font-body)', wordBreak: 'keep-all' }}>
                 {mb.replace(/\n/g, ' ').trim()}
               </p>
             ))}
       </div>
 
-      {/* 정리 단락 — "이 해의 핵심 시기" 강조 박스 */}
+      {/* 정리 단락 — "이 해의 핵심 시기" 코스믹 강조 박스 */}
       {summaryItems.length > 0 && (
-        <div className="mt-4 p-4 rounded-2xl bg-gradient-to-br from-[rgba(124,92,252,0.10)] to-[rgba(252,189,189,0.06)] border border-[rgba(124,92,252,0.25)]">
-          <div className="flex items-center gap-2 mb-3">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="text-cta">
+        <div
+          className="mt-5 relative overflow-hidden rounded-2xl p-5"
+          style={{
+            background: 'radial-gradient(ellipse at top right, rgba(252,213,180,0.10) 0%, rgba(20,12,38,0.7) 70%)',
+            border: '1px solid rgba(252,213,180,0.30)',
+            boxShadow: '0 0 32px rgba(252,213,180,0.08), inset 0 0 1px rgba(252,213,180,0.40)',
+          }}
+        >
+          {/* 배경 별빛 점 */}
+          <span aria-hidden className="absolute top-3 right-4 w-1 h-1 rounded-full bg-[#fcd5b4] opacity-70" />
+          <span aria-hidden className="absolute top-8 right-10 w-0.5 h-0.5 rounded-full bg-[#fcd5b4] opacity-50" />
+          <span aria-hidden className="absolute bottom-5 left-6 w-0.5 h-0.5 rounded-full bg-[#fcd5b4] opacity-40" />
+
+          <div className="relative flex items-center gap-2.5 mb-4">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="#fcd5b4" stroke="#fcd5b4" strokeWidth="1.5">
               <polygon points="12 2 15 9 22 9 17 14 19 22 12 18 5 22 7 14 2 9 9 9 12 2" />
             </svg>
-            <span className="text-[14px] font-bold text-text-primary">이 해의 핵심 시기</span>
+            <span
+              className="text-[16px] font-bold text-text-primary"
+              style={{ fontFamily: 'var(--font-title)', letterSpacing: '-0.01em' }}
+            >
+              이 해의 핵심 시기
+            </span>
           </div>
-          <ul className="space-y-2">
+          <ul className="relative space-y-2.5">
             {summaryItems.map((item, i) => (
-              <li key={i} className="flex gap-2 text-[14.5px] text-text-secondary leading-[1.65]">
-                <span className="text-cta shrink-0">·</span>
-                <span>{item}</span>
+              <li
+                key={i}
+                className="text-[15px] text-text-secondary"
+                style={{
+                  fontFamily: 'var(--font-title)',
+                  lineHeight: 1.85,
+                  letterSpacing: '-0.005em',
+                }}
+              >
+                {item}
               </li>
             ))}
           </ul>
