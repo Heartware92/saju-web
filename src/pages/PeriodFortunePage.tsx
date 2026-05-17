@@ -1356,21 +1356,6 @@ function MonthlySectionView({
                       boxShadow: `0 0 24px ${c}10, inset 0 0 1px ${c}40`,
                     }}
                   >
-                    {/* 한자 — 전통 낙관(도장) 스타일, 우측 중앙 배치로 잘 보이게 */}
-                    <span
-                      aria-hidden
-                      className="absolute top-1/2 right-5 text-[56px] font-bold leading-none select-none pointer-events-none"
-                      style={{
-                        fontFamily: 'var(--font-title)',
-                        color: c,
-                        opacity: 0.22,
-                        letterSpacing: '-0.05em',
-                        transform: 'translateY(-50%)',
-                      }}
-                    >
-                      {HANJA_MONTH[m.month - 1] ?? `${m.month}`}
-                    </span>
-
                     {/* 상단 — 월 번호(serif 큰 글씨) + 별점 + 영역 태그 */}
                     <div className="relative flex items-start justify-between gap-3 px-5 pt-4 pb-2">
                       <div className="flex items-baseline gap-2.5 flex-wrap">
@@ -1430,6 +1415,21 @@ function MonthlySectionView({
                           style={{ color: c }}
                         >
                           {m.grade.toUpperCase()}
+                        </span>
+                        {/* 월 한자 — 별점·등급 바로 아래 우측 정렬 */}
+                        <span
+                          aria-hidden
+                          className="font-bold leading-none select-none mt-0.5"
+                          style={{
+                            fontFamily: 'var(--font-title)',
+                            fontSize: '22px',
+                            color: c,
+                            opacity: 0.78,
+                            letterSpacing: '-0.04em',
+                            textShadow: `0 0 10px ${c}33`,
+                          }}
+                        >
+                          {HANJA_MONTH[m.month - 1] ?? `${m.month}`}
                         </span>
                       </div>
                     </div>
