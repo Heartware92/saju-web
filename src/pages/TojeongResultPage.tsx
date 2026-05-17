@@ -126,18 +126,22 @@ function DomainBar({ label, score, grade }: { label: string; score: number; grad
 
 function parseMonthlyEntries(raw: string): { month: number; keyword: string; text: string }[] {
   const entries: { month: number; keyword: string; text: string }[] = [];
+  const seen = new Set<number>();
   const cleaned = raw.replace(/\[\/?[a-zA-Z_]+\]/g, '').trim();
   const parts = cleaned.split(/(?=\d{1,2}월\s*[—\-–]\s*)/);
   for (const part of parts) {
     const m = part.match(/^(\d{1,2})월\s*[—\-–]\s*(.+?)[\n\r]/);
     if (!m) continue;
     const month = parseInt(m[1], 10);
+    if (month < 1 || month > 12) continue;
+    if (seen.has(month)) continue; // AI 가 1~9 만 만들고 다시 1월부터 출력하는 사고 차단
     const keyword = m[2].trim();
     const text = part.slice(m[0].length).trim();
-    if (month >= 1 && month <= 12 && text) {
-      entries.push({ month, keyword, text });
-    }
+    if (!text) continue;
+    seen.add(month);
+    entries.push({ month, keyword, text });
   }
+  entries.sort((a, b) => a.month - b.month);
   return entries;
 }
 
@@ -712,44 +716,112 @@ export default function TojeongResultPage() {
         </div>
       </section>
 
-      {/* 원문 한문 괘사 */}
+      {/* 원문 한문 괘사 — 토정비결 전통 표기: 메타(144괘 N번째·등급) + 한자 제목(낙관 글로우) + 한문 점사(양각 박스) + 현대어 풀이(인용 박스) */}
       {reading.entry.hanjaSa && (
-        <section className="rounded-2xl p-4 mb-3 text-center" style={{ backgroundColor: `${gradeColor}08`, border: `1px solid ${gradeColor}33` }}>
-          <div className="text-[12px] font-semibold uppercase tracking-widest text-text-tertiary mb-3">괘사 (卦辭)</div>
-          <div className="text-[22px] font-bold mb-3 tracking-[0.15em]" style={{ fontFamily: 'var(--font-serif)', color: gradeColor }}>
-            {reading.entry.hanjaSa.title}
+        <section
+          className="relative rounded-2xl px-5 py-6 mb-3 text-center overflow-hidden"
+          style={{
+            background: `radial-gradient(ellipse at top, ${gradeColor}14 0%, rgba(20,12,38,0.6) 70%)`,
+            border: `1px solid ${gradeColor}3a`,
+            boxShadow: `0 0 32px ${gradeColor}10, inset 0 0 1px ${gradeColor}55`,
+          }}
+        >
+          {/* 메타 — 144괘 중 N번째 · 등급 */}
+          <div className="flex items-center justify-center gap-2 mb-4">
+            <span className="h-px w-8" style={{ background: `linear-gradient(90deg, transparent, ${gradeColor}66)` }} />
+            <span
+              className="text-[11px] font-semibold tracking-[0.18em] uppercase"
+              style={{ color: gradeColor, opacity: 0.85, fontFamily: 'var(--font-title)' }}
+            >
+              144괘 중 {tojeong.gwaeNumber}괘 · {reading.grade}
+            </span>
+            <span className="h-px w-8" style={{ background: `linear-gradient(90deg, ${gradeColor}66, transparent)` }} />
           </div>
-          <div className="space-y-1 mb-3">
+
+          {/* 한자 제목 — 낙관 도장 톤 (큰 글씨 + 글로우 + 사방 살짝 여백) */}
+          <div
+            className="relative inline-block px-5 py-2 mb-5"
+            style={{
+              borderTop: `1px solid ${gradeColor}55`,
+              borderBottom: `1px solid ${gradeColor}55`,
+            }}
+          >
+            <div
+              className="text-[30px] font-bold tracking-[0.18em]"
+              style={{
+                fontFamily: 'var(--font-serif)',
+                color: gradeColor,
+                textShadow: `0 0 24px ${gradeColor}55`,
+                letterSpacing: '0.18em',
+              }}
+            >
+              {reading.entry.hanjaSa.title}
+            </div>
+          </div>
+
+          {/* 한문 점사 — 양각 박스 */}
+          <div
+            className="space-y-1.5 mb-5 px-4 py-3 mx-auto inline-block"
+            style={{
+              background: `${gradeColor}0a`,
+              border: `1px solid ${gradeColor}26`,
+              borderRadius: '12px',
+            }}
+          >
             {reading.entry.hanjaSa.lines.map((line, i) => (
-              <div key={i} className="text-[16px] tracking-[0.1em] text-text-secondary" style={{ fontFamily: 'var(--font-serif)' }}>
+              <div
+                key={i}
+                className="text-[17px] tracking-[0.18em] text-text-secondary"
+                style={{ fontFamily: 'var(--font-serif)', lineHeight: 1.7 }}
+              >
                 {line}
               </div>
             ))}
           </div>
-          <div
-            className="text-[14px] text-text-tertiary leading-[1.85] tracking-[-0.005em] border-t border-white/10 pt-3 mt-3"
-            style={{ fontFamily: 'var(--font-body)' }}
-          >
-            {reading.entry.hanjaSa.translation}
+
+          {/* 현대어 풀이 — 인용구 톤 (한문 점사와 시각적 분리) */}
+          <div className="relative max-w-[330px] mx-auto">
+            <span
+              aria-hidden
+              className="absolute -top-1 left-0 text-[28px] leading-none select-none"
+              style={{ color: gradeColor, opacity: 0.45, fontFamily: 'var(--font-serif)' }}
+            >
+              『
+            </span>
+            <p
+              className="px-5 text-[14px] text-text-secondary leading-[1.85] tracking-[-0.005em]"
+              style={{ fontFamily: 'var(--font-body)' }}
+            >
+              {reading.entry.hanjaSa.translation}
+            </p>
+            <span
+              aria-hidden
+              className="absolute -bottom-3 right-0 text-[28px] leading-none select-none"
+              style={{ color: gradeColor, opacity: 0.45, fontFamily: 'var(--font-serif)' }}
+            >
+              』
+            </span>
           </div>
         </section>
       )}
 
-      {/* 총평 */}
-      <section className="rounded-2xl p-4 mb-3 bg-[rgba(20,12,38,0.55)] border border-[var(--border-subtle)]">
-        <div className="text-[15px] font-semibold text-text-secondary mb-3 uppercase tracking-wider">올해 총평</div>
-        <div className="space-y-3">
-          {reading.paragraphs.map((p, i) => (
-            <p
-              key={i}
-              className="text-[15px] text-text-secondary leading-[1.85] tracking-[-0.005em]"
-              style={{ fontFamily: 'var(--font-body)' }}
-            >
-              {p}
-            </p>
-          ))}
-        </div>
-      </section>
+      {/* 총평 — 심층 풀이 [chongun] 이 없을 때만 fallback 으로 표시 (중복 방지) */}
+      {!aiSections?.chongun && (
+        <section className="rounded-2xl p-4 mb-3 bg-[rgba(20,12,38,0.55)] border border-[var(--border-subtle)]">
+          <div className="text-[15px] font-semibold text-text-secondary mb-3 uppercase tracking-wider">올해 총평</div>
+          <div className="space-y-3">
+            {reading.paragraphs.map((p, i) => (
+              <p
+                key={i}
+                className="text-[15px] text-text-secondary leading-[1.85] tracking-[-0.005em]"
+                style={{ fontFamily: 'var(--font-body)' }}
+              >
+                {p}
+              </p>
+            ))}
+          </div>
+        </section>
+      )}
 
       {/* 월별 흐름 — 심층 풀이 [monthly] 가 없을 때만 fallback 으로 표시 (중복 방지) */}
       {!aiSections?.monthly && (
