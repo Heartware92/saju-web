@@ -53,11 +53,13 @@ export default function RefundInquiryPage() {
   const [error, setError] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
 
+  // loading 끝난 후에만 비로그인 판단 (Supabase 세션 hydration race 방지)
+  const userLoading = useUserStore((s) => s.loading);
   useEffect(() => {
-    if (user === null) {
+    if (!userLoading && user === null) {
       router.replace('/login?from=/inquiry/refund');
     }
-  }, [user, router]);
+  }, [user, userLoading, router]);
 
   useEffect(() => {
     if (!user) return;

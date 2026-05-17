@@ -116,12 +116,13 @@ export default function InquiryPage() {
     setEmail((prev) => prev || (user.email ?? ''));
   }, [user]);
 
-  // 비로그인 사용자는 로그인 페이지로 유도
+  // 비로그인 사용자는 로그인 페이지로 유도 — loading 끝난 후에만 판단 (hydration race 방지)
+  const userLoading = useUserStore((s) => s.loading);
   useEffect(() => {
-    if (user === null) {
+    if (!userLoading && user === null) {
       router.replace('/login?from=/inquiry');
     }
-  }, [user, router]);
+  }, [user, userLoading, router]);
 
   const loadInquiries = useCallback(async () => {
     setListLoading(true);
