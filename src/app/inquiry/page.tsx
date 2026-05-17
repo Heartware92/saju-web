@@ -29,9 +29,9 @@ interface CategoryInfo {
 const CATEGORIES: CategoryInfo[] = [
   {
     key: 'payment',
-    label: '결제·환불',
-    desc: '결제 오류, 환불 요청, 영수증 발급 문의',
-    placeholder: '예: 어제 9,900원 결제했는데 크레딧이 들어오지 않았어요. 주문번호는…',
+    label: '환불 문의',
+    desc: '결제 후 7일 이내 미사용 크레딧 환불 요청',
+    placeholder: '', // 클릭 즉시 /inquiry/refund 로 라우팅, textarea 미사용
   },
   {
     key: 'bug',
@@ -249,6 +249,11 @@ export default function InquiryPage() {
               <button
                 key={cat.key}
                 onClick={() => {
+                  // 환불 문의는 전용 페이지로 즉시 라우팅 — 카테고리 선택·본문 폼 안 거침
+                  if (cat.key === 'payment') {
+                    router.push('/inquiry/refund');
+                    return;
+                  }
                   setSelectedCategory(cat.key);
                   setError('');
                   setSuccessMsg('');
@@ -288,24 +293,6 @@ export default function InquiryPage() {
           <h2 className="text-[13px] font-semibold text-text-tertiary uppercase tracking-wider mb-3 px-1">
             2. 문의 내용
           </h2>
-
-          {/* 결제·환불 카테고리: 환불 요청 전용 페이지 CTA */}
-          {selected.key === 'payment' && (
-            <Link
-              href="/inquiry/refund"
-              className="block mb-3 rounded-xl p-4 bg-[rgba(124,92,252,0.10)] border border-[rgba(124,92,252,0.35)] hover:bg-[rgba(124,92,252,0.16)] transition-colors"
-            >
-              <div className="flex items-center justify-between gap-3">
-                <div className="flex-1">
-                  <div className="text-[14px] font-semibold text-text-primary">환불을 요청하시나요?</div>
-                  <div className="text-[12.5px] text-text-tertiary mt-0.5 leading-snug">결제 수단·금액·일자 빠르게 입력하는 환불 전용 폼으로 이동합니다.</div>
-                </div>
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" className="text-cta shrink-0">
-                  <path d="M9 18l6-6-6-6" />
-                </svg>
-              </div>
-            </Link>
-          )}
 
           <div className="rounded-2xl px-5 py-5 bg-[rgba(20,12,38,0.55)] border border-[var(--border-subtle)] space-y-4">
             {/* 본문 */}

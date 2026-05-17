@@ -21,12 +21,10 @@ import { supabase } from '../../../services/supabase';
 import Layout from '../../../components/Layout';
 import { CREDIT_PACKAGES } from '../../../constants/pricing';
 
-type PaymentMethod = 'simple_card' | 'foreign_card' | 'bank_transfer';
+type PaymentMethod = 'simple_card';
 
 const PAYMENT_METHOD_LABEL: Record<PaymentMethod, string> = {
   simple_card: '간편결제 / 국내 카드',
-  foreign_card: '해외 카드',
-  bank_transfer: '계좌이체',
 };
 
 function formatPhone(raw: string | null | undefined): string {
@@ -80,27 +78,25 @@ export default function RefundInquiryPage() {
       setError('환불 요청하실 결제 패키지를 선택해주세요.');
       return;
     }
-    if (!purchaseDate) {
-      setError('결제 일자를 입력해주세요.');
-      return;
-    }
-    // 결제 일자 7일 초과 사전 안내 (서버는 별도 검증 X — 어드민이 최종 판단)
-    const daysAgo = Math.floor(
-      (Date.now() - new Date(purchaseDate).getTime()) / (1000 * 60 * 60 * 24),
-    );
-    if (daysAgo > 7) {
-      const ok = window.confirm(
-        '결제일로부터 7일이 지난 결제는 청약철회 기간이 경과되어 환불이 어려울 수 있어요.\n\n그래도 문의를 접수하시겠어요?',
+    // 결제 일자는 선택 — 입력했고 7일 초과면 사전 안내만
+    if (purchaseDate) {
+      const daysAgo = Math.floor(
+        (Date.now() - new Date(purchaseDate).getTime()) / (1000 * 60 * 60 * 24),
       );
-      if (!ok) return;
+      if (daysAgo > 7) {
+        const ok = window.confirm(
+          '결제일로부터 7일이 지난 결제는 청약철회 기간이 경과되어 환불이 어려울 수 있어요.\n\n그래도 문의를 접수하시겠어요?',
+        );
+        if (!ok) return;
+      }
     }
 
     const lines = [
       '[환불 요청]',
       `결제 수단: ${PAYMENT_METHOD_LABEL[method]}`,
       `결제 금액: ${selectedPackage.name} (${selectedPackage.price.toLocaleString()}원)`,
-      `결제 일자: ${purchaseDate}`,
     ];
+    if (purchaseDate) lines.push(`결제 일자: ${purchaseDate}`);
     if (reason.trim()) lines.push(`환불 사유: ${reason.trim()}`);
     if (memo.trim()) {
       lines.push('');
@@ -179,7 +175,7 @@ export default function RefundInquiryPage() {
             </li>
             <li className="flex gap-2">
               <span className="text-amber-300/80">·</span>
-              <span>일부만 사용하셨다면 <strong className="text-amber-200">미사용 분에 대해 부분 환불</strong>도 가능합니다.</span>
+              <span>크레딧을 <strong className="text-amber-200">한 번이라도 사용하셨다면</strong> 해당 결제 건은 환불이 어렵습니다 (부분 환불 불가).</span>
             </li>
             <li className="flex gap-2">
               <span className="text-amber-300/80">·</span>
@@ -194,32 +190,19 @@ export default function RefundInquiryPage() {
 
         {/* 폼 */}
         <div className="space-y-5 rounded-2xl p-5 bg-[rgba(20,12,38,0.55)] border border-[var(--border-subtle)]">
-          {/* 결제 수단 */}
+          {/* 결제 수단 — 현재 간편결제·국내카드만 지원 */}
           <div>
             <label className="block text-[14px] font-semibold text-text-primary mb-2">
-              결제 수단 <span className="text-red-400">*</span>
+              결제 수단
             </label>
-            <div className="space-y-2">
-              {(Object.keys(PAYMENT_METHOD_LABEL) as PaymentMethod[]).map((m) => (
-                <label
-                  key={m}
-                  className="flex items-center gap-2.5 px-3 py-2.5 rounded-lg cursor-pointer"
-                  style={{
-                    background: method === m ? 'rgba(124,92,252,0.12)' : 'rgba(255,255,255,0.03)',
-                    border: `1px solid ${method === m ? 'var(--cta-primary)' : 'rgba(255,255,255,0.10)'}`,
-                  }}
-                >
-                  <input
-                    type="radio"
-                    name="paymentMethod"
-                    value={m}
-                    checked={method === m}
-                    onChange={() => setMethod(m)}
-                    className="accent-cta"
-                  />
-                  <span className="text-[13.5px] text-text-primary">{PAYMENT_METHOD_LABEL[m]}</span>
-                </label>
-              ))}
+            <div
+              className="px-3 py-2.5 rounded-lg text-[13.5px] text-text-primary"
+              style={{
+                background: 'rgba(124,92,252,0.10)',
+                border: '1px solid rgba(124,92,252,0.30)',
+              }}
+            >
+              {PAYMENT_METHOD_LABEL[method]}
             </div>
           </div>
 
@@ -245,7 +228,7 @@ export default function RefundInquiryPage() {
           {/* 결제 일자 */}
           <div>
             <label className="block text-[14px] font-semibold text-text-primary mb-2">
-              결제 일자 <span className="text-red-400">*</span>
+              결제 일자 <span className="text-text-tertiary text-[12px] font-normal">(선택)</span>
             </label>
             <input
               type="date"
@@ -254,7 +237,7 @@ export default function RefundInquiryPage() {
               max={new Date().toISOString().slice(0, 10)}
               className="w-full px-3 py-2.5 rounded-lg bg-[rgba(255,255,255,0.04)] border border-[rgba(255,255,255,0.12)] text-[14px] text-text-primary"
             />
-            <p className="text-[11.5px] text-text-tertiary mt-1.5">결제일로부터 7일 이내여야 환불 가능합니다.</p>
+            <p className="text-[11.5px] text-text-tertiary mt-1.5">결제일로부터 7일 이내여야 환불 가능합니다. 정확한 날짜는 어드민이 결제 내역으로 확인합니다.</p>
           </div>
 
           {/* 환불 사유 */}
