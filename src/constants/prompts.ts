@@ -919,7 +919,12 @@ export const generateTodayFortuneV3Prompt = (
   const customHobbyNote = customHobbyRaw && customHobbyMapped && customHobbyMapped !== customHobbyRaw
     ? `\n  · 사용자 직접 입력 "${customHobbyRaw}" → 분야 "${customHobbyMapped}"로 매핑 (본문에서는 사용자 원본 표현 "${customHobbyRaw}" 자연스럽게 인용)`
     : (customHobbyRaw && !customHobbyMapped
-        ? `\n  · 사용자 직접 입력 "${customHobbyRaw}" → 9분야 매핑 실패. LLM 자율로 가장 가까운 분야 선택 후 본문 작성 (사용자 원본 표현은 본문에 인용).`
+        ? `\n  · 사용자 직접 입력 "${customHobbyRaw}" → 9분야 매핑 실패. 다음 [비표준 입력 풀이 가이드] 적용:
+    - 사용자 표현 "${customHobbyRaw}" 을 회피·미화·일반화하지 말고 본문에 그대로 인정하며 인용 (예: "○○에 시간을 많이 쓰고 계신다고 하셨는데" 식 자연스러운 화법)
+    - 자책·도덕적 평가·훈계 톤 절대 금지. 사주적으로 어떤 십성·오행 흐름이 그 행동·관심사를 평소보다 강하게 만드는지 명리적으로 짚어줌 (예: "지금 ○○ 십성이 강해 ~한 자극이 더 끌리는 시기")
+    - 트리거가 될 만한 시간대·환경 1~2개 + 용신 오행 / 부족한 오행을 살리는 대체 행동 1~2개 실용 제안
+    - 5번 섹션의 primaryHobby(${primaryHobby}) 분기 가이드는 골격으로만 빌리고, 본문은 사용자 원본 상황 자체를 풀이 대상으로 삼음 (자기계발 일반론으로 흘러가지 말 것)
+    - 후속 작은 행동 한 가지를 부드럽게 제안하며 마무리 (강요·금지 표현 금지. "오늘 잠들기 전 5분만 ~해보세요" 식 가벼운 톤)`
         : '');
   const slotLabel = TODAY_TIME_SLOT_LABELS[ctx.timeSlot];
   const q1 = ctx.q1Text || '';
