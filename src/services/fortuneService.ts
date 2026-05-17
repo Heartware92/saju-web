@@ -375,12 +375,13 @@ export const getTojeongReading = async (
   sourceBirth?: { birth_date: string; gender: 'male' | 'female'; calendar_type?: 'solar' | 'lunar' },
   profileId?: string,
 ): Promise<TojeongAIResult> => {
-  // archive 는 8초 timeout. supabase hang 으로 클라이언트 await 가 안 풀려
-  // backend 150초 race 까지 끌고가는 사고 차단. timeout 되어도 백그라운드 저장은 계속 진행됨.
+  // archive 는 3초 timeout — supabase hang 으로 클라이언트 await 가 안 풀려 backend
+  // 150초 race 까지 끌고가는 사고 차단. timeout 되어도 archiveSaju 내부 supabase 요청은
+  // 백그라운드에서 계속 진행되므로 보관함 저장은 보장됨 (ShareBar 즉시 표시만 포기).
   const archive = async (content: string): Promise<string | null> => {
     return Promise.race([
       archiveSaju({ profileId, sourceBirth, category: 'tojeong', engineResult: tj as unknown as Record<string, unknown>, interpretation: content, isDetailed: true }).catch(() => null),
-      new Promise<null>(resolve => setTimeout(() => resolve(null), 8_000)),
+      new Promise<null>(resolve => setTimeout(() => resolve(null), 3_000)),
     ]);
   };
 

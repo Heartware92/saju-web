@@ -416,21 +416,31 @@ export default function TojeongResultPage() {
     const scheduleRetry = (nextIdx: number) => {
       retryTimeoutRef.current = setTimeout(() => {
         retryTimeoutRef.current = null;
-        if (cancelled) return;
+        if (cancelled) {
+          // cleanup 된 경우 더 이상 재시도 안 하고 로딩 풀어둠 (이후 remount 대비)
+          setAiLoading(false);
+          return;
+        }
         void fetchOnce(nextIdx);
       }, 4_000);
     };
 
+    // ★ 핵심 안전망: 모든 종착점에서 setAiLoading(false) 호출 보장.
+    // cancelled 가 true 라도 setState 는 무시 처리 (React 18 은 unmounted 컴포넌트의
+    // setState 를 안전하게 ignore 함). 결과 페이지에서 응답을 받았는데도 화면이 안
+    // 풀리던 사고의 진짜 원인 — "if (cancelled) return" 으로 setAiLoading(false) 가
+    // skip 되는 경로를 모두 막는다.
     const fetchOnce = async (attemptIdx: number): Promise<void> => {
       try {
         const r = await getTojeongReading(tojeong, sourceBirth, targetProfile?.id);
-        if (cancelled) return;
         if (r.content) {
-          setAiContent(r.content);
-          if (r.sections) setAiSections(r.sections);
-          if (r.domainScores) setAiDomainScores(r.domainScores);
-          // archive 저장이 완료된 경우 ShareBar 즉시 노출
-          if (r.archivedRecordId) setSavedRecordId(r.archivedRecordId);
+          if (!cancelled) {
+            setAiContent(r.content);
+            if (r.sections) setAiSections(r.sections);
+            if (r.domainScores) setAiDomainScores(r.domainScores);
+            if (r.archivedRecordId) setSavedRecordId(r.archivedRecordId);
+          }
+          // cache · charge 는 cancelled 와 무관하게 진행 (한 번 받은 결과는 보존)
           const cache = useReportCacheStore.getState();
           cache.setReport('tojeong', cacheKey, r.content);
           if (!cache.isCharged('tojeong', cacheKey)) {
@@ -441,16 +451,15 @@ export default function TojeongResultPage() {
           setAiLoading(false);
           return;
         }
-        if (attemptIdx + 1 < MAX_PAGE_ATTEMPTS) {
+        if (attemptIdx + 1 < MAX_PAGE_ATTEMPTS && !cancelled) {
           aiAttemptCountRef.current = attemptIdx + 1;
           scheduleRetry(attemptIdx + 1);
           return;
         }
-        // 모든 시도 실패 — 로딩만 종료. 무료 결정론적 풀이가 페이지 결과로 노출.
+        // 더 이상 재시도 없음 — 항상 로딩 풀기 (cancelled 여부 무관)
         setAiLoading(false);
       } catch {
-        if (cancelled) return;
-        if (attemptIdx + 1 < MAX_PAGE_ATTEMPTS) {
+        if (attemptIdx + 1 < MAX_PAGE_ATTEMPTS && !cancelled) {
           aiAttemptCountRef.current = attemptIdx + 1;
           scheduleRetry(attemptIdx + 1);
           return;
@@ -926,10 +935,18 @@ export default function TojeongResultPage() {
             const body = aiSections[key];
             if (!body) return null;
 
-            // 월별운세 섹션 — "N월 — 키워드" 패턴으로 월별 카드 분리 (신년운세 톤과 동일)
+            // 월별 흐름 섹션 — AI 가 만든 카드 + 빠진 달은 결정론적 reading.monthly 로 보충해 12개월 보장
             if (key === 'monthly') {
-              const monthEntries = parseMonthlyEntries(body);
-              if (monthEntries.length > 0) {
+              const aiEntries = parseMonthlyEntries(body);
+              if (aiEntries.length > 0) {
+                const aiMonths = new Set(aiEntries.map(m => m.month));
+                const merged: { month: number; keyword: string; text: string }[] = [...aiEntries];
+                for (const dm of reading.monthly) {
+                  if (!aiMonths.has(dm.month)) {
+                    merged.push({ ...dm, keyword: dm.keyword.split('·')[0] });
+                  }
+                }
+                merged.sort((a, b) => a.month - b.month);
                 return (
                   <SectionCollapsible
                     key={key}
@@ -937,7 +954,7 @@ export default function TojeongResultPage() {
                     defaultOpen={idx === 0}
                     enterDelay={0.15 + idx * 0.05}
                   >
-                    <TojeongMonthlyCards months={monthEntries} accentColor={gradeColor} />
+                    <TojeongMonthlyCards months={merged} accentColor={gradeColor} />
                   </SectionCollapsible>
                 );
               }
