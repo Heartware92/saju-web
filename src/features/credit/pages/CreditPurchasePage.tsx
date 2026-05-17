@@ -77,7 +77,7 @@ export const CreditPurchasePage: React.FC = () => {
           <ul className="mt-1.5 space-y-1 list-disc pl-4 text-text-tertiary">
             <li>구매하신 크레딧은 <strong className="text-text-secondary">결제일로부터 1년 이내</strong>에 사용해 주세요.</li>
             <li>유효 기간 경과 시 미사용 크레딧은 <strong className="text-text-secondary">자동 소멸</strong>됩니다.</li>
-            <li>환불은 <strong className="text-text-secondary">결제 수단(신용카드)으로만</strong> 가능하며, 미사용 상태에서 결제일로부터 7일 이내 청약철회 신청 가능합니다.</li>
+            <li>환불은 <strong className="text-text-secondary">결제 시 사용한 결제 수단으로만</strong> 가능하며, 미사용 상태에서 결제일로부터 7일 이내 청약철회 신청 가능합니다.</li>
             <li>자세한 내용은 <a href="/terms" className="underline text-cta hover:text-cta-active">이용약관 제14조·제16조</a>를 참고해 주세요.</li>
           </ul>
         </div>
@@ -179,14 +179,6 @@ const PackageCard: React.FC<{
  */
 const FAQ: React.FC = () => {
   const faqs = [
-    {
-      q: '달 크레딧은 환불이 가능한가요?',
-      a: '구매 후 7일 이내, 미사용 크레딧에 한해 전액 환불이 가능합니다. 마이페이지 → 결제 내역에서 환불 요청을 진행해주세요.',
-    },
-    {
-      q: '달 크레딧에 유효기간이 있나요?',
-      a: '구매하신 크레딧의 유효기간은 결제일로부터 1년이며, 유효기간은 각 결제 건마다 별도로 적용됩니다. 기간 경과 시 미사용 크레딧은 자동 소멸됩니다. 자세한 내용은 이용약관 제14조 및 제16조를 참고해주세요.',
-    },
     {
       q: '어떤 결제 방법을 지원하나요?',
       a: '신용·체크카드, 카카오페이, 네이버페이, 토스페이, 계좌이체 등 다양한 결제 수단을 지원합니다.',
