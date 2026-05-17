@@ -419,7 +419,7 @@ function InputForm({
             { question: q2, value: q2Answer, setValue: setQ2Answer, custom: q2Custom, setCustom: setQ2Custom },
           ] as const).map(({ question, value, setValue, custom, setCustom }, idx) => (
             <div key={idx}>
-              <label className="block text-[13px] text-text-secondary mb-2">{question.q}</label>
+              <label className="block text-[16px] font-semibold text-text-primary mb-3 leading-snug">{question.q}</label>
               <div className="flex flex-wrap gap-2">
                 {question.options.map((opt) => {
                   const on = value === opt;
