@@ -1323,7 +1323,9 @@ export const getTaekilAdvice = async (
 ): Promise<TaekilAdviceResult> => {
   try {
     const prompt = generateTaekilAdvicePrompt(saju, taekil);
-    const raw = await callGPT(prompt, 5000);
+    // minContentLength 300 명시 — maxTokens 5000 의 기본 minLen (750자) 은 1개 날짜 풀이엔 과해서
+    // "응답이 너무 짧다" 오류 발생. 1개 후보도 풀이 가능하도록 300자 기준으로 완화.
+    const raw = await callGPT(prompt, 5000, 300);
     // [taekil_advice] 마커 제거하고 본문만 추출
     const match = raw.match(/\[taekil_advice\]\s*([\s\S]+)/);
     const advice = match ? match[1].trim() : raw.trim();

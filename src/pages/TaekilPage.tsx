@@ -131,10 +131,10 @@ export default function TaekilPage() {
     if (category !== 'custom') setCustomLabel('');
   }, [category, isArchiveMode]);
 
-  // 연/월 변경시에도 선택 초기화 (보관함 모드에서는 스킵)
+  // 연/월 변경시 결과 영역만 리셋 — pickedDates 는 유지 (여러 달 후보 비교 가능)
+  // 사용자가 5월에서 1~2개, 6월에서 1~2개 골라서 총 후보 비교하는 케이스 지원
   useEffect(() => {
     if (isArchiveMode) return;
-    setPickedDates([]);
     setAiError(null);
   }, [viewYear, viewMonth, isArchiveMode]);
 
