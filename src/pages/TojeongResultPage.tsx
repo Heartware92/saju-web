@@ -141,6 +141,120 @@ function parseMonthlyEntries(raw: string): { month: number; keyword: string; tex
   return entries;
 }
 
+const HANJA_MONTH_NUM = ['一', '二', '三', '四', '五', '六', '七', '八', '九', '十', '十一', '十二'];
+
+// 토정비결 월별 흐름 카드 — 신년운세 MonthlySectionView 와 동일 톤(코스믹 그라데이션 + 큰 숫자/月 + 키워드 + 한자 워터마크 + 본문 + 카드 간 점선)
+function TojeongMonthlyCards({
+  months,
+  accentColor,
+}: {
+  months: { month: number; keyword: string; text: string }[];
+  accentColor: string;
+}) {
+  if (!months.length) return null;
+  const c = accentColor;
+  return (
+    <div className="relative flex flex-col">
+      {months.map((m, idx) => {
+        const isLast = idx === months.length - 1;
+        return (
+          <div key={m.month} className="relative">
+            <div
+              className="relative overflow-hidden rounded-2xl border"
+              style={{
+                background: `linear-gradient(135deg, rgba(20,12,38,0.65) 0%, ${c}11 50%, rgba(20,12,38,0.55) 100%)`,
+                borderColor: `${c}33`,
+                boxShadow: `0 0 24px ${c}10, inset 0 0 1px ${c}40`,
+              }}
+            >
+              {/* 상단 — 월 번호(큰 글씨) + 月 + 키워드 + 한자 워터마크 */}
+              <div className="relative flex items-start justify-between gap-3 px-5 pt-4 pb-2">
+                <div className="flex items-baseline gap-2.5 flex-wrap">
+                  <span
+                    className="font-bold leading-none"
+                    style={{
+                      fontFamily: 'var(--font-title)',
+                      fontSize: '32px',
+                      color: c,
+                      textShadow: `0 0 18px ${c}55`,
+                      letterSpacing: '-0.04em',
+                    }}
+                  >
+                    {m.month}
+                  </span>
+                  <span
+                    className="font-bold leading-none"
+                    style={{
+                      fontFamily: 'var(--font-title)',
+                      fontSize: '28px',
+                      color: c,
+                      opacity: 0.85,
+                      letterSpacing: '-0.04em',
+                    }}
+                  >
+                    月
+                  </span>
+                  {m.keyword && (
+                    <span
+                      className="text-[18px] font-semibold text-text-primary ml-2"
+                      style={{ fontFamily: 'var(--font-title)', letterSpacing: '-0.01em' }}
+                    >
+                      {m.keyword}
+                    </span>
+                  )}
+                </div>
+                {/* 월 한자 — 우측 워터마크(별점·등급 자리 대체) */}
+                <span
+                  aria-hidden
+                  className="text-[40px] font-bold leading-none select-none pointer-events-none shrink-0"
+                  style={{
+                    fontFamily: 'var(--font-title)',
+                    color: c,
+                    opacity: 0.32,
+                    letterSpacing: '-0.05em',
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  {HANJA_MONTH_NUM[m.month - 1] ?? `${m.month}`}
+                </span>
+              </div>
+
+              {/* 구분선 */}
+              <div
+                className="relative mx-5 h-px"
+                style={{
+                  background: `linear-gradient(90deg, transparent, ${c}55, transparent)`,
+                }}
+              />
+
+              {/* 본문 — 다른 섹션 본문과 동일 톤 (SUIT 16px, 자간 -0.005em, leading 1.85) */}
+              <div className="relative px-4 pt-3 pb-4">
+                <p
+                  className="text-[16px] text-text-secondary leading-[1.85] tracking-[-0.005em]"
+                  style={{ fontFamily: 'var(--font-body)' }}
+                >
+                  {m.text}
+                </p>
+              </div>
+            </div>
+
+            {/* 카드 간 연결 점선 (마지막 제외) */}
+            {!isLast && (
+              <div className="flex justify-start pl-9 py-1.5">
+                <div className="flex flex-col items-center gap-1">
+                  <span className="w-px h-1.5 bg-white/15" />
+                  <span className="w-1 h-1 rounded-full bg-white/25" />
+                  <span className="w-px h-1.5 bg-white/15" />
+                </div>
+              </div>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 const DOMAIN_DEFS: { key: 'wealth' | 'love' | 'health' | 'career'; label: string }[] = [
   { key: 'wealth', label: '재물운' },
   { key: 'love', label: '애정·가정' },
@@ -625,25 +739,13 @@ export default function TojeongResultPage() {
         </div>
       </section>
 
-      {/* 월별 흐름 */}
+      {/* 월별 흐름 — 신년운세 카드 톤과 동일 */}
       <section className="rounded-2xl p-4 mb-3 bg-[rgba(20,12,38,0.55)] border border-[var(--border-subtle)]">
         <div className="text-[15px] font-semibold text-text-secondary mb-3 uppercase tracking-wider">월별 흐름</div>
-        <div className="space-y-1.5">
-          {reading.monthly.map(m => (
-            <div key={m.month} className="rounded-lg p-2.5 bg-white/5 flex gap-3">
-              <div className="shrink-0 text-center" style={{ minWidth: 52 }}>
-                <div className="text-[15px] font-bold text-text-primary">{m.month}월</div>
-                <div className="text-[12px] text-text-tertiary mt-0.5 whitespace-nowrap">{m.keyword.split('·')[0]}</div>
-              </div>
-              <div
-                className="flex-1 text-[14px] text-text-secondary leading-[1.85] tracking-[-0.005em]"
-                style={{ fontFamily: 'var(--font-body)' }}
-              >
-                {m.text}
-              </div>
-            </div>
-          ))}
-        </div>
+        <TojeongMonthlyCards
+          months={reading.monthly.map(m => ({ ...m, keyword: m.keyword.split('·')[0] }))}
+          accentColor={gradeColor}
+        />
       </section>
 
       {/* 조언·주의 */}
@@ -738,7 +840,7 @@ export default function TojeongResultPage() {
             const body = aiSections[key];
             if (!body) return null;
 
-            // 월별운세 섹션 — "N월 — 키워드" 패턴으로 월별 카드 분리
+            // 월별운세 섹션 — "N월 — 키워드" 패턴으로 월별 카드 분리 (신년운세 톤과 동일)
             if (key === 'monthly') {
               const monthEntries = parseMonthlyEntries(body);
               if (monthEntries.length > 0) {
@@ -749,22 +851,7 @@ export default function TojeongResultPage() {
                     defaultOpen={idx === 0}
                     enterDelay={0.15 + idx * 0.05}
                   >
-                    <div className="space-y-2">
-                      {monthEntries.map(me => (
-                        <div key={me.month} className="rounded-lg p-3 bg-white/5">
-                          <div className="flex items-center gap-2 mb-1.5">
-                            <span className="text-[15px] font-bold text-text-primary" style={{ minWidth: 36 }}>{me.month}월</span>
-                            <span className="text-[13px] text-cta/70 font-semibold whitespace-nowrap">{me.keyword}</span>
-                          </div>
-                          <div
-                            className="text-[14px] text-text-secondary leading-[1.85] tracking-[-0.005em]"
-                            style={{ fontFamily: 'var(--font-body)' }}
-                          >
-                            {me.text}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
+                    <TojeongMonthlyCards months={monthEntries} accentColor={gradeColor} />
                   </SectionCollapsible>
                 );
               }
