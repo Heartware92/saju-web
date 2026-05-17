@@ -1419,7 +1419,7 @@ function MonthlySectionView({
                         {/* 월 한자 — 별점·등급 바로 아래에 페이드 워터마크 */}
                         <span
                           aria-hidden
-                          className="absolute right-0 text-[56px] font-bold leading-none select-none pointer-events-none"
+                          className="absolute right-0 text-[56px] font-bold leading-none select-none pointer-events-none whitespace-nowrap"
                           style={{
                             fontFamily: 'var(--font-title)',
                             color: c,
