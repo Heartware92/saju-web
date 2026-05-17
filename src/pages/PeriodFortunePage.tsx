@@ -1419,13 +1419,16 @@ function MonthlySectionView({
                         {/* 월 한자 — 별점·등급 바로 아래에 페이드 워터마크 */}
                         <span
                           aria-hidden
-                          className="absolute right-0 text-[56px] font-bold leading-none select-none pointer-events-none whitespace-nowrap"
+                          className="absolute right-0 text-[56px] font-bold leading-none select-none pointer-events-none"
                           style={{
                             fontFamily: 'var(--font-title)',
                             color: c,
                             opacity: 0.22,
                             letterSpacing: '-0.05em',
                             top: 'calc(100% + 4px)',
+                            whiteSpace: 'nowrap',
+                            width: 'max-content',
+                            display: 'block',
                           }}
                         >
                           {HANJA_MONTH[m.month - 1] ?? `${m.month}`}
