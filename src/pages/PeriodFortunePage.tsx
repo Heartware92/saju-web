@@ -1356,10 +1356,10 @@ function MonthlySectionView({
                       boxShadow: `0 0 24px ${c}10, inset 0 0 1px ${c}40`,
                     }}
                   >
-                    {/* 배경 워터마크 — 큰 한자 월 표기 (좌측으로 당겨 잘 보이게) */}
+                    {/* 배경 워터마크 — 한자 월 표기 (카드 안에 온전히 들어가도록 80px) */}
                     <span
                       aria-hidden
-                      className="absolute -top-4 left-2 text-[110px] font-bold leading-none select-none pointer-events-none"
+                      className="absolute top-1 left-3 text-[80px] font-bold leading-none select-none pointer-events-none"
                       style={{
                         fontFamily: 'var(--font-title)',
                         color: c,
@@ -1635,10 +1635,10 @@ function TimeFlowSectionView({
                   boxShadow: `0 0 24px ${meta.color}10, inset 0 0 1px ${meta.color}40`,
                 }}
               >
-                {/* 한자 워터마크 — 좌측 상단 */}
+                {/* 한자 워터마크 — 좌측 상단 (카드 안에 온전히, 80px) */}
                 <span
                   aria-hidden
-                  className="absolute -top-4 left-2 text-[110px] font-bold leading-none select-none pointer-events-none"
+                  className="absolute top-1 left-3 text-[80px] font-bold leading-none select-none pointer-events-none"
                   style={{
                     fontFamily: 'var(--font-title)',
                     color: meta.color,
