@@ -28,6 +28,7 @@ import { useLoadingGuard } from '../hooks/useLoadingGuard';
 import { useScrollToTopOnLoad } from '../hooks/useScrollToTopOnLoad';
 import { ShareBar } from '@/components/share/ShareBar';
 import { RadarChart } from '../components/charts/RadarChart';
+import { LuckyVisualCard, ELEMENT_LUCKY } from '../components/saju/LuckyVisualCard';
 import { TOJEONG_SECTION_KEYS, TOJEONG_SECTION_LABELS, type TojeongSectionKey } from '../constants/prompts';
 import type { FortuneGrade } from '../engine/periodFortune';
 
@@ -123,6 +124,12 @@ function DomainBar({ label, score, grade }: { label: string; score: number; grad
     </div>
   );
 }
+
+// 한자 오행 → 한글 매핑 (LuckyVisualCard.ELEMENT_LUCKY key 와 호환)
+const ELEMENT_HAN_TO_KOR: Record<string, string> = {
+  '木': '목', '火': '화', '土': '토', '金': '금', '水': '수',
+  '목': '목', '화': '화', '토': '토', '금': '금', '수': '수',
+};
 
 function parseMonthlyEntries(raw: string): { month: number; keyword: string; text: string }[] {
   const entries: { month: number; keyword: string; text: string }[] = [];
@@ -975,6 +982,42 @@ export default function TojeongResultPage() {
               metaphorTitle = hasMetaphor ? firstLine : '';
               bodyText = hasMetaphor ? lines.slice(1).join('\n').trim() : bodyText;
             }
+
+            // 개운 조언 섹션 — 상괘 오행 기반 결정론적 LuckyVisualCard + AI 본문
+            // 사용자 캡처와 동일한 6슬롯 그리드(방위·색상·숫자·시간·보석·활동) 시각화
+            if (key === 'advice') {
+              const elKor = ELEMENT_HAN_TO_KOR[tojeong.upperGwae.element] ?? '목';
+              const lucky = ELEMENT_LUCKY[elKor];
+              return (
+                <SectionCollapsible
+                  key={key}
+                  title={TOJEONG_SECTION_LABELS[key]}
+                  metaphorTitle={metaphorTitle}
+                  defaultOpen={idx === 0}
+                  enterDelay={0.15 + idx * 0.05}
+                >
+                  <div className="space-y-4">
+                    {/* 결정론적 행운 처방 카드 — 정통사주·신년운세와 동일 6슬롯 그리드 */}
+                    <LuckyVisualCard
+                      colors={lucky.colors}
+                      colorCss={lucky.colorCss}
+                      numbers={lucky.numbers}
+                      direction={lucky.direction}
+                      timeSlot={lucky.timeSlot}
+                      gem={lucky.gem}
+                      activity={lucky.activity}
+                    />
+                    {/* AI 본문 — 실생활 적용·실천 풀이 */}
+                    <div className="text-[17px] text-text-secondary leading-[1.85] tracking-[-0.005em] space-y-3">
+                      {bodyText.split(/\n\n+/).map((para, pi) => (
+                        <p key={pi} className="whitespace-pre-line">{para.trim()}</p>
+                      ))}
+                    </div>
+                  </div>
+                </SectionCollapsible>
+              );
+            }
+
             return (
               <SectionCollapsible
                 key={key}
