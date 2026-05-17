@@ -13,9 +13,11 @@ import { useEffect, useMemo, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { tarotDB } from '../services/supabase';
+import { parseNumberedSections } from '../services/fortuneService';
 import { TAROT_DECK, ELEMENT_COLORS, getCardImg, type TarotCard } from '../engine/tarot/deck';
 import { TAROT_SPREAD_LABEL } from '../constants/adminLabels';
 import { BackButton } from '../components/ui/BackButton';
+import { SectionCollapsible } from '../components/saju/SectionCollapsible';
 import { useScrollToTopOnLoad } from '../hooks/useScrollToTopOnLoad';
 import { ShareBar } from '@/components/share/ShareBar';
 
@@ -218,28 +220,46 @@ export default function TarotResultPage() {
         </div>
       )}
 
-      {/* AI 풀이 본문 */}
-      {interpretation && (
-        <section className="rounded-2xl p-5 bg-[rgba(20,12,38,0.55)] border border-[var(--border-subtle)]">
-          <div className="flex items-center gap-2 mb-3">
-            <span className="inline-block w-1 h-5 rounded-full bg-cta" />
-            <div
-              className="text-[16px] font-bold text-text-primary tracking-tight"
-              style={{ fontFamily: 'var(--font-title)', letterSpacing: '-0.01em' }}
-            >
-              풀이
-            </div>
-          </div>
-          <div
-            className="text-[16px] text-text-secondary leading-[1.85] tracking-[-0.005em] space-y-3"
-            style={{ fontFamily: 'var(--font-body)' }}
-          >
-            {interpretation.split(/\n\n+/).map((para, pi) => (
-              <p key={pi} className="whitespace-pre-line">{para.trim()}</p>
+      {/* AI 풀이 본문 — 1·2·3… 번호 섹션을 카드로 분리 (다른 운세 결과와 동일 톤) */}
+      {interpretation && (() => {
+        const sections = parseNumberedSections(interpretation);
+        if (sections.length === 0) {
+          // 파싱 실패 fallback: 단일 카드
+          return (
+            <section className="rounded-2xl p-5 bg-[rgba(20,12,38,0.55)] border border-[var(--border-subtle)]">
+              <div
+                className="text-[16px] text-text-secondary leading-[1.85] tracking-[-0.005em] space-y-3"
+                style={{ fontFamily: 'var(--font-body)' }}
+              >
+                {interpretation.split(/\n\n+/).map((para, pi) => (
+                  <p key={pi} className="whitespace-pre-line">{para.trim()}</p>
+                ))}
+              </div>
+            </section>
+          );
+        }
+        return (
+          <div className="space-y-3">
+            {sections.map((s, idx) => (
+              <SectionCollapsible
+                key={idx}
+                title={s.title}
+                defaultOpen={idx === 0}
+                enterDelay={0.1 + idx * 0.05}
+              >
+                <div
+                  className="text-[16px] text-text-secondary leading-[1.85] tracking-[-0.005em] space-y-3"
+                  style={{ fontFamily: 'var(--font-body)' }}
+                >
+                  {s.body.split(/\n\n+/).map((para, pi) => (
+                    <p key={pi} className="whitespace-pre-line">{para.trim()}</p>
+                  ))}
+                </div>
+              </SectionCollapsible>
             ))}
           </div>
-        </section>
-      )}
+        );
+      })()}
 
       {/* 새로 한 장 더 — 라이브 페이지로 */}
       <div className="mt-6 flex justify-center">

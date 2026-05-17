@@ -14,7 +14,8 @@ import { useCreditStore } from '../store/useCreditStore';
 import { useReportCacheStore, sajuKey } from '../store/useReportCacheStore';
 import { MOON_COST_TAROT, CHARGE_REASONS } from '../constants/creditCosts';
 import { computeSajuFromProfile } from '../utils/profileSaju';
-import { getHybridReading } from '../services/fortuneService';
+import { getHybridReading, parseNumberedSections } from '../services/fortuneService';
+import { SectionCollapsible } from '../components/saju/SectionCollapsible';
 import type { TarotCardInfo } from '../services/api';
 import type { SajuResult } from '../utils/sajuCalculator';
 import { AILoadingBar } from '../components/AILoadingBar';
@@ -296,10 +297,40 @@ function ReadingView({ reading, color }: { reading: TarotReading; color: string 
 }
 
 // ── AI ReadingView ────────────────────────────────────────────────────────────
+// 1·2·3… 번호 섹션을 SectionCollapsible 카드로 분리 — 다른 운세 결과(토정·신년)와 동일 톤.
+function AIBodyChildren({ body, color }: { body: string; color: string }) {
+  // 문단별 — bullet vs 일반 문단 분기
+  const paras = body.split(/\n\n+/).filter(Boolean);
+  return (
+    <div
+      className="text-[16px] text-text-secondary leading-[1.85] tracking-[-0.005em] space-y-3"
+      style={{ fontFamily: 'var(--font-body)' }}
+    >
+      {paras.map((p, i) => {
+        const trimmed = p.trim();
+        if (trimmed.startsWith('-') || trimmed.startsWith('·')) {
+          return (
+            <ul key={i} className="space-y-1.5">
+              {trimmed.split('\n').map((line, j) => (
+                <li key={j} className="flex gap-2">
+                  <span style={{ color }} className="shrink-0">·</span>
+                  <span>{line.replace(/^[-·]\s*/, '').trim()}</span>
+                </li>
+              ))}
+            </ul>
+          );
+        }
+        return <p key={i} className="whitespace-pre-line">{trimmed}</p>;
+      })}
+    </div>
+  );
+}
+
 function AIReadingView({ content, color }: { content: string; color: string }) {
-  // [은유] 마커 안전망 — 본문에 마커가 섞여 있어도 strip 후 분할
+  // [은유] 마커 안전망 — 본문에 마커가 섞여 있어도 strip 후 파싱
   const clean = extractMetaphor(content).bodyText || content;
-  const sections = clean.split('\n\n').filter(Boolean);
+  const sections = parseNumberedSections(clean);
+
   return (
     <div className="space-y-3">
       <FadeIn delay={0.1}>
@@ -313,41 +344,27 @@ function AIReadingView({ content, color }: { content: string; color: string }) {
           </div>
         </section>
       </FadeIn>
-      <FadeIn delay={0.3}>
-        <section className="rounded-2xl p-4 bg-[rgba(20,12,38,0.55)] border border-[var(--border-subtle)]">
-          <div className="space-y-3">
-            {sections.map((p, i) => {
-              const trimmed = p.trim();
-              return (
-                <motion.div key={i} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.45 + Math.min(i * 0.18, 1.8), duration: 0.45, ease: 'easeOut' }}>
-                  {trimmed.startsWith('-') || trimmed.startsWith('·') ? (
-                    <ul className="space-y-1.5">
-                      {trimmed.split('\n').map((line, j) => (
-                        <li
-                          key={j}
-                          className="text-[15px] text-text-secondary leading-[1.85] tracking-[-0.005em] flex gap-2"
-                          style={{ fontFamily: 'var(--font-body)' }}
-                        >
-                          <span style={{ color }} className="shrink-0">·</span>
-                          <span>{line.replace(/^[-·]\s*/, '')}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  ) : (
-                    <p
-                      className="text-[15px] text-text-secondary leading-[1.85] tracking-[-0.005em] whitespace-pre-line"
-                      style={{ fontFamily: 'var(--font-body)' }}
-                    >
-                      {trimmed}
-                    </p>
-                  )}
-                </motion.div>
-              );
-            })}
-          </div>
-        </section>
-      </FadeIn>
+
+      {sections.length > 0 ? (
+        sections.map((s, idx) => (
+          <FadeIn key={idx} delay={0.25 + Math.min(idx * 0.1, 1.2)}>
+            <SectionCollapsible
+              title={s.title}
+              defaultOpen={idx === 0}
+              enterDelay={0}
+            >
+              <AIBodyChildren body={s.body} color={color} />
+            </SectionCollapsible>
+          </FadeIn>
+        ))
+      ) : (
+        // 파싱 실패 fallback: 기존 단일 카드
+        <FadeIn delay={0.3}>
+          <section className="rounded-2xl p-4 bg-[rgba(20,12,38,0.55)] border border-[var(--border-subtle)]">
+            <AIBodyChildren body={clean} color={color} />
+          </section>
+        </FadeIn>
+      )}
     </div>
   );
 }

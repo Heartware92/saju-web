@@ -324,6 +324,29 @@ export function parseTojeongScores(raw: string): { wealth: number; love: number;
   };
 }
 
+/**
+ * 한글 번호 헤더(`1. 제목`, `2. 제목` …) 기반 섹션 파서.
+ * SYSTEM_PROMPT 규칙(### 금지, 평문 번호) 에 맞춰 AI 가 출력하는 형식.
+ * 타로(`generateHybridPrompt`) 결과를 N개 카드로 나눠 렌더링할 때 사용.
+ */
+export function parseNumberedSections(raw: string): Array<{ title: string; body: string }> {
+  const lines = raw.split('\n');
+  const out: Array<{ title: string; body: string }> = [];
+  const headerRe = /^\s*#*\s*(\d+)\.\s+(.+?)\s*$/;
+  let current: { title: string; body: string[] } | null = null;
+  for (const line of lines) {
+    const m = headerRe.exec(line);
+    if (m) {
+      if (current) out.push({ title: current.title, body: current.body.join('\n').trim() });
+      current = { title: m[2].trim(), body: [] };
+    } else if (current) {
+      current.body.push(line);
+    }
+  }
+  if (current) out.push({ title: current.title, body: current.body.join('\n').trim() });
+  return out.filter(s => s.body.length > 0);
+}
+
 /** [key] 델리미터로 토정비결 섹션 파싱 */
 export function parseTojeongSections(raw: string): Partial<Record<TojeongSectionKey, string>> {
   const out: Partial<Record<TojeongSectionKey, string>> = {};
