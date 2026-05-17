@@ -164,7 +164,7 @@ export function ZamidusuResultBlock({ record }: Props) {
             {(() => {
               const raw = hasHeadline ? body : text;
               return splitIntoParagraphs(raw).map((p, i) => (
-                <p key={i} style={{ fontSize: 15, color: 'var(--text-secondary)', lineHeight: 1.85, letterSpacing: '-0.005em', margin: i === 0 ? 0 : '14px 0 0', fontFamily: 'var(--font-body)' }}>
+                <p key={i} className="leading-[1.85]" style={{ fontSize: 15, color: 'var(--text-secondary)', margin: i === 0 ? 0 : '14px 0 0' }}>
                   {p}
                 </p>
               ));
