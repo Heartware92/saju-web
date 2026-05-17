@@ -1465,16 +1465,9 @@ function MonthlySectionView({
                       }}
                     />
 
-                    {/* 본문 — SUIT 폰트 + 다른 섹션과 동일한 줄바꿈 패턴 */}
+                    {/* 본문 — 다른 섹션과 동일 톤 (leading-[1.85] 룰이 SUIT + 자간 0.16em 자동 적용) */}
                     <div className="relative px-4 pt-3 pb-4">
-                      <p
-                        className="text-[16px] text-text-secondary"
-                        style={{
-                          fontFamily: 'var(--font-body)',
-                          lineHeight: 1.85,
-                          letterSpacing: '-0.005em',
-                        }}
-                      >
+                      <p className="text-[16px] text-text-secondary leading-[1.85] tracking-[-0.005em]">
                         {m.body}
                       </p>
                     </div>
