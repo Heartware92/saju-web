@@ -3,37 +3,74 @@
 /**
  * Monument Valley 톤 측면 태양계 — 로딩 화면용 우주 시각화
  *
- * 사용자 요청:
- *  - 가로 정렬 (행성들이 일렬로)
- *  - 측면 시점 (전지적 작가시점 X, 옆에서 보는 시각)
- *  - 코일처럼 앞뒤로 자전·공전 시각화
+ * 2026-05-17 궤도 정확화 — 4단계 keyframes 의 직선 보간(마름모꼴 경로) 문제 해결.
+ * cos/sin 으로 36단계(10도 간격) keyframes 동적 생성하여 점선 ellipse 와 정확히 일치.
  *
  * 시각화 컨셉:
- *  - 각 행성이 매우 납작한 타원 궤도 (rx 큼, ry 작음) 측면에서 본 듯
- *  - 행성이 앞으로 올 때: 크게·진하게 (translateY +)
- *  - 행성이 뒤로 갈 때: 작게·흐리게 (translateY -, scale ↓, opacity ↓)
- *  - 4단계 keyframes — 오른쪽(보통) → 뒤(작음) → 왼쪽(보통) → 앞(큼) → 오른쪽
+ *  - 측면 시점 (45도 위에서 비스듬히) — ry/rx ≈ 0.7
+ *  - 행성이 앞으로 (y > 0): 크게·진하게
+ *  - 행성이 뒤로 (y < 0): 작게·흐리게
+ *  - 측면 (y = 0): 기본 크기·완전 불투명
  *
  * 구성:
- *  - 중앙 태양 (3s 펄스 + 8광선 회전)
+ *  - 중앙 태양 (5s 펄스 + 8광선 회전)
  *  - 4개 행성 각자 타원 궤도 (안쪽 빠름·바깥 느림)
- *  - 각 행성 자체 자전 (회전)
- *  - 행성 2(라일락)은 달 거느림
+ *  - 행성 2(라일락) 은 달 거느림 (작은 원 궤도, 동일한 측면 시점)
  *  - 배경 별 6개 트윙클
  *
- * 애니메이션:
- *  - 행성 1 공전: 5s linear
- *  - 행성 2 공전: 8s linear (+ 달 3s)
- *  - 행성 3 공전: 12s linear (역방향 자전)
- *  - 행성 4 공전: 18s linear (토성형 고리)
- *  - 태양 펄스: 3s / 광선: 30s
- *  - 별 트윙클: 6s
+ * 좌표계: viewBox 100×100, 중심 (50,50).
+ * 행성 outer <g> 가 keyframes 로 (rx*cosθ, ry*sinθ) 만큼 translate.
+ * inner <g> 에 translate(50,50) 으로 origin 보정.
  */
 
 interface SpinningEarthProps {
   size?: number;
   className?: string;
 }
+
+// ── 궤도 keyframes 동적 생성 ─────────────────────────────────────
+/**
+ * 측면 시점 타원 궤도 keyframes 36단계 생성.
+ * t ∈ [0,1] 일 때 (rx*cos(2πt), ry*sin(2πt)).
+ * y 부호로 scale·opacity 보간:
+ *  - y > 0 (앞): scale 1 → 1.4, opacity 1
+ *  - y < 0 (뒤): scale 1 → 0.6, opacity 1 → 0.55
+ *  - y = 0 (측면): scale 1, opacity 1
+ */
+function buildOrbitKeyframes(name: string, rx: number, ry: number): string {
+  const STEPS = 36;
+  const frames: string[] = [];
+  for (let i = 0; i <= STEPS; i++) {
+    const t = i / STEPS;
+    const theta = 2 * Math.PI * t;
+    const x = rx * Math.cos(theta);
+    const y = ry * Math.sin(theta);
+    const yRatio = y / ry;                      // -1 (뒤) ~ +1 (앞)
+    // scale: 뒤(-1)→0.6, 측면(0)→1, 앞(+1)→1.4
+    const scale = 1 + yRatio * 0.4;
+    // opacity: 앞·측면=1, 뒤로 갈수록 0.55 까지
+    const opacity = y >= 0 ? 1 : 1 + yRatio * 0.45;
+    frames.push(
+      `${(t * 100).toFixed(2)}% { transform: translate(${x.toFixed(3)}px, ${y.toFixed(3)}px) scale(${scale.toFixed(3)}); opacity: ${opacity.toFixed(3)}; }`,
+    );
+  }
+  return `@keyframes ${name} {\n      ${frames.join('\n      ')}\n    }`;
+}
+
+// 4개 궤도 — viewBox 100x100, ry/rx ≈ 0.7 균일 (같은 시야각)
+const ORBIT_RADII = [
+  { rx: 22, ry: 15 },  // 안쪽 (행성1)
+  { rx: 34, ry: 24 },  // 행성2 (지구·달)
+  { rx: 44, ry: 31 },  // 행성3
+  { rx: 52, ry: 36 },  // 바깥 (행성4)
+];
+
+const ORBIT_KEYFRAMES_CSS = ORBIT_RADII
+  .map((r, i) => buildOrbitKeyframes(`orbit-side-${i + 1}`, r.rx, r.ry))
+  .join('\n    ');
+
+// 달 궤도 — 행성2 주변 작은 원, 측면 시점 동일 비율(ry/rx ≈ 0.4 정도, 더 납작)
+const MOON_KEYFRAMES_CSS = buildOrbitKeyframes('moon-orbit-side', 6, 2.4);
 
 export function SpinningEarth({ size = 320, className = '' }: SpinningEarthProps) {
   const stars = [
@@ -91,12 +128,21 @@ export function SpinningEarth({ size = 320, className = '' }: SpinningEarthProps
           />
         ))}
 
-        {/* 가로 궤도 가이드 — 45도 기울어진 타원 (ry/rx ≈ 0.7) + 폭 확장 */}
+        {/* 궤도 가이드 — ORBIT_RADII 와 정확히 같은 rx/ry */}
         <g opacity="0.16">
-          <ellipse cx="50" cy="50" rx="22" ry="15" fill="none" stroke="#fcd5b4" strokeWidth="0.3" strokeDasharray="1 2" />
-          <ellipse cx="50" cy="50" rx="34" ry="24" fill="none" stroke="#fcd5b4" strokeWidth="0.3" strokeDasharray="1 2" />
-          <ellipse cx="50" cy="50" rx="44" ry="31" fill="none" stroke="#fcd5b4" strokeWidth="0.3" strokeDasharray="1 2" />
-          <ellipse cx="50" cy="50" rx="52" ry="36" fill="none" stroke="#fcd5b4" strokeWidth="0.3" strokeDasharray="1 2" />
+          {ORBIT_RADII.map((r, i) => (
+            <ellipse
+              key={i}
+              cx="50"
+              cy="50"
+              rx={r.rx}
+              ry={r.ry}
+              fill="none"
+              stroke="#fcd5b4"
+              strokeWidth="0.3"
+              strokeDasharray="1 2"
+            />
+          ))}
         </g>
 
         {/* 태양 코로나 글로우 */}
@@ -123,7 +169,7 @@ export function SpinningEarth({ size = 320, className = '' }: SpinningEarthProps
         {/* 태양 본체 */}
         <circle cx="50" cy="50" r="7.5" fill="url(#sunBody2)" style={{ animation: 'sun-pulse 5s ease-in-out infinite' }} />
 
-        {/* 행성 1 — 가장 안쪽, 페일핑크, 8s 측면 공전 (느림) */}
+        {/* 행성 1 — 가장 안쪽 궤도(rx=22, ry=15), 페일핑크, 8s */}
         <g style={{ animation: 'orbit-side-1 8s linear infinite', transformOrigin: '50px 50px' }}>
           <g style={{ transform: 'translate(50px, 50px)' }}>
             <g style={{ animation: 'planet-spin-fast 7s linear infinite' }}>
@@ -133,7 +179,7 @@ export function SpinningEarth({ size = 320, className = '' }: SpinningEarthProps
           </g>
         </g>
 
-        {/* 행성 2 — 지구 위치, 라일락+청록, 14s 측면 공전 + 달 */}
+        {/* 행성 2 — 지구 궤도(rx=34, ry=24), 라일락+청록, 14s + 달 */}
         <g style={{ animation: 'orbit-side-2 14s linear infinite', transformOrigin: '50px 50px' }}>
           <g style={{ transform: 'translate(50px, 50px)' }}>
             <g style={{ animation: 'planet-spin-mid 10s linear infinite' }}>
@@ -141,16 +187,14 @@ export function SpinningEarth({ size = 320, className = '' }: SpinningEarthProps
               <path d="M -1.5 -0.8 Q -0.5 -1.5, 0.8 -1 Q 1 -0.2, 0.3 0.4 Q -0.8 0.2, -1.5 -0.8 Z" fill="#7dd3c0" opacity="0.7" />
               <path d="M 0 3.2 A 3.2 3.2 0 0 1 -2.6 0.5 Q -1.3 0.2, 0 0.2 Q 1.3 0.2, 2.6 0.5 A 3.2 3.2 0 0 1 0 3.2 Z" fill="#7c5ca8" opacity="0.4" />
             </g>
-            {/* 달 — 행성 2 주위 공전 (5s) */}
+            {/* 달 — 행성 2 주위 작은 측면 궤도 (rx=6, ry=2.4), 5s */}
             <g style={{ animation: 'moon-orbit-side 5s linear infinite' }}>
-              <g style={{ transform: 'translate(0px, 0px)' }}>
-                <circle cx="6" cy="0" r="1.2" fill="#fff5e1" />
-              </g>
+              <circle cx="0" cy="0" r="1.2" fill="#fff5e1" />
             </g>
           </g>
         </g>
 
-        {/* 행성 3 — 화성 위치, 살구, 22s 측면 공전 */}
+        {/* 행성 3 — 화성 궤도(rx=44, ry=31), 살구, 22s */}
         <g style={{ animation: 'orbit-side-3 22s linear infinite', transformOrigin: '50px 50px' }}>
           <g style={{ transform: 'translate(50px, 50px)' }}>
             <g style={{ animation: 'planet-spin-rev 16s linear infinite reverse' }}>
@@ -161,7 +205,7 @@ export function SpinningEarth({ size = 320, className = '' }: SpinningEarthProps
           </g>
         </g>
 
-        {/* 행성 4 — 토성형, 32s 측면 공전 */}
+        {/* 행성 4 — 토성형 궤도(rx=52, ry=36), 32s */}
         <g style={{ animation: 'orbit-side-4 32s linear infinite', transformOrigin: '50px 50px' }}>
           <g style={{ transform: 'translate(50px, 50px)' }}>
             <g style={{ animation: 'planet-spin-slow 22s linear infinite' }}>
@@ -200,63 +244,15 @@ export function SpinningEarth({ size = 320, className = '' }: SpinningEarthProps
           to { transform: rotate(360deg); }
         }
 
-        /* 측면 공전 — 가로 타원 + 앞뒤 코일 모션 (4단계 keyframes)
-           오른쪽(보통) → 뒤(작음·흐림) → 왼쪽(보통) → 앞(큼·진함) → 오른쪽
-           translate 값은 viewBox 100x100 기준 px */
+        /* ── 측면 타원 궤도 keyframes — cos/sin 36단계로 점선 ellipse 와 정확히 일치 ── */
+        ${ORBIT_KEYFRAMES_CSS}
 
-        /* 45도 기울어진 시점 — ry/rx ≈ 0.7, 폭 확장 */
-        @keyframes orbit-side-1 {
-          0%   { transform: translate(22px, 0px) scale(1); opacity: 1; }
-          25%  { transform: translate(0px, -15px) scale(0.55); opacity: 0.55; }
-          50%  { transform: translate(-22px, 0px) scale(1); opacity: 1; }
-          75%  { transform: translate(0px, 15px) scale(1.3); opacity: 1; }
-          100% { transform: translate(22px, 0px) scale(1); opacity: 1; }
-        }
-        @keyframes orbit-side-2 {
-          0%   { transform: translate(34px, 0px) scale(1); opacity: 1; }
-          25%  { transform: translate(0px, -24px) scale(0.55); opacity: 0.55; }
-          50%  { transform: translate(-34px, 0px) scale(1); opacity: 1; }
-          75%  { transform: translate(0px, 24px) scale(1.3); opacity: 1; }
-          100% { transform: translate(34px, 0px) scale(1); opacity: 1; }
-        }
-        @keyframes orbit-side-3 {
-          0%   { transform: translate(44px, 0px) scale(1); opacity: 1; }
-          25%  { transform: translate(0px, -31px) scale(0.55); opacity: 0.55; }
-          50%  { transform: translate(-44px, 0px) scale(1); opacity: 1; }
-          75%  { transform: translate(0px, 31px) scale(1.3); opacity: 1; }
-          100% { transform: translate(44px, 0px) scale(1); opacity: 1; }
-        }
-        @keyframes orbit-side-4 {
-          0%   { transform: translate(52px, 0px) scale(1); opacity: 1; }
-          25%  { transform: translate(0px, -36px) scale(0.55); opacity: 0.55; }
-          50%  { transform: translate(-52px, 0px) scale(1); opacity: 1; }
-          75%  { transform: translate(0px, 36px) scale(1.3); opacity: 1; }
-          100% { transform: translate(52px, 0px) scale(1); opacity: 1; }
-        }
-        @keyframes moon-orbit-side {
-          0%   { transform: translate(0px, 0px) scale(1); }
-          25%  { transform: translate(0px, -4px) scale(0.5); opacity: 0.5; }
-          50%  { transform: translate(0px, 0px) scale(1); opacity: 1; }
-          75%  { transform: translate(0px, 4px) scale(1.25); }
-          100% { transform: translate(0px, 0px) scale(1); }
-        }
+        ${MOON_KEYFRAMES_CSS}
 
-        @keyframes planet-spin-fast {
-          from { transform: rotate(0deg); }
-          to { transform: rotate(360deg); }
-        }
-        @keyframes planet-spin-mid {
-          from { transform: rotate(0deg); }
-          to { transform: rotate(360deg); }
-        }
-        @keyframes planet-spin-rev {
-          from { transform: rotate(0deg); }
-          to { transform: rotate(360deg); }
-        }
-        @keyframes planet-spin-slow {
-          from { transform: rotate(0deg); }
-          to { transform: rotate(360deg); }
-        }
+        @keyframes planet-spin-fast { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+        @keyframes planet-spin-mid  { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+        @keyframes planet-spin-rev  { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+        @keyframes planet-spin-slow { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
       `}</style>
     </div>
   );

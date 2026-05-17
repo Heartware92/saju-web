@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { SpinningEarth } from './SpinningEarth';
 
@@ -26,6 +27,22 @@ export function AILoadingBar({
 }: AILoadingBarProps) {
   const [progress, setProgress] = useState(0);
   const [msgIdx, setMsgIdx] = useState(0);
+  const [mounted, setMounted] = useState(false);
+
+  // Portal 마운트 가드 (SSR 안전)
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  // 풀스크린 모드일 때만 body 스크롤 잠금 — unmount 시 자동 복원
+  useEffect(() => {
+    if (inline) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, [inline]);
 
   // 비대칭 점근선: estimatedSeconds 시점에서 ~86% 도달, 이후 천천히 92%로 수렴
   useEffect(() => {
@@ -94,17 +111,21 @@ export function AILoadingBar({
   }
 
   // ── Full-screen 버전 ──────────────────────────────────
+  // 핵심 — React Portal 로 document.body 에 직접 렌더해야 Layout 헤더/탭바 위에 정확히 올라감.
+  // app-container 가 overflow:hidden + max-width:430px 라 자식 fixed 는 그 안에 갇히는 문제.
+  // 또한 Layout header 의 backdrop-blur-xl 이 stacking context 만들어 z-index 비교가 어긋남.
+  // Portal 로 body 직접 렌더 + z-[9999] 로 모든 stacking context 위로.
+  //
   // 레이아웃: 한 화면(100dvh) 안에 상단 텍스트 + 진행바 + 행성을 자동 분배.
-  // 스크롤 막힘 (overflow-hidden + h-[100dvh]) — 다른 페이지 영향 없음 (컴포넌트 unmount 시 자연 해제).
-  // 상단 padding 은 safe-area-inset-top + 2.25rem (36px) → status bar + 32px serif 한자 잘림 방지.
-  // 행성은 위쪽 텍스트 영역을 침범하지 않도록 60vw / 30vh 로 축소 (이전 70vw / 35vh).
-  return (
+  // 상단 padding 은 safe-area-inset-top + 2.5rem → status bar + 큰 한자(정미년생 등) 잘림 방지.
+  // 행성 scale 상한 0.65, 60vw / 28vh — topContent 가장 긴 페이지(정통사주 일주 표기) 기준 안전 마진.
+  const fullScreen = (
     <div
-      className="fixed inset-0 z-50 flex flex-col items-center px-6 pb-6 overflow-hidden bg-[var(--space-deep,#0E0820)]"
-      style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 2.25rem)' }}
+      className="fixed inset-0 z-[9999] flex flex-col items-center px-6 pb-6 overflow-hidden bg-[var(--space-deep,#0E0820)]"
+      style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 2.5rem)' }}
     >
-      {/* 상단 영역 — 타이틀 + 진행바 + 메시지 */}
-      <div className="w-full flex flex-col items-center gap-4">
+      {/* 상단 영역 — topContent + 타이틀 + 진행바 + 메시지 (자동 압축) */}
+      <div className="w-full flex flex-col items-center gap-3.5 flex-shrink-0">
         {/* 상단 컨텐츠 (연도·일주 등) */}
         {topContent && (
           <motion.div
@@ -116,7 +137,7 @@ export function AILoadingBar({
           </motion.div>
         )}
 
-        <div className="w-full max-w-[300px] flex flex-col gap-3.5">
+        <div className="w-full max-w-[300px] flex flex-col gap-3">
           {/* 타이틀 */}
           <div className="text-center">
             <div className="text-[17px] font-semibold text-text-primary mb-1">{label}</div>
@@ -163,7 +184,7 @@ export function AILoadingBar({
         </div>
       </div>
 
-      {/* 코스믹 행성 — 남은 공간 가운데, 상단 텍스트 보호 우선 (60vw / 30vh, 최대 0.75) */}
+      {/* 코스믹 행성 — 남은 공간 가운데. 상단 텍스트 우선이라 상한 0.65 + 28vh */}
       <motion.div
         initial={{ opacity: 0, scale: 0.85 }}
         animate={{ opacity: 1, scale: 1 }}
@@ -172,9 +193,10 @@ export function AILoadingBar({
       >
         <div
           style={{
-            // 380px 기준으로 그리되 작은 화면일수록 transform: scale 로 축소
-            // 상한 0.75 — 상단 텍스트 잘림 방지를 위해 행성을 양보
-            transform: 'scale(min(0.75, calc(60vw / 380), calc(30vh / 380)))',
+            // 380px 기준, transform: scale 로 반응형
+            // 상한 0.65 (이전 0.85→0.75→0.65 단계적 축소) — 상단 텍스트 보호 최우선
+            // 60vw / 28vh — 짧은 폰(iPhone SE 667px)에서도 텍스트 영역 안 침범
+            transform: 'scale(min(0.65, calc(60vw / 380), calc(28vh / 380)))',
             transformOrigin: 'center',
           }}
         >
@@ -183,4 +205,8 @@ export function AILoadingBar({
       </motion.div>
     </div>
   );
+
+  // Portal 마운트 전엔 null (SSR 안전)
+  if (!mounted) return null;
+  return createPortal(fullScreen, document.body);
 }
