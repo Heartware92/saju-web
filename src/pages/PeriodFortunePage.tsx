@@ -1193,6 +1193,7 @@ export default function PeriodFortunePage({ scope }: { scope: FortuneScope | 'da
                 const isYes = key === 'date_yes';
                 const isNo = key === 'date_no';
                 const isRemedy = key === 'date_remedy';
+                const isTimeflow = key === 'date_timeflow';
                 // 시그널 명확성 우선 — 시도(초록)·피하기(빨강) 좌측 띠 + 카드 외곽 테두리 둘 다 적용.
                 const sectionBarColor = isYes ? '#34D399' : isNo ? '#F87171' : '#e8a490';
                 const sectionBorderColor = isYes
@@ -1212,6 +1213,8 @@ export default function PeriodFortunePage({ scope }: { scope: FortuneScope | 'da
                   >
                     {isRemedy ? (
                       <RemedyCardGrid bodyText={bodyText} />
+                    ) : isTimeflow ? (
+                      <TimeFlowSectionView bodyText={bodyText} flow={pickedDateReport.flow} />
                     ) : (
                       // 시그널은 SectionCollapsible 의 좌측 색띠(barColor) 로 전달.
                       // 본문 앞 ● / ▲ 마커는 번호 매겨진 리스트와 중복 시그널 + 안구 흐름 방해 → 제거.
@@ -1537,6 +1540,294 @@ function MonthlySectionView({
               </li>
             ))}
           </ul>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// 시간대별 흐름 — 아침·낮·저녁·밤 4구간 카드 레이아웃
+function TimeFlowSectionView({
+  bodyText,
+  flow,
+}: {
+  bodyText: string;
+  flow?: DateFlowScores;
+}) {
+  type SlotKey = 'morning' | 'afternoon' | 'evening' | 'night';
+
+  // 4 시간대 메타 — 한글 라벨 / 한자 / 시간 범위 / 색
+  const SLOT_META: Record<SlotKey, { ko: string; hanja: string; range: string; color: string }> = {
+    morning:   { ko: '아침', hanja: '朝', range: '06 — 12시', color: '#FCD34D' }, // sunrise amber
+    afternoon: { ko: '낮',   hanja: '晝', range: '12 — 18시', color: '#FB923C' }, // noon orange
+    evening:   { ko: '저녁', hanja: '夕', range: '18 — 22시', color: '#F472B6' }, // sunset pink
+    night:     { ko: '밤',   hanja: '夜', range: '22 — 02시', color: '#818CF8' }, // night indigo
+  };
+  const SLOT_ORDER: SlotKey[] = ['morning', 'afternoon', 'evening', 'night'];
+
+  // bodyText 파싱 — 각 시간대로 시작하는 단락 추출
+  // 형식: "아침(06~12시) — ..." / "아침 — ..." / "아침: ..."
+  const paragraphs = bodyText.split(/\n\n+/).map(p => p.trim()).filter(Boolean);
+  const slotBodies: Partial<Record<SlotKey, string>> = {};
+  const otherParas: string[] = [];
+
+  const slotRe: Record<SlotKey, RegExp> = {
+    morning:   /^아침(?:\s*\([^)]*\))?\s*[—\-:：·]\s*([\s\S]+)$/,
+    afternoon: /^낮(?:\s*\([^)]*\))?\s*[—\-:：·]\s*([\s\S]+)$/,
+    evening:   /^저녁(?:\s*\([^)]*\))?\s*[—\-:：·]\s*([\s\S]+)$/,
+    night:     /^밤(?:\s*\([^)]*\))?\s*[—\-:：·]\s*([\s\S]+)$/,
+  };
+
+  for (const para of paragraphs) {
+    let matched = false;
+    for (const slot of SLOT_ORDER) {
+      if (slotBodies[slot]) continue;
+      const m = para.match(slotRe[slot]);
+      if (m) {
+        slotBodies[slot] = m[1].trim();
+        matched = true;
+        break;
+      }
+    }
+    if (!matched) otherParas.push(para);
+  }
+
+  const hasAnySlot = SLOT_ORDER.some(s => slotBodies[s]);
+
+  // 가장 좋은/약한 시간대 추출 (flow 기반, summary 박스에 표시)
+  const bestSlot = flow
+    ? SLOT_ORDER.reduce((a, b) => (flow[a] >= flow[b] ? a : b))
+    : null;
+  const weakSlot = flow
+    ? SLOT_ORDER.reduce((a, b) => (flow[a] <= flow[b] ? a : b))
+    : null;
+
+  // 파싱 실패 시 fallback — 원본 단락 그대로
+  if (!hasAnySlot) {
+    return (
+      <div className="text-[17px] text-text-secondary leading-[1.85] tracking-[-0.005em] space-y-3">
+        {paragraphs.map((para, pi) => (
+          <p key={pi} className="whitespace-pre-line">{para}</p>
+        ))}
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-1">
+      <div className="relative flex flex-col">
+        {SLOT_ORDER.map((slot, idx) => {
+          const meta = SLOT_META[slot];
+          const body = slotBodies[slot];
+          if (!body) return null;
+          const score = flow?.[slot];
+          const isLast = idx === SLOT_ORDER.length - 1
+            || SLOT_ORDER.slice(idx + 1).every(s => !slotBodies[s]);
+          const isBest = bestSlot === slot;
+
+          return (
+            <div key={slot} className="relative">
+              <div
+                className="relative overflow-hidden rounded-2xl border"
+                style={{
+                  background: `linear-gradient(135deg, rgba(20,12,38,0.65) 0%, ${meta.color}11 50%, rgba(20,12,38,0.55) 100%)`,
+                  borderColor: `${meta.color}33`,
+                  boxShadow: `0 0 24px ${meta.color}10, inset 0 0 1px ${meta.color}40`,
+                }}
+              >
+                {/* 한자 워터마크 — 좌측 상단 */}
+                <span
+                  aria-hidden
+                  className="absolute -top-4 left-2 text-[110px] font-bold leading-none select-none pointer-events-none"
+                  style={{
+                    fontFamily: 'var(--font-title)',
+                    color: meta.color,
+                    opacity: 0.10,
+                    letterSpacing: '-0.05em',
+                  }}
+                >
+                  {meta.hanja}
+                </span>
+
+                {/* 상단 — 시간대 + 시간 범위 + 점수 */}
+                <div className="relative flex items-start justify-between gap-3 px-5 pt-4 pb-2">
+                  <div className="flex items-baseline gap-2.5 flex-wrap">
+                    <span
+                      className="font-bold leading-none"
+                      style={{
+                        fontFamily: 'var(--font-title)',
+                        fontSize: '28px',
+                        color: meta.color,
+                        textShadow: `0 0 18px ${meta.color}55`,
+                        letterSpacing: '-0.02em',
+                      }}
+                    >
+                      {meta.ko}
+                    </span>
+                    <span
+                      className="text-[13px] text-text-tertiary ml-1"
+                      style={{ fontFamily: 'var(--font-title)', letterSpacing: '0.02em' }}
+                    >
+                      {meta.range}
+                    </span>
+                  </div>
+                  {/* 점수 + best 표시 */}
+                  {typeof score === 'number' && (
+                    <div className="flex flex-col items-end gap-1 shrink-0">
+                      <span
+                        className="text-[20px] font-bold leading-none"
+                        style={{
+                          fontFamily: 'var(--font-title)',
+                          color: meta.color,
+                          letterSpacing: '-0.02em',
+                        }}
+                      >
+                        {score}
+                      </span>
+                      {isBest && (
+                        <span
+                          className="text-[10px] font-semibold tracking-[0.08em]"
+                          style={{ color: meta.color }}
+                        >
+                          BEST
+                        </span>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                {/* 구분선 */}
+                <div
+                  className="relative mx-5 h-px"
+                  style={{
+                    background: `linear-gradient(90deg, transparent, ${meta.color}55, transparent)`,
+                  }}
+                />
+
+                {/* 본문 */}
+                <div className="relative px-4 pt-3 pb-4">
+                  <p
+                    className="text-[16px] text-text-secondary"
+                    style={{
+                      fontFamily: 'var(--font-body)',
+                      lineHeight: 1.85,
+                      letterSpacing: '-0.005em',
+                    }}
+                  >
+                    {body}
+                  </p>
+                </div>
+              </div>
+
+              {/* 카드 간 연결 점선 */}
+              {!isLast && (
+                <div className="flex justify-start pl-9 py-1.5">
+                  <div className="flex flex-col items-center gap-1">
+                    <span className="w-px h-1.5 bg-white/15" />
+                    <span className="w-1 h-1 rounded-full bg-white/25" />
+                    <span className="w-px h-1.5 bg-white/15" />
+                  </div>
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+
+      {/* 정리 — 가장 좋은/약한 시간대 + 본문 내 잔여 단락 (예: 마지막 정리 문장) */}
+      {(otherParas.length > 0 || (bestSlot && weakSlot && bestSlot !== weakSlot)) && (
+        <div
+          className="mt-5 relative overflow-hidden rounded-2xl p-5"
+          style={{
+            background: 'radial-gradient(ellipse at top right, rgba(252,213,180,0.10) 0%, rgba(20,12,38,0.7) 70%)',
+            border: '1px solid rgba(252,213,180,0.30)',
+            boxShadow: '0 0 32px rgba(252,213,180,0.08), inset 0 0 1px rgba(252,213,180,0.40)',
+          }}
+        >
+          <div className="relative flex items-center gap-2.5 mb-4">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="#fcd5b4" stroke="#fcd5b4" strokeWidth="1.5">
+              <polygon points="12 2 15 9 22 9 17 14 19 22 12 18 5 22 7 14 2 9 9 9 12 2" />
+            </svg>
+            <span
+              className="text-[16px] font-bold text-text-primary"
+              style={{ fontFamily: 'var(--font-title)', letterSpacing: '-0.01em' }}
+            >
+              하루의 결
+            </span>
+          </div>
+
+          {/* 가장 좋은 / 가장 약한 시간대 — flow 데이터 있을 때만 */}
+          {bestSlot && weakSlot && bestSlot !== weakSlot && (
+            <div className="flex gap-2 mb-3">
+              <div
+                className="flex-1 rounded-xl px-3 py-2.5"
+                style={{
+                  background: `${SLOT_META[bestSlot].color}14`,
+                  border: `1px solid ${SLOT_META[bestSlot].color}40`,
+                }}
+              >
+                <div
+                  className="text-[11px] mb-0.5 tracking-[0.08em]"
+                  style={{ color: SLOT_META[bestSlot].color }}
+                >
+                  가장 좋은 시간
+                </div>
+                <div
+                  className="text-[16px] font-bold"
+                  style={{
+                    fontFamily: 'var(--font-title)',
+                    color: SLOT_META[bestSlot].color,
+                    letterSpacing: '-0.01em',
+                  }}
+                >
+                  {SLOT_META[bestSlot].ko}
+                </div>
+              </div>
+              <div
+                className="flex-1 rounded-xl px-3 py-2.5"
+                style={{
+                  background: `${SLOT_META[weakSlot].color}10`,
+                  border: `1px solid ${SLOT_META[weakSlot].color}30`,
+                }}
+              >
+                <div
+                  className="text-[11px] mb-0.5 tracking-[0.08em]"
+                  style={{ color: SLOT_META[weakSlot].color, opacity: 0.85 }}
+                >
+                  가장 약한 시간
+                </div>
+                <div
+                  className="text-[16px] font-bold"
+                  style={{
+                    fontFamily: 'var(--font-title)',
+                    color: SLOT_META[weakSlot].color,
+                    letterSpacing: '-0.01em',
+                  }}
+                >
+                  {SLOT_META[weakSlot].ko}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* 본문 내 잔여 단락 (마지막 정리 문장 등) */}
+          {otherParas.length > 0 && (
+            <div className="space-y-2">
+              {otherParas.map((para, i) => (
+                <p
+                  key={i}
+                  className="text-[15px] text-text-secondary"
+                  style={{
+                    fontFamily: 'var(--font-title)',
+                    lineHeight: 1.85,
+                    letterSpacing: '-0.005em',
+                  }}
+                >
+                  {para}
+                </p>
+              ))}
+            </div>
+          )}
         </div>
       )}
     </div>
