@@ -1356,15 +1356,16 @@ function MonthlySectionView({
                       boxShadow: `0 0 24px ${c}10, inset 0 0 1px ${c}40`,
                     }}
                   >
-                    {/* 배경 워터마크 — 둥근 모서리(rounded-2xl=16px)에 잘리지 않도록 top-5 로 충분히 내림 */}
+                    {/* 한자 — 전통 낙관(도장) 스타일, 우측 중앙 배치로 잘 보이게 */}
                     <span
                       aria-hidden
-                      className="absolute top-5 left-4 text-[48px] font-bold leading-none select-none pointer-events-none"
+                      className="absolute top-1/2 right-5 text-[56px] font-bold leading-none select-none pointer-events-none"
                       style={{
                         fontFamily: 'var(--font-title)',
                         color: c,
-                        opacity: 0.12,
+                        opacity: 0.22,
                         letterSpacing: '-0.05em',
+                        transform: 'translateY(-50%)',
                       }}
                     >
                       {HANJA_MONTH[m.month - 1] ?? `${m.month}`}
@@ -1635,15 +1636,16 @@ function TimeFlowSectionView({
                   boxShadow: `0 0 24px ${meta.color}10, inset 0 0 1px ${meta.color}40`,
                 }}
               >
-                {/* 한자 워터마크 — 둥근 모서리 회피 + 48px */}
+                {/* 한자 — 전통 낙관(도장) 스타일, 우측 중앙 배치 */}
                 <span
                   aria-hidden
-                  className="absolute top-5 left-4 text-[48px] font-bold leading-none select-none pointer-events-none"
+                  className="absolute top-1/2 right-5 text-[56px] font-bold leading-none select-none pointer-events-none"
                   style={{
                     fontFamily: 'var(--font-title)',
                     color: meta.color,
-                    opacity: 0.12,
+                    opacity: 0.22,
                     letterSpacing: '-0.05em',
+                    transform: 'translateY(-50%)',
                   }}
                 >
                   {meta.hanja}
