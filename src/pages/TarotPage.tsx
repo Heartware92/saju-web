@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { BackButton } from '../components/ui/BackButton';
 import { motion, AnimatePresence } from 'framer-motion';
 import { TAROT_DECK, ELEMENT_COLORS, getCardImg } from '../engine/tarot/deck';
 import { buildTarotReading, type DrawnCard, type TarotReading } from '../engine/tarot/reading';
@@ -594,9 +593,8 @@ export default function TarotPage() {
     <div className="w-full px-4 pt-4 pb-10">
       {showNoPrimaryModal && <NoPrimaryModal onClose={() => setShowNoPrimaryModal(false)} />}
 
-      {/* 헤더 — 뒤로가기 좌측 + 중앙 정렬 타이틀 + 우측 차감 안내 */}
+      {/* 헤더 — 메인 페이지라 뒤로가기 없음. 타이틀 + 우측 차감 안내 */}
       <div className="flex items-center mb-4 relative">
-        <BackButton to="/" className="absolute left-0" />
         <div className="flex-1 text-center">
           <h1 className="text-[22px] font-bold text-text-primary" style={{ fontFamily: 'var(--font-title)', letterSpacing: '-0.01em' }}>타로 상담</h1>
           <p className="text-[15px] text-text-tertiary mt-1">78장 라이더-웨이트 풀덱 · 전문 타로인의 노하우 기반</p>

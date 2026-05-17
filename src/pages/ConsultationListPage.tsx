@@ -5,7 +5,6 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useProfileStore } from '../store/useProfileStore';
 import { useUserStore } from '../store/useUserStore';
-import { BackButton } from '../components/ui/BackButton';
 import {
   type StoredConversation,
   loadConversations,
@@ -84,9 +83,8 @@ export default function ConsultationListPage() {
   return (
     <div className="pb-6">
 
-      {/* 헤더 — 뒤로가기 좌측 + 중앙 정렬 타이틀 + 우측 차감 안내 */}
+      {/* 헤더 — 메인 페이지라 뒤로가기 없음. 타이틀 + 우측 차감 안내 */}
       <div className="flex items-center relative mb-5 pt-3 px-1">
-        <BackButton to="/" className="absolute left-0" />
         <div className="flex-1 text-center">
           <h1 className="text-2xl font-bold text-text-primary" style={{ fontFamily: 'var(--font-serif)' }}>
             상담소
