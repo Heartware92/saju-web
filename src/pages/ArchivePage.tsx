@@ -12,7 +12,6 @@ import { useEffect, useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
 import Link from 'next/link';
 import { Card } from '../components/ui/Card';
-import { BackButton } from '../components/ui/BackButton';
 import { sajuDB, tarotDB } from '../services/supabase';
 import { useUserStore } from '../store/useUserStore';
 import { SAJU_CATEGORY_LABEL, TAROT_SPREAD_LABEL } from '../constants/adminLabels';
@@ -154,9 +153,8 @@ export default function ArchivePage() {
 
   return (
     <div className="min-h-screen bg-space-deep px-4 pt-4 pb-4">
-      {/* Header — 뒤로가기 + 타이틀 */}
+      {/* Header — 메인 페이지라 뒤로가기 없음. 풀이 클릭 시 진입한 상세 페이지에는 유지 */}
       <div className="flex items-center relative mb-5 pt-3 px-1">
-        <BackButton to="/" className="absolute left-0" />
         <div className="flex-1 text-center">
           <h1 className="text-2xl font-bold text-text-primary" style={{ fontFamily: 'var(--font-serif)' }}>보관함</h1>
           <p className="text-base text-text-tertiary mt-1">이전에 본 풀이를 그대로 다시 볼 수 있어요</p>
