@@ -600,7 +600,10 @@ export default function TojeongResultPage() {
               </div>
             ))}
           </div>
-          <div className="text-[14px] text-text-tertiary leading-relaxed border-t border-white/10 pt-3 mt-3">
+          <div
+            className="text-[14px] text-text-tertiary leading-[1.85] tracking-[-0.005em] border-t border-white/10 pt-3 mt-3"
+            style={{ fontFamily: 'var(--font-body)' }}
+          >
             {reading.entry.hanjaSa.translation}
           </div>
         </section>
@@ -611,7 +614,13 @@ export default function TojeongResultPage() {
         <div className="text-[15px] font-semibold text-text-secondary mb-3 uppercase tracking-wider">올해 총평</div>
         <div className="space-y-3">
           {reading.paragraphs.map((p, i) => (
-            <p key={i} className="text-[15px] text-text-secondary leading-relaxed">{p}</p>
+            <p
+              key={i}
+              className="text-[15px] text-text-secondary leading-[1.85] tracking-[-0.005em]"
+              style={{ fontFamily: 'var(--font-body)' }}
+            >
+              {p}
+            </p>
           ))}
         </div>
       </section>
@@ -626,7 +635,10 @@ export default function TojeongResultPage() {
                 <div className="text-[15px] font-bold text-text-primary">{m.month}월</div>
                 <div className="text-[12px] text-text-tertiary mt-0.5 whitespace-nowrap">{m.keyword.split('·')[0]}</div>
               </div>
-              <div className="flex-1 text-[14px] text-text-secondary leading-relaxed">
+              <div
+                className="flex-1 text-[14px] text-text-secondary leading-[1.85] tracking-[-0.005em]"
+                style={{ fontFamily: 'var(--font-body)' }}
+              >
                 {m.text}
               </div>
             </div>
@@ -640,7 +652,11 @@ export default function TojeongResultPage() {
           <div className="text-[15px] font-semibold mb-2" style={{ color: '#34D399' }}>올해의 조언</div>
           <ul className="space-y-1.5">
             {reading.advice.map((a, i) => (
-              <li key={i} className="text-[14px] text-text-secondary flex gap-2">
+              <li
+                key={i}
+                className="text-[14px] text-text-secondary flex gap-2 leading-[1.85] tracking-[-0.005em]"
+                style={{ fontFamily: 'var(--font-body)' }}
+              >
                 <span style={{ color: '#34D399' }}>✓</span>
                 <span>{a}</span>
               </li>
@@ -651,7 +667,11 @@ export default function TojeongResultPage() {
           <div className="text-[15px] font-semibold mb-2" style={{ color: '#F87171' }}>주의할 점</div>
           <ul className="space-y-1.5">
             {reading.warnings.map((w, i) => (
-              <li key={i} className="text-[14px] text-text-secondary flex gap-2">
+              <li
+                key={i}
+                className="text-[14px] text-text-secondary flex gap-2 leading-[1.85] tracking-[-0.005em]"
+                style={{ fontFamily: 'var(--font-body)' }}
+              >
                 <span style={{ color: '#F87171' }}>!</span>
                 <span>{w}</span>
               </li>
@@ -736,7 +756,10 @@ export default function TojeongResultPage() {
                             <span className="text-[15px] font-bold text-text-primary" style={{ minWidth: 36 }}>{me.month}월</span>
                             <span className="text-[13px] text-cta/70 font-semibold whitespace-nowrap">{me.keyword}</span>
                           </div>
-                          <div className="text-[14px] text-text-secondary leading-relaxed">
+                          <div
+                            className="text-[14px] text-text-secondary leading-[1.85] tracking-[-0.005em]"
+                            style={{ fontFamily: 'var(--font-body)' }}
+                          >
                             {me.text}
                           </div>
                         </div>
@@ -790,7 +813,10 @@ export default function TojeongResultPage() {
               심층 풀이
             </div>
           </div>
-          <p className="text-[15px] text-text-secondary leading-[1.85] whitespace-pre-line tracking-[-0.005em]">
+          <p
+            className="text-[15px] text-text-secondary leading-[1.85] whitespace-pre-line tracking-[-0.005em]"
+            style={{ fontFamily: 'var(--font-body)' }}
+          >
             {stripAllSectionTags(aiContent)}
           </p>
         </section>

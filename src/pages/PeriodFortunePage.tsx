@@ -1816,18 +1816,14 @@ function TimeFlowSectionView({
             </div>
           )}
 
-          {/* 본문 내 잔여 단락 (마지막 정리 문장 등) */}
+          {/* 본문 내 잔여 단락 (마지막 정리 문장 등) — 본문 톤 통일(SUIT, 자간 -0.005em) */}
           {otherParas.length > 0 && (
             <div className="space-y-2">
               {otherParas.map((para, i) => (
                 <p
                   key={i}
-                  className="text-[15px] text-text-secondary"
-                  style={{
-                    fontFamily: 'var(--font-title)',
-                    lineHeight: 1.85,
-                    letterSpacing: '-0.005em',
-                  }}
+                  className="text-[15px] text-text-secondary leading-[1.85] tracking-[-0.005em]"
+                  style={{ fontFamily: 'var(--font-body)' }}
                 >
                   {para}
                 </p>
