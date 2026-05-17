@@ -177,7 +177,7 @@ export default function RefundInquiryPage() {
             </li>
             <li className="flex gap-2">
               <span className="text-amber-300/80">·</span>
-              <span>크레딧을 <strong className="text-amber-200">한 번이라도 사용하셨다면</strong> 해당 결제 건은 환불이 어렵습니다 (부분 환불 불가).</span>
+              <span>크레딧을 <strong className="text-amber-200">한 번이라도 사용하셨다면</strong> 해당 결제 건은 환불이 어렵습니다.</span>
             </li>
             <li className="flex gap-2">
               <span className="text-amber-300/80">·</span>
