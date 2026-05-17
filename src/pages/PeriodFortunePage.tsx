@@ -1673,7 +1673,7 @@ function TimeFlowSectionView({
                       className="font-bold leading-none"
                       style={{
                         fontFamily: 'var(--font-title)',
-                        fontSize: '28px',
+                        fontSize: '23px',
                         color: meta.color,
                         textShadow: `0 0 18px ${meta.color}55`,
                         letterSpacing: '-0.02em',
@@ -1721,15 +1721,11 @@ function TimeFlowSectionView({
                   }}
                 />
 
-                {/* 본문 */}
+                {/* 본문 — 다른 섹션 본문과 동일 톤(SUIT 17px, 자간 -0.005em, 라인 1.85) */}
                 <div className="relative px-4 pt-3 pb-4">
                   <p
-                    className="text-[16px] text-text-secondary"
-                    style={{
-                      fontFamily: 'var(--font-body)',
-                      lineHeight: 1.85,
-                      letterSpacing: '-0.005em',
-                    }}
+                    className="text-[17px] text-text-secondary leading-[1.85] tracking-[-0.005em]"
+                    style={{ fontFamily: 'var(--font-body)' }}
                   >
                     {body}
                   </p>
