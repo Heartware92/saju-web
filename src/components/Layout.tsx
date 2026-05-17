@@ -136,70 +136,29 @@ export default function Layout({ children }: LayoutProps) {
                   </svg>
                 </button>
               </div>
-              <nav className="flex flex-col gap-2">
+              <nav className="flex flex-col gap-1">
                 {[
-                  { path: '/credit', label: '크레딧 충전', icon: '💎' },
-                  { path: '/mypage', label: '내 정보', icon: '👤' },
-                  { path: '/archive', label: '보관함', icon: '📦' },
+                  { path: '/credit', label: '크레딧 충전' },
+                  { path: '/mypage', label: '내 정보' },
+                  { path: '/archive', label: '보관함' },
+                  { path: '/inquiry', label: '문의하기' },
+                  { path: '/company', label: '회사 정보' },
                 ].map((item) => (
                   <Link
                     key={item.path}
                     href={item.path}
                     onClick={() => setMenuOpen(false)}
-                    className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm text-text-secondary hover:text-text-primary hover:bg-space-surface transition-colors"
+                    className="flex items-center justify-between px-4 py-3 rounded-xl text-[15px] text-text-secondary hover:text-text-primary hover:bg-space-surface transition-colors"
                   >
-                    <span>{item.icon}</span>
                     <span>{item.label}</span>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="opacity-50">
+                      <path d="M9 18l6-6-6-6" />
+                    </svg>
                   </Link>
                 ))}
               </nav>
-              <div className="mt-auto pt-8 flex flex-col items-center gap-3">
-                <div className="flex items-center gap-2 flex-wrap justify-center">
-                  <Link
-                    href="/terms"
-                    onClick={() => setMenuOpen(false)}
-                    className="text-[11px] text-text-tertiary hover:text-text-secondary transition-colors"
-                  >
-                    이용약관
-                  </Link>
-                  <span className="text-[11px] text-text-tertiary/40">|</span>
-                  <Link
-                    href="/privacy"
-                    onClick={() => setMenuOpen(false)}
-                    className="text-[11px] text-text-tertiary hover:text-text-secondary transition-colors"
-                  >
-                    개인정보처리방침
-                  </Link>
-                  <span className="text-[11px] text-text-tertiary/40">|</span>
-                  <Link
-                    href="/licenses"
-                    onClick={() => setMenuOpen(false)}
-                    className="text-[11px] text-text-tertiary hover:text-text-secondary transition-colors"
-                  >
-                    오픈소스 라이선스
-                  </Link>
-                </div>
-                <div className="flex flex-col items-center gap-1 text-[11px] leading-snug text-text-tertiary text-center px-2">
-                  <p>(주)하트웨어 · 대표자 허진우</p>
-                  <p>사업자등록번호 136-88-03376</p>
-                  <p>통신판매업 신고 2026-대구북구-0028</p>
-                  <p>대구광역시 북구 동북로 117</p>
-                  <p>고객센터 010-5960-0920</p>
-                  <p>이메일 heojinwoo@heartware.co.kr</p>
-                </div>
-                {/* 민원 책임 고지 — KG이니시스 환금성 업종 입점 필수 문구 */}
-                <div className="mt-3 pt-3 border-t border-[var(--border-subtle)] w-full px-2 text-center">
-                  <p className="text-[11px] leading-snug text-text-tertiary">
-                    본 서비스의 모든 거래에 대한 책임과 환불, 민원 등은{' '}
-                    <span className="text-text-secondary">(주)하트웨어</span>에서 진행합니다.
-                  </p>
-                  <p className="mt-1 text-[11px] leading-snug text-text-tertiary">
-                    민원 담당자: 허진우 (대표자 겸임)
-                    <br />
-                    010-5960-0920 · heojinwoo@heartware.co.kr
-                  </p>
-                  <p className="mt-2 text-[11px] text-text-tertiary/70">&copy; 2026 이천점</p>
-                </div>
+              <div className="mt-auto pt-8">
+                <p className="text-center text-[11px] text-text-tertiary/70">&copy; 2026 이천점</p>
               </div>
             </div>
           </>
