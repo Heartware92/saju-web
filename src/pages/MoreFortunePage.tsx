@@ -1063,43 +1063,46 @@ function MoreFortuneResultCard({
         ))}
       </div>
 
-      <div style={{ marginTop: 18, display: 'flex', gap: 8 }}>
-        {isArchiveMode ? (
-          <Link
-            href="/archive"
-            style={{
-              flex: 1,
-              padding: '12px',
-              background: 'rgba(255,255,255,0.06)',
-              border: '1px solid rgba(255,255,255,0.15)',
-              borderRadius: 10,
-              color: 'var(--text-secondary)',
-              fontSize: 13,
-              textAlign: 'center',
-              textDecoration: 'none',
-            }}
-          >
-            보관함으로
-          </Link>
-        ) : (
-          <button
-            onClick={onReset}
-            style={{
-              flex: 1,
-              padding: '12px',
-              background: 'var(--cta-primary)',
-              border: 'none',
-              borderRadius: 10,
-              color: 'white',
-              fontSize: 13,
-              fontWeight: 600,
-              cursor: 'pointer',
-            }}
-          >
-            {category === 'name' ? '다른 이름 풀이받기' : category === 'dream' ? '다른 꿈 풀이받기' : '다시 풀이 받기'}
-          </button>
-        )}
-      </div>
+      {/* 꿈해몽은 archive 모드에서 "보관함으로" 버튼 숨김 — 다른 결과 페이지와 일관성 (상단 BackButton 으로 복귀) */}
+      {!(isArchiveMode && category === 'dream') && (
+        <div style={{ marginTop: 18, display: 'flex', gap: 8 }}>
+          {isArchiveMode ? (
+            <Link
+              href="/archive"
+              style={{
+                flex: 1,
+                padding: '12px',
+                background: 'rgba(255,255,255,0.06)',
+                border: '1px solid rgba(255,255,255,0.15)',
+                borderRadius: 10,
+                color: 'var(--text-secondary)',
+                fontSize: 13,
+                textAlign: 'center',
+                textDecoration: 'none',
+              }}
+            >
+              보관함으로
+            </Link>
+          ) : (
+            <button
+              onClick={onReset}
+              style={{
+                flex: 1,
+                padding: '12px',
+                background: 'var(--cta-primary)',
+                border: 'none',
+                borderRadius: 10,
+                color: 'white',
+                fontSize: 13,
+                fontWeight: 600,
+                cursor: 'pointer',
+              }}
+            >
+              {category === 'name' ? '다른 이름 풀이받기' : category === 'dream' ? '다른 꿈 풀이받기' : '다시 풀이 받기'}
+            </button>
+          )}
+        </div>
+      )}
     </motion.div>
   );
 }
