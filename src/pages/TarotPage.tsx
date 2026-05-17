@@ -197,7 +197,12 @@ function ContextBlock({ block, color }: { block: TarotReading['contexts'][number
         <span style={{ color }} className="text-[16px]">{block.icon}</span>
         <span className="text-[15px] font-semibold text-text-primary">{block.label}</span>
       </div>
-      <p className="text-[15px] text-text-secondary leading-relaxed mb-2">{block.text}</p>
+      <p
+        className="text-[15px] text-text-secondary leading-[1.85] tracking-[-0.005em] mb-2"
+        style={{ fontFamily: 'var(--font-body)' }}
+      >
+        {block.text}
+      </p>
       {block.cardLines.length > 1 && (
         <ul className="space-y-1 pt-2 border-t border-[var(--border-subtle)]">
           {block.cardLines.map((line, i) => (
@@ -215,8 +220,18 @@ function ReadingView({ reading, color }: { reading: TarotReading; color: string 
       <FadeIn delay={0.1}>
         <section className="rounded-2xl p-5 text-center" style={{ backgroundColor: `${color}12`, border: `1px solid ${color}55` }}>
           <div className="text-[13px] font-semibold uppercase tracking-wider text-text-tertiary mb-2">타로 리딩</div>
-          <div className="text-[18px] font-bold mb-1" style={{ color, fontFamily: 'var(--font-serif)' }}>{reading.headline}</div>
-          <div className="text-[15px] text-text-secondary">{reading.subhead}</div>
+          <div
+            className="text-[18px] font-bold mb-1"
+            style={{ color, fontFamily: 'var(--font-title)', letterSpacing: '-0.01em' }}
+          >
+            {reading.headline}
+          </div>
+          <div
+            className="text-[15px] text-text-secondary tracking-[-0.005em]"
+            style={{ fontFamily: 'var(--font-body)' }}
+          >
+            {reading.subhead}
+          </div>
         </section>
       </FadeIn>
       <FadeIn delay={0.35}>
@@ -239,7 +254,8 @@ function ReadingView({ reading, color }: { reading: TarotReading; color: string 
             {reading.synthesis.map((p, i) => (
               <motion.p key={i} initial={{ opacity: 0 }} animate={{ opacity: 1 }}
                 transition={{ delay: 0.7 + i * 0.18, duration: 0.4 }}
-                className="text-[15px] text-text-secondary leading-relaxed">
+                className="text-[15px] text-text-secondary leading-[1.85] tracking-[-0.005em]"
+                style={{ fontFamily: 'var(--font-body)' }}>
                 {p}
               </motion.p>
             ))}
@@ -264,7 +280,11 @@ function ReadingView({ reading, color }: { reading: TarotReading; color: string 
           <div className="text-[15px] font-semibold mb-2" style={{ color: '#34D399' }}>카드의 조언</div>
           <ul className="space-y-1.5">
             {reading.advice.map((a, i) => (
-              <li key={i} className="text-[14px] text-text-secondary flex gap-2">
+              <li
+                key={i}
+                className="text-[14px] text-text-secondary tracking-[-0.005em] flex gap-2"
+                style={{ fontFamily: 'var(--font-body)' }}
+              >
                 <span style={{ color: '#34D399' }}>✓</span><span>{a}</span>
               </li>
             ))}
@@ -285,7 +305,10 @@ function AIReadingView({ content, color }: { content: string; color: string }) {
       <FadeIn delay={0.1}>
         <section className="rounded-2xl p-5 text-center" style={{ backgroundColor: `${color}12`, border: `1px solid ${color}55` }}>
           <div className="text-[13px] font-semibold uppercase tracking-wider text-text-tertiary mb-2">사주 × 타로 리딩</div>
-          <div className="text-[16px] font-bold" style={{ color, fontFamily: 'var(--font-serif)' }}>
+          <div
+            className="text-[16px] font-bold"
+            style={{ color, fontFamily: 'var(--font-title)', letterSpacing: '-0.01em' }}
+          >
             당신의 사주와 카드가 만나는 순간
           </div>
         </section>
@@ -301,14 +324,23 @@ function AIReadingView({ content, color }: { content: string; color: string }) {
                   {trimmed.startsWith('-') || trimmed.startsWith('·') ? (
                     <ul className="space-y-1.5">
                       {trimmed.split('\n').map((line, j) => (
-                        <li key={j} className="text-[15px] text-text-secondary leading-relaxed flex gap-2">
+                        <li
+                          key={j}
+                          className="text-[15px] text-text-secondary leading-[1.85] tracking-[-0.005em] flex gap-2"
+                          style={{ fontFamily: 'var(--font-body)' }}
+                        >
                           <span style={{ color }} className="shrink-0">·</span>
                           <span>{line.replace(/^[-·]\s*/, '')}</span>
                         </li>
                       ))}
                     </ul>
                   ) : (
-                    <p className="text-[15px] text-text-secondary leading-relaxed whitespace-pre-line">{trimmed}</p>
+                    <p
+                      className="text-[15px] text-text-secondary leading-[1.85] tracking-[-0.005em] whitespace-pre-line"
+                      style={{ fontFamily: 'var(--font-body)' }}
+                    >
+                      {trimmed}
+                    </p>
                   )}
                 </motion.div>
               );
@@ -595,7 +627,7 @@ export default function TarotPage() {
       <div className="flex items-center mb-4 relative">
         <BackButton to="/" className="absolute left-0" />
         <div className="flex-1 text-center">
-          <h1 className="text-[22px] font-bold text-text-primary" style={{ fontFamily: 'var(--font-serif)' }}>타로 상담</h1>
+          <h1 className="text-[22px] font-bold text-text-primary" style={{ fontFamily: 'var(--font-title)', letterSpacing: '-0.01em' }}>타로 상담</h1>
           <p className="text-[15px] text-text-tertiary mt-1">78장 라이더-웨이트 풀덱 · 전문 타로인의 노하우 기반</p>
         </div>
         <span className="absolute right-2 top-1 text-[12px] text-text-tertiary">🌙 1개 소모</span>

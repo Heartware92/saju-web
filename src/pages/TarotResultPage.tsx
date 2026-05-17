@@ -185,7 +185,7 @@ export default function TarotResultPage() {
       <div className="flex items-center relative mb-5 pt-3 px-1">
         <BackButton to="/archive" className="absolute left-0" />
         <div className="flex-1 text-center">
-          <h1 className="text-2xl font-bold text-text-primary" style={{ fontFamily: 'var(--font-serif)' }}>
+          <h1 className="text-2xl font-bold text-text-primary" style={{ fontFamily: 'var(--font-title)', letterSpacing: '-0.01em' }}>
             {modeLabel}
           </h1>
           {modeDesc && (
@@ -225,12 +225,15 @@ export default function TarotResultPage() {
             <span className="inline-block w-1 h-5 rounded-full bg-cta" />
             <div
               className="text-[16px] font-bold text-text-primary tracking-tight"
-              style={{ fontFamily: 'var(--font-serif)' }}
+              style={{ fontFamily: 'var(--font-title)', letterSpacing: '-0.01em' }}
             >
               풀이
             </div>
           </div>
-          <div className="text-[17px] text-text-secondary leading-[1.85] tracking-[-0.005em] space-y-3">
+          <div
+            className="text-[16px] text-text-secondary leading-[1.85] tracking-[-0.005em] space-y-3"
+            style={{ fontFamily: 'var(--font-body)' }}
+          >
             {interpretation.split(/\n\n+/).map((para, pi) => (
               <p key={pi} className="whitespace-pre-line">{para.trim()}</p>
             ))}
