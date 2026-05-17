@@ -111,22 +111,7 @@ export default function CompanyPage() {
         </dl>
       </section>
 
-      {/* 약관 링크 */}
-      <section className="rounded-2xl px-5 py-5 mb-3 bg-[rgba(20,12,38,0.55)] border border-[var(--border-subtle)]">
-        <h2 className="text-[13px] font-semibold text-text-tertiary uppercase tracking-wider mb-4">
-          정책 · 약관
-        </h2>
-        <div className="flex flex-col gap-2">
-          <LinkRow href="/terms" label="이용약관" />
-          <LinkRow href="/privacy" label="개인정보처리방침" />
-          <LinkRow href="/licenses" label="오픈소스 라이선스" />
-        </div>
-      </section>
-
-      {/* Copyright */}
-      <p className="text-center text-[11px] text-text-tertiary mt-6">
-        &copy; 2026 이천점. All rights reserved.
-      </p>
+      {/* 약관·정책·copyright 는 햄버거 메뉴 하단에 상시 노출되므로 페이지 내 중복 제거 */}
       </div>
     </Layout>
   );
@@ -141,16 +126,3 @@ function Row({ label, value }: { label: string; value: React.ReactNode }) {
   );
 }
 
-function LinkRow({ href, label }: { href: string; label: string }) {
-  return (
-    <Link
-      href={href}
-      className="flex items-center justify-between px-3 py-3 -mx-3 rounded-lg text-[14px] text-text-secondary hover:text-text-primary hover:bg-white/[0.03] transition-colors"
-    >
-      <span>{label}</span>
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-        <path d="M9 18l6-6-6-6" />
-      </svg>
-    </Link>
-  );
-}
