@@ -1527,7 +1527,7 @@ function MonthlySectionView({
                 key={i}
                 className="text-[15px] text-text-secondary"
                 style={{
-                  fontFamily: 'var(--font-title)',
+                  fontFamily: 'var(--font-body)',
                   lineHeight: 1.85,
                   letterSpacing: '-0.005em',
                 }}
