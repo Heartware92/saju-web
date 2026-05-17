@@ -664,7 +664,7 @@ export default function TarotPage() {
                             initial={{ x: 0, y: 0, rotate: 0 }}
                             animate={
                               isShuffling
-                                ? { x: (Math.random() - 0.5) * 80, y: (Math.random() - 0.5) * 40, rotate: (Math.random() - 0.5) * 20 }
+                                ? { x: (Math.random() - 0.5) * 300, y: (Math.random() - 0.5) * 140, rotate: (Math.random() - 0.5) * 60 }
                                 : { x: (i - 10.5) * 14, y: Math.sin((i - 10.5) * 0.3) * 18, rotate: (i - 10.5) * 2 }
                             }
                             transition={{ duration: 0.5, delay: i * 0.02 }}
@@ -783,7 +783,7 @@ export default function TarotPage() {
                     animate={
                       qState === 'spread'
                         ? { x: (i - 10.5) * 14, y: Math.sin((i - 10.5) * 0.3) * 18, rotate: (i - 10.5) * 2 }
-                        : { x: (Math.random() - 0.5) * 80, y: (Math.random() - 0.5) * 40, rotate: (Math.random() - 0.5) * 20 }
+                        : { x: (Math.random() - 0.5) * 300, y: (Math.random() - 0.5) * 140, rotate: (Math.random() - 0.5) * 60 }
                     }
                     transition={{ duration: 0.5, delay: i * 0.02 }}
                     className="absolute cursor-pointer"
