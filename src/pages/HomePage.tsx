@@ -246,7 +246,9 @@ export default function HomePage() {
                                 transition-all active:scale-[0.98]">
                   <div className="mx-auto w-16 h-16 mb-3 rounded-full bg-[rgba(20,12,38,0.6)]
                                   border border-cta/30 flex items-center justify-center">
-                    <MoonPhase size={36} />
+                    <svg width="32" height="32" viewBox="0 0 24 24" fill="#B8C5F0" aria-hidden="true">
+                      <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
+                    </svg>
                   </div>
                   <h2
                     className="text-lg font-bold text-text-primary mb-1 tracking-tight"
