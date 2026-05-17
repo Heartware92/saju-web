@@ -291,15 +291,15 @@ export async function findGunghapArchives(limit = 20): Promise<GunghapArchiveIte
       .order('created_at', { ascending: false })
       .limit(limit);
     if (error || !data) return [];
-    // 마이그레이션된 옛 행은 partner_name 이 NULL 인 경우가 많음 → partner_birth_date 로
-    // fallback. 둘 다 비면 빈 라벨로라도 항상 노출 (사용자가 옛 풀이 진입 가능하도록).
+    // 마이그레이션된 옛 행은 partner_name·partner_birth_date 가 NULL 인 경우가 많음.
+    // 빈 값은 빈 문자열로 그대로 두고, UI 에서 fallback 라벨 표시 (placeholder 도배 방지).
     return (data as { id: string; created_at: string; profile_name?: string; partner_name?: string; partner_birth_date?: string; engine_result?: Record<string, unknown> }[])
       .map(row => ({
         id: row.id,
         created_at: row.created_at,
         profile_name: row.profile_name ?? '나',
         partner_name: row.partner_name
-          ?? (row.partner_birth_date ? row.partner_birth_date.replace(/-/g, '.') : '상대'),
+          ?? (row.partner_birth_date ? row.partner_birth_date.replace(/-/g, '.') : ''),
         gunghap_category: (row.engine_result?.gunghapCategory as string) ?? '',
         custom_label: (row.engine_result?.customLabel as string) ?? undefined,
       }));

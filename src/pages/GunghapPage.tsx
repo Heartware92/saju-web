@@ -961,7 +961,10 @@ export default function GunghapPage() {
                 <p className="text-[13px] font-bold text-text-secondary uppercase tracking-wider mb-3">이전 궁합 결과</p>
                 <div className="space-y-2">
                   {archiveList.map((item, idx) => {
-                    const catLabel = item.custom_label || CATEGORY_LABEL_MAP[item.gunghap_category] || item.gunghap_category;
+                    const hasPartner = !!item.partner_name;
+                    const rawCatLabel = item.custom_label || CATEGORY_LABEL_MAP[item.gunghap_category] || item.gunghap_category;
+                    // 옛 풀이는 partner_name·gunghap_category 모두 비어있을 수 있음. 카테고리 비면 "이전 궁합" placeholder
+                    const catLabel = rawCatLabel || '이전 궁합';
                     const dateStr = new Date(item.created_at).toLocaleDateString('ko-KR', { month: 'short', day: 'numeric' });
                     return (
                       <motion.button
@@ -978,8 +981,12 @@ export default function GunghapPage() {
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2">
                               <span className="text-[15px] font-bold text-text-primary">{item.profile_name}</span>
-                              <span className="text-text-tertiary text-[13px]">↔</span>
-                              <span className="text-[15px] font-bold text-text-primary">{item.partner_name}</span>
+                              {hasPartner && (
+                                <>
+                                  <span className="text-text-tertiary text-[13px]">↔</span>
+                                  <span className="text-[15px] font-bold text-text-primary">{item.partner_name}</span>
+                                </>
+                              )}
                             </div>
                             <div className="flex items-center gap-2 mt-1">
                               <span className="text-[12px] px-2 py-0.5 rounded-full bg-cta/15 text-cta font-medium">
