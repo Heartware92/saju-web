@@ -819,16 +819,123 @@ export const TODAY_V3_DOMAIN_LABELS: Record<TodayV3DomainKey, string> = {
 export const TODAY_V3_FLOW_SLOTS: TodayTimeSlot[] = ['midnight', 'morning', 'afternoon', 'evening'];
 
 // ─────────────────────────────────────────────────────────────────────────────
+// [Pre-classification] 사용자 직접 입력 5개 필드 사전 분류
+//   - 5개 직접 입력 필드 (customHobby / customJobState / customLoveState / q1Answer / q2Answer)
+//   - 비어있지 않은 필드만 골라 1회 호출로 동시 분류
+//   - 결과를 메인 풀이 prompt 에 명시적으로 주입해 LLM 톤·해석 정확도 ↑
+//   - 분류 실패 시 메인 호출에 null 전달 → 기존 D안 customHobbyNote fallback
+// ─────────────────────────────────────────────────────────────────────────────
+
+/** 비표준 입력 톤 분류 결과 — 한 필드 단위 */
+export interface UserInputClassification {
+  /** 사용자가 입력한 원본 텍스트 */
+  raw: string;
+  /** 톤 분류:
+   *   a = 일상 관심사·취미·생산적 활동 (적당히 하면 해롭지 않음)
+   *   b = 자극적·중독성·해로운·도덕적 회색 (자극·보상·통제 어려움)
+   *   c = 자해·자살 암시·위급 표현 (1393 안내 트리거)
+   *   d = 농담·도발·자기조롱 (사주 핵심으로 전환) */
+  category: 'a' | 'b' | 'c' | 'd';
+  /** 입력을 1~2문장 자연어로 해석 — LLM 이 본문에서 참고할 의미 */
+  interpretation: string;
+  /** 9분야 매핑 결과 (가능하면 그 분야명, 아니면 null) */
+  normalizedMapping: string | null;
+  /** 위험 수준 — high 이면 메인 호출에서 더 보수적 톤 */
+  riskLevel: 'low' | 'medium' | 'high';
+  /** 본문에서 이 입력을 어떻게 다뤄야 하는지 1줄 톤 가이드 */
+  toneGuidance: string;
+}
+
+/** 5개 직접 입력 필드 분류 결과 — 비어있지 않은 필드만 키로 포함 */
+export interface UserInputClassifications {
+  customHobby?: UserInputClassification;
+  customJobState?: UserInputClassification;
+  customLoveState?: UserInputClassification;
+  q1Answer?: UserInputClassification;
+  q2Answer?: UserInputClassification;
+}
+
+/**
+ * 분류기 prompt 생성 — JSON 출력 강제.
+ * 비어있지 않은 직접 입력 필드만 분류 요청. 모두 비어있으면 호출 자체 skip (호출자가 판단).
+ */
+export const generateUserInputClassifierPrompt = (
+  inputs: {
+    customHobby?: string;
+    customJobState?: string;
+    customLoveState?: string;
+    q1Answer?: string;
+    q2Answer?: string;
+  },
+  q1Question?: string,
+  q2Question?: string,
+): string => {
+  const fields: string[] = [];
+  if (inputs.customHobby) fields.push(`- customHobby ("${inputs.customHobby}") : 요즘 가장 시간을 쏟는 분야 (취미·관심사)`);
+  if (inputs.customJobState) fields.push(`- customJobState ("${inputs.customJobState}") : 직업 상태`);
+  if (inputs.customLoveState) fields.push(`- customLoveState ("${inputs.customLoveState}") : 연애 상태`);
+  if (inputs.q1Answer) fields.push(`- q1Answer ("${inputs.q1Answer}") : ${q1Question ? `질문 "${q1Question}" 에 대한 답변` : '시간대 질문 1 답변'}`);
+  if (inputs.q2Answer) fields.push(`- q2Answer ("${inputs.q2Answer}") : ${q2Question ? `질문 "${q2Question}" 에 대한 답변` : '시간대 질문 2 답변'}`);
+
+  return `당신은 사주 사이트의 사용자 직접 입력을 분류하는 분류기입니다. 다음 입력 필드들을 분석해 JSON 으로만 응답하세요. 본문 풀이나 다른 텍스트 절대 출력 금지.
+
+[분류 대상 필드]
+${fields.join('\n')}
+
+[톤 분류 기준 — 모호하면 무조건 (b) 로 처리. 안전 우선]
+
+(a) 일상 관심사·취미·생산적 활동 (적당히 하면 해롭지 않음 — 건강한 휴식·자기개발·운동·일상)
+    예: 넷플릭스, 영화 감상, 독서, 산책, 카페, 그림, 요리, 캠핑, 사진, 등산, 헬스, 야구, 축구, 게임 (보통 수준), 공부, 일, 가족, 친구
+
+(b) 자극적·중독성·해로운·도덕적 회색 (자극·보상·통제 어려움·과하면 해로운)
+    예: 음주, 음주가무, 술자리, 폭음, 혼술, 숙취, 흡연, 담배, 약물
+       야동, 음란물, 성인콘텐츠, 도박, 카지노, 베팅, 폭식, 야식, 충동 쇼핑, 명품 과소비
+       게임 과몰입(밤새), SNS 과사용, 유튜브 쇼츠 무한 스크롤, 친구 괴롭히기, 일탈
+
+(c) 자해·자살 암시·심각한 위급 표현
+    예: 죽고 싶다, 자살하고 싶다, 사라지고 싶다, 끝내고 싶다, 더는 못 버티겠다, 살기 싫다
+
+(d) 농담·도발·자기조롱·무기력 톤
+    예: 아무것도 안 함, 그냥 누워있기, 죽기살기로 게임, 망했음, 답이 없음
+
+[필드별 출력 schema]
+각 필드에 대해 다음 객체:
+{
+  "raw": "사용자가 입력한 원본 그대로",
+  "category": "a" | "b" | "c" | "d",
+  "interpretation": "1-2문장 자연어 해석 (본문에서 LLM 이 참고할 의미)",
+  "normalizedMapping": "9분야 중 하나 또는 null" (9분야 = 공부·시험 / 업무·일 / 창작·예술 / 운동·체력 / 육아·돌봄 / 투자·재테크 / 인간관계 / 자기계발 / 휴식·재충전. 매핑 어려우면 null),
+  "riskLevel": "low" | "medium" | "high",
+  "toneGuidance": "본문에서 이 입력을 어떻게 다뤄야 하는지 1줄"
+}
+
+[톤 가이드 작성 원칙]
+- (a) → "원본 그대로 인정·인용 + 사주적 흐름과 자연 연결"
+- (b) → "직접 인용 1회 이내·우회 표현. 권유 동사 금지. 명리 reframe + 대체 행동 + 따뜻한 마무리"
+- (c) → "원본 단어 인용 금지. 자기 돌봄 톤. 본문 끝에 1393 자살예방상담전화 안내"
+- (d) → "따라가지 말고 사주 핵심으로 자연스럽게 전환"
+
+[출력 형식 — 반드시 이 JSON 구조 (없는 필드는 키 자체 생략)]
+{
+  ${Object.keys(inputs).filter(k => inputs[k as keyof typeof inputs]).map(k => `"${k}": { ... }`).join(',\n  ')}
+}
+
+JSON 만 출력. 마크다운 코드블록 \`\`\`json 같은 wrapper 도 금지. 그냥 raw JSON 만.`;
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
 // 오늘의 운세 V3 프롬프트 — 14 섹션 + 9 항목 점수 + 4 시간대 흐름
 //   - 만세력 전체(4기둥·신살·합충·격국·신강·일주특성)를 모두 주입
 //   - 사용자 입력(취미·직업·연애·시간대 답변)을 모든 섹션에 강제 반영
 //   - 마커 출력 절대 규칙으로 본문에 [todayhobbymethod] 같은 마커 노출 차단
+//   - classifications 가 있으면 사전 분류 결과를 명시적으로 주입
 // ─────────────────────────────────────────────────────────────────────────────
 export const generateTodayFortuneV3Prompt = (
   result: SajuResult,
   todayGz: TodayGanZhi,
   isoDate: string,
   ctx: TodayUserContext,
+  classifications?: UserInputClassifications | null,
 ): string => {
   const { pillars, elementPercent, yongSinElement, isStrong, daeWoon, dayMaster, dayMasterYinYang, sinSals, interactions, hourUnknown, gender } = result;
 
@@ -916,7 +1023,10 @@ export const generateTodayFortuneV3Prompt = (
   const customHobbyMapped = customHobbyRaw ? normalizeHobbyToCategory(customHobbyRaw) : null;
   const primaryHobby = ctx.hobbies[0] || customHobbyMapped || '자기계발';
   // 정규화된 경우만 LLM에 알림 (사용자가 "공부"라 썼는데 시스템이 "공부·시험"으로 매핑한 사실을 LLM이 알도록)
-  const customHobbyNote = customHobbyRaw && customHobbyMapped && customHobbyMapped !== customHobbyRaw
+  // classifications.customHobby 가 있으면 사전 분류 블록이 더 정밀한 가이드 → customHobbyNote skip (중복 방지)
+  const customHobbyNote = (classifications?.customHobby)
+    ? ''
+    : customHobbyRaw && customHobbyMapped && customHobbyMapped !== customHobbyRaw
     ? `\n  · 사용자 직접 입력 "${customHobbyRaw}" → 분야 "${customHobbyMapped}"로 매핑 (본문에서는 사용자 원본 표현 "${customHobbyRaw}" 자연스럽게 인용)`
     : (customHobbyRaw && !customHobbyMapped
         ? `\n  · 사용자 직접 입력 "${customHobbyRaw}" → 9분야 매핑 실패. 다음 [비표준 입력 풀이 가이드] 적용:
@@ -989,6 +1099,41 @@ export const generateTodayFortuneV3Prompt = (
     evening:   '지금이 저녁이므로 "지금부터의 저녁 + 자정 전 마무리"까지 2구간 풀이. 아침·오후는 길게 다루지 말 것 (한 줄 회상도 가급적 생략). 자기 전까지 무엇을 할지가 핵심.',
   };
   const slotAhead = slotAheadGuide[ctx.timeSlot];
+
+  // ── [Pre-classification] 사전 분류 결과 블록 ──
+  // 5개 직접 입력 필드 중 분류된 것만 명시 주입. 분류기 실패/skip 시 빈 string → 기존 customHobbyNote fallback 자연 작동.
+  const classificationBlock = (() => {
+    if (!classifications || Object.keys(classifications).length === 0) return '';
+    const FIELD_LABEL: Record<keyof UserInputClassifications, string> = {
+      customHobby: '취미·관심사 직접 입력',
+      customJobState: '직업 직접 입력',
+      customLoveState: '연애 상태 직접 입력',
+      q1Answer: `질문1 ("${q1}") 직접 입력`,
+      q2Answer: `질문2 ("${q2}") 직접 입력`,
+    };
+    const TONE_HINT: Record<UserInputClassification['category'], string> = {
+      a: '(a) 일상 관심사 — 원본 그대로 인정·인용 + 사주 흐름 자연 연결',
+      b: '(b) 자극·중독성·회색 — 인용 1회 이내·우회 표현. ★ 권유 동사 절대 금지 ("○○ 즐겨보세요/시도해보세요/마셔보세요" 등 출력 금지). 명리 reframe → 대체 행동 → 따뜻한 마무리 3단',
+      c: '(c) 자해·자살 암시 — 원본 단어 인용 절대 금지. 자기 돌봄 톤. 본문 끝에 "혼자 견디기 힘들 땐 자살예방상담전화 1393 에 부담 없이 연락해보세요. 24시간 무료입니다." 안내 필수',
+      d: '(d) 농담·도발·자기조롱 — 따라가지 말고 사주 핵심 흐름으로 자연스럽게 전환',
+    };
+    const lines: string[] = [];
+    (Object.keys(classifications) as Array<keyof UserInputClassifications>).forEach((key) => {
+      const c = classifications[key];
+      if (!c) return;
+      lines.push(`- ${FIELD_LABEL[key]} "${c.raw}"`);
+      lines.push(`  · 톤: ${TONE_HINT[c.category]}`);
+      lines.push(`  · 해석: ${c.interpretation}`);
+      if (c.normalizedMapping) lines.push(`  · 9분야 매핑: ${c.normalizedMapping}`);
+      if (c.riskLevel !== 'low') lines.push(`  · 위험 수준: ${c.riskLevel} (더 보수적 톤 적용)`);
+      lines.push(`  · 풀이 지침: ${c.toneGuidance}`);
+    });
+    return `\n\n[★★★ 사용자 직접 입력 사전 분류 결과 — 본문 풀이에 반드시 그대로 적용 ★★★]
+사용자가 직접 입력한 필드를 사전에 분류·해석한 결과입니다. 본문 풀이는 아래 분류 결과의 톤·해석을 그대로 따를 것. 분류와 다른 톤·해석으로 가지 말 것. 분류 결과 자체(a/b/c/d 라벨)는 본문에 노출 금지.
+
+${lines.join('\n')}
+`;
+  })();
 
   const userInputBlock = `[사용자 현재 상황 — 모든 섹션 풀이에 강제 반영]
 - 진입 시간대: ${slotLabel} (${ctx.timeSlot} 시간 구간)
@@ -1146,7 +1291,7 @@ ${dayTraitsBlock}
 
 [오늘 날짜] ${dateLabel}
 
-${userInputBlock}
+${userInputBlock}${classificationBlock}
 
 ${WRITING_RULES_BLOCK.replace('${todayGz_label}', `${todayGz.gan}${todayGz.zhi}`)}
 
@@ -6360,50 +6505,58 @@ ${interactionStr}
 
 ${MORE_COMMON_RULES}
 
-[작성 지침] 8개 섹션 구조 — 각 섹션은 [key] 마커로 시작. 총 본문 900~1200자.
+[작성 지침] 8개 섹션 구조 — 각 섹션은 [key] 마커로 시작. 총 본문 1450~1900자. 5달 가치에 맞게 풍부하게.
 
 ★ 출력 형식 (반드시 준수):
 [aptitude]
 [은유] (한 줄 은유 부제목 — 18자 이내, 계절·자연·빛 이미지. 정통사주와 동일 마커 형식)
 (빈 줄)
-(본문 60~90자 — 학업 체질 단정: 암기형/사고형/표현형/독학형 중 하나. 격국·십성 근거 1개만. 십성 용어는 일상어 즉시 풀이. 추상 격언 금지)
+(본문 130~180자 — 학업 체질 단정: 암기형/사고형/표현형/독학형 중 하나 + 그 체질의 일상 발현 묘사 1~2문장. 격국·십성 근거 1~2개. 십성 용어는 일상어 즉시 풀이. 본인이 공부할 때 자연스럽게 보이는 행동 묘사 한 호흡 포함. 추상 격언 금지)
 
 [strengths]
-(본문 90~120자 — 인성·식상·관성 비율로 본 강점 영역 2개 + 약점 1개. 일상에서 어떻게 발현되는지 구체 묘사. 추상 격언 금지)
+(본문 160~210자 — 인성·식상·관성 비율로 본 강점 영역 2~3개 + 약점 1~2개:
+ · 각 강점: 어떤 십성 근거 + 일상에서 어떻게 발현되는지 구체 장면 1~2문장씩
+ · 각 약점: 어떤 십성 결핍·과다 + 어떤 상황에서 드러나는지 구체 묘사
+ 추상 격언 금지. "꼼꼼함이 강점" 같은 한 줄 라벨 금지 — 반드시 구체 행동·장면)
 
 [exam_type]
-(본문 70~100자 — 객관식·논술·면접·실기 중 어느 쪽 강자인지 단정 + 약점 유형 1개. 십성 매핑 명시: 객관식=인성·식신, 논술=상관, 면접=상관·도화, 실기=편관·식상)
+(본문 130~180자 — 객관식·논술·면접·실기 4가지를 모두 짚되 강자/약자로 분기:
+ · 가장 강한 유형 1개 단정 + 십성 매핑 근거 + 어떤 식으로 잘하는지 1문장
+ · 보통 유형 1개 + 한 줄 평
+ · 가장 약한 유형 1개 + 명리 근거 + 보완 전략 한 호흡
+ 십성 매핑: 객관식=인성·식신, 논술=상관, 면접=상관·도화, 실기=편관·식상)
 
 [environment]
-(본문 130~170자 — 3가지 항목을 한 호흡씩:
- · 공부 환경: 혼자 vs 스터디그룹 vs 카페 vs 도서관 중 하나로 단정 + 명리 근거 한 호흡
- · 공부 시간대: ${result.yongSinElement === '목' ? '오전 5~9시' : result.yongSinElement === '화' ? '오전 11시~오후 3시' : result.yongSinElement === '토' ? '오후 1시~5시' : result.yongSinElement === '금' ? '오후 3시~7시' : '오후 9시~새벽 1시'} (용신 ${result.yongSinElement} 기준 + 이유 한 호흡)
- · 공부 방법: 시각형(노트·다이어그램) / 청각형(인강·녹음) / 토론형 / 필기형 중 하나로 단정 + 명리 근거)
+(본문 180~240자 — 3가지 항목을 한 호흡씩 충분히 풀어:
+ · 공부 환경: 혼자 vs 스터디그룹 vs 카페 vs 도서관 중 하나로 단정 + 명리 근거 + 그 환경에서 본인이 보이는 모습 1문장
+ · 공부 시간대: ${result.yongSinElement === '목' ? '오전 5~9시' : result.yongSinElement === '화' ? '오전 11시~오후 3시' : result.yongSinElement === '토' ? '오후 1시~5시' : result.yongSinElement === '금' ? '오후 3시~7시' : '오후 9시~새벽 1시'} (용신 ${result.yongSinElement} 기준 + 왜 그 시간이 좋은지 1~2문장 + 그 시간대에 어떤 과제를 배치하면 좋은지)
+ · 공부 방법: 시각형(노트·다이어그램) / 청각형(인강·녹음) / 토론형 / 필기형 중 하나로 단정 + 명리 근거 + 구체 활용 팁 1~2문장)
 
 [subjects]
-(본문 110~150자 — 강점 과목 2~3개 + 약점 과목 1~2개 + 약점 보완 방법.
+(본문 160~210자 — 강점 과목 3개 + 약점 과목 2개 + 약점 보완 방법:
  강한 오행 = ${result.yongSinElement === '목' ? '어학·문학·국어' : result.yongSinElement === '화' ? '예술·심리·미디어' : result.yongSinElement === '토' ? '역사·지리·경영' : result.yongSinElement === '금' ? '수학·논리·법학' : '철학·연구·이공계'} 결,
- 약한 오행 = 의식적 보강 필요. **구체 과목명** 명시 + 약점 보완에 어떤 방식이 효과적인지)
+ 약한 오행 = 의식적 보강 필요. **구체 과목명** 3개 + 2개 명시 + 강점 과목에서 본인이 잘하는 이유 한 호흡 + 약점 과목 보완에 어떤 방식이 효과적인지 1~2문장)
 
 [sinsal]
-(본문 70~110자 — 학업 관련 신살이 만드는 학습 패턴 — 사주에 **있는 신살만** 다룸:
- · 문창귀인 = 어학·글쓰기·인문계 강점
- · 학당귀인 = 정규교육·학벌 인연
- · 화개살 = 연구·철학·종교 적성
- · 도화살 = 집중력 저하·인간관계 에너지 소모 주의
- · 역마살 = 이동 학습형·외부 자극에 집중력 흔들림
- 신살이 없으면 "특별한 학업 신살 없음 — 신살에 의존하지 않는 꾸준한 학업 결" 한 줄)
+(본문 130~180자 — 학업 관련 신살이 만드는 학습 패턴 — 사주에 **있는 신살만** 다룸:
+ · 문창귀인 = 어학·글쓰기·인문계 강점 + 일상 발현 묘사
+ · 학당귀인 = 정규교육·학벌 인연 + 영향 묘사
+ · 화개살 = 연구·철학·종교 적성 + 적성 묘사
+ · 도화살 = 집중력 저하·인간관계 에너지 소모 주의 + 구체 상황
+ · 역마살 = 이동 학습형·외부 자극에 집중력 흔들림 + 환경 추천
+ 있는 신살을 2~3개 골라 각 한 호흡씩 풍부하게. 신살이 없으면 "특별한 학업 신살 없음 — 신살에 의존하지 않는 꾸준한 학업 결. 대신 본인의 격국·십성 균형이 학습의 기반이 된다" 2~3문장)
 
 [timing]
-(본문 130~170자 — 현재 대운(${currentDaeWoonStr}) 학업 영향 한 호흡 + 올해 세운 영향 한 호흡 + 유리한 달 2~3개 (월 + 명리 근거 한 줄씩) + 향후 3년 내 시험·자격·입학에 가장 좋은 시기 1개)
+(본문 200~260자 — 현재 대운(${currentDaeWoonStr}) 학업 영향 1~2문장 + 올해 세운 영향 1~2문장 + 유리한 달 3~4개 (월 + 명리 근거 한 줄씩) + 향후 3년 내 시험·자격·입학에 가장 좋은 시기 1개 + 그 시기 활용 권고 한 호흡)
 
 [action]
-(본문 200~270자 — 실전 행동 가이드 — "- " 불릿 4~5개 + 마지막 응원 한 줄. 추상 격언 금지, 구체 행동만:
- - 시험 직전 루틴: (구체 행동)
- - 약한 과목 보완: (구체 학습 방법)
- - 슬럼프 대처: (구체 활동)
- - 유리한 시험 유형: 경쟁 시험·절대평가·자격증 중 단정
- - 일상 공부 습관 1개 추가 (선택)
+(본문 240~320자 — 실전 행동 가이드 — "- " 불릿 5~6개 + 마지막 응원 한 줄. 추상 격언 금지, 구체 행동만:
+ - 시험 직전 루틴: (구체 시간·행동·먹는 것까지)
+ - 약한 과목 보완: (구체 학습 방법·교재 유형·시간 배분)
+ - 슬럼프 대처: (구체 활동·장소·휴식 방식)
+ - 유리한 시험 유형: 경쟁 시험·절대평가·자격증 중 단정 + 이유
+ - 일상 공부 습관 1~2개 (구체 행동)
+ - 학습 동기 유지법 1개 (구체 방법)
  마지막 한 줄(30~50자): 잠재력 응원)
 
 ★★★ 은유 중복 절대 금지 ★★★

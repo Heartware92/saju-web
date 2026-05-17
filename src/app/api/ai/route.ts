@@ -22,6 +22,7 @@ async function callGeminiOnce(
   maxTokens: number,
   systemPrompt: string,
   temperature: number = 0.4,
+  jsonMode: boolean = false,
 ): Promise<{ ok: true; data: AIResult } | { ok: false; status: number | null; msg: string; retryable: boolean }> {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) return { ok: false, status: null, msg: 'NO_GEMINI_KEY', retryable: false };
@@ -35,17 +36,23 @@ async function callGeminiOnce(
     //   영향 없음(빈 응답 회피 목적).
     const adjustedMaxOutputTokens = Math.min(Math.ceil(maxTokens * 1.3), 8192);
 
+    const generationConfig: Record<string, unknown> = {
+      temperature,
+      maxOutputTokens: adjustedMaxOutputTokens,
+      thinkingConfig: { thinkingBudget: 0, includeThoughts: false },
+    };
+    if (jsonMode) {
+      // Gemini structured output — JSON 응답 강제. 분류기 등 schema-bound 호출용.
+      generationConfig.responseMimeType = 'application/json';
+    }
+
     const res = await fetch(`${GEMINI_API_URL}?key=${apiKey}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         systemInstruction: { parts: [{ text: systemPrompt }] },
         contents: [{ role: 'user', parts: [{ text: prompt }] }],
-        generationConfig: {
-          temperature,
-          maxOutputTokens: adjustedMaxOutputTokens,
-          thinkingConfig: { thinkingBudget: 0, includeThoughts: false },
-        },
+        generationConfig,
       }),
     });
 
@@ -98,13 +105,14 @@ async function callGeminiWithRetry(
   maxTokens: number,
   systemPrompt: string,
   temperature: number = 0.4,
+  jsonMode: boolean = false,
 ): Promise<{ ok: true; data: AIResult } | { ok: false; status: number | null; msg: string }> {
   const backoffsMs = [200, 800, 1600];
   let lastStatus: number | null = null;
   let lastMsg = '';
 
   for (let attempt = 0; attempt <= backoffsMs.length; attempt++) {
-    const r = await callGeminiOnce(prompt, maxTokens, systemPrompt, temperature);
+    const r = await callGeminiOnce(prompt, maxTokens, systemPrompt, temperature, jsonMode);
     if (r.ok) return r;
 
     lastStatus = r.status;
@@ -130,9 +138,24 @@ async function callOpenAI(
   maxTokens: number,
   systemPrompt: string,
   temperature: number = 0.4,
+  jsonMode: boolean = false,
 ): Promise<AIResult> {
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) throw new Error('NO_OPENAI_KEY');
+
+  const body: Record<string, unknown> = {
+    model: OPENAI_MODEL,
+    messages: [
+      { role: 'system', content: systemPrompt },
+      { role: 'user', content: prompt },
+    ],
+    temperature,
+    max_tokens: maxTokens,
+  };
+  if (jsonMode) {
+    // OpenAI JSON mode — prompt 에 "JSON" 단어 포함 필수 (분류기 prompt 에 이미 포함)
+    body.response_format = { type: 'json_object' };
+  }
 
   const res = await fetch(OPENAI_API_URL, {
     method: 'POST',
@@ -140,15 +163,7 @@ async function callOpenAI(
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${apiKey}`,
     },
-    body: JSON.stringify({
-      model: OPENAI_MODEL,
-      messages: [
-        { role: 'system', content: systemPrompt },
-        { role: 'user', content: prompt },
-      ],
-      temperature,
-      max_tokens: maxTokens,
-    }),
+    body: JSON.stringify(body),
   });
 
   if (!res.ok) {
@@ -168,7 +183,7 @@ async function callOpenAI(
 // ── 메인 핸들러 ────────────────────────────────────────────────────────────
 export async function POST(request: NextRequest) {
   try {
-    const { prompt, maxTokens = 1000, systemPrompt, temperature = 0.4 } = await request.json();
+    const { prompt, maxTokens = 1000, systemPrompt, temperature = 0.4, jsonMode = false } = await request.json();
     const sys =
       systemPrompt ||
       '당신은 정통 사주명리 전문가입니다. 핵심만 간결하게, 실용적으로 답변하세요. 한국어로 작성하며 이모지는 최소화하세요.';
@@ -182,7 +197,7 @@ export async function POST(request: NextRequest) {
 
     // ── 1순위: Gemini (재시도 3회 포함) ──
     if (process.env.GEMINI_API_KEY) {
-      const geminiResult = await callGeminiWithRetry(prompt, maxTokens, sys, temperature);
+      const geminiResult = await callGeminiWithRetry(prompt, maxTokens, sys, temperature, jsonMode);
       if (geminiResult.ok) {
         return NextResponse.json({
           content: geminiResult.data.content,
@@ -198,7 +213,7 @@ export async function POST(request: NextRequest) {
     if (process.env.OPENAI_API_KEY) {
       try {
         console.warn('[AI] OpenAI gpt-4o-mini 폴백 시도');
-        const r = await callOpenAI(prompt, maxTokens, sys, temperature);
+        const r = await callOpenAI(prompt, maxTokens, sys, temperature, jsonMode);
         return NextResponse.json({
           content: r.content,
           truncated: r.truncated,

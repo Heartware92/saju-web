@@ -7,7 +7,10 @@ import { archiveSaju, archiveTarot } from './archiveService';
 import {
   SYSTEM_PROMPT,
   generateTodayFortuneV3Prompt,
+  generateUserInputClassifierPrompt,
+  type UserInputClassifications,
   TODAY_V3_SECTION_KEYS,
+  TODAY_TIME_SLOT_QUESTION_POOL,
   type TodayV3SectionKey,
   type TodayV3DomainKey,
   type TodayUserContext,
@@ -193,7 +196,7 @@ const callGPT = async (
   userPrompt: string,
   maxTokens: number = 1000,
   minContentLength?: number,
-  opts?: { allowTruncated?: boolean; timeoutMs?: number },
+  opts?: { allowTruncated?: boolean; timeoutMs?: number; jsonMode?: boolean; systemPrompt?: string },
 ): Promise<string> => {
   const controller = new AbortController();
   const timeout = opts?.timeoutMs ?? AI_CLIENT_TIMEOUT_MS;
@@ -203,7 +206,12 @@ const callGPT = async (
     const response = await fetch('/api/ai', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ prompt: userPrompt, maxTokens, systemPrompt: SYSTEM_PROMPT }),
+      body: JSON.stringify({
+        prompt: userPrompt,
+        maxTokens,
+        systemPrompt: opts?.systemPrompt ?? SYSTEM_PROMPT,
+        jsonMode: opts?.jsonMode === true,
+      }),
       signal: controller.signal,
     });
 
@@ -234,6 +242,64 @@ const callGPT = async (
     throw err;
   } finally {
     clearTimeout(timeoutId);
+  }
+};
+
+/**
+ * [Pre-classification] 5개 직접 입력 필드 사전 분류.
+ *
+ * - 비어있지 않은 직접 입력 필드가 1개 이상 있을 때만 호출 (호출자가 판단)
+ * - 모두 칩 선택이면 null 반환하지 말고 호출 자체 skip 권장 (비용 절감)
+ * - 분류 실패 (JSON parse 실패 / API 에러 등) → null 반환 → fallback: 기존 single-pass 동작
+ * - 회귀 위험 0: 분류 결과는 메인 풀이 prompt 상단에 명시 주입되며, 분류 없을 때는 기존 customHobbyNote 가이드 그대로 동작
+ *
+ * @param inputs 5개 직접 입력 필드 (undefined/빈 string 인 필드는 자동 skip)
+ * @param q1Question q1 의 질문 텍스트 (분류기에 context 제공용, optional)
+ * @param q2Question q2 의 질문 텍스트 (분류기에 context 제공용, optional)
+ * @returns 분류 결과 또는 null (실패 시)
+ */
+export const classifyUserInputs = async (
+  inputs: {
+    customHobby?: string;
+    customJobState?: string;
+    customLoveState?: string;
+    q1Answer?: string;
+    q2Answer?: string;
+  },
+  q1Question?: string,
+  q2Question?: string,
+): Promise<UserInputClassifications | null> => {
+  // 비어있지 않은 필드가 1개도 없으면 호출 skip
+  const hasAny = Object.values(inputs).some((v) => v && v.trim().length > 0);
+  if (!hasAny) return null;
+
+  try {
+    const prompt = generateUserInputClassifierPrompt(inputs, q1Question, q2Question);
+    const raw = await callGPT(prompt, 1500, 20, {
+      timeoutMs: 30_000,
+      jsonMode: true,
+      // 분류는 SYSTEM_PROMPT 명리 톤이 아닌 분류기 역할
+      systemPrompt: '당신은 사용자 입력을 분류하는 분류기입니다. 반드시 JSON 으로만 응답하세요. 다른 텍스트·설명·마크다운 wrapper 절대 금지.',
+    });
+
+    // JSON 파싱 — 마크다운 wrapper 가 섞여 있으면 제거 시도
+    const cleaned = raw
+      .replace(/^```(?:json)?\s*/i, '')
+      .replace(/\s*```$/i, '')
+      .trim();
+    const parsed = JSON.parse(cleaned) as UserInputClassifications;
+
+    // 최소 유효성 검사 — 적어도 1개 필드 분류 결과가 있어야 함
+    if (!parsed || typeof parsed !== 'object' || Object.keys(parsed).length === 0) {
+      console.warn('[classifyUserInputs] 빈 분류 결과 → fallback');
+      return null;
+    }
+
+    return parsed;
+  } catch (err) {
+    // 분류 실패 → null 반환 → 메인 풀이는 기존 single-pass 로 자연 fallback
+    console.warn('[classifyUserInputs] 분류 실패 → fallback (single-pass):', err);
+    return null;
   }
 };
 
@@ -1114,6 +1180,22 @@ export function stripStrayMarkers(text: string): string {
 // 미사용 경고 회피용 (regex 가 함수 안에서 재사용되지 않더라도 유지)
 void TODAY_DOMAIN_LABELS_RE;
 
+/**
+ * q1Answer / q2Answer 가 칩 옵션 매칭이 아닌 자유 텍스트(직접 입력)인지 판정.
+ * ctx.q1Text / q2Text 와 ctx.timeSlot 으로 옵션 lookup 후 비교.
+ */
+const isCustomTimeSlotAnswer = (
+  questionText: string | undefined,
+  answer: string | undefined,
+  slot: TodayTimeSlot,
+): boolean => {
+  if (!answer || !answer.trim() || !questionText) return false;
+  const pool = TODAY_TIME_SLOT_QUESTION_POOL[slot] ?? [];
+  const matched = pool.find((qs) => qs.q === questionText);
+  if (!matched) return true; // 질문 자체 매칭 안 되면 안전하게 custom 으로 간주
+  return !matched.options.includes(answer.trim());
+};
+
 export const getTodayFortuneV3Report = async (
   result: SajuResult,
   ctx: TodayUserContext,
@@ -1123,7 +1205,24 @@ export const getTodayFortuneV3Report = async (
   try {
     const date = isoDate ?? new Date().toISOString().slice(0, 10);
     const todayGz = calcTodayGanZhi(result, date);
-    const prompt = generateTodayFortuneV3Prompt(result, todayGz, date, ctx);
+
+    // ── [Pre-classification] 직접 입력 필드들 분류 (있을 때만) ──
+    // 칩만 선택한 케이스는 호출 자체 skip → 영향 0. 분류 실패 시 null 반환 → fallback.
+    const q1IsCustom = isCustomTimeSlotAnswer(ctx.q1Text, ctx.q1Answer, ctx.timeSlot);
+    const q2IsCustom = isCustomTimeSlotAnswer(ctx.q2Text, ctx.q2Answer, ctx.timeSlot);
+    const classifierInputs = {
+      customHobby: ctx.customHobby?.trim() || undefined,
+      customJobState: ctx.customJobState?.trim() || undefined,
+      customLoveState: ctx.customLoveState?.trim() || undefined,
+      q1Answer: q1IsCustom ? ctx.q1Answer?.trim() : undefined,
+      q2Answer: q2IsCustom ? ctx.q2Answer?.trim() : undefined,
+    };
+    const hasAnyCustom = Object.values(classifierInputs).some((v) => v && v.length > 0);
+    const classifications: UserInputClassifications | null = hasAnyCustom
+      ? await classifyUserInputs(classifierInputs, ctx.q1Text, ctx.q2Text)
+      : null;
+
+    const prompt = generateTodayFortuneV3Prompt(result, todayGz, date, ctx, classifications);
 
     // ── 13 섹션 모두 있는 응답을 받기 위한 retry 안전망 ──
     // 사용자 보고: "큰 섹션은 동일해야지 않나?" — 13개 섹션 항상 노출 보장.
