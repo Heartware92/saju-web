@@ -3149,16 +3149,21 @@ ${pass1Content}`;
 
 
 /**
- * 사주 × 타로 하이브리드 — mode 별 섹션 구조 분기
+ * 사주 × 타로 하이브리드 — 카드 중심 깊이 있는 타로 상담
  *
- * 공통 3섹션: (1) 사주와 타로의 교차점 / (N-1) 오행 보완 / (N) 마무리 메시지
+ * 핵심 원칙: **카드가 풀이의 본질, 사주는 카드 메시지를 받아들이는 그릇**
  *
- * 모드별:
- *  - today    (4섹션): + "카드가 전하는 오늘의 상황"
- *  - monthly  (5섹션): + "카드가 전하는 이달의 흐름" + "이달의 흐름" (월초/월중/월말 3시점)
- *  - question (4섹션): + "질문에 대한 카드가 전하는 답"
+ * 표준 전문 타로 상담 5단계 방법론(Mary K. Greer 의 "21 Ways" 식 / 라이더-웨이트
+ * 전통)을 prompt 룰로 명시화해 AI 가 "사주 진단에 카드 이름만 갈아끼우는" 패턴에서
+ * 벗어나게 함.
  *
- * monthly 는 카드 3장(상순/중순/하순)을 받음. 시점별로 카드를 매핑해 해설.
+ * 카드 깊이 보장 장치:
+ *  1) deck.ts 의 카드별 6맥락 의미(overall/love/career/money/health/advice)를
+ *     prompt 에 그대로 주입 → AI 가 창작 안 하고 정의된 의미를 활용
+ *  2) "카드의 본연 의미 → 사주 그릇 → 굴절·적용" 흐름 강제
+ *  3) 매 섹션 첫 문장은 카드 의미/키워드/심볼로 시작 (사주 진단 시작 금지)
+ *  4) monthly 3장은 카드 간 관계(시너지·충돌·시간 흐름) 분석 지시
+ *  5) 라이더-웨이트 도상(검·잔·동전·완드의 색·자세·배경) 1개 이상 매 섹션 인용
  */
 export const generateHybridPrompt = (
   sajuResult: SajuResult,
@@ -3172,89 +3177,132 @@ export const generateHybridPrompt = (
   const tarotSajuElement: Record<string, string> = {
     Fire: '화', Water: '수', Air: '목', Earth: '토', Spirit: '금'
   };
-  const cardElementInSaju = tarotSajuElement[tarotCard.element];
   const direction = tarotCard.isReversed ? '역방향' : '정방향';
 
-  // 카드 정보 블록 — monthly 는 3장(상순/중순/하순), 나머지는 1장
+  // 단일 카드 의미 블록 — deck.ts 의 6맥락 그대로 주입 (창작 금지 시그널)
+  const renderCardMeaning = (c: TarotCardInfo): string => {
+    const dir = c.isReversed ? '역방향' : '정방향';
+    const el = tarotSajuElement[c.element];
+    const ctx = c.contexts;
+    const meaningLines = ctx
+      ? `  · 전반: ${ctx.overall}\n  · 애정: ${ctx.love}\n  · 직업: ${ctx.career}\n  · 재물: ${ctx.money}\n  · 건강: ${ctx.health}\n  · 조언: ${ctx.advice}`
+      : `  · 본의: ${c.meaning}`;
+    return `▣ ${c.nameKr}(${c.name}) — ${dir}
+  타로 오행: ${c.element}(사주 오행으로 ${el})
+  키워드: ${c.keywords.join(', ')}
+  카드 본연의 의미(전통 라이더-웨이트 — 변형 금지, 그대로 활용):
+${meaningLines}`;
+  };
+
+  // 모드별 카드 정보 블록
+  const isMonthly = mode === 'monthly' && allCards && allCards.length >= 3;
   const cardBlock = (() => {
-    if (mode === 'monthly' && allCards && allCards.length >= 3) {
-      const labels = ['월초', '월중', '월말'];
-      return allCards.slice(0, 3).map((c, i) => {
-        const dir = c.isReversed ? '역방향' : '정방향';
-        const el = tarotSajuElement[c.element];
-        return `${labels[i]}: ${c.nameKr}(${c.name}) — ${dir} · 타로 오행 ${c.element}(${el}) · 키워드 ${c.keywords.join(', ')}`;
-      }).join('\n');
+    if (isMonthly) {
+      const labels = ['월초(1~10일)', '월중(11~20일)', '월말(21~말일)'];
+      return allCards!.slice(0, 3).map((c, i) => `[${labels[i]}]\n${renderCardMeaning(c)}`).join('\n\n');
     }
-    return `${tarotCard.nameKr}(${tarotCard.name}) — ${direction}\n타로 오행: ${tarotCard.element} → 사주 오행 ${cardElementInSaju}\n키워드: ${tarotCard.keywords.join(', ')}`;
+    return renderCardMeaning(tarotCard);
   })();
 
-  // 모드별 카드 상황 섹션 정의 — 표현/내용을 mode 에 맞게 차별화
+  // 모드별 카드 상황 섹션 (2번 섹션)
   const cardSituationSection = (() => {
     if (mode === 'monthly') {
-      return `### 2. 카드가 전하는 이달의 흐름 (220~280자)
-- 3장의 카드가 합쳐서 비추는 이달의 큰 줄기 (어떤 흐름의 한 달인지)
-- 사주 구조 위에서 이달이 강조하는 주제`;
+      const cardNames = (allCards ?? []).slice(0, 3).map(c => c.nameKr).join(' → ');
+      return `### 2. 카드가 전하는 이달의 흐름 (240~320자)
+- ★ 시작 문장은 반드시 "3장의 카드(${cardNames})가 함께 비추는 한 달의 큰 줄기는 ..." 형식
+- 세 장 사이의 관계 분석 필수: 정/역 비율, 같은 수트/오행 반복(시너지), 상반 메시지(전환)
+- 그 큰 줄기가 사용자 사주의 어떤 부분과 맞닿는지 (큰 그림만 — 시점별 디테일은 3섹션에서)`;
     }
     if (mode === 'question') {
-      const qNote = question ? `사용자 질문: "${question}"` : '사용자가 별도 질문 없이 카드 한 장만 뽑은 경우, "지금 내가 가장 알고 싶은 것"으로 해석';
-      return `### 2. 질문에 대한 카드가 전하는 답 (260~340자)
-- ${qNote}
-- ${tarotCard.nameKr}(${direction}) 카드가 그 질문에 어떻게 답하고 있는지 구체적으로
-- 사주 구조와 결합해 "지금 움직여라/멈춰라/관망하라" 중 어느 쪽인지 판단까지`;
+      const qNote = question ? `[사용자 질문]\n"${question}"` : '[질문]\n(사용자가 자유 카드 한 장만 뽑음 — "지금 내가 가장 알고 싶은 것"으로 해석)';
+      return `### 2. 질문에 대한 카드가 전하는 답 (280~360자)
+${qNote}
+- ★ 시작 문장은 반드시 "${tarotCard.nameKr}(${direction}) 카드가 이 질문에 대해 전하는 답은 ..." 형식
+- 위 카드 6맥락 의미 중 사용자 질문과 가장 맞닿는 영역(애정/직업/재물/건강 등)을 짚어 인용
+- 카드 이미지의 핵심 심볼 1~2개 짚어 답의 깊이 더하기
+  (예: 마법사의 무한대 표식 / 연인의 천사 / 여사제의 베일 / 절제의 두 컵 / 동전 카드의 별 모양 펜타클 등)
+- 마지막에 사주가 그 답을 받아들이기에 어떤 상태인지 한 줄 — "지금 움직여라 / 멈춰라 / 관망하라" 판단까지`;
     }
     // today
-    return `### 2. 카드가 전하는 오늘의 상황 (200~260자)
-- ${tarotCard.nameKr}(${direction})가 사용자 인생의 어느 지점을 비추고 있는지
-- 사주 구조 위에서 이 카드가 강조하는 오늘의 주제`;
+    return `### 2. 카드가 전하는 오늘의 상황 (220~280자)
+- ★ 시작 문장은 반드시 "${tarotCard.nameKr}(${direction}) 카드가 오늘 당신에게 비추는 핵심 메시지는 ..." 형식
+- 위 카드 6맥락 의미 중 "전반"·"조언" 을 중심으로 풀되, 사용자 일상 상황 1~2개 짚기(직장·관계·의사결정 등)
+- 카드 이미지의 핵심 심볼 1개 짚어 의미 깊게 (예: 펜타클의 동전·완드의 새싹·컵의 물·검의 칼날 등)
+- 사주는 마지막 한두 문장에서만 "이 메시지를 받아들이는 그릇" 으로 등장`;
   })();
 
-  // 이달의 흐름 섹션 (monthly 전용)
+  // 이달의 흐름 (monthly 전용 3번 섹션) — 카드별 위치 의미 + 시간 흐름 분석
   const monthlyFlowSection = mode === 'monthly'
-    ? `\n### 3. 이달의 흐름 (월초·월중·월말, 280~360자)
-- 월초(1~10일): 상순 카드 핵심 한 줄 + 이 시기의 권장·주의 행동
-- 월중(11~20일): 중순 카드 핵심 한 줄 + 이 시기의 권장·주의 행동
-- 월말(21~말일): 하순 카드 핵심 한 줄 + 이 시기의 권장·주의 행동
-- 세 시기 모두 사주 용신/오행 기준으로 강·약 명시`
+    ? `\n### 3. 시점별 흐름 — 카드가 짚어주는 한 달의 리듬 (340~440자)
+세 시점 각각 다음 형식으로 작성:
+- **월초(1~10일) [상순 카드 이름]**: 카드 메시지 한 줄(위에 주어진 6맥락 의미 중 적합한 것 인용) + 이 시기 권장 행동 1개 + 주의 행동 1개
+- **월중(11~20일) [중순 카드 이름]**: 동일 구조
+- **월말(21~말일) [하순 카드 이름]**: 동일 구조
++ 세 시기를 관통하는 흐름 한 줄로 마무리 (상승·하강·전환·정체 중 어느 곡선인지)
+- 사주 용신(${yongSinElement})의 강도는 각 시기 끝에 "사주 그릇으로는 ~" 한 줄로만 간단히 표기`
     : '';
 
   // 섹션 번호 정렬
   const sectionsAfter = mode === 'monthly'
-    ? { remedyNo: 4, closingNo: 5, totalSections: 5, totalChars: '1100~1450자' }
+    ? { remedyNo: 4, closingNo: 5, totalSections: 5, totalChars: '1300~1700자' }
     : mode === 'question'
-      ? { remedyNo: 3, closingNo: 4, totalSections: 4, totalChars: '900~1180자' }
-      : { remedyNo: 3, closingNo: 4, totalSections: 4, totalChars: '800~1050자' };
+      ? { remedyNo: 3, closingNo: 4, totalSections: 4, totalChars: '1000~1300자' }
+      : { remedyNo: 3, closingNo: 4, totalSections: 4, totalChars: '900~1180자' };
 
-  return `[내 사주]
+  return `[당신의 역할]
+당신은 라이더-웨이트 전통 타로 30년 + 자평명리학 20년 경력의 통합 상담사입니다.
+당신은 카드의 깊이를 절대 줄이지 않습니다. 카드는 풀이의 본질이고, 사주는 카드 메시지를 받아들이는 그릇입니다.
+
+[당신이 모든 섹션에서 무의식적으로 따르는 5단계 상담 방법론]
+① 카드의 본연 의미를 읽는다 (정/역 + 키워드 + 6맥락 의미 — 위에 다 주어짐, 창작 금지)
+② 카드 이미지의 핵심 심볼·수비(Numerology)·수트 영역을 짚는다
+③ 사주의 일주·신강약·용신을 "그릇" 으로 본다 (사주 진단이 본문 시작이 되면 안 됨)
+④ 카드 메시지가 그 그릇에 어떻게 담기는지 (강화·굴절·충돌) 분석한다
+⑤ 사용자의 시점 / 질문에 어떻게 적용되는지 — 구체 행동 1~2개로 닫는다
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+[뽑은 타로 — 풀이의 본질 / 절대 변형 금지]
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+${cardBlock}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+[참고: 사주 그릇 — 카드 메시지를 받아들이는 컨텍스트]
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 일주: ${pillars.day.gan}${pillars.day.zhi} (${pillars.day.ganElement}일간) · ${isStrong ? '신강' : '신약'}
 오행 분포: 목${elementPercent.목}% 화${elementPercent.화}% 토${elementPercent.토}% 금${elementPercent.금}% 수${elementPercent.수}%
 용신: ${yongSinElement}(${yongSin})
 
-[뽑은 타로]
-${cardBlock}
-
-${question ? `[질문]\n${question}\n` : ''}
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-[작성 규칙]
+[작성 규칙 — 절대 준수]
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-1) 총 ${sectionsAfter.totalChars}. 아래 ${sectionsAfter.totalSections}개 섹션 헤더 그대로 (번호·제목 변경 금지).
-2) 타로 오행과 내 용신(${yongSinElement})의 관계를 1섹션에서 반드시 명시.
-   - 같은 오행 → 기운 강화 / 상생 → 보완 / 상극 → 경고 중 어디인지.
-3) 사주 확정 사실(격국·용신·신강약)과 모순되지 않게.
-4) 이모지 금지. 신비주의 수사 최소화.
+1) ★ 풀이의 본질은 카드. 사주는 카드 메시지를 굴절시키는 그릇.
+2) ★ 매 섹션 첫 문장은 반드시 카드 의미·이름·심볼로 시작.
+   ✗ 잘못: "당신은 신강 사주이며 용신이 ${yongSinElement}이므로 ..."
+   ○ 옳음: "${tarotCard.nameKr} 카드가 비추는 ...라는 메시지는, 당신의 사주 그릇 위에서 ...으로 작동합니다."
+3) ★ 위에 주어진 카드 6맥락 의미는 그대로 활용. 카드 본의를 임의 창작·변형 금지.
+   사주 적용은 "그 의미가 사주 그릇에서 어떻게 강화/굴절되는지" 만 추가.
+4) 사주 정보가 prominent 한 곳은 1섹션(교차점)과 ${sectionsAfter.remedyNo}섹션(오행 보완)뿐.
+   나머지 섹션 본문은 카드 중심 (사주는 마지막 한두 문장 추임새로만).
+5) 타로 이미지의 핵심 심볼을 매 섹션에서 1개 이상 짚어 깊이 확보 (검·잔·동전·완드의 색·자세·배경 등 라이더-웨이트 도상).
+6) 총 ${sectionsAfter.totalChars}. 아래 ${sectionsAfter.totalSections}개 섹션 헤더 그대로 (번호·제목 변경 금지).
+7) 이모지·이모티콘·신비주의 수사("우주의 흐름이 ~", "별이 속삭이듯") 금지. 단정적 한국어.
 
-### 1. 사주와 타로의 교차점 (200~260자)
-- 타로 오행과 내 용신 ${yongSinElement}의 관계 해석
-- 사주 오행 분포가 이 카드의 기운을 받아들이기에 부족한지/넘치는지
+### 1. 사주와 타로의 교차점 (220~280자)
+- 시작: 카드의 핵심 메시지 한 줄 요약 (카드가 무엇을 말하는지)
+- 그 다음: 카드 오행 vs 사주 용신 ${yongSinElement} 관계 (강화·상생·상극)
+- 마지막: 사주 그릇이 이 카드 메시지를 잘 받아들일지 아니면 굴절·왜곡할지 진단
 
 ${cardSituationSection}
 ${monthlyFlowSection}
 
-### ${sectionsAfter.remedyNo}. 오행 보완 (160~210자)
-- 용신 ${yongSinElement}을 기르는 생활 속 보완책 2개
-- 타로 카드 오행이 과잉될 경우 눌러줄 보완책 1개
+### ${sectionsAfter.remedyNo}. 오행 보완 (180~230자)
+- 시작: 카드 오행이 사주에 부족·과잉시키는 부분 진단
+- 용신 ${yongSinElement} 을 기르는 생활 속 보완책 2개 (색·방향·음식·시간대·장소 등 구체)
+- 카드 오행이 과잉될 경우 눌러줄 보완책 1개
 
-### ${sectionsAfter.closingNo}. 마무리 메시지 (120~160자)
-- 한 줄 핵심 + 독자를 북돋우는 단정적 문장으로 마무리`;
+### ${sectionsAfter.closingNo}. 마무리 메시지 (140~180자)
+- 카드가 사용자에게 건네는 단정적 한 줄 (카드의 어조로 — 명령·격려·경고 중 선택)
+- 사주 그릇에서 그 한 줄이 어떻게 작동할지 짧게 덧붙임`;
 };
 
 /**

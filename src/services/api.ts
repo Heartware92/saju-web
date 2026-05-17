@@ -15,4 +15,17 @@ export interface TarotCardInfo {
   isReversed: boolean;
   keywords: string[];
   meaning: string;
+  /**
+   * 카드 본연의 6맥락 의미 — 정/역방향 중 해당하는 쪽 전체.
+   * prompt 에 주입돼 AI 가 카드 의미를 본질로 다루도록 강제.
+   * (legacy 호출자 호환 위해 optional)
+   */
+  contexts?: {
+    overall: string;
+    love: string;
+    career: string;
+    money: string;
+    health: string;
+    advice: string;
+  };
 }

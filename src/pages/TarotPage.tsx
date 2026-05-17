@@ -34,6 +34,14 @@ function drawnToCardInfo(drawn: DrawnCard): TarotCardInfo {
     isReversed: drawn.isReversed,
     keywords: drawn.card.keywords[drawn.isReversed ? 'reversed' : 'upright'],
     meaning: drawn.card[dir].overall,
+    contexts: {
+      overall: drawn.card[dir].overall,
+      love: drawn.card[dir].love,
+      career: drawn.card[dir].career,
+      money: drawn.card[dir].money,
+      health: drawn.card[dir].health,
+      advice: drawn.card[dir].advice,
+    },
   };
 }
 
