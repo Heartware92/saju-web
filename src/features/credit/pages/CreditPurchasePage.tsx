@@ -94,10 +94,6 @@ export const CreditPurchasePage: React.FC = () => {
           ))}
         </div>
 
-        {/* FAQ */}
-        <div className="mb-4">
-          <FAQ />
-        </div>
     </div>
   );
 };
@@ -174,30 +170,3 @@ const PackageCard: React.FC<{
   );
 };
 
-/**
- * FAQ
- */
-const FAQ: React.FC = () => {
-  const faqs = [
-    {
-      q: '어떤 결제 방법을 지원하나요?',
-      a: '신용·체크카드, 카카오페이, 네이버페이, 토스페이, 계좌이체 등 다양한 결제 수단을 지원합니다.',
-    },
-    {
-      q: '보너스 크레딧도 같은 기능으로 사용 가능한가요?',
-      a: '네, 패키지 구매 시 함께 적립되는 보너스 크레딧도 구매한 크레딧과 동일하게 모든 기능에 사용 가능합니다.',
-    },
-  ];
-
-  return (
-    <div className="rounded-2xl bg-space-surface/60 border border-[var(--border-subtle)] p-4">
-      <h3 className="text-sm font-bold text-text-primary mb-3">자주 묻는 질문</h3>
-      {faqs.map((faq, idx) => (
-        <div key={idx} className={idx < faqs.length - 1 ? 'mb-4' : ''}>
-          <h4 className="text-xs font-semibold text-text-primary mb-1">Q. {faq.q}</h4>
-          <p className="text-xs text-text-secondary leading-relaxed">{faq.a}</p>
-        </div>
-      ))}
-    </div>
-  );
-};
