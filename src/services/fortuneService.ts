@@ -352,8 +352,13 @@ export const getTojeongReading = async (
   sourceBirth?: { birth_date: string; gender: 'male' | 'female'; calendar_type?: 'solar' | 'lunar' },
   profileId?: string,
 ): Promise<TojeongAIResult> => {
+  // archive 는 8초 timeout. supabase hang 으로 클라이언트 await 가 안 풀려
+  // backend 150초 race 까지 끌고가는 사고 차단. timeout 되어도 백그라운드 저장은 계속 진행됨.
   const archive = async (content: string): Promise<string | null> => {
-    return await archiveSaju({ profileId, sourceBirth, category: 'tojeong', engineResult: tj as unknown as Record<string, unknown>, interpretation: content, isDetailed: true }).catch(() => null);
+    return Promise.race([
+      archiveSaju({ profileId, sourceBirth, category: 'tojeong', engineResult: tj as unknown as Record<string, unknown>, interpretation: content, isDetailed: true }).catch(() => null),
+      new Promise<null>(resolve => setTimeout(() => resolve(null), 8_000)),
+    ]);
   };
 
   // 전체 150초 제한 — 4단 폴백을 모두 시도할 수 있는 마진.

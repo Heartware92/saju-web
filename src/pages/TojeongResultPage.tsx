@@ -289,14 +289,17 @@ export default function TojeongResultPage() {
   useScrollToTopOnLoad(!!aiSections && !aiLoading);
   const [aiError, setAiError] = useState<string | null>(null);
 
-  // ── 로딩 안전장치: 180초 초과 시 강제 해제 (에러 표시 없음) ──
-  // 백엔드 race 마감 150s + 자동 재시도 사이의 여유까지 모두 포함.
-  // 길어 보이지만, 실패 시에도 무료 결정론적 풀이가 결과로 노출되므로
-  // 사용자는 "결과를 못 받는" 상황이 발생하지 않음.
-  const [aiTimedOut] = useLoadingGuard(aiLoading, 180_000);
+  // ── 로딩 안전장치: 165초 초과 시 강제 해제 + 친절한 에러 ──
+  // 백엔드 race 마감 150s + 클라이언트 4초 retry + 마진 11s.
+  // 무료 결정론적 풀이가 페이지의 결과로 노출되므로 "결과를 못 받는" 상황은 발생하지 않음.
+  // 단, AI 심층 풀이가 빠진 채 풀리는 케이스는 사용자가 인지할 수 있도록 에러 배너 표시.
+  const [aiTimedOut, aiTimeoutMsg] = useLoadingGuard(aiLoading, 165_000);
   useEffect(() => {
-    if (aiTimedOut) setAiLoading(false);
-  }, [aiTimedOut]);
+    if (aiTimedOut) {
+      setAiLoading(false);
+      if (!aiContent) setAiError(aiTimeoutMsg);
+    }
+  }, [aiTimedOut, aiContent, aiTimeoutMsg]);
 
   const [savedRecordId, setSavedRecordId] = useState<string | null>(null);
   const [cacheGate, setCacheGate] = useState<{ kind: ReportKind; key: string; restore: () => void } | null>(null);
@@ -389,9 +392,10 @@ export default function TojeongResultPage() {
 
   // ── 보관함 DB 확인 → 심층 풀이 호출 (순차 실행) ──
   // 보관함 체크를 먼저 완료한 뒤, 기존 풀이가 없을 때만 호출.
-  // 첫 시도가 빈 응답이면 백그라운드에서 1회 자동 재시도(5s 후) → 사용자에게 에러 노출 최소화.
+  // 첫 시도가 빈 응답이면 백그라운드에서 1회 자동 재시도(4s 후) → 사용자에게 에러 노출 최소화.
   const aiStartedRef = useRef(false);
   const aiAttemptCountRef = useRef(0);
+  const retryTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => {
     if (isArchiveMode) return;
     if (!tojeong || !cacheKey) return;
@@ -404,6 +408,14 @@ export default function TojeongResultPage() {
     // 4초 대기 후 한 번 더 호출. 사용자 입장에서는 길어진 단일 로딩 안에서 처리됨.
     // 2회 모두 실패해도 무료 결정론적 풀이가 페이지의 결과로 노출되므로 화면은 절대 비지 않음.
     const MAX_PAGE_ATTEMPTS = 2;
+
+    const scheduleRetry = (nextIdx: number) => {
+      retryTimeoutRef.current = setTimeout(() => {
+        retryTimeoutRef.current = null;
+        if (cancelled) return;
+        void fetchOnce(nextIdx);
+      }, 4_000);
+    };
 
     const fetchOnce = async (attemptIdx: number): Promise<void> => {
       try {
@@ -427,10 +439,7 @@ export default function TojeongResultPage() {
         }
         if (attemptIdx + 1 < MAX_PAGE_ATTEMPTS) {
           aiAttemptCountRef.current = attemptIdx + 1;
-          setTimeout(() => {
-            if (cancelled) return;
-            void fetchOnce(attemptIdx + 1);
-          }, 4_000);
+          scheduleRetry(attemptIdx + 1);
           return;
         }
         // 모든 시도 실패 — 로딩만 종료. 무료 결정론적 풀이가 페이지 결과로 노출.
@@ -439,10 +448,7 @@ export default function TojeongResultPage() {
         if (cancelled) return;
         if (attemptIdx + 1 < MAX_PAGE_ATTEMPTS) {
           aiAttemptCountRef.current = attemptIdx + 1;
-          setTimeout(() => {
-            if (cancelled) return;
-            void fetchOnce(attemptIdx + 1);
-          }, 4_000);
+          scheduleRetry(attemptIdx + 1);
           return;
         }
         setAiLoading(false);
@@ -504,7 +510,13 @@ export default function TojeongResultPage() {
     };
 
     run();
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+      if (retryTimeoutRef.current) {
+        clearTimeout(retryTimeoutRef.current);
+        retryTimeoutRef.current = null;
+      }
+    };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tojeong, cacheKey, isArchiveMode, refetchNonce]);
 
@@ -739,14 +751,16 @@ export default function TojeongResultPage() {
         </div>
       </section>
 
-      {/* 월별 흐름 — 신년운세 카드 톤과 동일 */}
-      <section className="rounded-2xl p-4 mb-3 bg-[rgba(20,12,38,0.55)] border border-[var(--border-subtle)]">
-        <div className="text-[15px] font-semibold text-text-secondary mb-3 uppercase tracking-wider">월별 흐름</div>
-        <TojeongMonthlyCards
-          months={reading.monthly.map(m => ({ ...m, keyword: m.keyword.split('·')[0] }))}
-          accentColor={gradeColor}
-        />
-      </section>
+      {/* 월별 흐름 — 심층 풀이 [monthly] 가 없을 때만 fallback 으로 표시 (중복 방지) */}
+      {!aiSections?.monthly && (
+        <section className="rounded-2xl p-4 mb-3 bg-[rgba(20,12,38,0.55)] border border-[var(--border-subtle)]">
+          <div className="text-[15px] font-semibold text-text-secondary mb-3 uppercase tracking-wider">월별 흐름</div>
+          <TojeongMonthlyCards
+            months={reading.monthly.map(m => ({ ...m, keyword: m.keyword.split('·')[0] }))}
+            accentColor={gradeColor}
+          />
+        </section>
+      )}
 
       {/* 조언·주의 */}
       <div className="grid grid-cols-1 gap-3">
