@@ -1394,7 +1394,7 @@ function MonthlySectionView({
                         )}
                       </div>
                       {/* 별점 + 등급 라벨 */}
-                      <div className="flex flex-col items-end gap-1 shrink-0">
+                      <div className="relative flex flex-col items-end gap-1 shrink-0">
                         <div className="flex gap-0.5">
                           {Array.from({ length: 5 }, (_, si) => (
                             <svg
@@ -1416,17 +1416,16 @@ function MonthlySectionView({
                         >
                           {m.grade.toUpperCase()}
                         </span>
-                        {/* 월 한자 — 별점·등급 바로 아래 우측 정렬 */}
+                        {/* 월 한자 — 별점·등급 바로 아래에 페이드 워터마크 */}
                         <span
                           aria-hidden
-                          className="font-bold leading-none select-none mt-0.5"
+                          className="absolute right-0 text-[56px] font-bold leading-none select-none pointer-events-none"
                           style={{
                             fontFamily: 'var(--font-title)',
-                            fontSize: '22px',
                             color: c,
-                            opacity: 0.78,
-                            letterSpacing: '-0.04em',
-                            textShadow: `0 0 10px ${c}33`,
+                            opacity: 0.22,
+                            letterSpacing: '-0.05em',
+                            top: 'calc(100% + 4px)',
                           }}
                         >
                           {HANJA_MONTH[m.month - 1] ?? `${m.month}`}
