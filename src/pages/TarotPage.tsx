@@ -45,26 +45,6 @@ function drawnToCardInfo(drawn: DrawnCard): TarotCardInfo {
   };
 }
 
-// ── 손바닥 비비기 셔플 모션 — 카드별 sweep 시드값 ──────────────────────────
-//   shuffling 상태에서 22장 카드 각각에 적용. sin/cos 기반 반복 sweep 으로
-//   사용자가 손바닥으로 카드를 좌우로 비비는 듯한 그루브감 연출.
-function shuffleAnimate(i: number) {
-  const phase = (i / 22) * Math.PI * 2;
-  const sx = Math.cos(phase) * 110;
-  const sy = Math.sin(phase * 1.3) * 50;
-  const sr = Math.sin(phase * 0.7) * 22;
-  return {
-    x: [sx, sx + Math.cos(phase + 1.5) * 40, sx - Math.sin(phase + 2.5) * 60, sx],
-    y: [sy, sy + Math.sin(phase + 1.5) * 22, sy - Math.cos(phase + 2.5) * 18, sy],
-    rotate: [sr, sr + 14, sr - 12, sr],
-  };
-}
-
-function shuffleTransition(i: number) {
-  const base = { duration: 1.6, ease: 'easeInOut' as const, repeat: Infinity, repeatType: 'mirror' as const, delay: i * 0.03 };
-  return { x: base, y: base, rotate: base };
-}
-
 // ── 뒷면→앞면 3D 플립 카드 ───────────────────────────────────────────────────
 function FlipCard({
   drawn, width = 120, shouldFlip, flipDelay = 0,
@@ -583,7 +563,7 @@ export default function TarotPage() {
       [indices[i], indices[j]] = [indices[j], indices[i]];
     }
     setQSpread(indices.slice(0, 22));
-    setTimeout(() => setQState('spread'), 2500);
+    setTimeout(() => setQState('spread'), 1200);
   };
 
   const pickQuestionCard = (idxInSpread: number) => {
@@ -672,29 +652,22 @@ export default function TarotPage() {
                   const positions = mode === 'monthly' ? ['상순', '중순', '하순'] : ['오늘'];
                   const isShuffling = autoState === 'shuffling';
                   return (
-                    <div className="relative flex justify-center items-center mx-auto" style={{ width: '100%', maxWidth: 420, minHeight: 240, marginTop: 40, marginBottom: 56 }}>
+                    <div className="relative flex justify-center items-center flex-wrap gap-1" style={{ minHeight: 220, marginTop: 40 }}>
                       {autoSpread.map((_, i) => {
                         const isSelected = selectedSpreadIdxs.includes(i);
                         const selectedOrder = selectedSpreadIdxs.indexOf(i);
-                        const fanX = (i - 10.5) * 14;
-                        const fanY = Math.sin((i - 10.5) * 0.3) * 18;
-                        const fanRot = (i - 10.5) * 2;
                         return (
                           <motion.div
                             key={i}
                             onClick={() => !isShuffling && pickAutoCard(i, mode)}
-                            whileHover={!isShuffling && !isSelected ? { y: fanY + 28, scale: 1.13, zIndex: 50 } : {}}
-                            initial={{ x: 0, y: 0, rotate: 0, opacity: 0, scale: 0.85 }}
+                            whileHover={!isShuffling && !isSelected ? { y: 28, scale: 1.13, zIndex: 50 } : {}}
+                            initial={{ x: 0, y: 0, rotate: 0 }}
                             animate={
                               isShuffling
-                                ? { ...shuffleAnimate(i), opacity: 1, scale: 1 }
-                                : { x: fanX, y: fanY, rotate: fanRot, opacity: 1, scale: 1 }
+                                ? { x: (Math.random() - 0.5) * 80, y: (Math.random() - 0.5) * 40, rotate: (Math.random() - 0.5) * 20 }
+                                : { x: (i - 10.5) * 14, y: Math.sin((i - 10.5) * 0.3) * 18, rotate: (i - 10.5) * 2 }
                             }
-                            transition={
-                              isShuffling
-                                ? { ...shuffleTransition(i), opacity: { duration: 0.3, delay: i * 0.02 }, scale: { duration: 0.3, delay: i * 0.02 } }
-                                : { duration: 0.5, delay: i * 0.014 }
-                            }
+                            transition={{ duration: 0.5, delay: i * 0.02 }}
                             className="absolute"
                             style={{
                               width: 58, height: 92, borderRadius: 8, overflow: 'hidden',
@@ -720,20 +693,14 @@ export default function TarotPage() {
                           </motion.div>
                         );
                       })}
-                      <motion.p
-                        animate={{ opacity: isShuffling ? [0.5, 1, 0.5] : 1 }}
-                        transition={isShuffling
-                          ? { duration: 1.4, repeat: Infinity, ease: 'easeInOut' }
-                          : { delay: 0.5 }}
-                        className="absolute w-full text-center text-[14px] text-text-tertiary"
-                        style={{ bottom: -40 }}
-                      >
-                        {isShuffling
-                          ? (mode === 'today' ? '오늘의 카드를 손바닥으로 비비는 중...' : '이달의 카드를 손바닥으로 비비는 중...')
-                          : remaining > 0
+                      {!isShuffling && (
+                        <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.5 }}
+                          className="absolute -bottom-10 w-full text-center text-[14px] text-text-tertiary">
+                          {remaining > 0
                             ? (mode === 'today' ? '마음이 끌리는 카드를 선택하세요' : `마음이 끌리는 카드를 ${remaining}장 더 선택하세요`)
                             : '카드를 확인하는 중...'}
-                      </motion.p>
+                        </motion.p>
+                      )}
                     </div>
                   );
                 })()}
@@ -806,50 +773,33 @@ export default function TarotPage() {
             )}
 
             {(qState === 'shuffling' || qState === 'spread') && (
-              <div className="relative flex justify-center items-center mx-auto" style={{ width: '100%', maxWidth: 420, minHeight: 240, marginTop: 40, marginBottom: 56 }}>
-                {(qState === 'shuffling' ? Array.from({ length: 22 }) : qSpread).map((_, i) => {
-                  const isShuffling = qState === 'shuffling';
-                  const fanX = (i - 10.5) * 14;
-                  const fanY = Math.sin((i - 10.5) * 0.3) * 18;
-                  const fanRot = (i - 10.5) * 2;
-                  return (
-                    <motion.div
-                      key={i}
-                      onClick={() => !isShuffling && pickQuestionCard(i)}
-                      whileHover={!isShuffling ? { y: fanY + 28, scale: 1.13, zIndex: 50 } : {}}
-                      initial={{ x: 0, y: 0, rotate: 0, opacity: 0, scale: 0.85 }}
-                      animate={
-                        isShuffling
-                          ? { ...shuffleAnimate(i), opacity: 1, scale: 1 }
-                          : { x: fanX, y: fanY, rotate: fanRot, opacity: 1, scale: 1 }
-                      }
-                      transition={
-                        isShuffling
-                          ? { ...shuffleTransition(i), opacity: { duration: 0.3, delay: i * 0.02 }, scale: { duration: 0.3, delay: i * 0.02 } }
-                          : { duration: 0.5, delay: i * 0.014 }
-                      }
-                      className="absolute"
-                      style={{ width: 58, height: 92, borderRadius: 8, overflow: 'hidden',
-                        boxShadow: '0 3px 10px rgba(0,0,0,0.4)', border: '2px solid rgba(124,92,252,0.5)',
-                        backgroundColor: '#2a1660',
-                        cursor: isShuffling ? 'default' : 'pointer' }}
-                    >
-                      <img src="/tarot/back.png" style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt="" />
-                    </motion.div>
-                  );
-                })}
-                <motion.p
-                  animate={{ opacity: qState === 'shuffling' ? [0.5, 1, 0.5] : 1 }}
-                  transition={qState === 'shuffling'
-                    ? { duration: 1.4, repeat: Infinity, ease: 'easeInOut' }
-                    : { delay: 0.5 }}
-                  className="absolute w-full text-center text-[14px] text-text-tertiary"
-                  style={{ bottom: -40 }}
-                >
-                  {qState === 'shuffling'
-                    ? '질문을 떠올리며 카드를 손바닥으로 비비는 중...'
-                    : '마음이 끌리는 카드를 선택하세요'}
-                </motion.p>
+              <div className="relative flex justify-center items-center flex-wrap gap-1" style={{ minHeight: 220, marginTop: 40 }}>
+                {(qState === 'shuffling' ? Array.from({ length: 22 }) : qSpread).map((_, i) => (
+                  <motion.div
+                    key={i}
+                    onClick={() => pickQuestionCard(i)}
+                    whileHover={qState === 'spread' ? { y: 28, scale: 1.13, zIndex: 50 } : {}}
+                    initial={{ x: 0, y: 0, rotate: 0 }}
+                    animate={
+                      qState === 'spread'
+                        ? { x: (i - 10.5) * 14, y: Math.sin((i - 10.5) * 0.3) * 18, rotate: (i - 10.5) * 2 }
+                        : { x: (Math.random() - 0.5) * 80, y: (Math.random() - 0.5) * 40, rotate: (Math.random() - 0.5) * 20 }
+                    }
+                    transition={{ duration: 0.5, delay: i * 0.02 }}
+                    className="absolute cursor-pointer"
+                    style={{ width: 58, height: 92, borderRadius: 8, overflow: 'hidden',
+                      boxShadow: '0 3px 10px rgba(0,0,0,0.4)', border: '2px solid rgba(124,92,252,0.5)',
+                      backgroundColor: '#2a1660' }}
+                  >
+                    <img src="/tarot/back.png" style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt="" />
+                  </motion.div>
+                ))}
+                {qState === 'spread' && (
+                  <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.5 }}
+                    className="absolute -bottom-10 w-full text-center text-[14px] text-text-tertiary">
+                    마음이 끌리는 카드를 선택하세요
+                  </motion.p>
+                )}
               </div>
             )}
 
