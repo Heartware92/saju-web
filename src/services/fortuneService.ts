@@ -1417,8 +1417,8 @@ export const getHybridReading = async (
   allDrawnCards?: TarotCardInfo[],
 ): Promise<FortuneResponse> => {
   try {
-    const prompt = generateHybridPrompt(sajuResult, tarotCard, question);
-    // 프롬프트 명세: 총 1,200~1,600자 (6섹션). 한국어 토큰 비율 고려해 4,000.
+    const prompt = generateHybridPrompt(sajuResult, tarotCard, question, mode, allDrawnCards);
+    // 모드별 섹션 분기: today/question 4섹션 (≤1,180자), monthly 5섹션 (≤1,450자). 4,000 토큰 충분.
     const content = await callGPT(prompt, 4000);
     // 사주+타로 하이브리드는 saju_records · tarot_records 양쪽에 기록 (유저가 어느 탭에서 찾든 보이도록)
     archiveSaju({ sourceBirth: sourceBirthFromSaju(sajuResult), category: 'gunghap', resultData: sajuResult as unknown as Record<string, unknown>, engineResult: { tarotCard, question } as unknown as Record<string, unknown>, interpretation: content });
