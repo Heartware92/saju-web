@@ -108,15 +108,33 @@ export default function TaekilPage() {
   }, [saju, category, subItem, pickedDates, customLabel]);
 
   // 카테고리/연월 변경시 엔진 재계산 (보관함 모드에서는 스킵)
+  // ★ pickedDates 가 viewMonth 밖 날짜를 포함하면 range 확장 — 여러 달 후보 통합 풀이 위해.
+  //   캘린더 셀 표시는 calendarCells 에서 viewMonth 만 잘라서 그리므로 시각 영향 없음.
   const compute = useCallback(() => {
     if (isArchiveMode) return;
     if (!saju || !category) { setResult(null); return; }
-    const start = `${viewYear}-${String(viewMonth).padStart(2, '0')}-01`;
+    let start = `${viewYear}-${String(viewMonth).padStart(2, '0')}-01`;
     const lastDay = daysInMonth(viewYear, viewMonth);
-    const end = `${viewYear}-${String(viewMonth).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
+    let end = `${viewYear}-${String(viewMonth).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
+    if (pickedDates.length > 0) {
+      const sorted = [...pickedDates].sort();
+      const minPicked = sorted[0];
+      const maxPicked = sorted[sorted.length - 1];
+      if (minPicked < start) {
+        const [y, m] = minPicked.split('-');
+        start = `${y}-${m}-01`;
+      }
+      if (maxPicked > end) {
+        const [yStr, mStr] = maxPicked.split('-');
+        const y = Number(yStr);
+        const m = Number(mStr);
+        const last = daysInMonth(y, m);
+        end = `${yStr}-${mStr}-${String(last).padStart(2, '0')}`;
+      }
+    }
     const r = calculateTaekil(saju, category, start, end, category === 'custom' ? customLabel : undefined, subItem ?? undefined);
     setResult(r);
-  }, [saju, viewYear, viewMonth, category, subItem, isArchiveMode, customLabel]);
+  }, [saju, viewYear, viewMonth, category, subItem, isArchiveMode, customLabel, pickedDates]);
 
   useEffect(() => {
     compute();
