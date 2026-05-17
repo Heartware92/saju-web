@@ -157,7 +157,39 @@ export default function Layout({ children }: LayoutProps) {
                   </Link>
                 ))}
               </nav>
-              <div className="mt-auto pt-8">
+              <div className="mt-auto pt-8 flex flex-col items-center gap-3">
+                {/* 약관 / 정책 링크 — 회사정보 페이지에도 동일 노출, 햄버거 즉시 접근용 중복 배치 */}
+                <div className="flex items-center gap-2 flex-wrap justify-center">
+                  <Link
+                    href="/terms"
+                    onClick={() => setMenuOpen(false)}
+                    className="text-[11px] text-text-tertiary hover:text-text-secondary transition-colors"
+                  >
+                    이용약관
+                  </Link>
+                  <span className="text-[11px] text-text-tertiary/40">|</span>
+                  <Link
+                    href="/privacy"
+                    onClick={() => setMenuOpen(false)}
+                    className="text-[11px] text-text-tertiary hover:text-text-secondary transition-colors"
+                  >
+                    개인정보처리방침
+                  </Link>
+                  <span className="text-[11px] text-text-tertiary/40">|</span>
+                  <Link
+                    href="/licenses"
+                    onClick={() => setMenuOpen(false)}
+                    className="text-[11px] text-text-tertiary hover:text-text-secondary transition-colors"
+                  >
+                    오픈소스 라이선스
+                  </Link>
+                </div>
+                {/* 사업자 핵심 3 라인 — 자세한 정보는 회사 정보 페이지 */}
+                <div className="flex flex-col items-center gap-0.5 text-[11px] leading-snug text-text-tertiary text-center px-2">
+                  <p>(주)하트웨어 · 대표자 허진우</p>
+                  <p>사업자등록번호 136-88-03376</p>
+                  <p>통신판매업 신고 2026-대구북구-0028</p>
+                </div>
                 <p className="text-center text-[11px] text-text-tertiary/70">&copy; 2026 이천점</p>
               </div>
             </div>

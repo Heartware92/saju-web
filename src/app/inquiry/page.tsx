@@ -15,6 +15,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useUserStore } from '../../store/useUserStore';
 import { supabase } from '../../services/supabase';
+import Layout from '../../components/Layout';
 
 type CategoryKey = 'payment' | 'bug' | 'account' | 'feedback' | 'other';
 
@@ -210,7 +211,8 @@ export default function InquiryPage() {
   };
 
   return (
-    <div className="min-h-[100dvh] px-5 pt-3 pb-12">
+    <Layout>
+      <div className="px-5 pt-3 pb-12">
       {/* 헤더 */}
       <div className="flex items-center relative mb-6 pt-3 px-1">
         <Link
@@ -457,6 +459,7 @@ export default function InquiryPage() {
         </Link>
         에서 확인하실 수 있어요.
       </p>
-    </div>
+      </div>
+    </Layout>
   );
 }

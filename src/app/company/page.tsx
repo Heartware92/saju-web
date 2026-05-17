@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
+import Layout from '@/components/Layout';
 
 export const metadata: Metadata = {
   title: '회사 정보 — 이천점',
@@ -8,7 +9,8 @@ export const metadata: Metadata = {
 
 export default function CompanyPage() {
   return (
-    <div className="min-h-[100dvh] px-5 pt-3 pb-12">
+    <Layout>
+      <div className="px-5 pt-3 pb-12">
       {/* 헤더 */}
       <div className="flex items-center relative mb-6 pt-3 px-1">
         <Link
@@ -125,7 +127,8 @@ export default function CompanyPage() {
       <p className="text-center text-[11px] text-text-tertiary mt-6">
         &copy; 2026 이천점. All rights reserved.
       </p>
-    </div>
+      </div>
+    </Layout>
   );
 }
 

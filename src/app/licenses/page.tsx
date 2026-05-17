@@ -1,4 +1,5 @@
 import { BackButton } from '@/components/ui/BackButton';
+import Layout from '@/components/Layout';
 
 export const metadata = {
   title: '오픈소스 라이선스 — 이천점',
@@ -24,7 +25,8 @@ const LIBRARIES = [
 
 export default function LicensesPage() {
   return (
-    <div className="min-h-screen px-4 pt-4 pb-12 max-w-[720px] mx-auto">
+    <Layout>
+    <div className="px-4 pt-4 pb-12">
       <div className="flex items-center relative mb-5 pt-3 px-1">
         <BackButton className="absolute left-0" />
         <div className="flex-1 text-center">
@@ -100,5 +102,6 @@ export default function LicensesPage() {
         </div>
       </div>
     </div>
+    </Layout>
   );
 }

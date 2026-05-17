@@ -1,4 +1,5 @@
 import { BackButton } from '@/components/ui/BackButton';
+import Layout from '@/components/Layout';
 
 export const metadata = {
   title: '개인정보처리방침 — 이천점',
@@ -8,8 +9,8 @@ export default async function PrivacyPage({ searchParams }: { searchParams: Prom
   const { embed } = await searchParams;
   const isEmbed = embed === '1';
 
-  return (
-    <div className={`min-h-screen px-4 pb-12 max-w-[720px] mx-auto ${isEmbed ? 'pt-2' : 'pt-4'}`}>
+  const inner = (
+    <div className={`px-4 pb-12 ${isEmbed ? 'pt-2' : 'pt-4'}`}>
       {!isEmbed && (
         <div className="flex items-center relative mb-5 pt-3 px-1">
           <BackButton className="absolute left-0" />
@@ -335,6 +336,8 @@ export default async function PrivacyPage({ searchParams }: { searchParams: Prom
       </div>
     </div>
   );
+
+  return isEmbed ? inner : <Layout>{inner}</Layout>;
 }
 
 function Article({ title, children }: { title: string; children: React.ReactNode }) {
