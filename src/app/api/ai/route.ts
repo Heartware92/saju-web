@@ -27,6 +27,14 @@ async function callGeminiOnce(
   if (!apiKey) return { ok: false, status: null, msg: 'NO_GEMINI_KEY', retryable: false };
 
   try {
+    // ★ Gemini 2.5 Flash thinking 토큰 누수 대응:
+    // thinkingBudget=0 이어도 thinking 토큰이 maxOutputTokens 를 잠식해 빈 텍스트가
+    // 반환되는 알려진 이슈가 다수 보고됨 (google AI Developers Forum,
+    // langchain-google#1020, python-genai#782, ha-llmvision#609).
+    // → maxOutputTokens 에 30% 마진 추가 + 상한 8192. 호출자가 받는 컨텐츠 길이엔
+    //   영향 없음(빈 응답 회피 목적).
+    const adjustedMaxOutputTokens = Math.min(Math.ceil(maxTokens * 1.3), 8192);
+
     const res = await fetch(`${GEMINI_API_URL}?key=${apiKey}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -35,8 +43,8 @@ async function callGeminiOnce(
         contents: [{ role: 'user', parts: [{ text: prompt }] }],
         generationConfig: {
           temperature,
-          maxOutputTokens: maxTokens,
-          thinkingConfig: { thinkingBudget: 0 },
+          maxOutputTokens: adjustedMaxOutputTokens,
+          thinkingConfig: { thinkingBudget: 0, includeThoughts: false },
         },
       }),
     });
@@ -51,13 +59,30 @@ async function callGeminiOnce(
     const data = await res.json();
     const candidate = data.candidates?.[0];
     const parts: any[] = candidate?.content?.parts ?? [];
+    const finishReason = candidate?.finishReason;
     // 2.5-flash 의 thinking 파트(thought:true) 가 parts[0] 에 올 수 있어 실제 텍스트 파트 검색
     const textPart = parts.find((p: any) => p.text && !p.thought) ?? parts[0];
+    const text: string = textPart?.text ?? '';
+
+    // ★ 빈 텍스트 + MAX_TOKENS → Gemini thinking 누수 사고. OpenAI 폴백 유도.
+    // SAFETY/RECITATION 같은 다른 비정상 finishReason 도 동일 처리.
+    if (!text.trim()) {
+      console.warn('[AI] Gemini 빈 응답 — finishReason:', finishReason, 'promptLen:', prompt.length, 'maxTokens:', maxTokens);
+      return {
+        ok: false,
+        status: null,
+        msg: `Gemini empty text (finishReason=${finishReason ?? 'unknown'})`,
+        // MAX_TOKENS 인 경우 같은 prompt 로 재시도해봐야 같은 결과 — retryable=false 로
+        // callGeminiWithRetry 를 빠르게 빠져나가 OpenAI 폴백으로 진입.
+        retryable: false,
+      };
+    }
+
     return {
       ok: true,
       data: {
-        content: textPart?.text ?? '',
-        truncated: candidate?.finishReason === 'MAX_TOKENS',
+        content: text,
+        truncated: finishReason === 'MAX_TOKENS',
         provider: 'gemini',
       },
     };
