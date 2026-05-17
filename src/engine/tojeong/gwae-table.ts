@@ -37,6 +37,17 @@ export interface GwaeEntry {
   keywords: string[]; // 3~5개
   summary: string; // 2~3문장 총평
   monthlyHints: string[]; // 12개월 키워드
+  /**
+   * 4영역 mood 키워드 — 같은 등급이어도 영역별 차등을 만들어주는 결정론적 키워드.
+   * 토정비결 144괘 × 4영역 = 576개 무드를 sang 오행 + jung 효위치 + ha 영역 + grade 휴리스틱으로 자동 합성.
+   * AI 가 영역별로 동일 톤만 반복하는 사고("중흉·중흉·중흉" 반복)를 차단하기 위해 prompt 에 영역별로 주입.
+   */
+  domainMoods: {
+    wealth: string;  // 재물 무드 (sang 오행 + ha 가중)
+    love: string;    // 애정·가정 무드 (sang 친화도 + jung 효위치)
+    health: string;  // 건강 무드 (sang 오행 → 장부 매핑)
+    career: string;  // 직장·학업 무드 (jung 발전 단계 중심)
+  };
   hanjaSa?: {
     title: string;       // 4자 한문 표제
     lines: string[];     // 7언 한문 구절 2줄
@@ -150,6 +161,103 @@ function buildMonthlyHints(sang: SangMeta, jung: JungMeta): string[] {
 }
 
 // ============================================
+// 4영역 무드 합성 — sang 오행 + jung 효위치 + ha 영역 + grade
+//   "같은 괘 = 같은 등급" 의 토정비결 정통성은 유지하되,
+//   각 영역에 다른 키워드·다른 강조점을 부여해 풀이가 영역별로 색깔이 나뉘도록 한다.
+//   AI 는 이 키워드를 자연어로 풀어쓰기만 — 환각 차단.
+// ============================================
+
+function buildDomainMoods(
+  sang: SangMeta,
+  jung: JungMeta,
+  ha: HaMeta,
+  grade: GwaeGrade,
+): GwaeEntry['domainMoods'] {
+  const isUpper = grade === '대길' || grade === '길';
+  const isMid = grade === '중길' || grade === '평';
+  const isLower = !isUpper && !isMid; // 중흉·흉·대흉
+  const isPeak = jung.num === 5;
+  const isTest = jung.num === 3;
+  const isStart = jung.num === 1;
+
+  // ── 재물 — sang 오행 + ha 영역 ──
+  const wealth = (() => {
+    const sangElTone =
+      sang.element === '木' ? '확장·새 사업 투자기'
+      : sang.element === '土' ? '축적·부동산·실물 자산'
+      : sang.element === '金' ? '결실·매듭·정리 수익'
+      : sang.element === '水' ? '유동성·이동 자금·현금 흐름'
+      : '확장과 손실 양면 — 큰 거래 주의';
+    const haGain =
+      ha.num === 2 ? '재물 무대가 정면에 섬'
+      : ha.num === 3 ? '인연·소개로 들어오는 수입'
+      : '시운·외부 흐름에 따라 변동';
+    if (isUpper) return `${sangElTone}, ${haGain}, 들어오는 흐름 우세`;
+    if (isMid) return `${sangElTone}, ${haGain}, 무리 없는 보수 운영`;
+    return `${sangElTone}, ${haGain}, 새는 지출 단속 + 큰 거래 보류`;
+  })();
+
+  // ── 애정·가정 — sang 친화도 + jung 효위치 ──
+  const love = (() => {
+    const sangLove =
+      sang.num === 2 ? '따뜻한 교류와 즐거운 만남'           // 兌
+      : sang.num === 3 ? '명예·매력 발산, 새 사람 시선'      // 離
+      : sang.num === 6 ? '소통 정체, 오해 쌓임 주의'         // 坎
+      : sang.num === 7 ? '잠시 거리 두고 자기 정리'          // 艮
+      : sang.num === 8 ? '안정·포용, 가정의 결실'            // 坤
+      : sang.num === 1 ? '주도적 결단·청혼·고백 시기'        // 乾
+      : sang.num === 4 ? '갑작스러운 변동·이별 또는 새 인연'  // 震
+      : '부드러운 교감·은근한 끌림';                        // 巽
+    if (isPeak) return `${sangLove}, 결혼·동거·약속 같은 결단 분기점`;
+    if (isTest) return `${sangLove}, 관계 시험기 — 갈등·오해 발생 가능`;
+    if (isStart) return `${sangLove}, 새 인연의 씨앗이 뿌려지는 시기`;
+    if (isUpper) return `${sangLove}, 새 인연 흐름 + 기존 관계 깊어짐`;
+    if (isMid) return `${sangLove}, 있는 인연 다지고 작은 다툼 봉합`;
+    return `${sangLove}, 말 한마디 조심 + 가족 건강·재정 챙기기`;
+  })();
+
+  // ── 건강 — sang 오행 → 장부 매핑 + 등급 ──
+  const health = (() => {
+    const organ =
+      sang.element === '木' ? '간·근육·눈'
+      : sang.element === '火' ? '심장·순환·혈압'
+      : sang.element === '土' ? '비위·소화·체중'
+      : sang.element === '金' ? '폐·기관지·피부'
+      : '신장·허리·하체';
+    const season =
+      sang.element === '木' ? '봄철'
+      : sang.element === '火' ? '여름철'
+      : sang.element === '土' ? '환절기'
+      : sang.element === '金' ? '가을철'
+      : '겨울철';
+    if (isUpper) return `${organ} 활발 — ${season} 과로만 단속`;
+    if (isMid) return `${organ} 무난 — ${season} 환절기 기본 관리`;
+    if (isTest) return `${organ} 시험기 — ${season} 환절기 예방 우선`;
+    return `${organ} 약화 — ${season} 무리 금지 + 정기 검진 권장`;
+  })();
+
+  // ── 직장·학업 — jung 효위치 중심 + sang 강건성 ──
+  const career = (() => {
+    const stageTone =
+      jung.num === 1 ? '새 시작·기획 준비기'
+      : jung.num === 2 ? '기반 다지기·내실 강화'
+      : jung.num === 3 ? '평가·시험·이직 시험기'
+      : jung.num === 4 ? '외부 확장·도약·발표'
+      : jung.num === 5 ? '승진·정점·결실 수확'
+      : '마무리·전환·다음 라운드 준비';
+    const sangPush =
+      sang.score >= 2 ? '추진력 강함'
+      : sang.score >= 0 ? '꾸준함이 답'
+      : '큰 결정은 보류';
+    if (isUpper) return `${stageTone}, ${sangPush}, 기회 적극 잡기`;
+    if (isMid) return `${stageTone}, ${sangPush}, 무리 없는 진척`;
+    return `${stageTone}, ${sangPush}, 과욕 금물·실수·구설 단속`;
+  })();
+
+  return { wealth, love, health, career };
+}
+
+// ============================================
 // 엔트리 빌더
 // ============================================
 
@@ -177,6 +285,7 @@ function buildEntry(upper: number, middle: number, lower: number): GwaeEntry {
     keywords,
     summary,
     monthlyHints: buildMonthlyHints(sang, jung),
+    domainMoods: buildDomainMoods(sang, jung, ha, grade),
   };
 }
 
