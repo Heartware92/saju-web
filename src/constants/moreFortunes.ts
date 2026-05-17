@@ -87,7 +87,7 @@ export const MORE_FORTUNE_CONFIGS: Record<MoreFortuneId, MoreFortuneConfig> = {
     shortDesc: '시험 유리한 달',
     longDesc: '인성(문창·학당귀인)과 식상, 올해 세운을 근거로 공부 체질인지, 시험·자격·발표에 유리한 달이 언제인지 짚어드려요.',
     ctaButton: '내 학업운 보기',
-    maxTokens: 3500,
+    maxTokens: 5500,
   },
   // [비활성 — B안] 신년운세 인간관계운, 정통사주 인간관계·가족과 중복.
   // people: {
@@ -106,7 +106,7 @@ export const MORE_FORTUNE_CONFIGS: Record<MoreFortuneId, MoreFortuneConfig> = {
     shortDesc: '출산 유리한 달',
     longDesc: '남성은 관성, 여성은 식상을 자녀성으로 보고 시주의 자녀궁과 세운 흐름으로 자녀복과 출산에 유리한 시기를 풀어드려요.',
     ctaButton: '내 자녀운 보기',
-    maxTokens: 3500,
+    maxTokens: 5500,
   },
   personality: {
     id: 'personality',
@@ -115,7 +115,7 @@ export const MORE_FORTUNE_CONFIGS: Record<MoreFortuneId, MoreFortuneConfig> = {
     shortDesc: '성격 심층 진단',
     longDesc: '일주 60갑자와 격국·신강신약·간여지동·주요 신살을 종합해 타고난 본질, 강점 2가지와 숨은 그림자 2가지를 명확히 짚어드려요.',
     ctaButton: '내 성격 분석 보기',
-    maxTokens: 4500,
+    maxTokens: 6500,
   },
   name: {
     id: 'name',
