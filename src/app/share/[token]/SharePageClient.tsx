@@ -88,12 +88,12 @@ function universalSectionParser(raw: string): { sections: { title: string; body:
   return { sections: parts.filter(p => p.body.length > 0) };
 }
 
-// ─── 점수 → 색상/등급 (오늘의 운세·토정비결 공통) ───
+// ─── 점수 → 색상/등급 (실시간 운세·토정비결 공통) ───
 function scoreColor(s: number): string {
   return s >= 75 ? '#34D399' : s >= 60 ? '#A78BFA' : s >= 45 ? '#FBBF24' : s >= 30 ? '#FB923C' : '#F87171';
 }
 
-// ─── 오늘의 운세 — 시간대 흐름 SVG ───
+// ─── 실시간 운세 — 시간대 흐름 SVG ───
 function TodayFlowChart({ flow }: { flow: { midnight: number; morning: number; afternoon: number; evening: number } }) {
   const slots: TodayTimeSlot[] = ['midnight', 'morning', 'afternoon', 'evening'];
   const points = slots.map((s, i) => ({ x: 30 + i * 80, y: 110 - (flow[s] ?? 50) * 0.85, slot: s, score: flow[s] ?? 50 }));
@@ -124,7 +124,7 @@ function TodayFlowChart({ flow }: { flow: { midnight: number; morning: number; a
   );
 }
 
-// ─── 오늘의 운세 — 9도메인 점수 바 ───
+// ─── 실시간 운세 — 9도메인 점수 바 ───
 function TodayDomainBars({ scores }: { scores: Record<string, number> }) {
   return (
     <div className="space-y-2.5">
@@ -229,7 +229,7 @@ export default function SharePageClient({ type, record }: Props) {
   // 궁합 본문은 헤더/스코어 블록을 제거한 body 만 섹션 파서에 넘긴다
   const bodyForSections = gunghapHeader ? gunghapHeader.body : content;
 
-  // 오늘의 운세 — 점수·시간대 흐름
+  // 실시간 운세 — 점수·시간대 흐름
   const isToday = type === 'saju' && category === 'today';
   const todayDomainScores = isToday ? parseTodayV3DomainScores(content) : undefined;
   const todayFlowScores = isToday ? parseTodayV3FlowScores(content) : undefined;
@@ -328,7 +328,7 @@ export default function SharePageClient({ type, record }: Props) {
         </motion.div>
       )}
 
-      {/* 오늘의 운세 — 결과 페이지 풀 시각 (일진·종합·9도메인·시간대·10섹션) */}
+      {/* 실시간 운세 — 결과 페이지 풀 시각 (일진·종합·9도메인·시간대·10섹션) */}
       {isToday && (
         <TodayResultBlock record={record} />
       )}

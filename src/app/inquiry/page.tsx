@@ -49,7 +49,7 @@ const CATEGORIES: CategoryInfo[] = [
     key: 'feedback',
     label: '제안·피드백',
     desc: '서비스 개선 의견, 새 기능 제안, 사용 후기',
-    placeholder: '예: 오늘의 운세 결과를 친구에게 카톡으로 공유할 수 있으면 좋겠어요.',
+    placeholder: '예: 실시간 운세 결과를 친구에게 카톡으로 공유할 수 있으면 좋겠어요.',
   },
   {
     key: 'other',

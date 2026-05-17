@@ -13,7 +13,7 @@ export const SAJU_CATEGORY_LABEL: Record<string, string> = {
   // 큰 8 꼭지 (해 ☀ 1개)
   traditional: '정통사주',
   newyear: '신년운세',
-  today: '오늘의 운세',
+  today: '실시간 운세',
   period: '지정일 운세',  // archiveService 저장 키
   date: '지정일 운세',     // 레거시 호환
   gunghap: '궁합',
@@ -69,7 +69,7 @@ export const CREDIT_REASON_LABEL: Record<string, string> = {
   // 컨텐츠 소비
   traditional: '정통사주',
   newyear: '신년운세',
-  today: '오늘의 운세',
+  today: '실시간 운세',
   gunghap: '궁합',
   period: '지정일 운세',
   date: '지정일 운세',  // 레거시 호환
