@@ -184,11 +184,13 @@ export default function Layout({ children }: LayoutProps) {
                     오픈소스 라이선스
                   </Link>
                 </div>
-                {/* 사업자 핵심 3 라인 — 자세한 정보는 회사 정보 페이지 */}
+                {/* 사업자 필수 6항목 — PG 심사 표준 (상호·대표자·사업자번호·통신판매업·주소·전화) */}
                 <div className="flex flex-col items-center gap-0.5 text-[11px] leading-snug text-text-tertiary text-center px-2">
                   <p>(주)하트웨어 · 대표자 허진우</p>
                   <p>사업자등록번호 136-88-03376</p>
                   <p>통신판매업 신고 2026-대구북구-0028</p>
+                  <p>대구광역시 북구 동북로 117</p>
+                  <p>고객센터 010-5960-0920</p>
                 </div>
                 <p className="text-center text-[11px] text-text-tertiary/70">&copy; 2026 이천점</p>
               </div>
