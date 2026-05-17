@@ -1,7 +1,8 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState, useCallback } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import Link from 'next/link';
+import { useRouter, useSearchParams, usePathname } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useProfileStore } from '../store/useProfileStore';
 import { useUserStore } from '../store/useUserStore';
@@ -23,9 +24,58 @@ import {
 } from '../lib/consultation';
 import StarfallBackground from '../components/StarfallBackground';
 
+// 탭바 — Layout.tsx 의 nav 와 동일. 채팅 페이지가 자체 viewport-fit 컨테이너라 직접 사용
+const CHAT_TAB_ITEMS = [
+  { path: '/', label: '홈', icon: 'home' },
+  { path: '/sangdamso', label: '상담소', icon: 'chat' },
+  { path: '/tarot', label: '타로', icon: 'card' },
+  { path: '/archive', label: '보관함', icon: 'archive' },
+];
+
+function ChatTabIcon({ name, active }: { name: string; active: boolean }) {
+  const color = active ? 'var(--cta-primary)' : 'var(--text-tertiary)';
+  const size = 22;
+  switch (name) {
+    case 'home':
+      return (
+        <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z" />
+          <polyline points="9,22 9,12 15,12 15,22" />
+        </svg>
+      );
+    case 'chat':
+      return (
+        <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M21 12a8.5 8.5 0 0 1-12.4 7.56L3 21l1.44-4.56A8.5 8.5 0 1 1 21 12Z" />
+          <circle cx="9" cy="12" r="0.9" fill={color} stroke="none" />
+          <circle cx="12" cy="12" r="0.9" fill={color} stroke="none" />
+          <circle cx="15" cy="12" r="0.9" fill={color} stroke="none" />
+        </svg>
+      );
+    case 'card':
+      return (
+        <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <rect x="4" y="2" width="16" height="20" rx="2" />
+          <circle cx="12" cy="12" r="3" fill={active ? color : 'none'} />
+        </svg>
+      );
+    case 'archive':
+      return (
+        <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <rect x="2" y="3" width="20" height="5" rx="1" />
+          <path d="M4 8v11a2 2 0 002 2h12a2 2 0 002-2V8" />
+          <path d="M10 12h4" />
+        </svg>
+      );
+    default:
+      return null;
+  }
+}
+
 export default function ConsultationChatPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const pathname = usePathname();
   const pid = searchParams?.get('pid') || '';
   const cid = searchParams?.get('cid') || '';
 
@@ -369,9 +419,18 @@ export default function ConsultationChatPage() {
   const convTitle = activeConv?.title === '새 대화' ? '' : (activeConv?.title ?? '');
 
   return (
-    <div className="app-auth-shell">
+    // ★ outer 를 viewport 에 강제 박음 (position:fixed inset:0). body 스크롤 무관하게
+    //   inner 가 항상 viewport 안에 fit. inner 는 flex-col + h-full + 마지막 자식이
+    //   탭바라 입력창은 그 바로 위에 자연 stacking. height calc 없이 안전.
+    <div
+      className="app-auth-shell"
+      style={{ position: 'fixed', inset: 0, display: 'flex', justifyContent: 'center', overflow: 'hidden' }}
+    >
       <StarfallBackground />
-      <div className="app-auth-container flex flex-col h-[100dvh]">
+      <div
+        className="app-auth-container flex flex-col"
+        style={{ width: '100%', maxWidth: '430px', height: '100%', overflow: 'hidden' }}
+      >
 
         {/* 헤더 */}
         <div className="flex-shrink-0 flex items-center h-12 px-3 border-b border-[var(--border-subtle)] bg-[rgba(20,12,38,0.88)] backdrop-blur-xl">
@@ -505,8 +564,8 @@ export default function ConsultationChatPage() {
           )}
         </div>
 
-        {/* 입력창 */}
-        <div className="flex-shrink-0 px-3 py-3 border-t border-[var(--border-subtle)] bg-[rgba(20,12,38,0.5)] pb-[calc(12px+env(safe-area-inset-bottom,0px))]">
+        {/* 입력창 — 탭바 바로 위에 자연 stacking. safe-area 는 탭바가 처리 */}
+        <div className="flex-shrink-0 px-3 py-3 border-t border-[var(--border-subtle)] bg-[rgba(20,12,38,0.5)]">
           <div className="flex items-end gap-2">
             <textarea
               value={inputText}
@@ -584,6 +643,39 @@ export default function ConsultationChatPage() {
             </>
           )}
         </AnimatePresence>
+
+        {/* 하단 탭바 — inner flex-col 의 마지막 자식. 입력창 바로 아래에 자연 stacking */}
+        <nav
+          className="flex-shrink-0 bg-[rgba(20,12,38,0.96)] border-t border-[var(--border-default)]"
+          style={{
+            paddingBottom: 'env(safe-area-inset-bottom, 0px)',
+            backdropFilter: 'blur(20px)',
+            WebkitBackdropFilter: 'blur(20px)',
+            boxShadow: '0 -4px 16px rgba(0, 0, 0, 0.3)',
+          }}
+        >
+          <div className="flex items-center justify-around h-16">
+            {CHAT_TAB_ITEMS.map((item) => {
+              const active = pathname === item.path
+                || (item.path === '/sangdamso' && !!pathname?.startsWith('/sangdamso'));
+              return (
+                <Link
+                  key={item.path}
+                  href={item.path}
+                  className={`flex flex-col items-center gap-1 px-3 py-2 rounded-lg transition-all duration-200 min-w-[56px] ${active ? 'text-cta' : 'text-text-tertiary'}`}
+                >
+                  <div className="relative">
+                    <ChatTabIcon name={item.icon} active={active} />
+                    {active && (
+                      <div className="absolute -top-1 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-cta shadow-[0_0_6px_var(--cta-primary)]" />
+                    )}
+                  </div>
+                  <span className="text-[12px] font-medium">{item.label}</span>
+                </Link>
+              );
+            })}
+          </div>
+        </nav>
       </div>
     </div>
   );
