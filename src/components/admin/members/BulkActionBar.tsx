@@ -16,7 +16,8 @@ type Mode = null | 'credit' | 'note' | 'ban' | 'unban';
 
 export function BulkActionBar({ selectedIds, token, onClearSelection, onDone }: Props) {
   const [mode, setMode] = useState<Mode>(null);
-  const [creditType, setCreditType] = useState<'sun' | 'moon'>('sun');
+  // 단일 달 크레딧 통합(2026-05-16) 이후 sun 조정 UI 폐기. moon 만 처리.
+  const creditType = 'moon' as const;
   const [delta, setDelta] = useState(1);
   const [reason, setReason] = useState('');
   const [note, setNote] = useState('');
@@ -83,13 +84,7 @@ export function BulkActionBar({ selectedIds, token, onClearSelection, onDone }: 
 
       {mode === 'credit' && (
         <div className="mt-3 flex gap-2 flex-wrap items-center">
-          <div className="flex gap-1 p-1 bg-white/5 rounded-lg border border-white/10">
-            {(['sun', 'moon'] as const).map(t => (
-              <button key={t} onClick={() => setCreditType(t)}
-                className={`px-3 py-1 rounded text-[12px] ${creditType === t ? 'bg-cta text-white' : 'text-text-tertiary'}`}
-              >{t === 'sun' ? '☀ 해' : '🌙 달'}</button>
-            ))}
-          </div>
+          <span className="px-3 py-1 rounded text-[12px] bg-indigo-500/20 text-indigo-200 border border-indigo-500/30">🌙 달 크레딧</span>
           <input type="number" value={delta} onChange={e => setDelta(parseInt(e.target.value) || 0)}
             className="w-24 px-2 py-1 rounded-lg bg-white/5 border border-white/15 text-[13px] tabular-nums"
             placeholder="+10 / -5" />

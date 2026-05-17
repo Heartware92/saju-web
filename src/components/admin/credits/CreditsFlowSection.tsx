@@ -59,25 +59,11 @@ export function CreditsFlowSection({ summary }: { summary: CreditsSummary | null
   }));
 
   // 월별 순발행 = 발행 - 소비 (양수면 부채 증가, 음수면 소진)
-  const sunNetBars = monthly.map(m => ({
-    key: m.month,
-    label: m.month.slice(5),
-    value: m.netSun,
-  }));
+  // 단일 달 크레딧 통합(2026-05-16) 이후 moon 만 표시. sun bars 는 dead code 제거.
   const moonNetBars = monthly.map(m => ({
     key: m.month,
     label: m.month.slice(5),
     value: m.netMoon,
-  }));
-  const sunIssuedBars = monthly.map(m => ({
-    key: m.month,
-    label: m.month.slice(5),
-    value: m.sunIssued,
-  }));
-  const sunConsumedBars = monthly.map(m => ({
-    key: m.month,
-    label: m.month.slice(5),
-    value: m.sunConsumed,
   }));
 
   const typeBars = txnTypes.map(t => ({
