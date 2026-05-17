@@ -96,12 +96,12 @@ export function AILoadingBar({
   // ── Full-screen 버전 ──────────────────────────────────
   // 레이아웃: 한 화면(100dvh) 안에 상단 텍스트 + 진행바 + 행성을 자동 분배.
   // 스크롤 막힘 (overflow-hidden + h-[100dvh]) — 다른 페이지 영향 없음 (컴포넌트 unmount 시 자연 해제).
-  // 상단 padding 은 safe-area-inset-top + 16px → status bar 가려져 텍스트 잘리는 현상 방지.
-  // 행성 크기는 작은 화면일수록 줄어들도록 min(320px, 35vh) 적용 — 짧은 뷰포트도 텍스트 우선 확보.
+  // 상단 padding 은 safe-area-inset-top + 2.25rem (36px) → status bar + 32px serif 한자 잘림 방지.
+  // 행성은 위쪽 텍스트 영역을 침범하지 않도록 60vw / 30vh 로 축소 (이전 70vw / 35vh).
   return (
     <div
       className="fixed inset-0 z-50 flex flex-col items-center px-6 pb-6 overflow-hidden bg-[var(--space-deep,#0E0820)]"
-      style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 1rem)' }}
+      style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 2.25rem)' }}
     >
       {/* 상단 영역 — 타이틀 + 진행바 + 메시지 */}
       <div className="w-full flex flex-col items-center gap-4">
@@ -163,7 +163,7 @@ export function AILoadingBar({
         </div>
       </div>
 
-      {/* 코스믹 행성 — 남은 공간 가운데, 상단 텍스트 보호 위해 더 작게(320 / 35vh) */}
+      {/* 코스믹 행성 — 남은 공간 가운데, 상단 텍스트 보호 우선 (60vw / 30vh, 최대 0.75) */}
       <motion.div
         initial={{ opacity: 0, scale: 0.85 }}
         animate={{ opacity: 1, scale: 1 }}
@@ -173,8 +173,8 @@ export function AILoadingBar({
         <div
           style={{
             // 380px 기준으로 그리되 작은 화면일수록 transform: scale 로 축소
-            // 380px ≤ min(70vw, 35vh) 이면 scale(1), 짧은 뷰포트일수록 축소
-            transform: 'scale(min(0.85, calc(70vw / 380), calc(35vh / 380)))',
+            // 상한 0.75 — 상단 텍스트 잘림 방지를 위해 행성을 양보
+            transform: 'scale(min(0.75, calc(60vw / 380), calc(30vh / 380)))',
             transformOrigin: 'center',
           }}
         >
