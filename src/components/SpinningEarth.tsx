@@ -1,26 +1,19 @@
 'use client';
 
+import { useEffect } from 'react';
+
 /**
  * Monument Valley 톤 측면 태양계 — 로딩 화면용 우주 시각화
  *
- * 2026-05-17 궤도 정확화 — 4단계 keyframes 의 직선 보간(마름모꼴 경로) 문제 해결.
- * cos/sin 으로 36단계(10도 간격) keyframes 동적 생성하여 점선 ellipse 와 정확히 일치.
+ * 2026-05-17 궤도 정확화 — cos/sin 36단계 keyframes 로 점선 ellipse 와 정확히 일치.
+ * styled-jsx 안 ${} 동적 보간이 keyframes hash·scope 문제로 일관되게 적용 안 되는
+ * 이슈가 있어 모듈 import 시 document.head 에 <style> 한 번 inject 하는 방식으로 변경.
  *
  * 시각화 컨셉:
  *  - 측면 시점 (45도 위에서 비스듬히) — ry/rx ≈ 0.7
  *  - 행성이 앞으로 (y > 0): 크게·진하게
  *  - 행성이 뒤로 (y < 0): 작게·흐리게
  *  - 측면 (y = 0): 기본 크기·완전 불투명
- *
- * 구성:
- *  - 중앙 태양 (5s 펄스 + 8광선 회전)
- *  - 4개 행성 각자 타원 궤도 (안쪽 빠름·바깥 느림)
- *  - 행성 2(라일락) 은 달 거느림 (작은 원 궤도, 동일한 측면 시점)
- *  - 배경 별 6개 트윙클
- *
- * 좌표계: viewBox 100×100, 중심 (50,50).
- * 행성 outer <g> 가 keyframes 로 (rx*cosθ, ry*sinθ) 만큼 translate.
- * inner <g> 에 translate(50,50) 으로 origin 보정.
  */
 
 interface SpinningEarthProps {
@@ -29,14 +22,6 @@ interface SpinningEarthProps {
 }
 
 // ── 궤도 keyframes 동적 생성 ─────────────────────────────────────
-/**
- * 측면 시점 타원 궤도 keyframes 36단계 생성.
- * t ∈ [0,1] 일 때 (rx*cos(2πt), ry*sin(2πt)).
- * y 부호로 scale·opacity 보간:
- *  - y > 0 (앞): scale 1 → 1.4, opacity 1
- *  - y < 0 (뒤): scale 1 → 0.6, opacity 1 → 0.55
- *  - y = 0 (측면): scale 1, opacity 1
- */
 function buildOrbitKeyframes(name: string, rx: number, ry: number): string {
   const STEPS = 36;
   const frames: string[] = [];
@@ -45,34 +30,53 @@ function buildOrbitKeyframes(name: string, rx: number, ry: number): string {
     const theta = 2 * Math.PI * t;
     const x = rx * Math.cos(theta);
     const y = ry * Math.sin(theta);
-    const yRatio = y / ry;                      // -1 (뒤) ~ +1 (앞)
-    // scale: 뒤(-1)→0.6, 측면(0)→1, 앞(+1)→1.4
-    const scale = 1 + yRatio * 0.4;
-    // opacity: 앞·측면=1, 뒤로 갈수록 0.55 까지
-    const opacity = y >= 0 ? 1 : 1 + yRatio * 0.45;
+    const yRatio = y / ry;                  // -1 (뒤) ~ +1 (앞)
+    const scale = 1 + yRatio * 0.4;          // y=-1→0.6, y=0→1, y=+1→1.4
+    const opacity = y >= 0 ? 1 : 1 + yRatio * 0.45;  // 앞·측면=1, 뒤→0.55
     frames.push(
       `${(t * 100).toFixed(2)}% { transform: translate(${x.toFixed(3)}px, ${y.toFixed(3)}px) scale(${scale.toFixed(3)}); opacity: ${opacity.toFixed(3)}; }`,
     );
   }
-  return `@keyframes ${name} {\n      ${frames.join('\n      ')}\n    }`;
+  return `@keyframes ${name} {\n  ${frames.join('\n  ')}\n}`;
 }
 
-// 4개 궤도 — viewBox 100x100, ry/rx ≈ 0.7 균일 (같은 시야각)
 const ORBIT_RADII = [
-  { rx: 22, ry: 15 },  // 안쪽 (행성1)
+  { rx: 22, ry: 15 },  // 행성1 (안쪽)
   { rx: 34, ry: 24 },  // 행성2 (지구·달)
   { rx: 44, ry: 31 },  // 행성3
-  { rx: 52, ry: 36 },  // 바깥 (행성4)
+  { rx: 52, ry: 36 },  // 행성4 (바깥)
 ];
 
-const ORBIT_KEYFRAMES_CSS = ORBIT_RADII
-  .map((r, i) => buildOrbitKeyframes(`orbit-side-${i + 1}`, r.rx, r.ry))
-  .join('\n    ');
+const ORBIT_KEYFRAMES_CSS = [
+  ...ORBIT_RADII.map((r, i) => buildOrbitKeyframes(`orbit-side-${i + 1}`, r.rx, r.ry)),
+  buildOrbitKeyframes('moon-orbit-side', 6, 2.4),
+  // 정적 keyframes
+  `@keyframes solar-breathe { 0%, 100% { opacity: 0.6; transform: scale(1); } 50% { opacity: 1; transform: scale(1.06); } }`,
+  `@keyframes solar-star { 0%, 100% { opacity: 0.25; } 50% { opacity: 0.95; } }`,
+  `@keyframes sun-pulse { 0%, 100% { transform: scale(1); transform-origin: 50px 50px; } 50% { transform: scale(1.08); transform-origin: 50px 50px; } }`,
+  `@keyframes sun-ray-spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`,
+  `@keyframes planet-spin-fast { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`,
+  `@keyframes planet-spin-mid  { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`,
+  `@keyframes planet-spin-rev  { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`,
+  `@keyframes planet-spin-slow { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`,
+].join('\n\n');
 
-// 달 궤도 — 행성2 주변 작은 원, 측면 시점 동일 비율(ry/rx ≈ 0.4 정도, 더 납작)
-const MOON_KEYFRAMES_CSS = buildOrbitKeyframes('moon-orbit-side', 6, 2.4);
+const STYLE_ID = 'spinning-earth-keyframes';
+
+function injectKeyframesOnce() {
+  if (typeof document === 'undefined') return;
+  if (document.getElementById(STYLE_ID)) return;
+  const style = document.createElement('style');
+  style.id = STYLE_ID;
+  style.textContent = ORBIT_KEYFRAMES_CSS;
+  document.head.appendChild(style);
+}
 
 export function SpinningEarth({ size = 320, className = '' }: SpinningEarthProps) {
+  useEffect(() => {
+    injectKeyframesOnce();
+  }, []);
+
   const stars = [
     { cx: 8, cy: 22, r: 0.9, delay: 0 },
     { cx: 92, cy: 18, r: 1.0, delay: 2 },
@@ -225,35 +229,6 @@ export function SpinningEarth({ size = 320, className = '' }: SpinningEarthProps
           </g>
         </g>
       </svg>
-
-      <style jsx>{`
-        @keyframes solar-breathe {
-          0%, 100% { opacity: 0.6; transform: scale(1); }
-          50% { opacity: 1; transform: scale(1.06); }
-        }
-        @keyframes solar-star {
-          0%, 100% { opacity: 0.25; }
-          50% { opacity: 0.95; }
-        }
-        @keyframes sun-pulse {
-          0%, 100% { transform: scale(1); transform-origin: 50px 50px; }
-          50% { transform: scale(1.08); transform-origin: 50px 50px; }
-        }
-        @keyframes sun-ray-spin {
-          from { transform: rotate(0deg); }
-          to { transform: rotate(360deg); }
-        }
-
-        /* ── 측면 타원 궤도 keyframes — cos/sin 36단계로 점선 ellipse 와 정확히 일치 ── */
-        ${ORBIT_KEYFRAMES_CSS}
-
-        ${MOON_KEYFRAMES_CSS}
-
-        @keyframes planet-spin-fast { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
-        @keyframes planet-spin-mid  { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
-        @keyframes planet-spin-rev  { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
-        @keyframes planet-spin-slow { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
-      `}</style>
     </div>
   );
 }

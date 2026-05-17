@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { SpinningEarth } from './SpinningEarth';
 
@@ -27,22 +26,6 @@ export function AILoadingBar({
 }: AILoadingBarProps) {
   const [progress, setProgress] = useState(0);
   const [msgIdx, setMsgIdx] = useState(0);
-  const [mounted, setMounted] = useState(false);
-
-  // Portal 마운트 가드 (SSR 안전)
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  // 풀스크린 모드일 때만 body 스크롤 잠금 — unmount 시 자동 복원
-  useEffect(() => {
-    if (inline) return;
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
-    return () => {
-      document.body.style.overflow = prev;
-    };
-  }, [inline]);
 
   // 비대칭 점근선: estimatedSeconds 시점에서 ~86% 도달, 이후 천천히 92%로 수렴
   useEffect(() => {
@@ -111,20 +94,17 @@ export function AILoadingBar({
   }
 
   // ── Full-screen 버전 ──────────────────────────────────
-  // 핵심 — React Portal 로 document.body 에 직접 렌더해야 Layout 헤더/탭바 위에 정확히 올라감.
-  // app-container 가 overflow:hidden + max-width:430px 라 자식 fixed 는 그 안에 갇히는 문제.
-  // 또한 Layout header 의 backdrop-blur-xl 이 stacking context 만들어 z-index 비교가 어긋남.
-  // Portal 로 body 직접 렌더 + z-[9999] 로 모든 stacking context 위로.
+  // Layout 안에 자연스럽게 들어감 — Layout 헤더(이천점/잔액/햄버거) + 하단 탭바 유지.
+  // main 영역(flex-1, overflow-y-auto) 안에서 컨텐츠가 viewport 가용 영역 안에 맞도록 설계.
   //
-  // 레이아웃: 한 화면(100dvh) 안에 상단 텍스트 + 진행바 + 행성을 자동 분배.
-  // 상단 padding 은 safe-area-inset-top + 2.5rem → status bar + 큰 한자(정미년생 등) 잘림 방지.
-  // 행성 scale 상한 0.65, 60vw / 28vh — topContent 가장 긴 페이지(정통사주 일주 표기) 기준 안전 마진.
-  const fullScreen = (
-    <div
-      className="fixed inset-0 z-[9999] flex flex-col items-center px-6 pb-6 overflow-hidden bg-[var(--space-deep,#0E0820)]"
-      style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 2.5rem)' }}
-    >
-      {/* 상단 영역 — topContent + 타이틀 + 진행바 + 메시지 (자동 압축) */}
+  // 레이아웃:
+  //  - 상단 영역(topContent + 타이틀 + 진행바 + 메시지)은 위쪽에 자연 배치
+  //  - 행성은 flex-1 로 남은 공간 차지
+  //  - main 영역 안에서 자연스럽게 fit (Layout 헤더 48px + 탭바 64px 제외한 영역)
+  //  - 행성 transform: scale 로 짧은 뷰포트 자동 축소
+  return (
+    <div className="w-full flex flex-col items-center px-6 pt-6 pb-4 gap-4" style={{ minHeight: 'calc(100dvh - 48px - 64px - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px))' }}>
+      {/* 상단 영역 — topContent + 타이틀 + 진행바 + 메시지 */}
       <div className="w-full flex flex-col items-center gap-3.5 flex-shrink-0">
         {/* 상단 컨텐츠 (연도·일주 등) */}
         {topContent && (
@@ -184,7 +164,7 @@ export function AILoadingBar({
         </div>
       </div>
 
-      {/* 코스믹 행성 — 남은 공간 가운데. 상단 텍스트 우선이라 상한 0.65 + 28vh */}
+      {/* 코스믹 행성 — 남은 공간 가운데. Layout 유지하면서 가용 영역 안에 fit */}
       <motion.div
         initial={{ opacity: 0, scale: 0.85 }}
         animate={{ opacity: 1, scale: 1 }}
@@ -194,9 +174,9 @@ export function AILoadingBar({
         <div
           style={{
             // 380px 기준, transform: scale 로 반응형
-            // 상한 0.65 (이전 0.85→0.75→0.65 단계적 축소) — 상단 텍스트 보호 최우선
-            // 60vw / 28vh — 짧은 폰(iPhone SE 667px)에서도 텍스트 영역 안 침범
-            transform: 'scale(min(0.65, calc(60vw / 380), calc(28vh / 380)))',
+            // 상한 0.55 — Layout(헤더+탭바) 안에서 텍스트 영역 양보
+            // 60vw / 32vh — 짧은 뷰포트도 텍스트 안 침범
+            transform: 'scale(min(0.55, calc(60vw / 380), calc(32vh / 380)))',
             transformOrigin: 'center',
           }}
         >
@@ -205,8 +185,4 @@ export function AILoadingBar({
       </motion.div>
     </div>
   );
-
-  // Portal 마운트 전엔 null (SSR 안전)
-  if (!mounted) return null;
-  return createPortal(fullScreen, document.body);
 }
