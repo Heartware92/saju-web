@@ -438,7 +438,7 @@ export default function HomePage() {
       {/* 상단 서비스 7종 — 지정일·택일 운세 사이즈로 통일 (h-[88], 폰트 19/15) */}
       <section className="px-4 -mt-3 relative z-10">
         <div className="flex items-center justify-between mb-3 px-1">
-          <h2 className="text-base font-bold text-text-primary">기본 풀이</h2>
+          <h2 className="text-base font-bold text-text-primary">메인 풀이</h2>
           <span className="text-[12px] text-text-tertiary">🌙 10개 소모</span>
         </div>
         <motion.div
