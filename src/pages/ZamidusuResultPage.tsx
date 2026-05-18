@@ -68,6 +68,297 @@ const LOADING_MESSAGES = [
  * - 한 단락 안에 문장이 너무 많으면 sentencesPerPara 단위로 추가 분할
  * - 한국어 문장 종결(. ! ? + 공백) 기준
  */
+// ============================================
+// 섹션별 데이터 카드 — 본문 위에 시각 파티션
+// ============================================
+
+const CARD_BG = 'rgba(139, 92, 246, 0.10)';
+const CARD_BORDER = 'rgba(139, 92, 246, 0.30)';
+const CARD_ACCENT = '#fcd5b4';
+
+function MetaPills({ items }: { items: { label: string; value: string; color?: string }[] }) {
+  return (
+    <div style={{ display: 'grid', gridTemplateColumns: `repeat(${items.length}, 1fr)`, gap: 8, marginBottom: 14 }}>
+      {items.map((it, i) => (
+        <div key={i} style={{ textAlign: 'center', padding: '10px 6px', background: 'rgba(255,255,255,0.04)', borderRadius: 10 }}>
+          <div style={{ fontSize: 11, color: 'var(--text-tertiary)', fontWeight: 600, letterSpacing: 1, marginBottom: 4 }}>{it.label}</div>
+          <div style={{ fontSize: 16, fontWeight: 700, color: it.color ?? 'var(--text-primary)', fontFamily: 'var(--font-serif)' }}>{it.value}</div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function StarBigCard({ name, hanja, brightness, mutagen, keywords }: { name: string; hanja: string; brightness?: string; mutagen?: string; keywords?: string[] }) {
+  return (
+    <div style={{
+      flex: 1, minWidth: 120,
+      padding: '16px 14px', borderRadius: 14,
+      background: CARD_BG, border: `1px solid ${CARD_BORDER}`,
+      textAlign: 'center',
+    }}>
+      <div style={{ fontSize: 32, fontFamily: 'var(--font-serif)', color: 'var(--text-primary)', marginBottom: 4, lineHeight: 1 }}>{hanja}</div>
+      <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 6 }}>{name}</div>
+      <div style={{ fontSize: 11, color: 'var(--text-tertiary)', display: 'flex', justifyContent: 'center', gap: 6, flexWrap: 'wrap' }}>
+        {brightness && <span>{brightness}</span>}
+        {mutagen && <span style={{ color: CARD_ACCENT, fontWeight: 700 }}>{mutagen}</span>}
+      </div>
+      {keywords && keywords.length > 0 && (
+        <div style={{ marginTop: 8, display: 'flex', justifyContent: 'center', gap: 4, flexWrap: 'wrap' }}>
+          {keywords.slice(0, 3).map((k, i) => (
+            <span key={i} style={{ fontSize: 10, padding: '2px 6px', borderRadius: 6, background: 'rgba(252,213,180,0.10)', color: CARD_ACCENT, border: '1px solid rgba(252,213,180,0.25)' }}>#{k}</span>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function MainStarCards({ palace }: { palace: ZamidusuPalace }) {
+  if (palace.majorStars.length === 0) {
+    return (
+      <div style={{ padding: '14px 16px', borderRadius: 12, background: CARD_BG, border: `1px solid ${CARD_BORDER}`, textAlign: 'center', marginBottom: 14, fontSize: 13, color: 'var(--text-tertiary)' }}>
+        명궁 공궁 — 대궁(對宮)의 별이 명궁에 비춰 들어옴
+      </div>
+    );
+  }
+  return (
+    <div style={{ display: 'flex', gap: 10, marginBottom: 14, flexWrap: 'wrap' }}>
+      {palace.majorStars.map(s => {
+        const meta = MAJOR_STARS_META[s.name];
+        return (
+          <StarBigCard
+            key={s.name}
+            name={meta?.name ?? s.name}
+            hanja={meta?.hanja ?? s.name}
+            brightness={s.brightness}
+            mutagen={s.mutagen}
+            keywords={meta?.keywords}
+          />
+        );
+      })}
+    </div>
+  );
+}
+
+function HelperStarsChips({ palace }: { palace: ZamidusuPalace }) {
+  const lucky = palace.minorStars.filter(s => MINOR_STARS_META[s.name]?.category === '6길성');
+  const unlucky = palace.minorStars.filter(s => MINOR_STARS_META[s.name]?.category === '4흉성');
+  const other = palace.minorStars.filter(s => MINOR_STARS_META[s.name]?.category === '기타');
+  if (lucky.length + unlucky.length + other.length === 0) {
+    return (
+      <div style={{ padding: '12px 16px', borderRadius: 12, background: CARD_BG, border: `1px solid ${CARD_BORDER}`, textAlign: 'center', marginBottom: 14, fontSize: 13, color: 'var(--text-tertiary)' }}>
+        명궁에 보좌성 없음 — 본인 별만으로 풀어가는 인생
+      </div>
+    );
+  }
+  const Group = ({ label, stars, color, bg }: { label: string; stars: ZamidusuPalace['minorStars']; color: string; bg: string }) => (
+    stars.length > 0 ? (
+      <div style={{ flex: 1, minWidth: 130, padding: 12, borderRadius: 12, background: bg, border: `1px solid ${color}55` }}>
+        <div style={{ fontSize: 11, color, fontWeight: 700, marginBottom: 8, letterSpacing: 1 }}>{label}</div>
+        <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+          {stars.map(s => {
+            const meta = MINOR_STARS_META[s.name];
+            return (
+              <span key={s.name} style={{ fontSize: 12, padding: '4px 8px', borderRadius: 6, background: `${color}15`, color: 'var(--text-primary)', fontWeight: 600 }}>
+                {meta?.name ?? s.name} <span style={{ fontFamily: 'var(--font-serif)', opacity: 0.7 }}>{meta?.hanja ?? ''}</span>
+              </span>
+            );
+          })}
+        </div>
+      </div>
+    ) : null
+  );
+  return (
+    <div style={{ display: 'flex', gap: 8, marginBottom: 14, flexWrap: 'wrap' }}>
+      <Group label="6 길성 (귀인·복)" stars={lucky} color="#34D399" bg="rgba(52,211,153,0.08)" />
+      <Group label="4 흉성 (압력·함정)" stars={unlucky} color="#F87171" bg="rgba(248,113,113,0.08)" />
+      <Group label="록존·천마" stars={other} color="#FBBF24" bg="rgba(251,191,36,0.08)" />
+    </div>
+  );
+}
+
+function PalaceMiniCard({ palace, accent }: { palace: ZamidusuPalace | undefined; accent?: string }) {
+  if (!palace) return null;
+  const role = PALACE_ROLE_META[palace.name];
+  const stars = palace.majorStars.map(s => s.name).join('·') || '공궁';
+  return (
+    <div style={{
+      flex: 1, minWidth: 110,
+      padding: '12px 10px', borderRadius: 12,
+      background: 'rgba(255,255,255,0.04)',
+      border: `1px solid ${accent ?? CARD_BORDER}`,
+    }}>
+      <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 6 }}>
+        <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)', fontFamily: 'var(--font-serif)' }}>{palace.name}</span>
+        <span style={{ fontSize: 10, color: 'var(--text-tertiary)', letterSpacing: 1 }}>{palace.heavenlyStem}{palace.earthlyBranch}</span>
+      </div>
+      <div style={{ fontSize: 13, color: 'var(--text-secondary)', fontWeight: 600, marginBottom: role ? 4 : 0 }}>{stars}</div>
+      {role && <div style={{ fontSize: 10, color: 'var(--text-tertiary)' }}>{role.domain}</div>}
+    </div>
+  );
+}
+
+function PalaceGroup({ chart, names, accent }: { chart: ZamidusuResult; names: string[]; accent?: string }) {
+  const palaces = names.map(n => chart.palaces.find(p => p.name === n));
+  return (
+    <div style={{ display: 'grid', gridTemplateColumns: `repeat(${Math.min(names.length, 3)}, 1fr)`, gap: 8, marginBottom: 14 }}>
+      {palaces.map((p, i) => <PalaceMiniCard key={i} palace={p} accent={accent} />)}
+    </div>
+  );
+}
+
+function MutagenGridCards({ chart }: { chart: ZamidusuResult }) {
+  const muts: { type: string; star: string; palace: string }[] = [];
+  chart.palaces.forEach(p => {
+    p.majorStars.forEach(s => {
+      if (s.mutagen) muts.push({ type: s.mutagen, star: s.name, palace: p.name });
+    });
+  });
+  const order = ['화록', '화권', '화과', '화기'];
+  const colorMap: Record<string, string> = {
+    화록: '#34D399', 화권: '#FBBF24', 화과: '#60A5FA', 화기: '#F87171',
+  };
+  return (
+    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 8, marginBottom: 14 }}>
+      {order.map(t => {
+        const m = muts.find(x => x.type === t);
+        const meta = MUTAGEN_META[t];
+        const color = colorMap[t];
+        return (
+          <div key={t} style={{
+            padding: '12px 14px', borderRadius: 12,
+            background: `${color}10`, border: `1px solid ${color}40`,
+          }}>
+            <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 4 }}>
+              <span style={{ fontSize: 14, fontWeight: 700, color, fontFamily: 'var(--font-serif)' }}>{meta?.name ?? t} {meta?.hanja && <span style={{ opacity: 0.6 }}>{meta.hanja}</span>}</span>
+            </div>
+            {m ? (
+              <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>
+                <span style={{ fontWeight: 700, color: 'var(--text-primary)' }}>{m.star}</span>
+                <span style={{ color: 'var(--text-tertiary)', marginLeft: 6 }}>{m.palace}</span>
+              </div>
+            ) : (
+              <div style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>없음</div>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function InteractionsCards({ chart }: { chart: ZamidusuResult }) {
+  // 명궁 기준 삼방사정 — 재백·관록·천이
+  const targets = ['명궁', '재백궁', '관록궁', '천이궁'];
+  return (
+    <>
+      <div style={{ fontSize: 11, color: 'var(--text-tertiary)', fontWeight: 600, letterSpacing: 1, marginBottom: 6 }}>
+        삼방사정 — 명궁에 비춰 들어오는 핵심 4 궁
+      </div>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 8, marginBottom: 14 }}>
+        {targets.map(n => <PalaceMiniCard key={n} palace={chart.palaces.find(p => p.name === n)} accent="rgba(252,213,180,0.35)" />)}
+      </div>
+    </>
+  );
+}
+
+function DaehanTable({ chart, currentAge }: { chart: ZamidusuResult; currentAge?: number }) {
+  const rows = chart.palaces
+    .filter(p => p.decadal)
+    .sort((a, b) => (a.decadal!.startAge - b.decadal!.startAge))
+    .slice(0, 10);
+  if (rows.length === 0) return null;
+  return (
+    <div style={{
+      marginBottom: 14, borderRadius: 12, overflow: 'hidden',
+      border: `1px solid ${CARD_BORDER}`, background: CARD_BG,
+    }}>
+      {rows.map((p, i) => {
+        const isCurrent = currentAge !== undefined && p.decadal!.startAge <= currentAge && currentAge <= p.decadal!.endAge;
+        const stars = p.majorStars.map(s => s.name).join('·') || '공궁';
+        return (
+          <div key={i} style={{
+            display: 'grid', gridTemplateColumns: '70px 70px 1fr', gap: 10,
+            padding: '8px 12px',
+            borderBottom: i === rows.length - 1 ? 'none' : '1px solid rgba(255,255,255,0.06)',
+            background: isCurrent ? 'rgba(252,213,180,0.10)' : 'transparent',
+          }}>
+            <div style={{ fontSize: 12, color: isCurrent ? CARD_ACCENT : 'var(--text-secondary)', fontWeight: isCurrent ? 700 : 500 }}>
+              {isCurrent && '★ '}{p.decadal!.startAge}~{p.decadal!.endAge}세
+            </div>
+            <div style={{ fontSize: 12, color: 'var(--text-primary)', fontWeight: 600, fontFamily: 'var(--font-serif)' }}>{p.name}</div>
+            <div style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>{stars}</div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function SohanCard({ chart, currentAge }: { chart: ZamidusuResult; currentAge?: number }) {
+  if (currentAge === undefined) return null;
+  const cur = chart.palaces.find(p => p.ages.includes(currentAge));
+  if (!cur) return null;
+  const stars = cur.majorStars.map(s => s.name).join('·') || '공궁';
+  return (
+    <div style={{
+      padding: '14px 16px', borderRadius: 12, marginBottom: 14,
+      background: 'rgba(252,213,180,0.10)', border: `1px solid rgba(252,213,180,0.35)`,
+    }}>
+      <div style={{ fontSize: 11, color: CARD_ACCENT, fontWeight: 700, letterSpacing: 1, marginBottom: 6 }}>
+        ★ 올해 ({currentAge}세) 소한 — {cur.name}
+      </div>
+      <div style={{ fontSize: 14, color: 'var(--text-primary)', fontWeight: 700 }}>{stars}</div>
+      <div style={{ fontSize: 11, color: 'var(--text-tertiary)', marginTop: 4 }}>{PALACE_ROLE_META[cur.name]?.domain}</div>
+    </div>
+  );
+}
+
+function renderSectionDataCards(
+  key: string,
+  chart: ZamidusuResult,
+  currentAge?: number,
+): React.ReactNode | null {
+  const myeong = chart.palaces.find(p => p.name === '명궁');
+  switch (key) {
+    case 'overview':
+      return <MetaPills items={[
+        { label: '명주', value: chart.soul },
+        { label: '신주', value: chart.body },
+        { label: '오행국', value: chart.fiveElementsClass, color: '#FBBF24' },
+      ]} />;
+    case 'main_star':
+      return myeong ? <MainStarCards palace={myeong} /> : null;
+    case 'helper_stars':
+      return myeong ? <HelperStarsChips palace={myeong} /> : null;
+    case 'body_palace': {
+      const body = chart.palaces.find(p => p.isBodyPalace);
+      return body ? (
+        <div style={{ marginBottom: 14 }}>
+          <PalaceMiniCard palace={body} accent="rgba(244,114,182,0.4)" />
+        </div>
+      ) : null;
+    }
+    case 'relations':
+      return <PalaceGroup chart={chart} names={['부처궁', '자녀궁', '형제궁', '노복궁', '부모궁']} />;
+    case 'wealth':
+      return <PalaceGroup chart={chart} names={['재백궁', '관록궁', '전택궁']} />;
+    case 'body_mind':
+      return <PalaceGroup chart={chart} names={['질액궁', '복덕궁', '천이궁']} />;
+    case 'mutagen':
+      return <MutagenGridCards chart={chart} />;
+    case 'interactions':
+      return <InteractionsCards chart={chart} />;
+    case 'daehan':
+      return <DaehanTable chart={chart} currentAge={currentAge} />;
+    case 'sohan':
+      return <SohanCard chart={chart} currentAge={currentAge} />;
+    default:
+      return null;
+  }
+}
+
 function splitIntoParagraphs(text: string, sentencesPerPara = 3): string[] {
   const paras = text.split(/\n{2,}/).map((p) => p.trim()).filter(Boolean);
   const out: string[] = [];
@@ -1003,6 +1294,8 @@ export default function ZamidusuResultPage() {
               defaultOpen={idx === 0}
               enterDelay={0.05 * idx}
             >
+              {/* 섹션별 데이터 카드 — 본문 위 시각 파티션 */}
+              {renderSectionDataCards(key, chart, currentAge)}
               {(() => {
                 const raw = hasHeadline ? body : text;
                 const paragraphs = splitIntoParagraphs(raw);
