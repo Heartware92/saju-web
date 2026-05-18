@@ -216,17 +216,20 @@ function ActionCardList({ bodyText, variant }: { bodyText: string; variant: 'yes
     ? { bg: 'rgba(52,211,153,0.06)', border: 'rgba(52,211,153,0.22)', accent: '#34D399' }
     : { bg: 'rgba(248,113,113,0.06)', border: 'rgba(248,113,113,0.22)', accent: '#F87171' };
 
-  // 1순위 배지 — date_yes 한정. "1순위/가장 권장/최우선" 매치, 없으면 첫 카드.
-  const topIdx = variant === 'yes'
-    ? (() => {
-        const idx = paragraphs.findIndex(p => /(1\s*순위|가장\s*권장|최우선|★)/i.test(p));
-        return idx >= 0 ? idx : 0;
-      })()
-    : -1;
+  // 최우선 카드 — yes 는 "1순위/가장 권장/최우선/★", no 는 "가장 조심/최우선/최대 주의/★" 매치.
+  // 없으면 첫 카드를 최우선으로.
+  const topIdx = (() => {
+    const re = variant === 'yes'
+      ? /(1\s*순위|가장\s*권장|최우선|★)/i
+      : /(가장\s*조심|가장\s*경계|최우선|최대\s*주의|★)/i;
+    const idx = paragraphs.findIndex(p => re.test(p));
+    return idx >= 0 ? idx : 0;
+  })();
+  const topLabel = variant === 'yes' ? '1순위' : '가장 조심';
 
-  // 본문 앞에 붙은 prefix 정리 ("1순위·", "가장 권장:" 등) — 배지로 시각화하니 본문에서 제거
+  // 본문 앞에 붙은 prefix 정리 — 배지로 시각화하니 본문에서 제거
   const stripPrefix = (s: string) =>
-    s.replace(/^(\d+\s*순위[\s:·\-]*|가장\s*권장[\s:·\-]*|최우선[\s:·\-]*|★[\s:·\-]*)/g, '').trim();
+    s.replace(/^(\d+\s*순위[\s:·\-]*|가장\s*권장[\s:·\-]*|가장\s*조심[\s:·\-]*|가장\s*경계[\s:·\-]*|최우선[\s:·\-]*|최대\s*주의[\s:·\-]*|★[\s:·\-]*)/g, '').trim();
 
   return (
     <div className="space-y-2.5">
@@ -241,22 +244,16 @@ function ActionCardList({ bodyText, variant }: { bodyText: string; variant: 'yes
             className="rounded-xl px-4 py-3.5 border"
             style={{ background: palette.bg, borderColor: palette.border }}
           >
-            <div className="flex items-center gap-2 mb-2">
-              <span
-                className="inline-flex items-center justify-center w-6 h-6 rounded-full text-[12px] font-bold"
-                style={{ background: palette.accent, color: '#0a0a0a' }}
-              >
-                {i + 1}
-              </span>
-              {isTop && (
+            {isTop && (
+              <div className="mb-2">
                 <span
-                  className="inline-block px-2 py-0.5 rounded-full text-[10.5px] font-bold tracking-wide"
+                  className="inline-block px-2.5 py-1 rounded-full text-[11px] font-bold tracking-wide"
                   style={{ background: palette.accent, color: '#0a0a0a' }}
                 >
-                  1순위
+                  {topLabel}
                 </span>
-              )}
-            </div>
+              </div>
+            )}
             <p className="text-[15px] text-text-secondary leading-[1.85] tracking-[-0.005em] whitespace-pre-line">
               {stripPrefix(para)}
             </p>
