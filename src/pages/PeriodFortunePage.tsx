@@ -194,6 +194,79 @@ function RemedyCardGrid({ bodyText }: { bodyText: string }) {
   );
 }
 
+/**
+ * 시도하면 좋은 일·피하면 좋은 일 — 항목별 카드 분할 시각화.
+ * 프롬프트가 각 항목을 빈 줄로 분리하도록 강제 (date_yes 3장 / date_no 2장).
+ * yes = 초록 #34D399 / no = 빨강 #F87171. 좌측 색띠 SectionCollapsible.barColor 와 동일 톤.
+ */
+function ActionCardList({ bodyText, variant }: { bodyText: string; variant: 'yes' | 'no' }) {
+  const paragraphs = bodyText.split(/\n\n+/).map(p => p.trim()).filter(Boolean);
+
+  if (paragraphs.length < 2) {
+    return (
+      <div className="text-[17px] text-text-secondary leading-[1.85] tracking-[-0.005em] space-y-3">
+        {paragraphs.map((para, pi) => (
+          <p key={pi} className="whitespace-pre-line">{para}</p>
+        ))}
+      </div>
+    );
+  }
+
+  const palette = variant === 'yes'
+    ? { bg: 'rgba(52,211,153,0.06)', border: 'rgba(52,211,153,0.22)', accent: '#34D399' }
+    : { bg: 'rgba(248,113,113,0.06)', border: 'rgba(248,113,113,0.22)', accent: '#F87171' };
+
+  // 1순위 배지 — date_yes 한정. "1순위/가장 권장/최우선" 매치, 없으면 첫 카드.
+  const topIdx = variant === 'yes'
+    ? (() => {
+        const idx = paragraphs.findIndex(p => /(1\s*순위|가장\s*권장|최우선|★)/i.test(p));
+        return idx >= 0 ? idx : 0;
+      })()
+    : -1;
+
+  // 본문 앞에 붙은 prefix 정리 ("1순위·", "가장 권장:" 등) — 배지로 시각화하니 본문에서 제거
+  const stripPrefix = (s: string) =>
+    s.replace(/^(\d+\s*순위[\s:·\-]*|가장\s*권장[\s:·\-]*|최우선[\s:·\-]*|★[\s:·\-]*)/g, '').trim();
+
+  return (
+    <div className="space-y-2.5">
+      {paragraphs.map((para, i) => {
+        const isTop = i === topIdx;
+        return (
+          <motion.div
+            key={i}
+            initial={{ opacity: 0, y: 4 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.05 * i }}
+            className="rounded-xl px-4 py-3.5 border"
+            style={{ background: palette.bg, borderColor: palette.border }}
+          >
+            <div className="flex items-center gap-2 mb-2">
+              <span
+                className="inline-flex items-center justify-center w-6 h-6 rounded-full text-[12px] font-bold"
+                style={{ background: palette.accent, color: '#0a0a0a' }}
+              >
+                {i + 1}
+              </span>
+              {isTop && (
+                <span
+                  className="inline-block px-2 py-0.5 rounded-full text-[10.5px] font-bold tracking-wide"
+                  style={{ background: palette.accent, color: '#0a0a0a' }}
+                >
+                  1순위
+                </span>
+              )}
+            </div>
+            <p className="text-[15px] text-text-secondary leading-[1.85] tracking-[-0.005em] whitespace-pre-line">
+              {stripPrefix(para)}
+            </p>
+          </motion.div>
+        );
+      })}
+    </div>
+  );
+}
+
 function CalendarPicker({ value, onChange }: { value: string; onChange: (v: string) => void }) {
   const [viewDate, setViewDate] = useState(() => {
     const d = value ? new Date(value) : new Date();
@@ -1266,9 +1339,10 @@ export default function PeriodFortunePage({ scope }: { scope: FortuneScope | 'da
                       <RemedyCardGrid bodyText={bodyText} />
                     ) : isTimeflow ? (
                       <TimeFlowSectionView bodyText={bodyText} flow={pickedDateReport.flow} />
+                    ) : isYes || isNo ? (
+                      <ActionCardList bodyText={bodyText} variant={isYes ? 'yes' : 'no'} />
                     ) : (
                       // 시그널은 SectionCollapsible 의 좌측 색띠(barColor) 로 전달.
-                      // 본문 앞 ● / ▲ 마커는 번호 매겨진 리스트와 중복 시그널 + 안구 흐름 방해 → 제거.
                       <div className="text-[17px] text-text-secondary leading-[1.85] tracking-[-0.005em] space-y-3">
                         {bodyText.split(/\n\n+/).map((para, pi) => (
                           <p key={pi} className="whitespace-pre-line">{para.trim()}</p>
