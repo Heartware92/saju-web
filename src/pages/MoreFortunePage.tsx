@@ -459,6 +459,20 @@ export default function MoreFortunePage({ category }: Props) {
   //   기존엔 fresh=1 이어도 silent restore 가 메모리·persist 캐시 hit 으로 setResult 를
   //   호출해, auto-start useEffect 가 result 있으니 skip → AI 호출이 안 일어나
   //   이전 결과가 그대로 표시되는 사고가 있었음. 사용자 신고 "A 시나리오 만 발생" 의 원인.
+  // ★ fresh URL 진입 시 name 입력 강제 리셋 — 별도 useEffect 로 분리해 입력 state 변경에
+  //   다시 발동되는 무한 리셋 루프 차단. deps 는 freshParam/category/isArchiveMode 만.
+  //   mount 또는 이 3개 변경 시 1회만 발동.
+  const nameResetDoneRef = useRef(false);
+  useEffect(() => {
+    if (!freshParam || isArchiveMode || category !== 'name') return;
+    if (nameResetDoneRef.current) return;
+    nameResetDoneRef.current = true;
+    setKoreanName('');
+    setCharMeanings([]);
+    setSelectedHanjas([]);
+    setManualMode(true);
+  }, [freshParam, category, isArchiveMode]);
+
   useEffect(() => {
     if (isArchiveMode) return;
     if (cacheGate) return;
@@ -466,15 +480,6 @@ export default function MoreFortunePage({ category }: Props) {
       // fresh=1 진입 — 캐시 무시하고 result/sections 비워둠 → auto-start useEffect 가 새 AI 호출 트리거
       setResult(null);
       setResultSections(null);
-      // ★ name 카테고리는 한자 선택 필수 — 입력 state 도 명시적 리셋해 입력 화면 강제 진입.
-      //   reload 후에도 어딘가에서 koreanName 이 살아있어 result 가 채워지는 사고가 있어
-      //   강한 안전망으로 fresh 진입에서 항상 입력 초기화.
-      if (category === 'name') {
-        setKoreanName('');
-        setCharMeanings([]);
-        setSelectedHanjas([]);
-        setManualMode(true);
-      }
       return;
     }
     const cacheKey = buildCacheKey();
