@@ -132,7 +132,10 @@ export function QuickFortuneGate({
   const navigate = useCallback(
     (extra?: string) => {
       if (!primaryProfile) return;
-      router.push(`${navPath}?profileId=${primaryProfile.id}${extra ?? ''}`);
+      // ★ targetPath 가 이미 ?year=... 같은 query 를 포함할 수 있음 (예: 연도별 운세)
+      //   "?" 가 두 번 들어가 URL parsing 깨지지 않도록 separator 분기
+      const separator = navPath.includes('?') ? '&' : '?';
+      router.push(`${navPath}${separator}profileId=${primaryProfile.id}${extra ?? ''}`);
       // 라우팅 직후 모달 state 정리 — 뒤로가기로 홈 복귀 시 모달이
       // 다시 떠 있는 현상 방지(bfcache 복원 케이스도 함께 차단)
       if (onClose) onClose();
