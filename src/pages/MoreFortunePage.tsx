@@ -1249,9 +1249,15 @@ function MoreFortuneResultCard({
   category?: MoreFortuneId;
   onReset: () => void;
 }) {
-  // 옛 record 호환 — 옛 prompt 의 [name] 같은 단일 마커가 본문에 그대로 노출되던 사고 차단
-  // 새 6 섹션 마커는 parseNameSections 가 처리하므로 여기 도달 X. 단일 본문 record 만 strip.
-  const cleanText = text.replace(/\r/g, '').replace(/^\s*\[(?:name|name_old|legacy)\]\s*$/gm, '').replace(/\n{3,}/g, '\n\n').trim();
+  // 옛 record 호환 + 안전망 — 마커가 본문에 그대로 노출되던 사고 차단.
+  // (1) 옛 단일 마커 [name]/[name_old]/[legacy]
+  // (2) 새 6 섹션 마커도 strip (parseMarkerSections 가 매칭 실패해 fallback 으로 들어온 경우)
+  // 대소문자·공백·콜론 변형까지 모두 흡수.
+  const cleanText = text
+    .replace(/\r/g, '')
+    .replace(/^[\s*#▶■·•\-]*\[\s*(?:name|name_old|legacy|summary|eum_ryeong|ja_won|harmony|numerology|advice)\s*\][\s*#:：]*$/gmi, '')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
 
   // [은유] 마커 우선 추출 + 본문 strip. 마커 없으면 첫 비어있지 않은 줄 fallback.
   const parsed = extractMetaphor(cleanText);

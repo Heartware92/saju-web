@@ -1642,10 +1642,12 @@ function parseMarkerSections<K extends string>(raw: string, keys: readonly K[]):
   const out: Partial<Record<K, string>> = {};
   if (!raw) return out;
   const keysPattern = keys.join('|');
-  // AI 가 마커 주변에 markdown bold/prefix 기호를 끼우는 케이스 흡수
+  // ★ AI 출력 변형 흡수 — 모든 케이스를 표준 [key] 형식으로 정규화:
+  //   [Summary] / [summary :] / [ summary ] / **[summary]** / ▶ [summary] / [summary]:
+  //   대소문자(i flag) + 마커 안팎 공백 + 뒤따라오는 콜론·기호도 강제 제거.
   const normalized = raw.replace(
-    new RegExp(`^[\\s*#▶■·•\\-]*\\[(${keysPattern})\\][\\s*#]*$`, 'gm'),
-    '[$1]',
+    new RegExp(`^[\\s*#▶■·•\\-]*\\[\\s*(${keysPattern})\\s*\\][\\s*#:：]*$`, 'gmi'),
+    (_match: string, key: string) => `[${key.toLowerCase()}]`,
   );
   const parts = normalized.split(new RegExp(`^\\s*\\[(${keysPattern})\\]\\s*$`, 'm'));
   for (let i = 1; i < parts.length; i += 2) {
