@@ -149,8 +149,10 @@ export default function MoreFortunePage({ category }: Props) {
   const handleReadRef = useRef<((force?: boolean) => Promise<void>) | null>(null);
   // SajuResultPage 패턴: refetchNonce 증가 → useEffect 가 force AI 호출 트리거
   const [refetchNonce, setRefetchNonce] = useState(0);
+  // ★ name 은 한자 선택이 사용자 입력 필수 → autoStart 제외. fresh URL 진입해도
+  //   입력 화면을 다시 거쳐 한자를 새로 선택할 수 있게 한다.
   const shouldAutoStart = freshParam && !isArchiveMode && !manualMode &&
-    (category === 'study' || category === 'children' || category === 'personality' || category === 'name');
+    (category === 'study' || category === 'children' || category === 'personality');
 
   // ── 로딩 안전장치: 70초 초과 시 강제 해제 ──
   const [loadingTimedOut] = useLoadingGuard(loading, 70_000);
@@ -801,21 +803,26 @@ export default function MoreFortunePage({ category }: Props) {
               category={category}
               onReset={() => {
                 // ★ 자동 풀이 카테고리 (학업·자녀·성격) 는 사용자 추가 입력이 없으므로
-                //   소개 화면을 거치지 않고 곧장 새 풀이 시작 (handleRefetch 와 동일 동작)
-                //   이름·꿈 카테고리는 입력 필요 → 기존대로 manualMode=true 로 소개 화면 복귀
-                if (category === 'study' || category === 'children' || category === 'personality' || category === 'name') {
+                //   곧장 새 풀이 시작 (handleRefetch — fresh=1 URL 강제 reload)
+                //   이름·꿈 카테고리는 입력 필요 → manualMode=true 로 입력 화면 복귀
+                if (category === 'study' || category === 'children' || category === 'personality') {
                   handleRefetch();
                   return;
                 }
                 setResult(null);
+                setResultSections(null);
                 setError(null);
                 setManualMode(true);
                 // 캐시 무효화 — 다시 풀이 시 이전 결과가 복원되지 않도록
                 if (category) {
                   useReportCacheStore.getState().invalidate(`more:${category}` as const);
                 }
-                // 이름·꿈 카테고리의 입력 초기화 — name 은 위 sectioned 분기에서 handleRefetch 로 빠지지만
-                // 옛 코드 호환을 위해 보존
+                // 이름 풀이 입력값 초기화 — 한자 다시 선택할 수 있게
+                if (category === 'name') {
+                  setKoreanName('');
+                  setCharMeanings([]);
+                  setSelectedHanjas([]);
+                }
                 if (category === 'dream') {
                   setDreamText('');
                   setDreamValid(false);
