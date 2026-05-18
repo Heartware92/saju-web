@@ -640,96 +640,71 @@ export default function TaekilResultPage() {
                     );
                   })}
 
+                  {/* 피해야 할 날 — 공통 섹션 패턴 (cta bar = red 로 시그널 유지) */}
                   {parsedAdvice.avoid && (
-                    <div style={{
-                      padding: 14,
-                      background: 'rgba(248,113,113,0.06)',
-                      borderRadius: 14,
-                      border: '1px solid rgba(248,113,113,0.25)',
-                    }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}>
-                        <span style={{
-                          display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                          width: 22, height: 22, borderRadius: '50%',
-                          background: 'rgba(248,113,113,0.15)',
-                          fontSize: 11, fontWeight: 800, color: '#F87171',
-                        }}>!</span>
-                        <span style={{ fontSize: 13, fontWeight: 700, color: '#F87171' }}>피해야 할 날</span>
+                    <section className="mt-3 rounded-2xl p-5 bg-[rgba(20,12,38,0.55)] border border-[rgba(248,113,113,0.30)]">
+                      <div className="flex items-center gap-2 mb-3">
+                        <span className="inline-block w-1 h-5 rounded-full" style={{ background: '#F87171' }} />
+                        <h3
+                          className="text-[17px] font-bold tracking-tight"
+                          style={{ fontFamily: 'var(--font-title)', color: '#F87171' }}
+                        >
+                          피해야 할 날
+                        </h3>
                       </div>
                       <p
-                        className="text-text-secondary leading-[1.85] tracking-[-0.005em]"
-                        style={{
-                          fontSize: 15, margin: 0, whiteSpace: 'pre-line',
-                          fontFamily: 'var(--font-body)',
-                        }}
+                        className="text-[17px] text-text-secondary leading-[1.85] tracking-[-0.005em] whitespace-pre-line"
+                        style={{ fontFamily: 'var(--font-body)' }}
                       >
                         {parsedAdvice.avoid}
                       </p>
-                    </div>
+                    </section>
                   )}
 
-                  {/* "OO에 대한 조언" — 1·2·3위 통합 권고 (행사 자체에 대한 톤) */}
+                  {/* "OO에 대한 조언" — 다른 풀이 페이지와 동일한 공통 섹션 패턴
+                       (좌측 cta bar + 17px 굵은 헤더 + 본문) */}
                   {parsedAdvice.overallAdvice && (() => {
                     const eventLabel = result?.subItem ?? result?.customLabel ?? result?.categoryLabel ?? '';
                     return (
-                      <div style={{
-                        marginTop: 16,
-                        padding: '18px 16px',
-                        background: 'radial-gradient(ellipse at top, rgba(124,92,252,0.10) 0%, rgba(20,12,38,0.65) 70%)',
-                        borderRadius: 16,
-                        border: '1px solid rgba(124,92,252,0.32)',
-                        boxShadow: '0 0 24px rgba(124,92,252,0.08), inset 0 0 1px rgba(124,92,252,0.40)',
-                      }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
-                          <span style={{
-                            display: 'inline-block', width: 4, height: 18, borderRadius: 2,
-                            background: 'var(--cta-primary)',
-                          }} />
-                          <span style={{ fontSize: 15, fontWeight: 800, color: 'var(--text-primary)', letterSpacing: '-0.01em' }}>
+                      <section className="mt-4 rounded-2xl p-5 bg-[rgba(20,12,38,0.55)] border border-[var(--border-subtle)]">
+                        <div className="flex items-center gap-2 mb-3">
+                          <span className="inline-block w-1 h-5 rounded-full bg-cta" />
+                          <h3
+                            className="text-[17px] font-bold text-text-primary tracking-tight"
+                            style={{ fontFamily: 'var(--font-title)' }}
+                          >
                             {eventLabel ? `${eventLabel}에 대한 조언` : '이 행사에 대한 조언'}
-                          </span>
+                          </h3>
                         </div>
                         <p
-                          className="text-text-secondary leading-[1.85] tracking-[-0.005em]"
-                          style={{
-                            fontSize: 16, margin: 0, whiteSpace: 'pre-line',
-                            fontFamily: 'var(--font-body)',
-                          }}
+                          className="text-[17px] text-text-secondary leading-[1.85] tracking-[-0.005em] whitespace-pre-line"
+                          style={{ fontFamily: 'var(--font-body)' }}
                         >
                           {parsedAdvice.overallAdvice}
                         </p>
-                      </div>
+                      </section>
                     );
                   })()}
 
-                  {/* "추천 대체 방법" — 1·2·3위가 어렵거나 행사 자체를 변형할 때 */}
+                  {/* "추천 대체 방법" — 공통 섹션 패턴 통일 */}
                   {parsedAdvice.alternative && (
-                    <div style={{
-                      marginTop: 12,
-                      padding: '18px 16px',
-                      background: 'rgba(252,213,180,0.06)',
-                      borderRadius: 16,
-                      border: '1px solid rgba(252,213,180,0.28)',
-                    }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fcd5b4" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                          <polyline points="23 4 23 10 17 10" />
-                          <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" />
-                        </svg>
-                        <span style={{ fontSize: 15, fontWeight: 800, color: '#fcd5b4', letterSpacing: '-0.01em' }}>
+                    <section className="mt-3 rounded-2xl p-5 bg-[rgba(20,12,38,0.55)] border border-[var(--border-subtle)]">
+                      <div className="flex items-center gap-2 mb-3">
+                        <span className="inline-block w-1 h-5 rounded-full bg-cta" />
+                        <h3
+                          className="text-[17px] font-bold text-text-primary tracking-tight"
+                          style={{ fontFamily: 'var(--font-title)' }}
+                        >
                           추천 대체 방법
-                        </span>
+                        </h3>
                       </div>
                       <p
-                        className="text-text-secondary leading-[1.85] tracking-[-0.005em]"
-                        style={{
-                          fontSize: 16, margin: 0, whiteSpace: 'pre-line',
-                          fontFamily: 'var(--font-body)',
-                        }}
+                        className="text-[17px] text-text-secondary leading-[1.85] tracking-[-0.005em] whitespace-pre-line"
+                        style={{ fontFamily: 'var(--font-body)' }}
                       >
                         {parsedAdvice.alternative}
                       </p>
-                    </div>
+                    </section>
                   )}
                 </>
               ) : (
