@@ -56,6 +56,8 @@ import {
   type ChildrenSectionKey,
   PERSONALITY_SECTION_KEYS,
   type PersonalitySectionKey,
+  NAME_SECTION_KEYS,
+  type NameSectionKey,
 } from '../constants/prompts';
 import type { TaekilResult } from '../engine/taekil';
 import { Solar } from 'lunar-javascript';
@@ -1629,6 +1631,8 @@ export const parseChildrenSections = (raw: string): Partial<Record<ChildrenSecti
   parseMarkerSections(raw, CHILDREN_SECTION_KEYS);
 export const parsePersonalitySections = (raw: string): Partial<Record<PersonalitySectionKey, string>> =>
   parseMarkerSections(raw, PERSONALITY_SECTION_KEYS);
+export const parseNameSections = (raw: string): Partial<Record<NameSectionKey, string>> =>
+  parseMarkerSections(raw, NAME_SECTION_KEYS);
 
 export const getStudyShort = async (result: SajuResult, profileId?: string): Promise<FortuneResponse> => {
   try {
@@ -1681,6 +1685,7 @@ export const getNameFortune = async (
     let nameInputWithResolved = nameInput;
     if (nameInput.hanjaName && nameInput.charMeanings && nameInput.charMeanings.length > 0) {
       const { lookupHanjaBySound } = await import('@/lib/data/hanjaByKoreanSound');
+      const { calc4Gyeok } = await import('@/utils/numerology');
       const chars = [...nameInput.hanjaName];
       const resolved = chars.map((char, i) => {
         const sound = nameInput.charMeanings?.[i]?.sound ?? '';
@@ -1702,12 +1707,28 @@ export const getNameFortune = async (
               jawon: '',
             };
       });
-      nameInputWithResolved = { ...nameInput, hanjaResolved: resolved };
+
+      // 81 수리 4격 계산 — 모든 글자가 정적 데이터에 매칭됐을 때만
+      const sounds = (nameInput.charMeanings ?? []).map(c => c.sound ?? '');
+      const fourGyeok = calc4Gyeok(chars, sounds);
+      const numerology4Gyeok = fourGyeok
+        ? {
+            strokes: fourGyeok.strokes,
+            won:    { sum: fourGyeok.won.sum,    grade: fourGyeok.won.entry.grade,    name: fourGyeok.won.entry.name,    meaning: fourGyeok.won.entry.meaning },
+            hyeong: { sum: fourGyeok.hyeong.sum, grade: fourGyeok.hyeong.entry.grade, name: fourGyeok.hyeong.entry.name, meaning: fourGyeok.hyeong.entry.meaning },
+            i:      { sum: fourGyeok.i.sum,      grade: fourGyeok.i.entry.grade,      name: fourGyeok.i.entry.name,      meaning: fourGyeok.i.entry.meaning },
+            jeong:  { sum: fourGyeok.jeong.sum,  grade: fourGyeok.jeong.entry.grade,  name: fourGyeok.jeong.entry.name,  meaning: fourGyeok.jeong.entry.meaning },
+          }
+        : undefined;
+
+      nameInputWithResolved = { ...nameInput, hanjaResolved: resolved, numerology4Gyeok };
     }
 
+    // 6 섹션 마커 출력이 추가되어 길이 증가 — 출력 토큰 50% 증액
     const baseTokens = MORE_FORTUNE_CONFIGS.name.maxTokens;
-    const maxTokens = isHanjaMode ? Math.round(baseTokens * 1.25) : baseTokens;
+    const maxTokens = isHanjaMode ? Math.round(baseTokens * 1.5) : Math.round(baseTokens * 1.25);
     const content = await callGPT(generateNameFortunePrompt(result, nameInputWithResolved), maxTokens);
+    const sections = parseNameSections(content);
     archiveSaju({
       profileId,
       sourceBirth: sourceBirthFromSaju(result),
@@ -1722,7 +1743,7 @@ export const getNameFortune = async (
       creditType: 'moon',
       creditUsed: 1,
     });
-    return { success: true, content };
+    return { success: true, content, sections };
   } catch (e: any) { return { success: false, error: e.message }; }
 };
 

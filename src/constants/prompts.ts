@@ -7163,13 +7163,41 @@ export interface NameAnalysisInput {
   /** 사용자가 모달에서 선택한 한자의 결정론적 메타 — 부수·획수·자원오행이 정적 데이터에서 lookup 된 값.
    *  hanjaName 과 같은 순서. 있으면 prompt 가 "확정 한자" 모드로 동작해 AI 환각 차단. */
   hanjaResolved?: Array<{ char: string; meaning: string; radical: string; strokes: number; jawon: string }>;
+  /** 4격(원·형·이·정) + 81 수리 결과 — service 에서 calc4Gyeok 으로 계산해 주입 */
+  numerology4Gyeok?: {
+    strokes: number[];
+    won:    { sum: number; grade: string; name: string; meaning: string };
+    hyeong: { sum: number; grade: string; name: string; meaning: string };
+    i:      { sum: number; grade: string; name: string; meaning: string };
+    jeong:  { sum: number; grade: string; name: string; meaning: string };
+  };
 }
+
+// ── 이름 풀이 6 섹션 ──────────────────────────────────────────────
+export const NAME_SECTION_KEYS = [
+  'summary',     // 종합 평가 — 결론 한 줄 + 은유
+  'eum_ryeong',  // 음령오행 풀이 (한글 초성)
+  'ja_won',      // 자원오행 풀이 (한자 부수)
+  'harmony',     // 사주와의 조화 (용신·기신 매칭)
+  'numerology',  // 수리 길흉 (81수리 4격)
+  'advice',      // 실천 조언
+] as const;
+export type NameSectionKey = typeof NAME_SECTION_KEYS[number];
+
+export const NAME_SECTION_LABELS: Record<NameSectionKey, string> = {
+  summary:    '종합 평가',
+  eum_ryeong: '음령오행 — 한글 발음의 결',
+  ja_won:     '자원오행 — 한자 부수의 결',
+  harmony:    '사주와의 조화',
+  numerology: '수리 길흉 — 81 수리 4격',
+  advice:     '실천 조언',
+};
 
 export const generateNameFortunePrompt = (
   result: SajuResult,
   nameInput: NameAnalysisInput,
 ): string => {
-  const { koreanName, koreanInitialsElements, charMeanings, hanjaName, hanjaResolved } = nameInput;
+  const { koreanName, koreanInitialsElements, charMeanings, hanjaName, hanjaResolved, numerology4Gyeok } = nameInput;
 
   // 음령오행 분포 카운트
   const countEls = (els: string[]) => {
@@ -7277,27 +7305,60 @@ ${isHanjaMode
   : '※ 한자 정보가 없으므로 자원오행은 절대 임의로 부여하지 말고 음령오행 분석에 충실할 것.'}
 
 ${isResolvedHanjaMode ? RESOLVED_HANJA_BLOCK + '\n\n' + HANJA_RULE_BLOCK + '\n' : (isHanjaMode ? HANJA_INFER_RULE + '\n\n' + HANJA_RULE_BLOCK + '\n' : '')}
+${numerology4Gyeok ? `[수리 길흉 — 81 수리 4격 결정값 (재계산·수정 금지)]
+획수: ${numerology4Gyeok.strokes.join('·')}
+원격(元格, 초년운 ~35세) = ${numerology4Gyeok.won.sum}수 — ${numerology4Gyeok.won.grade} ${numerology4Gyeok.won.name}: ${numerology4Gyeok.won.meaning}
+형격(亨格, 중년·주운 35~55) = ${numerology4Gyeok.hyeong.sum}수 — ${numerology4Gyeok.hyeong.grade} ${numerology4Gyeok.hyeong.name}: ${numerology4Gyeok.hyeong.meaning}
+이격(利格, 사회·인간관계) = ${numerology4Gyeok.i.sum}수 — ${numerology4Gyeok.i.grade} ${numerology4Gyeok.i.name}: ${numerology4Gyeok.i.meaning}
+정격(貞格, 평생·총운) = ${numerology4Gyeok.jeong.sum}수 — ${numerology4Gyeok.jeong.grade} ${numerology4Gyeok.jeong.name}: ${numerology4Gyeok.jeong.meaning}
+
+★ 위 4격 수와 길흉은 결정값. 다른 수·등급으로 재계산하거나 임의 변경 금지.
+` : ''}
 ${MORE_COMMON_RULES}
 
-[작성 지침] ${isHanjaMode ? '450~620자' : '380~500자'} 내외. 각 단락은 빈 줄로 구분.
-${isHanjaMode ? `**첫 줄(필수)**: \`자원오행 판정\` 라인 — 글자별 추정 한자와 부수, 자원오행을 명시.
-형식 예시: \`자원오행 판정: 넓을 홍→洪(水부, 水) · 길할 길→吉(口부, 水) · 아이 동→童(立부, 火)\`
-뜻이 비어 있던 글자는 \`(순우리말)\`로 표기하고 자원오행 미부여.
-` : ''}1단락 — 은유 제목 + 결론 한 줄: 이름이 사주를 돕는가·중립인가·거스르는가 (단정적으로)
-2단락 — 한글 음령오행 분포가 사주(용신 ${yongSinEl}·기신 ${result.giSin}·신강신약 ${result.strengthStatus})와 어떻게 맞물리는지 구체 묘사
-${isHanjaMode
-  ? `3단락 — 추정한 한자의 자원오행이 음령과 조화를 이루는지, 사주의 약한 오행을 어떻게 보강하는지 구체 분석. 추정 근거(뜻과 한자 매칭)도 한 문장 명시.
-4단락 — 음령·자원 교차 평가: 둘 다 용신 보강이면 "좋은 이름", 상충하면 이유 설명. 개명·필명 권장 여부 단정`
-  : isPureKorean
-    ? `3단락 — 순우리말 이름의 정서·울림이 사주의 일주(${result.pillars.day.gan}${result.pillars.day.zhi}) 기질과 어떻게 어울리는지 묘사. 음령 분포만으로 사주 보완이 충분한지, 부족하면 필명·자주 쓰는 색 등 보완책 제안. 개명 권장 여부 단정`
-    : `3단락 — 음령 분포만으로 사주 보완이 충분한지, 부족하다면 한자 선택·필명·자주 쓰는 색 등 보완책 제안. 개명 권장 여부 단정`
-}
-마지막 — "- " 불릿 3개로 실천 조언 (필명·SNS ID·자주 쓰는 색·호칭 등 이름 대안 보완)
+[작성 지침] 6개 섹션 구조 — 각 섹션은 반드시 [key] 마커 줄로 시작. 총 본문 ${isHanjaMode ? '950~1300' : '700~950'}자.
+
+★★★ 출력 형식 절대 규칙 (한 글자도 어기지 마세요)
+- 각 섹션은 반드시 대괄호 마커 한 줄로 시작: [summary] / [eum_ryeong] / [ja_won] / [harmony] / [numerology] / [advice]
+- 절대 금지: "1. 종합", "2. 음령오행" 같은 번호+제목 헤더를 본문에 출력하는 것
+- 절대 금지: 마커 누락하고 한 덩어리로 통합 출력
+- 절대 금지: "[name]" 같은 엉뚱한 마커 출력
+- 절대 금지: 본문 안 "1) ~", "2) ~" 같은 번호 indent (마지막 [advice] 의 "- " 불릿만 예외)
+- 본문은 자연스러운 한국어 문단으로 한 호흡씩
+
+★ 출력 형식:
+[summary]
+[은유] (한 줄, 18자 이내, 자연 이미지 한 쌍. 예: "강물에 비친 금빛 달")
+(빈 줄)
+본문 130~180자 — 이름이 사주를 돕는가·중립인가·거스르는가 한 줄로 단정하고, 음령오행 + 자원오행 + 수리 길흉을 종합한 결론을 자연스럽게 풀어쓰기. 한 단락 안에 4격 중 가장 강한 격 1개를 한 문장으로 짚어주기.
+
+[eum_ryeong]
+본문 150~200자 — 한글 음령오행 ${koreanInitialsElements.join('·') || '(없음)'} 의 분포가 사주(용신 ${yongSinEl} · 기신 ${result.giSin} · 신강신약 ${result.strengthStatus})와 어떻게 맞물리는지 자연스러운 문단으로. 용신 보강 / 기신 강화 / 중립 중 어느 결인지 단정 + 일상에서 어떤 효과로 발현되는지 한 호흡.
+
+${isHanjaMode ? `[ja_won]
+본문 ${isResolvedHanjaMode ? '180~240' : '180~240'}자 — ${isResolvedHanjaMode
+  ? '확정 한자의 자원오행이 음령과 어떻게 교차하는지 자연스러운 문단으로. 부수와 자원오행을 인용하되 "부수 → 오행" 형식으로 1~2문장 짧게 박고, 그 오행이 사주에 어떤 역할(보강/중복/거스름)을 하는지 풀이.'
+  : '뜻+음으로 추정한 한자의 부수와 자원오행을 1~2문장 명시하고, 그 자원오행이 사주의 약한 오행을 어떻게 보강하는지 구체 분석. 추정 근거(뜻과 한자 매칭)도 한 문장 명시.'}
+
+` : ''}[harmony]
+본문 160~210자 — 음령오행 + ${isHanjaMode ? '자원오행' : '(자원오행 없음)'} + 수리 길흉 4격을 종합해 사주와의 조화도를 단정. 어떤 영역(재물·인간관계·건강·직장)에서 가장 큰 효과 / 가장 큰 보완 필요인지 구체 묘사. 개명·필명 권장 여부도 한 문장으로 단정.
+
+${numerology4Gyeok ? `[numerology]
+본문 200~270자 — 4격 각각의 길흉을 자연스러운 문단으로 풀어쓰기. 원격(초년·기반) → 형격(중년·주운) → 이격(인간관계) → 정격(평생) 순서로, 각 격마다 "${numerology4Gyeok.won.sum}수 ${numerology4Gyeok.won.grade}" 같이 수와 등급을 1회 인용 + 그 결이 일상에서 어떻게 나타나는지 1~2문장. 4격 중 가장 강한 격과 가장 약한 격을 마지막 한 문장으로 짚어 마무리.
+
+` : ''}[advice]
+본문 120~170자 — "- " 불릿 3~4개로 실천 조언. (1./2./3. 번호 절대 금지):
+- 자주 쓰는 색·소품 1개 (음령·자원오행 보완)
+- 필명·SNS ID 또는 영문 이니셜 활용 한 가지
+- 일상에서 의식할 자세 또는 호칭 1개
+- (선택) 약한 격 보완 행동 1개
+마지막 한 줄(20~40자): 응원·격려.
 
 [금지]
 - 자원오행 판정 규칙에 없는 부수 오행을 창작하지 말 것.
 - 글자별 뜻이 입력되지 않았는데 자원오행을 임의로 지어내지 말 것.
-- 추정한 한자가 인명에 거의 쓰이지 않는 벽자(僻字)이면 본문에 추정임을 명시하고 보편 한자 후보도 함께 제시할 것.`;
+- 81 수리 4격의 수·등급을 임의로 바꾸지 말 것 (결정값 그대로 사용).
+- 추정한 한자가 벽자(僻字)이면 본문에 추정임을 명시.`;
 };
 
 // ─────────────────────────────────────────────

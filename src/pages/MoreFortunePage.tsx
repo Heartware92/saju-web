@@ -40,6 +40,7 @@ import {
   parseStudySections,
   parseChildrenSections,
   parsePersonalitySections,
+  parseNameSections,
 } from '../services/fortuneService';
 import { sajuDB } from '../services/supabase';
 import { findRecentArchive, type ArchiveCategory } from '../services/archiveService';
@@ -58,6 +59,7 @@ import {
   STUDY_SECTION_KEYS, STUDY_SECTION_LABELS,
   CHILDREN_SECTION_KEYS, CHILDREN_SECTION_LABELS,
   PERSONALITY_SECTION_KEYS, PERSONALITY_SECTION_LABELS,
+  NAME_SECTION_KEYS, NAME_SECTION_LABELS,
 } from '../constants/prompts';
 import { SectionCollapsible } from '@/components/saju/SectionCollapsible';
 import { HanjaPickerModal } from '@/components/saju/HanjaPickerModal';
@@ -148,7 +150,7 @@ export default function MoreFortunePage({ category }: Props) {
   // SajuResultPage 패턴: refetchNonce 증가 → useEffect 가 force AI 호출 트리거
   const [refetchNonce, setRefetchNonce] = useState(0);
   const shouldAutoStart = freshParam && !isArchiveMode && !manualMode &&
-    (category === 'study' || category === 'children' || category === 'personality');
+    (category === 'study' || category === 'children' || category === 'personality' || category === 'name');
 
   // ── 로딩 안전장치: 70초 초과 시 강제 해제 ──
   const [loadingTimedOut] = useLoadingGuard(loading, 70_000);
@@ -247,6 +249,9 @@ export default function MoreFortunePage({ category }: Props) {
           setResultSections(Object.keys(out).length > 0 ? out : null);
         } else if (record.category === 'personality') {
           const out = parsePersonalitySections(content) as Record<string, string>;
+          setResultSections(Object.keys(out).length > 0 ? out : null);
+        } else if (record.category === 'name') {
+          const out = parseNameSections(content) as Record<string, string>;
           setResultSections(Object.keys(out).length > 0 ? out : null);
         } else {
           setResultSections(null);
@@ -429,6 +434,9 @@ export default function MoreFortunePage({ category }: Props) {
           setResultSections(Object.keys(out).length > 0 ? out : null);
         } else if (category === 'personality') {
           const out = parsePersonalitySections(cached.data) as Record<string, string>;
+          setResultSections(Object.keys(out).length > 0 ? out : null);
+        } else if (category === 'name') {
+          const out = parseNameSections(cached.data) as Record<string, string>;
           setResultSections(Object.keys(out).length > 0 ? out : null);
         } else {
           setResultSections(null);
@@ -774,7 +782,7 @@ export default function MoreFortunePage({ category }: Props) {
 
         {/* 결과 — 학업·자녀·성격은 섹션별 카드 / 그 외는 단일 카드 */}
         <AnimatePresence>
-          {result && resultSections && (category === 'study' || category === 'children' || category === 'personality') && (
+          {result && resultSections && (category === 'study' || category === 'children' || category === 'personality' || category === 'name') && (
             <MoreFortuneSectionedCard
               title={`${cfg.title} 풀이`}
               sections={resultSections}
@@ -785,7 +793,7 @@ export default function MoreFortunePage({ category }: Props) {
               }}
             />
           )}
-          {result && (!resultSections || !(category === 'study' || category === 'children' || category === 'personality')) && (
+          {result && (!resultSections || !(category === 'study' || category === 'children' || category === 'personality' || category === 'name')) && (
             <MoreFortuneResultCard
               title={`${cfg.title} 풀이`}
               text={result}
@@ -795,7 +803,7 @@ export default function MoreFortunePage({ category }: Props) {
                 // ★ 자동 풀이 카테고리 (학업·자녀·성격) 는 사용자 추가 입력이 없으므로
                 //   소개 화면을 거치지 않고 곧장 새 풀이 시작 (handleRefetch 와 동일 동작)
                 //   이름·꿈 카테고리는 입력 필요 → 기존대로 manualMode=true 로 소개 화면 복귀
-                if (category === 'study' || category === 'children' || category === 'personality') {
+                if (category === 'study' || category === 'children' || category === 'personality' || category === 'name') {
                   handleRefetch();
                   return;
                 }
@@ -806,10 +814,8 @@ export default function MoreFortunePage({ category }: Props) {
                 if (category) {
                   useReportCacheStore.getState().invalidate(`more:${category}` as const);
                 }
-                if (category === 'name') {
-                  setKoreanName('');
-                  setCharMeanings([]);
-                }
+                // 이름·꿈 카테고리의 입력 초기화 — name 은 위 sectioned 분기에서 handleRefetch 로 빠지지만
+                // 옛 코드 호환을 위해 보존
                 if (category === 'dream') {
                   setDreamText('');
                   setDreamValid(false);
@@ -1344,18 +1350,20 @@ function MoreFortuneSectionedCard({
 }: {
   title: string;
   sections: Record<string, string>;
-  category: 'study' | 'children' | 'personality';
+  category: 'study' | 'children' | 'personality' | 'name';
   isArchiveMode: boolean;
   onReset: () => void;
 }) {
   const keys =
     category === 'study' ? STUDY_SECTION_KEYS
     : category === 'children' ? CHILDREN_SECTION_KEYS
-    : PERSONALITY_SECTION_KEYS;
+    : category === 'personality' ? PERSONALITY_SECTION_KEYS
+    : NAME_SECTION_KEYS;
   const labels =
     category === 'study' ? STUDY_SECTION_LABELS as Record<string, string>
     : category === 'children' ? CHILDREN_SECTION_LABELS as Record<string, string>
-    : PERSONALITY_SECTION_LABELS as Record<string, string>;
+    : category === 'personality' ? PERSONALITY_SECTION_LABELS as Record<string, string>
+    : NAME_SECTION_LABELS as Record<string, string>;
 
   // 본문 잔여 섹션 마커 strip 패턴
   // AI 가 가이드 어겨 본문 안에 [aptitude] / [strengths] 같은 자기 마커를 또
