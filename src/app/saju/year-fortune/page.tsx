@@ -108,7 +108,6 @@ function YearFortuneSelector() {
             </option>
           ))}
         </select>
-        <p className="text-[11.5px] text-text-tertiary mt-2">기본값: 올해 ({currentYear}년)</p>
       </div>
 
       {/* 프로필 선택 카드 */}
@@ -134,7 +133,6 @@ function YearFortuneSelector() {
             ))}
           </select>
         )}
-        <p className="text-[11.5px] text-text-tertiary mt-2">기본값: 대표 프로필</p>
       </div>
 
       {/* 풀이 보기 버튼 */}

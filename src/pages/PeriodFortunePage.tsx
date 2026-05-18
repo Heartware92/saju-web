@@ -371,6 +371,24 @@ export default function PeriodFortunePage({ scope }: { scope: FortuneScope | 'da
   // ref guard: 동일한 호출 키에 대해 중복 API 호출 방지 (탭 전환·백그라운드 복귀 시 보호)
   const apiCalledKeyRef = useRef<string | null>(null);
 
+  // ★ fresh=1 또는 targetYear/profileId 변경 시 state 명시적 reset
+  //   router.push 만으로는 같은 component instance 라 useState 유지됨 →
+  //   연도별 운세에서 다른 연도로 navigate 시 옛 결과 state 가 그대로 보이는 사고 방지.
+  const profileIdParam = searchParams?.get('profileId') ?? null;
+  const isFreshParam = searchParams?.get('fresh') === '1';
+  useEffect(() => {
+    if (!isFreshParam) return;
+    // fresh=1 진입 — 모든 풀이 state 강제 초기화 후 useEffect 가 새 풀이 호출하도록
+    setNewyearReport(null);
+    setPickedDateReport(null);
+    setNewyearReportLoading(scope === 'year');
+    setPickedDateReportLoading(scope === 'date');
+    setCacheGate(null);
+    setSavedRecordId(null);
+    apiCalledKeyRef.current = null;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isFreshParam, targetYear, profileIdParam, scope]);
+
   // ── 보관함 재생 모드 — recordId 가 있으면 DB에서 풀이 복원, AI 호출 skip ──
   // (scope='year'·newyear / scope='date'·period 가 archive 저장됨)
   useEffect(() => {
