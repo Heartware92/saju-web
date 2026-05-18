@@ -64,6 +64,15 @@ import {
 import { SectionCollapsible } from '@/components/saju/SectionCollapsible';
 import { HanjaPickerModal } from '@/components/saju/HanjaPickerModal';
 import type { HanjaCandidate } from '@/lib/data/hanjaByKoreanSound';
+import {
+  EumRyeongVisual,
+  JaWonVisual,
+  HarmonyVisual,
+  NumerologyVisual,
+  AdviceVisual,
+  resolveHanjasForVisual,
+  extractBullets,
+} from '@/components/saju/NameSectionVisuals';
 
 interface Props {
   /** 카테고리 id. /saju/more/[category] 동적 라우트에서 주입된다. */
@@ -121,6 +130,41 @@ export default function MoreFortunePage({ category }: Props) {
   const [charMeanings, setCharMeanings] = useState<string[]>([]);
   /** 사용자가 모달에서 선택한 한자 (글자 위치별). null = 미선택. 선택 시 charMeanings 자동 채움 */
   const [selectedHanjas, setSelectedHanjas] = useState<(string | null)[]>([]);
+
+  /** 이름 풀이 시각 컴포넌트들의 context — analyzeKoreanName + selectedHanjas + saju 로 빌드 */
+  const nameVisualContext = useMemo(() => {
+    if (category !== 'name') return null;
+    const kor = analyzeKoreanName(koreanName);
+    const hanjaName = selectedHanjas.filter(Boolean).join('');
+    const completeHanja = hanjaName.length === kor.chars.length && kor.chars.length > 0;
+    const charMeaningsArr = kor.chars.map((_, i) => ({ sound: kor.chars[i], meaning: charMeanings[i] ?? '' }));
+    const hanjas = completeHanja ? resolveHanjasForVisual(hanjaName, charMeaningsArr) : [];
+    return {
+      chars: kor.chars,
+      elements: kor.elements,
+      sounds: kor.chars, // 한국 음 = 한글 음절
+      hanjas, // 한자 모드일 때만 채워짐
+      yongSinEl: saju?.yongSinElement ?? '',
+      giSinEl: (() => {
+        if (!saju) return '';
+        const g = saju.giSin || '';
+        const dayEl = saju.dayMasterElement;
+        const EL_GEN: Record<string, string> = { '목': '화', '화': '토', '토': '금', '금': '수', '수': '목' };
+        const EL_CON: Record<string, string> = { '목': '토', '화': '금', '토': '수', '금': '목', '수': '화' };
+        const EL_PAR: Record<string, string> = { '목': '수', '화': '목', '토': '화', '금': '토', '수': '금' };
+        const EL_BY:  Record<string, string> = { '목': '금', '화': '수', '토': '목', '금': '화', '수': '토' };
+        if (g.includes('식신') || g.includes('상관')) return EL_GEN[dayEl] ?? '';
+        if (g.includes('편재') || g.includes('정재')) return EL_CON[dayEl] ?? '';
+        if (g.includes('편관') || g.includes('정관')) return EL_BY[dayEl] ?? '';
+        if (g.includes('편인') || g.includes('정인')) return EL_PAR[dayEl] ?? '';
+        if (g.includes('비견') || g.includes('겁재')) return dayEl;
+        return '';
+      })(),
+      jawonElements: hanjas.map(h => h.jawon).filter(Boolean),
+    };
+  // saju 객체 자체가 매 렌더 새로 생기더라도 핵심 필드만 보고 stale 회피
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [category, koreanName, charMeanings, selectedHanjas, saju?.yongSinElement, saju?.giSin, saju?.dayMasterElement]);
 
   // 꿈 해몽 전용 state — DreamInputPanel에서 onChange로 주입되는 합성 텍스트/유효성
   // dreamInputResetKey: "다른 꿈 풀이받기" 클릭 시 패널을 강제 remount 해 내부 상태(선명/흐릿 모드, 칩 선택 등)를 초기화
@@ -789,6 +833,7 @@ export default function MoreFortunePage({ category }: Props) {
         <AnimatePresence>
           {result && resultSections && (category === 'study' || category === 'children' || category === 'personality' || category === 'name') && (
             <MoreFortuneSectionedCard
+              nameVisualContext={category === 'name' ? nameVisualContext : null}
               title={`${cfg.title} 풀이`}
               sections={resultSections}
               category={category}
@@ -1361,12 +1406,22 @@ function MoreFortuneSectionedCard({
   category,
   isArchiveMode,
   onReset,
+  nameVisualContext,
 }: {
   title: string;
   sections: Record<string, string>;
   category: 'study' | 'children' | 'personality' | 'name';
   isArchiveMode: boolean;
   onReset: () => void;
+  nameVisualContext?: {
+    chars: string[];
+    elements: string[];
+    sounds: string[];
+    hanjas: Array<{ char: string; meaning: string; radical: string; strokes: number; jawon: string }>;
+    yongSinEl: string;
+    giSinEl: string;
+    jawonElements: string[];
+  } | null;
 }) {
   const keys =
     category === 'study' ? STUDY_SECTION_KEYS
@@ -1402,6 +1457,32 @@ function MoreFortuneSectionedCard({
           // 본문 안 잔여 카테고리 마커 strip → extractMetaphor 로 [은유] 마커 + 부제 추출
           const stripped = raw.replace(markerStripPattern, '').replace(/\n{3,}/g, '\n\n').trim();
           const { metaphorTitle, bodyText } = extractMetaphor(stripped);
+          // name 카테고리: 섹션별 시각 컴포넌트 + 본문에서 불릿 분리 (advice 만)
+          const nameVisualNode = category === 'name' && nameVisualContext ? (() => {
+            const ctx = nameVisualContext;
+            switch (key) {
+              case 'eum_ryeong':
+                return <EumRyeongVisual chars={ctx.chars} elements={ctx.elements} yongSinEl={ctx.yongSinEl} giSinEl={ctx.giSinEl} />;
+              case 'ja_won':
+                return ctx.hanjas.length > 0 ? <JaWonVisual hanjas={ctx.hanjas} /> : null;
+              case 'harmony':
+                return <HarmonyVisual yongSinEl={ctx.yongSinEl} giSinEl={ctx.giSinEl} eumElements={ctx.elements} jawonElements={ctx.jawonElements} />;
+              case 'numerology':
+                return ctx.hanjas.length > 0 ? <NumerologyVisual chars={ctx.hanjas.map(h => h.char)} sounds={ctx.sounds} /> : null;
+              default:
+                return null;
+            }
+          })() : null;
+
+          // advice 본문에서 불릿 추출 → AdviceVisual 로 카드 변환
+          let renderBody: string = bodyText;
+          let nameAdviceBullets: string[] = [];
+          if (category === 'name' && key === 'advice') {
+            const ex = extractBullets(bodyText);
+            nameAdviceBullets = ex.bullets;
+            renderBody = ex.rest;
+          }
+
           return (
             <SectionCollapsible
               key={key}
@@ -1410,10 +1491,16 @@ function MoreFortuneSectionedCard({
               defaultOpen={idx === 0}
               enterDelay={idx * 0.05}
             >
+              {nameVisualNode}
+              {category === 'name' && key === 'advice' && nameAdviceBullets.length > 0 && (
+                <AdviceVisual bullets={nameAdviceBullets} />
+              )}
               <div className="text-[17px] text-text-secondary leading-[1.85] tracking-[-0.005em] space-y-3">
                 {(() => {
                   // 단락 분리 + 단락 안에서 "- " "· " 같은 불릿 라인은 별도 리스트로 렌더
-                  const paras = bodyText.split(/\n\n+/).map(p => p.trim()).filter(Boolean);
+                  // name+advice 는 위에서 AdviceVisual 로 분리했으므로 renderBody 사용
+                  const sourceText = (category === 'name' && key === 'advice') ? renderBody : bodyText;
+                  const paras = sourceText.split(/\n\n+/).map(p => p.trim()).filter(Boolean);
                   return paras.map((para, pi) => {
                     const lines = para.split('\n');
                     const items: { type: 'text' | 'bullet'; content: string }[] = [];
