@@ -402,7 +402,10 @@ export default function MoreFortunePage({ category }: Props) {
       const meaningsKey = charMeanings.map((m) => (m || '').trim()).join('|');
       // 한자 선택값이 다르면 다른 풀이로 인식해야 함 — 같은 뜻이라도 한자 다르면 자원오행 다름
       const hanjasKey = selectedHanjas.map((h) => h ?? '').join('|');
-      return `${sk}:${koreanName.trim()}|${meaningsKey}|${hanjasKey}`;
+      // v2: prefix — 6 섹션 마커 prompt 적용 후 옛 단일 본문 캐시 자동 무효화
+      // 81 수리 4격 도입·섹션 분리 후 prompt 출력 형식이 완전히 바뀌어, 옛 캐시는
+      // 사용 안 함. 이 prefix 만으로 새 풀이가 강제됨.
+      return `v2:${sk}:${koreanName.trim()}|${meaningsKey}|${hanjasKey}`;
     }
     return sk;
   };
@@ -1201,8 +1204,12 @@ function MoreFortuneResultCard({
   category?: MoreFortuneId;
   onReset: () => void;
 }) {
+  // 옛 record 호환 — 옛 prompt 의 [name] 같은 단일 마커가 본문에 그대로 노출되던 사고 차단
+  // 새 6 섹션 마커는 parseNameSections 가 처리하므로 여기 도달 X. 단일 본문 record 만 strip.
+  const cleanText = text.replace(/\r/g, '').replace(/^\s*\[(?:name|name_old|legacy)\]\s*$/gm, '').replace(/\n{3,}/g, '\n\n').trim();
+
   // [은유] 마커 우선 추출 + 본문 strip. 마커 없으면 첫 비어있지 않은 줄 fallback.
-  const parsed = extractMetaphor(text.replace(/\r/g, ''));
+  const parsed = extractMetaphor(cleanText);
   let metaphor = parsed.metaphorTitle;
   let restSource = parsed.bodyText;
   if (!metaphor) {
