@@ -562,19 +562,23 @@ export interface ZamidusuAIResult {
 }
 
 const ZAMIDUSU_KEYS: ZamidusuSectionKey[] = [
-  'overview', 'core', 'relations', 'wealth', 'body_mind', 'mutagen', 'daehan', 'advice',
+  'overview', 'main_star', 'helper_stars', 'body_palace',
+  'relations', 'wealth', 'body_mind', 'mutagen',
+  'interactions', 'daehan', 'sohan', 'advice',
 ];
 
 export function parseZamidusuSections(raw: string): Partial<Record<ZamidusuSectionKey, string>> {
   const out: Partial<Record<ZamidusuSectionKey, string>> = {};
-  const re = /^\s*\[(overview|core|relations|wealth|body_mind|mutagen|daehan|advice)\]\s*$/m;
+  const re = /^\s*\[(overview|main_star|helper_stars|body_palace|relations|wealth|body_mind|mutagen|interactions|daehan|sohan|advice|core)\]\s*$/m;
   const parts = raw.split(re);
-  // parts: ['', 'overview', '본문...', 'core', '본문...', ...]
+  // parts: ['', 'overview', '본문...', 'main_star', '본문...', ...]
   for (let i = 1; i < parts.length; i += 2) {
     const key = parts[i] as ZamidusuSectionKey;
     const body = (parts[i + 1] ?? '').trim();
-    if (ZAMIDUSU_KEYS.includes(key) && body) {
-      out[key] = body;
+    // 'core' 는 구버전 호환 — main_star 로 매핑 (옛 archive 데이터 그대로 표시 가능)
+    const normalizedKey = (key as string) === 'core' ? ('main_star' as ZamidusuSectionKey) : key;
+    if (ZAMIDUSU_KEYS.includes(normalizedKey) && body) {
+      out[normalizedKey] = body;
     }
   }
   return out;
@@ -588,15 +592,17 @@ export const getZamidusuReading = async (
   try {
     const prompt = generateZamidusuPrompt(z);
 
-    // 2-pass 분할: 1차(overview·core·relations·wealth) + 2차(body_mind·mutagen·daehan·advice)
-    const pass1Prompt = prompt + '\n\n★ 이번 응답에서는 [overview] [core] [relations] [wealth] 4개 섹션만 출력하세요. 나머지 4개는 다음 호출에서 작성합니다. 각 섹션의 분량 지침을 충실히 따라 깊이 있게 작성하세요.';
-    const pass1Content = await callGPT(pass1Prompt, 7000);
+    // 2-pass 분할 (12 섹션):
+    //   1차 (명궁 영역 + 외부 관계·재물): overview·main_star·helper_stars·body_palace·relations·wealth (6)
+    //   2차 (몸·마음 + 사화·시간·조언):  body_mind·mutagen·interactions·daehan·sohan·advice (6)
+    const pass1Prompt = prompt + '\n\n★ 이번 응답에서는 [overview] [main_star] [helper_stars] [body_palace] [relations] [wealth] 6개 섹션만 출력하세요. 나머지 6개는 다음 호출에서 작성합니다. 각 섹션의 분량 지침을 충실히 따라 깊이 있게 작성하세요.';
+    const pass1Content = await callGPT(pass1Prompt, 8000);
     const pass1Sections = parseZamidusuSections(pass1Content);
 
     const pass2Prompt = prompt
-      + '\n\n★ 이번 응답에서는 [body_mind] [mutagen] [daehan] [advice] 4개 섹션만 출력하세요. [overview] [core] [relations] [wealth]는 이미 완료되었습니다. 각 섹션의 분량 지침을 충실히 따라 깊이 있게 작성하세요.'
+      + '\n\n★ 이번 응답에서는 [body_mind] [mutagen] [interactions] [daehan] [sohan] [advice] 6개 섹션만 출력하세요. [overview] [main_star] [helper_stars] [body_palace] [relations] [wealth]는 이미 완료되었습니다. 각 섹션의 분량 지침을 충실히 따라 깊이 있게 작성하세요.'
       + `\n\n[이미 작성된 1차 내용 — 참고만, 출력하지 말 것]\n${pass1Content}`;
-    const pass2Content = await callGPT(pass2Prompt, 6000);
+    const pass2Content = await callGPT(pass2Prompt, 8000);
     const pass2Sections = parseZamidusuSections(pass2Content);
 
     const sections: Partial<Record<ZamidusuSectionKey, string>> = { ...pass1Sections, ...pass2Sections };
