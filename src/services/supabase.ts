@@ -363,9 +363,12 @@ export const sajuDB = {
   // result_data/engine_result/interpretation_basic/interpretation_detailed 제외 → 1MB → 30KB 수준
   // 상세 본문은 카드 클릭 시 getRecordById 가 풀 row 가져옴
   getRecords: async (userId: string, limit = 50): Promise<SajuRecord[]> => {
+    // ★ engine_result 포함 — ArchivePage 가 newyear record 의 engine_result.source 로
+    //   "신년운세" vs "연도별 운세" 라벨 분기에 사용. result_data·interpretation_*
+    //   같은 무거운 필드는 여전히 제외.
     const { data, error } = await supabase
       .from('saju_records')
-      .select('id, user_id, profile_id, profile_name, partner_name, partner_birth_date, birth_date, birth_time, birth_place, gender, calendar_type, category, created_at, is_detailed, credit_type, credit_used')
+      .select('id, user_id, profile_id, profile_name, partner_name, partner_birth_date, birth_date, birth_time, birth_place, gender, calendar_type, category, created_at, is_detailed, credit_type, credit_used, engine_result')
       .eq('user_id', userId)
       .order('created_at', { ascending: false })
       .limit(limit);
@@ -374,7 +377,6 @@ export const sajuDB = {
       console.error('Error fetching saju records:', error);
       return [];
     }
-    // 누락된 무거운 필드는 SajuRecord 타입상 optional 이거나 카드에 미사용. 캐스트 안전.
     return (data ?? []) as SajuRecord[];
   },
 
