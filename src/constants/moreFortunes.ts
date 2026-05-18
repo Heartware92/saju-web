@@ -84,7 +84,7 @@ export const MORE_FORTUNE_CONFIGS: Record<MoreFortuneId, MoreFortuneConfig> = {
     id: 'study',
     title: '학업·시험운',
     icon: '✎',
-    shortDesc: '시험 유리한 달',
+    shortDesc: '시험학업 흐름',
     longDesc: '인성(문창·학당귀인)과 식상, 올해 세운을 근거로 공부 체질인지, 시험·자격·발표에 유리한 달이 언제인지 짚어드려요.',
     ctaButton: '내 학업운 보기',
     maxTokens: 5500,
