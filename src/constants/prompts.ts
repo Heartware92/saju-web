@@ -2607,13 +2607,14 @@ ${METAPHOR_SHORT_GUIDE}
  * - AI 티 없는 자연스러운 한국어 서술, 마크다운·이모지 금지
  */
 
-export const NEWYEAR_SECTION_KEYS = ['general', 'wealth', 'career', 'love', 'health', 'relation', 'monthly', 'lucky'] as const;
+export const NEWYEAR_SECTION_KEYS = ['general', 'wealth', 'career', 'study', 'love', 'health', 'relation', 'monthly', 'lucky'] as const;
 export type NewyearSectionKey = typeof NEWYEAR_SECTION_KEYS[number];
 
 export const NEWYEAR_SECTION_LABELS: Record<NewyearSectionKey, string> = {
   general: '총운',
   wealth: '재물운',
   career: '직장·사업운',
+  study: '학업·시험운',
   love: '연애·결혼운',
   health: '건강운',
   relation: '인간관계운',
@@ -2709,8 +2710,8 @@ ${monthlyLine}
 6) 전문 용어(십성·격국·용신·대운 등)는 첫 등장 시 괄호로 쉬운 말 병기.
 7) "~일 수 있습니다" "혹시" 같은 흐린 표현은 전체 답변에서 2회 이하. 단정적 어투 유지.
 8) 출력은 [general] 마커부터 시작. 마커 이전에 어떤 텍스트도 없어야 함.
-9) 아래 8개 마커를 빠짐없이 정확히 사용. 마커는 줄 처음에 단독으로 위치. 마커 뒤 바로 내용 시작.
-   반드시 포함해야 하는 마커 체크리스트: [general] [wealth] [career] [love] [health] [relation] [monthly] [lucky] — 하나라도 빠지면 실패.
+9) 아래 9개 마커를 빠짐없이 정확히 사용. 마커는 줄 처음에 단독으로 위치. 마커 뒤 바로 내용 시작.
+   반드시 포함해야 하는 마커 체크리스트: [general] [wealth] [career] [study] [love] [health] [relation] [monthly] [lucky] — 하나라도 빠지면 실패.
 10) ★ 데이터 무결성 — 위 "원국에 0개인 십성" 목록의 십성을 본문에서 "사주에 있다/강하다/약하다" 형태로 서술 절대 금지.
     예시 금지: "당신 사주의 편관이 강해…" / "정관이 부족한 사주라…"
     (단 세운으로 들어오는 ${seWoonTenGod}는 "올해 ${seWoonTenGod}(쉬운말)이 들어와…"로 사용 가능)
@@ -2737,6 +2738,11 @@ ${year}년 전체 기조 — 320~430자
 직장·사업운 — 280~360자
 첫 줄: 커리어 기운을 상징하는 은유적 제목(7~12자) 1줄.
 직장인과 사업자를 구분해 각각 1~2문장씩 풀이. 세운과 원국의 관성·재성 관계로 승진·이직·계약·파트너십 중 유리한 것 명시. 결정 내리기 좋은 월 1~2개 구체 명시 (월별 흐름 참고). 조심할 직장 내 함정 1가지.
+
+[study]
+학업·시험운 — 250~330자
+첫 줄: 학업·시험 기운을 상징하는 은유적 제목(7~12자) 1줄.
+세운 십성(${seWoon.tenGod})·인성(정인/편인)·식상 흐름으로 ${year}년 학업·시험 기운 1단락. 시험·자격증·승급·합격 시기로 유리한 월 1~2개 구체 명시 (월별 흐름 참고). 학습 스타일 매칭 (개념 정리·문제풀이·실전모의·암기·발표 중 어떤 결이 잘 맞는지) 1가지. 집중·암기력 떨어지기 쉬운 함정 시기 1가지와 회복 방향 1줄. 학생·수험생이 아니어도 자기계발 학습(독서·자격증·언어·인강) 관점으로 풀이 가능.
 
 [love]
 연애·결혼운 — 280~360자

@@ -736,7 +736,7 @@ export function calculatePeriodFortune(
     const { summary, tips } = buildDomainSummary(key, grade, target);
     return {
       key,
-      label: { overall: '총운', wealth: '재물운', career: '직장·사업운', love: '연애·결혼운', health: '건강운', relation: '인간관계운', study: '학업·자격운' }[key],
+      label: { overall: '총운', wealth: '재물운', career: '직장·사업운', love: '연애·결혼운', health: '건강운', relation: '인간관계운', study: '학업·시험운' }[key],
       score,
       grade,
       summary,
