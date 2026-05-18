@@ -3,6 +3,7 @@
  */
 
 import { SajuResult } from '../utils/sajuCalculator';
+import { calculateSeWoonRange } from '../utils/sajuCalculator';
 import { archiveSaju, archiveTarot } from './archiveService';
 import {
   SYSTEM_PROMPT,
@@ -1382,8 +1383,14 @@ export const getNewyearReport = async (
   },
 ): Promise<NewyearReportAIResult> => {
   try {
-    const seWoon = result.seWoon.find(s => s.year === year);
-    if (!seWoon) throw new Error(`${year}년 세운 데이터가 없습니다.`);
+    // ★ saju.seWoon 은 calculateSeWoon 의 12년 윈도우 (currentYear -7 ~ +4) 만 가짐
+    //   연도별 운세에서 1900 ~ 2200 자유 선택 가능하므로 윈도우 밖이면 동적 계산
+    let seWoon = result.seWoon.find(s => s.year === year);
+    if (!seWoon) {
+      const dynamicRange = calculateSeWoonRange(result.pillars.day.gan, year, 1, result.pillars.year.zhi);
+      seWoon = dynamicRange[0];
+      if (!seWoon) throw new Error(`${year}년 세운 데이터가 없습니다.`);
+    }
 
     const currentDaeWoon = result.daeWoon.find(
       d => d.gan && d.zhi && year >= d.startAge && year <= d.endAge
