@@ -537,7 +537,12 @@ export default function PeriodFortunePage({ scope }: { scope: FortuneScope | 'da
 
       setNewyearReport(null);
       setNewyearReportLoading(true);
-      getNewyearReport(saju, fortune, targetYear, targetProfile?.id)
+      getNewyearReport(saju, fortune, targetYear, targetProfile?.id, {
+        jobState: targetProfile?.job_state ?? null,
+        customJobState: targetProfile?.custom_job_state ?? null,
+        loveState: targetProfile?.love_state ?? null,
+        customLoveState: targetProfile?.custom_love_state ?? null,
+      })
         .then(r => {
           if (cancelled) return;
           setNewyearReport(r);

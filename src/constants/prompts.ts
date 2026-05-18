@@ -2633,10 +2633,34 @@ export const generateNewyearReportPrompt = (
     domains: { key: string; label: string; score: number; grade: string }[];
     overallScore: number;
     overallGrade: string;
+    /** 대표 프로필의 사용자 컨텍스트 — 각 섹션 풀이에 분산 인용해 커스텀 결과 생성 */
+    userCtx?: {
+      jobState?: string | null;        // 직장인 / 학생 / 자영업·프리랜서 / 구직 중 / 주부
+      customJobState?: string | null;  // 직접 입력 (예: "회계사", "공무원 준비")
+      loveState?: string | null;       // 싱글 / 호감 있는 상대 있음 / 연애 중 / 기혼 / 공개 안 함
+      customLoveState?: string | null; // 직접 입력 (예: "장거리 1년차")
+    };
   }
 ): string => {
   const { pillars, elementPercent, isStrong, yongSinElement, yongSin, hourUnknown, gender, dayMasterYinYang } = result;
-  const { year, seWoon, currentDaeWoon, monthlyFlow, domains, overallScore, overallGrade } = opts;
+  const { year, seWoon, currentDaeWoon, monthlyFlow, domains, overallScore, overallGrade, userCtx } = opts;
+
+  // ── 사용자 컨텍스트 정리 (각 섹션 가이드에서 인용) ──
+  const jobLabel = userCtx?.customJobState?.trim() || userCtx?.jobState || '미입력';
+  const loveLabel = userCtx?.customLoveState?.trim() || userCtx?.loveState || '미입력';
+  const hasJob = jobLabel !== '미입력';
+  const hasLove = loveLabel !== '미입력' && loveLabel !== '공개 안 함';
+  const userCtxBlock = (hasJob || hasLove) ? `
+
+[★ 사용자 현재 상황 — 본문에 반드시 분산 인용해 커스텀 풀이로 만들기]
+- 직업: ${jobLabel}${userCtx?.customJobState?.trim() ? ' (직접 입력 — 직업의 일과·도구·상호작용·압박 특수성 반영, 일반 사무직 가이드 베끼지 말 것)' : ''}
+- 연애 상태: ${loveLabel}${userCtx?.customLoveState?.trim() ? ' (직접 입력 — 관계 형태·현재 단계 과제·오늘 톤 반영)' : ''}
+
+[★★ 사용자 입력 분산 인용 매트릭스 — 어느 섹션에서 어느 입력 인용]
+- 직업(${jobLabel}) → general·wealth·career·study·health·relation·monthly·fortune_message 거의 모든 섹션에 자연 인용. career 는 필수.
+- 연애(${loveLabel}) → love(필수, 분기 기준), wealth(${gender === 'male' ? '남성 정재=처재 → 처/연인이 재물 결정·소비에 영향' : '여성 정관=배우자 → 부의 안정성·결정권에 영향'}), relation(가까운 관계망 핵심), monthly(결혼·이별·만남 월 강조)
+- 같은 입력을 여러 섹션에 반복 인용 시 동일 문장 패턴 금지. 다른 측면(시간·결정·환경·관계망)으로 변형 1회씩만.
+` : '';
   const gyeokguk = determineGyeokguk(result);
   const sipseongCounts = computeSipseongCounts(result);
   const sipseong = formatSipseongCounts(sipseongCounts);
@@ -2682,7 +2706,7 @@ ${pillarLine}
    → 본문에서 이 십성을 "사주에 ~십성이 강하다/있다"고 서술하면 절대 안 됨.
    → 단 세운 천간 십성(${seWoonTenGod})은 "올해 ~이 들어온다"로 사용 허용.
 간여지동: ${formatGanYeojidong(result)} / 병존·삼존: ${formatByeongjOn(result)}
-성별: ${gender === 'male' ? '남성' : '여성'}${hourNote}
+성별: ${gender === 'male' ? '남성' : '여성'}${hourNote}${userCtxBlock}
 
 [${year}년 세운 — ${seWoon.gan}${seWoon.zhi}(${seWoon.animal}년)]
 세운 천간: ${seWoon.gan}(${seWoon.ganElement}) — 일간 ${pillars.day.gan} 기준 십성: ${seWoon.tenGod}
@@ -2728,36 +2752,50 @@ ${METAPHOR_TITLE_RULE}
 ${year}년 전체 기조 — 320~430자
 첫 줄: 이 해 전체를 관통하는 은유적 제목(7~12자) 1줄.
 세운 ${seWoon.gan}${seWoon.zhi}이 일간 ${pillars.day.gan}에 ${seWoon.tenGod}으로 작용하는 구체적 의미 1단락. 대운 흐름과 겹쳐 어떤 국면(도약기·축적기·전환기·수성기)인지 명확히 판정. 이 해에 가장 도드라지는 축(재물·직장·관계·건강) 중 2가지를 선정해 왜 그런지 설명. 올 한 해 핵심 주제 문장 1개로 마무리.
+${hasJob ? `★ 직업(${jobLabel}) 가볍게 1회 자연 인용 — 어떤 국면이 이 직업에 어떻게 작용하는지 1문장.` : ''}
 
 [wealth]
 재물운 — 280~360자
 첫 줄: 재물운을 상징하는 은유적 제목(7~12자) 1줄.
 세운 십성(${seWoon.tenGod})과 용신(${yongSinElement})의 관계로 수입이 들어오는 경로·시기 1단락. 지출 위험 구간과 조심할 금전 결정 1가지 구체적으로. 재테크 방향 1가지(주식·부동산·저축·사업 중 어떤 방향이 유리한지). 엔진 점수 ${wealthDomain?.score ?? '?'}점(${wealthDomain?.grade ?? '?'}) 방향성 유지.
+${hasJob ? `★ 직업(${jobLabel}) 수입 구조 1회 자연 반영 — 직장인 vs 자영업 vs 학생·주부 등 수입원 패턴에 맞춰.` : ''}
+${hasLove ? `★ 연애 상태(${loveLabel}) — ${gender === 'male' ? '남성은 정재가 처(妻)와 재물을 함께 보는 십성. 연애·기혼 상태가 데이트·가족 부양·자산 결정에 영향' : '여성은 정관이 배우자와 사회적 지위를 함께 보는 십성. 부부·연인의 재정 협의·소비 패턴 영향'}을 1문장 자연 반영.` : ''}
 
 [career]
 직장·사업운 — 280~360자
 첫 줄: 커리어 기운을 상징하는 은유적 제목(7~12자) 1줄.
 직장인과 사업자를 구분해 각각 1~2문장씩 풀이. 세운과 원국의 관성·재성 관계로 승진·이직·계약·파트너십 중 유리한 것 명시. 결정 내리기 좋은 월 1~2개 구체 명시 (월별 흐름 참고). 조심할 직장 내 함정 1가지.
+${hasJob ? `★ 직업(${jobLabel}) 필수 호명 — "직장인이라면…" 같은 일반 가이드 베끼지 말고 그 직업의 일과·도구·상호작용·압박 특수성을 반영한 5요소(승진·이직·계약·파트너십·함정) 구체 풀이.` : ''}
+${hasLove && (loveLabel === '기혼' || userCtx?.customLoveState?.trim()) ? `★ 연애 상태(${loveLabel}) — 가족 부양·육아 책임이 직장 결정(야근·이직·창업)에 미치는 영향 1문장 가볍게.` : ''}
 
 [study]
 학업·시험운 — 250~330자
 첫 줄: 학업·시험 기운을 상징하는 은유적 제목(7~12자) 1줄.
 세운 십성(${seWoon.tenGod})·인성(정인/편인)·식상 흐름으로 ${year}년 학업·시험 기운 1단락. 시험·자격증·승급·합격 시기로 유리한 월 1~2개 구체 명시 (월별 흐름 참고). 학습 스타일 매칭 (개념 정리·문제풀이·실전모의·암기·발표 중 어떤 결이 잘 맞는지) 1가지. 집중·암기력 떨어지기 쉬운 함정 시기 1가지와 회복 방향 1줄. 학생·수험생이 아니어도 자기계발 학습(독서·자격증·언어·인강) 관점으로 풀이 가능.
+${hasJob ? `★ 직업(${jobLabel}) 자기계발 방향 1회 반영 — 학생이면 입시·수능, 직장인이면 직무 자격증·승급 시험, 자영업·프리랜서면 신규 분야 학습 등.` : ''}
 
 [love]
 연애·결혼운 — 280~360자
 첫 줄: 인연·관계 기운을 상징하는 은유적 제목(7~12자) 1줄.
-기혼자와 미혼자를 구분해 각각 핵심 기운 1단락씩. 이 해 가장 좋은 인연 시기를 월별 흐름 참고해 구체 월로 명시. 관계 갈등이 생기기 쉬운 패턴 1가지와 해소 방향. 사랑·결혼 결정을 내리기 좋은 조건 1가지.
+${hasLove ? `★★★ 연애 상태(${loveLabel}) 필수 분기 기준 — 일반 "기혼/미혼 구분" 가이드로 흘리지 말고 사용자의 실제 상태를 본문 첫 1~2문장에 자연 호칭으로 1회 반영. ${userCtx?.customLoveState?.trim() ? `(직접 입력 "${userCtx.customLoveState}" — 관계 형태·현재 단계 과제 그대로 풀이, 일반 가이드 베끼지 말 것)` : ''}
+${loveLabel === '싱글' ? '· 싱글 → 새 인연 들어오는 시기·유형·만남 장소·계기 구체 명시.' : ''}
+${loveLabel === '호감 있는 상대 있음' ? '· 호감 있는 상대 → 표현·연락 타이밍·진전 가능한 월·조심할 말투.' : ''}
+${loveLabel === '연애 중' ? '· 연애 중 → 관계 깊어지는 월·갈등 위험 월·다음 단계(동거·결혼·이별) 결정 시기.' : ''}
+${loveLabel === '기혼' ? '· 기혼 → 부부 관계 흐름·자녀·가족 사건 시기·외도 함정 주의 시점.' : ''}` : '연애 상태 미입력 — 일반 기혼/미혼 구분으로 풀이.'}
+이 해 가장 좋은 인연·관계 변화 시기를 월별 흐름 참고해 구체 월로 명시. 관계 갈등이 생기기 쉬운 패턴 1가지와 해소 방향. 사랑·결혼·이별 등 결정을 내리기 좋은 조건 1가지.
 
 [health]
 건강운 — 220~290자
 첫 줄: 건강 기운을 상징하는 은유적 제목(7~12자) 1줄.
 오행 분포와 세운 오행으로 취약 장부 판단 (구체 장부명 명시). 이 해 특히 주의할 건강 위험 계절·시기 1개. 일상에서 챙겨야 할 구체 습관 2가지 (음식·운동·수면·환경 중). "이 해의 건강 함정" — 가장 조심해야 할 생활 패턴 1가지.
+${hasJob ? `★ 직업(${jobLabel}) 자세·체력 패턴 1회 반영 — 앉아서 일하는 직장인이면 허리·목, 현장직이면 관절·근육, 학생이면 자세·수면, 주부이면 손목·어깨 등 직업 특수성에 맞춘 1문장.` : ''}
 
 [relation]
 인간관계운 — 220~290자
 첫 줄: 인간관계 기운을 상징하는 은유적 제목(7~12자) 1줄.
 비겁·식상·관성 배치로 본 ${year}년 인간관계 전반적 기운. 의지할 관계 유형 1가지 (구체적 직업·성격 유형). 멀리해야 할 관계 유형 1가지 (왜 그런지 이유 포함). 이 해 특별히 도움이 되는 인연 특징 1가지.
+${hasJob ? `★ 직업(${jobLabel}) 직장·업무 관계망 1회 반영 — 동료·상사·고객·거래처·동기 등 주 상호작용 대상에 맞춘 1문장.` : ''}
+${hasLove ? `★ 연애 상태(${loveLabel}) — 가까운 관계망(연인·배우자·가족·인척·친구)이 인간관계 중심축이라 1회 자연 인용.` : ''}
 
 [monthly]
 월별 흐름 — 총 1800~2300자
@@ -2775,6 +2813,8 @@ ${year}년 전체 기조 — 320~430자
 ★ 월과 월 사이에 반드시 빈 줄(empty line) 1개 삽입. 같은 월 내 문장 사이에는 줄바꿈 금지.
 ★ 각 월 서술은 해당 월의 등급·키워드만 참고. 이전 월 내용이 다음 월에 반복·침범 금지.
 ★ 영역은 12개월 통틀어 다양하게 분포. 한 영역(예: 재물)이 5개월 이상 연속 등장 금지 — 균형 있게 배치.
+${hasJob ? `★ 직업(${jobLabel}) 사이클 반영 — 결산기·시험·시즌·마감 등 직업의 일과 사이클이 두드러지는 월 2~3개에 자연 인용. 일반 직장인 가이드(연말 보너스·연초 인사 등) 그대로 베끼지 말고 입력된 직업 특수성으로.` : ''}
+${hasLove ? `★ 연애 상태(${loveLabel}) 반영 — 결혼·이별·만남·재회 등 관계 큰 변화가 들어올 수 있는 월 1~2개를 사용자 상태 기준으로 구체 명시 (싱글이면 만남 시기, 연애 중이면 다음 단계 결정 월, 기혼이면 부부 사건 시기 등).` : ''}
 
 예시:
 5월(길·확장) | 영역: 재물·도전

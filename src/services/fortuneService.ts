@@ -1371,6 +1371,13 @@ export const getNewyearReport = async (
   fortune: PeriodFortune,
   year: number,
   profileId?: string,
+  /** 대표 프로필의 사용자 컨텍스트 — 각 섹션 풀이에 분산 인용해 커스텀 결과 생성 */
+  userCtx?: {
+    jobState?: string | null;
+    customJobState?: string | null;
+    loveState?: string | null;
+    customLoveState?: string | null;
+  },
 ): Promise<NewyearReportAIResult> => {
   try {
     const seWoon = result.seWoon.find(s => s.year === year);
@@ -1395,15 +1402,17 @@ export const getNewyearReport = async (
       domains,
       overallScore: fortune.overallScore,
       overallGrade: fortune.overallGrade as string,
+      userCtx,
     });
 
-    // 2-pass 분할: 1차(general·wealth·career·love) + 2차(health·relation·monthly·lucky)
-    const pass1Prompt = prompt + '\n\n★ 이번 응답에서는 [general] [wealth] [career] [love] 4개 섹션만 출력. 나머지 4개는 다음 호출에서 작성.';
-    const pass1Content = await callGPT(pass1Prompt, 5000);
+    // 2-pass 분할: 1차(general·wealth·career·study·love) + 2차(health·relation·monthly·lucky)
+    // study 신설로 1차에 추가 — 1차 5섹션 합 ~1450자라 5000 토큰 여유
+    const pass1Prompt = prompt + '\n\n★ 이번 응답에서는 [general] [wealth] [career] [study] [love] 5개 섹션만 출력. 나머지 4개는 다음 호출에서 작성.';
+    const pass1Content = await callGPT(pass1Prompt, 5500);
     const pass1Sections = parseNewyearReport(pass1Content);
 
     const pass2Prompt = prompt
-      + '\n\n★ 이번 응답에서는 [health] [relation] [monthly] [lucky] 4개 섹션만 출력. [general] [wealth] [career] [love]는 이미 완료.'
+      + '\n\n★ 이번 응답에서는 [health] [relation] [monthly] [lucky] 4개 섹션만 출력. [general] [wealth] [career] [study] [love]는 이미 완료.'
       + `\n\n[이미 작성된 1차 내용 — 참고만, 출력하지 말 것]\n${pass1Content}`;
     const pass2Content = await callGPT(pass2Prompt, 6000);
     const pass2Sections = parseNewyearReport(pass2Content);
