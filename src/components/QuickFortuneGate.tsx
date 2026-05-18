@@ -21,6 +21,8 @@ export interface QuickFortuneGateProps {
   targetPath?: string;
   /** 모달 닫기 콜백 (미지정 시 router.back) */
   onClose?: () => void;
+  /** 명시 시 이 프로필 사용 (미지정 시 대표 프로필 자동) — 연도별 운세처럼 사용자가 직접 프로필 선택하는 케이스용 */
+  profileId?: string;
 }
 
 export function QuickFortuneGate({
@@ -32,6 +34,7 @@ export function QuickFortuneGate({
   creditCost,
   targetPath,
   onClose,
+  profileId,
 }: QuickFortuneGateProps) {
   const router = useRouter();
   const pathname = usePathname();
@@ -49,7 +52,11 @@ export function QuickFortuneGate({
   void creditType;
   const balance = moonBalance;
   const creditLabel = '🌙';
-  const primaryProfile = profiles.find(p => p.is_primary) ?? profiles[0] ?? null;
+  // profileId 명시되면 그 프로필 우선, 아니면 대표 프로필 자동
+  const primaryProfile = useMemo(() => {
+    if (profileId) return profiles.find(p => p.id === profileId) ?? null;
+    return profiles.find(p => p.is_primary) ?? profiles[0] ?? null;
+  }, [profiles, profileId]);
   const navPath = targetPath ?? pathname;
 
   const contextKey = useMemo(
@@ -75,7 +82,12 @@ export function QuickFortuneGate({
     }
   }, [initialized, profiles, user, router, onClose]);
 
-  const isListMode = (archiveCategory === 'period' || archiveCategory === 'taekil' || archiveCategory === 'today') && !archiveContext;
+  const isListMode = (
+    archiveCategory === 'period' ||
+    archiveCategory === 'taekil' ||
+    archiveCategory === 'today' ||
+    archiveCategory === 'newyear'  // 연도별 운세 — 같은 프로필의 모든 newyear 풀이 리스트로
+  ) && !archiveContext;
 
   useEffect(() => {
     if (!initialized || !primaryProfile) return;
