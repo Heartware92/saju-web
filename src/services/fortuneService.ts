@@ -1422,7 +1422,22 @@ export const getNewyearReport = async (
     const sections: Partial<Record<NewyearSectionKey, string>> = { ...pass1Sections, ...pass2Sections };
     const content = `${pass1Content}\n\n${pass2Content}`;
 
-    const archivedRecordId = await archiveSaju({ profileId, sourceBirth: sourceBirthFromSaju(result), category: 'newyear', resultData: result as unknown as Record<string, unknown>, engineResult: { year, seWoon, currentDaeWoon } as unknown as Record<string, unknown>, interpretation: content, isDetailed: true }).catch(() => null);
+    // engineResult 에 isoDate·categoryLabel 추가 — findArchiveList 가 리스트 모달에서 연도 식별·표시 가능
+    const archivedRecordId = await archiveSaju({
+      profileId,
+      sourceBirth: sourceBirthFromSaju(result),
+      category: 'newyear',
+      resultData: result as unknown as Record<string, unknown>,
+      engineResult: {
+        year,
+        isoDate: String(year),
+        categoryLabel: `${year}년 신년운세`,
+        seWoon,
+        currentDaeWoon,
+      } as unknown as Record<string, unknown>,
+      interpretation: content,
+      isDetailed: true,
+    }).catch(() => null);
 
     if (Object.keys(sections).length === 0) {
       return { success: true, rawText: content, ...(archivedRecordId ? { archivedRecordId } : {}) };

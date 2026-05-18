@@ -282,7 +282,11 @@ export default function PeriodFortunePage({ scope }: { scope: FortuneScope | 'da
     scope !== 'date' || !!searchParams?.get('date') || !!searchParams?.get('recordId'),
   );
 
+  // archive 재생 모드에서 record 의 engine_result.year 가 로드되면 그 값을 우선 사용
+  // (연도별 운세 list 모달에서 다른 연도 record 클릭 시 URL.year 와 다른 record.year 가 충돌하는 사고 방지)
+  const [archiveYear, setArchiveYear] = useState<number | null>(null);
   const targetYear = (() => {
+    if (archiveYear !== null) return archiveYear;
     const y = searchParams?.get('year');
     if (y) return parseInt(y, 10);
     return new Date().getFullYear();
@@ -399,6 +403,12 @@ export default function PeriodFortunePage({ scope }: { scope: FortuneScope | 'da
       .then((record) => {
         if (cancelled || !record) return;
         const content = record.interpretation_detailed ?? record.interpretation_basic ?? '';
+        // archive 의 engine_result.year 가 있으면 targetYear override (헤더·prompt 동기화)
+        const recordYear = (record.engine_result as { year?: number | string } | null)?.year;
+        if (scope === 'year' && recordYear !== undefined && recordYear !== null) {
+          const y = Number(recordYear);
+          if (!Number.isNaN(y)) setArchiveYear(y);
+        }
         if (scope === 'year') {
           const sections = parseNewyearReport(content);
           setNewyearReport(
