@@ -68,28 +68,6 @@ const LOADING_MESSAGES = [
  * - 한 단락 안에 문장이 너무 많으면 sentencesPerPara 단위로 추가 분할
  * - 한국어 문장 종결(. ! ? + 공백) 기준
  */
-/**
- * `**핵심 문구**` 마크다운을 <strong> 으로 변환.
- * 자미두수 prompt 룰에서 한정적으로 허용된 표기 — 한 단락에 2~3곳 굵게.
- */
-function renderBold(text: string): React.ReactNode[] {
-  const parts = text.split(/(\*\*[^*\n]+?\*\*)/g);
-  return parts.map((part, i) => {
-    const m = part.match(/^\*\*([^*\n]+?)\*\*$/);
-    if (m) {
-      return (
-        <strong
-          key={i}
-          style={{ color: 'var(--text-primary)', fontWeight: 700 }}
-        >
-          {m[1]}
-        </strong>
-      );
-    }
-    return <span key={i}>{part}</span>;
-  });
-}
-
 function splitIntoParagraphs(text: string, sentencesPerPara = 3): string[] {
   const paras = text.split(/\n{2,}/).map((p) => p.trim()).filter(Boolean);
   const out: string[] = [];
@@ -1038,7 +1016,7 @@ export default function ZamidusuResultPage() {
                       margin: i === 0 ? 0 : '14px 0 0',
                     }}
                   >
-                    {renderBold(p)}
+                    {p}
                   </p>
                 ));
               })()}
