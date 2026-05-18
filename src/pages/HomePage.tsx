@@ -80,6 +80,13 @@ const TOP_SERVICES = [
     direct: '/saju/zamidusu',
     gradient: 'from-violet-500/20 to-fuchsia-500/10',
   },
+  {
+    id: 'year-fortune',
+    title: '연도별 운세',
+    desc: '특정 연도 신년운세',
+    direct: '/saju/year-fortune',
+    gradient: 'from-amber-500/20 to-orange-500/10',
+  },
 ];
 
 // 모든 서비스 버튼은 결과 페이지로 직행한다.
