@@ -1672,12 +1672,42 @@ export const getNameFortune = async (
   profileId?: string,
 ): Promise<FortuneResponse> => {
   try {
-    // 한자 모드(글자별 뜻 ≥1 또는 레거시 hanjaName)면 출력 길이 25% 가산.
+    // 한자 모드(글자별 뜻 ≥1 또는 사용자가 선택한 hanjaName)면 출력 길이 25% 가산.
     const hasMeaning = !!(nameInput.charMeanings ?? []).find((c) => c.meaning && c.meaning.trim().length > 0);
     const isHanjaMode = hasMeaning || !!nameInput.hanjaName;
+
+    // ★ 사용자가 모달에서 선택한 한자가 있으면 정적 데이터에서 lookup → 결정론적 메타 주입
+    //   AI 한자 추정 단계 완전 생략 + 자원오행 환각 차단.
+    let nameInputWithResolved = nameInput;
+    if (nameInput.hanjaName && nameInput.charMeanings && nameInput.charMeanings.length > 0) {
+      const { lookupHanjaBySound } = await import('@/lib/data/hanjaByKoreanSound');
+      const chars = [...nameInput.hanjaName];
+      const resolved = chars.map((char, i) => {
+        const sound = nameInput.charMeanings?.[i]?.sound ?? '';
+        const candidates = lookupHanjaBySound(sound);
+        const hit = candidates.find(c => c.char === char);
+        return hit
+          ? {
+              char,
+              meaning: hit.meanings[0] ?? (nameInput.charMeanings?.[i]?.meaning ?? ''),
+              radical: hit.radical,
+              strokes: hit.strokes,
+              jawon: hit.jawon,
+            }
+          : {
+              char,
+              meaning: nameInput.charMeanings?.[i]?.meaning ?? '',
+              radical: '',
+              strokes: 0,
+              jawon: '',
+            };
+      });
+      nameInputWithResolved = { ...nameInput, hanjaResolved: resolved };
+    }
+
     const baseTokens = MORE_FORTUNE_CONFIGS.name.maxTokens;
     const maxTokens = isHanjaMode ? Math.round(baseTokens * 1.25) : baseTokens;
-    const content = await callGPT(generateNameFortunePrompt(result, nameInput), maxTokens);
+    const content = await callGPT(generateNameFortunePrompt(result, nameInputWithResolved), maxTokens);
     archiveSaju({
       profileId,
       sourceBirth: sourceBirthFromSaju(result),

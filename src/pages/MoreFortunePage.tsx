@@ -60,6 +60,8 @@ import {
   PERSONALITY_SECTION_KEYS, PERSONALITY_SECTION_LABELS,
 } from '../constants/prompts';
 import { SectionCollapsible } from '@/components/saju/SectionCollapsible';
+import { HanjaPickerModal } from '@/components/saju/HanjaPickerModal';
+import type { HanjaCandidate } from '@/lib/data/hanjaByKoreanSound';
 
 interface Props {
   /** 카테고리 id. /saju/more/[category] 동적 라우트에서 주입된다. */
@@ -115,6 +117,8 @@ export default function MoreFortunePage({ category }: Props) {
   //               비워두면 순우리말 또는 모름으로 처리되어 음령오행만 적용.
   const [koreanName, setKoreanName] = useState('');
   const [charMeanings, setCharMeanings] = useState<string[]>([]);
+  /** 사용자가 모달에서 선택한 한자 (글자 위치별). null = 미선택. 선택 시 charMeanings 자동 채움 */
+  const [selectedHanjas, setSelectedHanjas] = useState<(string | null)[]>([]);
 
   // 꿈 해몽 전용 state — DreamInputPanel에서 onChange로 주입되는 합성 텍스트/유효성
   // dreamInputResetKey: "다른 꿈 풀이받기" 클릭 시 패널을 강제 remount 해 내부 상태(선명/흐릿 모드, 칩 선택 등)를 초기화
@@ -258,6 +262,10 @@ export default function MoreFortunePage({ category }: Props) {
           if (typeof eng.koreanName === 'string') setKoreanName(eng.koreanName);
           if (Array.isArray(eng.charMeanings)) {
             setCharMeanings(eng.charMeanings.map((c) => (typeof c?.meaning === 'string' ? c.meaning : '')));
+          }
+          // 옛 record 호환: hanjaName 이 있으면 글자 단위로 분해해 selectedHanjas 복원
+          if (typeof eng.hanjaName === 'string' && eng.hanjaName.length > 0) {
+            setSelectedHanjas([...eng.hanjaName]);
           }
         }
         // 꿈 해몽이면 저장된 꿈 텍스트 복원
@@ -525,10 +533,14 @@ export default function MoreFortunePage({ category }: Props) {
             const sounds = kor.chars.slice(0, 4);
             const meanings = sounds.map((_, i) => (charMeanings[i] || '').trim());
             const charPairs = sounds.map((sound, i) => ({ sound, meaning: meanings[i] }));
+            // 모달에서 선택한 한자가 모두 채워졌으면 hanjaName 으로 prompt 에 직접 주입
+            // → AI 한자 추정 단계 생략, 자원오행 정확도 ↑
+            const hanjaName = selectedHanjas.slice(0, sounds.length).filter(Boolean).join('');
             resp = await getNameFortune(s, {
               koreanName: koreanName.trim(),
               koreanInitialsElements: kor.elements,
               charMeanings: charPairs,
+              ...(hanjaName.length === sounds.length ? { hanjaName } : {}),
             }, targetProfile?.id);
             break;
           }
@@ -702,6 +714,8 @@ export default function MoreFortunePage({ category }: Props) {
                 onKoreanNameChange={setKoreanName}
                 charMeanings={charMeanings}
                 onCharMeaningsChange={setCharMeanings}
+                selectedHanjas={selectedHanjas}
+                onSelectedHanjasChange={setSelectedHanjas}
                 readOnly={false}
               />
             )}
@@ -833,12 +847,16 @@ function NameInputPanel({
   onKoreanNameChange,
   charMeanings,
   onCharMeaningsChange,
+  selectedHanjas,
+  onSelectedHanjasChange,
   readOnly,
 }: {
   koreanName: string;
   onKoreanNameChange: (v: string) => void;
   charMeanings: string[];
   onCharMeaningsChange: (v: string[]) => void;
+  selectedHanjas: (string | null)[];
+  onSelectedHanjasChange: (v: (string | null)[]) => void;
   readOnly: boolean;
 }) {
   // 한글 음절만 추출 (공백·한자·기호 제외) — 4글자까지
@@ -853,22 +871,46 @@ function NameInputPanel({
     return out;
   })();
 
-  const updateMeaning = (i: number, value: string) => {
-    const next = [...charMeanings];
-    while (next.length <= i) next.push('');
-    next[i] = value;
-    onCharMeaningsChange(next);
+  // 모달 state
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const [pickerIndex, setPickerIndex] = useState(0);
+  const [manualMeaningIndex, setManualMeaningIndex] = useState<number | null>(null);
+
+  const ensureSize = (arr: string[], n: number): string[] => {
+    const out = [...arr];
+    while (out.length < n) out.push('');
+    return out;
+  };
+  const ensureSizeNullable = (arr: (string | null)[], n: number): (string | null)[] => {
+    const out = [...arr];
+    while (out.length < n) out.push(null);
+    return out;
   };
 
-  const inputBase: React.CSSProperties = {
-    width: '100%',
-    padding: '10px 12px',
-    background: 'rgba(255,255,255,0.05)',
-    border: '1px solid rgba(255,255,255,0.12)',
-    borderRadius: 10,
-    color: 'var(--text-primary)',
-    fontSize: 14,
-    cursor: readOnly ? 'default' : 'text',
+  const handleSelectHanja = (i: number, candidate: HanjaCandidate) => {
+    // 한자 + 뜻 동시 채움
+    const nextHanjas = ensureSizeNullable(selectedHanjas, chars.length);
+    nextHanjas[i] = candidate.char;
+    onSelectedHanjasChange(nextHanjas);
+    const nextMeanings = ensureSize(charMeanings, chars.length);
+    nextMeanings[i] = candidate.meanings[0] ?? '';
+    onCharMeaningsChange(nextMeanings);
+    setPickerOpen(false);
+  };
+
+  const handleClearHanja = (i: number) => {
+    const nextHanjas = ensureSizeNullable(selectedHanjas, chars.length);
+    nextHanjas[i] = null;
+    onSelectedHanjasChange(nextHanjas);
+    const nextMeanings = ensureSize(charMeanings, chars.length);
+    nextMeanings[i] = '';
+    onCharMeaningsChange(nextMeanings);
+  };
+
+  const handleManualMeaning = (i: number, value: string) => {
+    const nextMeanings = ensureSize(charMeanings, chars.length);
+    nextMeanings[i] = value;
+    onCharMeaningsChange(nextMeanings);
   };
 
   return (
@@ -886,59 +928,238 @@ function NameInputPanel({
             placeholder="예: 홍길동"
             maxLength={6}
             readOnly={readOnly}
-            style={inputBase}
+            style={{
+              width: '100%',
+              padding: '10px 12px',
+              background: 'rgba(255,255,255,0.05)',
+              border: '1px solid rgba(255,255,255,0.12)',
+              borderRadius: 10,
+              color: 'var(--text-primary)',
+              fontSize: 14,
+              cursor: readOnly ? 'default' : 'text',
+            }}
           />
         </div>
 
         {chars.length > 0 && (
           <div>
             <label style={{ fontSize: 11, color: 'var(--text-tertiary)', display: 'block', marginBottom: 6 }}>
-              글자별 뜻 {readOnly ? '' : '(한자 이름이면 입력 / 순우리말이면 비워두세요)'}
+              글자별 한자 {readOnly ? '' : '(+ 버튼을 누르면 그 음의 한자 후보가 나와요)'}
             </label>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-              {chars.map((ch, i) => (
-                <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <div
-                    style={{
-                      flex: '0 0 44px',
-                      height: 40,
-                      borderRadius: 10,
-                      background: 'rgba(168, 132, 255, 0.12)',
-                      border: '1px solid rgba(168, 132, 255, 0.3)',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      fontSize: 18,
-                      fontWeight: 600,
-                      color: 'var(--text-primary)',
-                      fontFamily: 'var(--font-serif)',
-                    }}
-                  >
-                    {ch}
+              {chars.map((ch, i) => {
+                const hanja = selectedHanjas[i] ?? null;
+                const meaning = (charMeanings[i] ?? '').trim();
+                return (
+                  <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    {/* 한글 음 */}
+                    <div
+                      style={{
+                        flex: '0 0 44px',
+                        height: 44,
+                        borderRadius: 10,
+                        background: 'rgba(168, 132, 255, 0.12)',
+                        border: '1px solid rgba(168, 132, 255, 0.3)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontSize: 18,
+                        fontWeight: 600,
+                        color: 'var(--text-primary)',
+                        fontFamily: 'var(--font-serif)',
+                      }}
+                    >
+                      {ch}
+                    </div>
+
+                    {/* 한자 카드 or + 버튼 */}
+                    {hanja ? (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (readOnly) return;
+                          setPickerIndex(i);
+                          setManualMeaningIndex(null);
+                          setPickerOpen(true);
+                        }}
+                        disabled={readOnly}
+                        style={{
+                          flex: 1,
+                          height: 44,
+                          borderRadius: 10,
+                          background: 'rgba(124,92,252,0.15)',
+                          border: '1px solid var(--cta-primary)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 10,
+                          padding: '0 12px',
+                          cursor: readOnly ? 'default' : 'pointer',
+                          textAlign: 'left',
+                        }}
+                      >
+                        <span
+                          style={{
+                            fontSize: 24,
+                            fontWeight: 700,
+                            color: 'var(--text-primary)',
+                            fontFamily: 'var(--font-serif)',
+                            lineHeight: 1,
+                          }}
+                        >
+                          {hanja}
+                        </span>
+                        <span
+                          style={{
+                            flex: 1,
+                            fontSize: 13,
+                            color: 'var(--text-secondary)',
+                            fontFamily: 'var(--font-body)',
+                          }}
+                        >
+                          {meaning ? `${meaning} ${ch}` : ch}
+                        </span>
+                        {!readOnly && (
+                          <span style={{ fontSize: 11, color: 'var(--cta-primary)', fontWeight: 700 }}>변경</span>
+                        )}
+                      </button>
+                    ) : manualMeaningIndex === i && !readOnly ? (
+                      // 직접 뜻 입력 모드
+                      <input
+                        type="text"
+                        value={meaning}
+                        onChange={(e) => handleManualMeaning(i, e.target.value)}
+                        onBlur={() => setManualMeaningIndex(null)}
+                        autoFocus
+                        placeholder="뜻을 직접 입력 (예: 넓을)"
+                        maxLength={12}
+                        style={{
+                          flex: 1,
+                          height: 44,
+                          padding: '0 12px',
+                          background: 'rgba(255,255,255,0.05)',
+                          border: '1px solid rgba(168, 132, 255, 0.4)',
+                          borderRadius: 10,
+                          color: 'var(--text-primary)',
+                          fontSize: 14,
+                        }}
+                      />
+                    ) : (
+                      <div style={{ flex: 1, display: 'flex', gap: 6 }}>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (readOnly) return;
+                            setPickerIndex(i);
+                            setManualMeaningIndex(null);
+                            setPickerOpen(true);
+                          }}
+                          disabled={readOnly}
+                          style={{
+                            flex: 1,
+                            height: 44,
+                            borderRadius: 10,
+                            background: 'rgba(255,255,255,0.04)',
+                            border: '1px dashed rgba(255,255,255,0.2)',
+                            color: 'var(--text-tertiary)',
+                            fontSize: 13,
+                            cursor: readOnly ? 'default' : 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            gap: 6,
+                          }}
+                        >
+                          <span style={{ fontSize: 18, fontWeight: 700, color: 'var(--cta-primary)' }}>+</span>
+                          <span>"{ch}" 자 한자 선택</span>
+                        </button>
+                        {meaning && (
+                          <div
+                            style={{
+                              flex: '0 0 80px',
+                              height: 44,
+                              borderRadius: 10,
+                              background: 'rgba(255,255,255,0.05)',
+                              border: '1px solid rgba(255,255,255,0.12)',
+                              padding: '0 10px',
+                              display: 'flex',
+                              alignItems: 'center',
+                              fontSize: 12,
+                              color: 'var(--text-secondary)',
+                            }}
+                          >
+                            {meaning}
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* X (제거) — 한자 또는 뜻 입력됐을 때 */}
+                    {(hanja || meaning) && !readOnly && (
+                      <button
+                        type="button"
+                        onClick={() => handleClearHanja(i)}
+                        style={{
+                          flex: '0 0 32px',
+                          height: 44,
+                          borderRadius: 10,
+                          background: 'transparent',
+                          border: '1px solid rgba(255,255,255,0.1)',
+                          color: 'var(--text-tertiary)',
+                          fontSize: 14,
+                          cursor: 'pointer',
+                        }}
+                        aria-label="제거"
+                      >
+                        ×
+                      </button>
+                    )}
                   </div>
-                  <input
-                    type="text"
-                    value={charMeanings[i] ?? ''}
-                    onChange={(e) => updateMeaning(i, e.target.value)}
-                    placeholder={
-                      i === 0 ? '예: 넓을' : i === 1 ? '예: 길할' : i === 2 ? '예: 아이' : '뜻을 적어주세요'
-                    }
-                    maxLength={12}
-                    readOnly={readOnly}
-                    style={{ ...inputBase, flex: 1 }}
-                  />
-                </div>
-              ))}
+                );
+              })}
             </div>
             {!readOnly && (
-              <p style={{ fontSize: 10, color: 'var(--text-tertiary)', marginTop: 6, lineHeight: 1.55 }}>
-                한자를 모르거나 순우리말 이름이면 뜻 칸을 비워두셔도 됩니다. 비워두면 음령오행(초성 오행)만으로 풀이됩니다.
-                뜻을 적으시면 그 뜻과 음에 가장 맞는 한자를 추정해 부수 기반 자원오행까지 교차 분석합니다.
+              <p style={{ fontSize: 10, color: 'var(--text-tertiary)', marginTop: 8, lineHeight: 1.6 }}>
+                각 글자의 + 버튼을 누르면 그 음의 한자 후보(뜻·부수·자원오행 색)가 나와요.
+                한자를 모르거나 순우리말 이름이면 비워두셔도 됩니다 — 음령오행만으로도 풀이돼요.
               </p>
             )}
           </div>
         )}
       </div>
+
+      {/* 한자 선택 모달 — 음 → 한자 후보 그리드 */}
+      <HanjaPickerModal
+        open={pickerOpen}
+        sound={chars[pickerIndex] ?? ''}
+        currentChar={selectedHanjas[pickerIndex] ?? undefined}
+        onSelect={(c) => handleSelectHanja(pickerIndex, c)}
+        onClose={() => setPickerOpen(false)}
+      />
+
+      {/* "한자 모르겠어요" 모드 안내 — 모달이 닫혀있을 때만 */}
+      {!readOnly && manualMeaningIndex === null && (
+        <div style={{ marginTop: 4 }}>
+          <button
+            type="button"
+            onClick={() => {
+              // 첫 번째 미선택 글자에서 직접 뜻 입력 모드 시작
+              const firstEmpty = chars.findIndex((_, i) => !selectedHanjas[i] && !(charMeanings[i] || '').trim());
+              setManualMeaningIndex(firstEmpty >= 0 ? firstEmpty : 0);
+            }}
+            style={{
+              fontSize: 11,
+              color: 'var(--text-tertiary)',
+              background: 'transparent',
+              border: 'none',
+              textDecoration: 'underline',
+              cursor: 'pointer',
+              padding: '2px 0',
+            }}
+          >
+            한자 후보에 없어요 — 뜻만 직접 입력하기
+          </button>
+        </div>
+      )}
     </div>
   );
 }
