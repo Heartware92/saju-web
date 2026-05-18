@@ -133,19 +133,28 @@ export function JaWonVisual({
               />
             )}
             <span
-              className="text-[28px] font-bold leading-none mt-1"
+              className="text-[36px] font-bold leading-none mt-1"
               style={{ fontFamily: 'var(--font-serif)', color: 'var(--text-primary)' }}
             >
               {h.char}
             </span>
-            <span className="text-[12px] font-semibold text-text-secondary mt-1 text-center">
+            <span
+              className="text-[15px] font-semibold text-text-secondary mt-2 text-center leading-snug"
+              style={{ fontFamily: 'var(--font-body)', letterSpacing: '-0.005em' }}
+            >
               {h.meaning}
             </span>
-            <span className="text-[10px] text-text-tertiary mt-0.5">
+            <span
+              className="text-[12px] text-text-tertiary mt-1"
+              style={{ fontFamily: 'var(--font-body)', letterSpacing: '-0.005em' }}
+            >
               {h.radical || '?'}부 · {h.strokes}획
             </span>
             {h.jawon && (
-              <span className="text-[10px] font-bold mt-1" style={{ color }}>
+              <span
+                className="text-[12px] font-bold mt-1"
+                style={{ color, fontFamily: 'var(--font-body)', letterSpacing: '0.02em' }}
+              >
                 자원 {h.jawon}
               </span>
             )}
@@ -241,45 +250,58 @@ export function NumerologyVisual({
   ];
 
   return (
-    <div className="grid grid-cols-2 gap-2 mb-3">
+    <div className="space-y-2 mb-3">
       {items.map((it, i) => {
         const color = GRADE_COLOR[it.data.entry.grade] ?? '#CBD5E1';
         return (
           <div
             key={i}
-            className="rounded-2xl p-3 border"
+            className="rounded-2xl p-4 border flex items-center gap-4"
             style={{
               background: `linear-gradient(135deg, rgba(20,12,38,0.65) 0%, ${color}10 50%, rgba(20,12,38,0.55) 100%)`,
               borderColor: `${color}45`,
               boxShadow: `0 0 18px ${color}10, inset 0 0 1px ${color}40`,
             }}
           >
-            <div className="flex items-baseline justify-between mb-1.5">
-              <span className="text-[14px] font-bold" style={{ color: 'var(--text-primary)', fontFamily: 'var(--font-title)' }}>
+            {/* 좌측: 격 라벨 + 큰 수 */}
+            <div className="flex flex-col items-center justify-center flex-shrink-0" style={{ minWidth: 76 }}>
+              <span
+                className="text-[13px] font-bold mb-1"
+                style={{ color: 'var(--text-primary)', fontFamily: 'var(--font-title)', letterSpacing: '0.02em' }}
+              >
                 {it.label}
               </span>
-              <span className="text-[10px] text-text-tertiary">{it.area}</span>
-            </div>
-            <div className="flex items-baseline gap-1.5 mb-1">
               <span
-                className="text-[22px] font-bold leading-none"
-                style={{ fontFamily: 'var(--font-serif)', color }}
+                className="text-[34px] font-bold leading-none"
+                style={{ fontFamily: 'var(--font-serif)', color, textShadow: `0 0 16px ${color}55` }}
               >
                 {it.data.sum}
               </span>
-              <span className="text-[11px] text-text-tertiary">수</span>
-              <span
-                className="ml-auto text-[11px] font-bold px-1.5 py-0.5 rounded-md"
-                style={{ background: `${color}1a`, color }}
+              <span className="text-[10px] text-text-tertiary mt-0.5">{it.area}</span>
+            </div>
+
+            {/* 우측: 등급 배지 + 한자 명칭 + 의미 */}
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 mb-1.5">
+                <span
+                  className="text-[12px] font-bold px-2 py-0.5 rounded-md"
+                  style={{ background: `${color}1f`, color, border: `1px solid ${color}55` }}
+                >
+                  {it.data.entry.grade}
+                </span>
+                <span
+                  className="text-[14px] font-bold"
+                  style={{ color: 'var(--text-primary)', fontFamily: 'var(--font-title)' }}
+                >
+                  {it.data.entry.name}
+                </span>
+              </div>
+              <p
+                className="text-[14px] text-text-secondary leading-[1.7] tracking-[-0.005em]"
+                style={{ fontFamily: 'var(--font-body)' }}
               >
-                {it.data.entry.grade}
-              </span>
-            </div>
-            <div className="text-[11px] font-semibold text-text-secondary mb-1" style={{ fontFamily: 'var(--font-title)' }}>
-              {it.data.entry.name}
-            </div>
-            <div className="text-[10px] text-text-tertiary leading-snug">
-              {it.data.entry.meaning}
+                {it.data.entry.meaning}
+              </p>
             </div>
           </div>
         );
@@ -306,7 +328,12 @@ export function AdviceVisual({ bullets }: { bullets: string[] }): JSX.Element | 
           >
             {i + 1}
           </span>
-          <span className="text-[14px] text-text-secondary leading-snug">{b}</span>
+          <span
+            className="text-[15px] text-text-secondary leading-[1.7] tracking-[-0.005em]"
+            style={{ fontFamily: 'var(--font-body)' }}
+          >
+            {b}
+          </span>
         </div>
       ))}
     </div>
