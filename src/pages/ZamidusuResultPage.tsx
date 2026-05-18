@@ -78,11 +78,11 @@ const CARD_ACCENT = '#fcd5b4';
 
 function MetaPills({ items }: { items: { label: string; value: string; color?: string }[] }) {
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: `repeat(${items.length}, 1fr)`, gap: 8, marginBottom: 14 }}>
+    <div style={{ display: 'grid', gridTemplateColumns: `repeat(${items.length}, 1fr)`, gap: 10, marginBottom: 18 }}>
       {items.map((it, i) => (
-        <div key={i} style={{ textAlign: 'center', padding: '10px 6px', background: 'rgba(255,255,255,0.04)', borderRadius: 10 }}>
-          <div style={{ fontSize: 11, color: 'var(--text-tertiary)', fontWeight: 600, letterSpacing: 1, marginBottom: 4 }}>{it.label}</div>
-          <div style={{ fontSize: 16, fontWeight: 700, color: it.color ?? 'var(--text-primary)', fontFamily: 'var(--font-serif)' }}>{it.value}</div>
+        <div key={i} style={{ textAlign: 'center', padding: '14px 8px', background: 'rgba(255,255,255,0.04)', borderRadius: 12 }}>
+          <div style={{ fontSize: 13, color: 'var(--text-tertiary)', fontWeight: 600, letterSpacing: 1, marginBottom: 6 }}>{it.label}</div>
+          <div style={{ fontSize: 20, fontWeight: 700, color: it.color ?? 'var(--text-primary)', fontFamily: 'var(--font-serif)' }}>{it.value}</div>
         </div>
       ))}
     </div>
@@ -92,21 +92,21 @@ function MetaPills({ items }: { items: { label: string; value: string; color?: s
 function StarBigCard({ name, hanja, brightness, mutagen, keywords }: { name: string; hanja: string; brightness?: string; mutagen?: string; keywords?: string[] }) {
   return (
     <div style={{
-      flex: 1, minWidth: 120,
-      padding: '16px 14px', borderRadius: 14,
+      flex: 1, minWidth: 150,
+      padding: '20px 18px', borderRadius: 16,
       background: CARD_BG, border: `1px solid ${CARD_BORDER}`,
       textAlign: 'center',
     }}>
-      <div style={{ fontSize: 32, fontFamily: 'var(--font-serif)', color: 'var(--text-primary)', marginBottom: 4, lineHeight: 1 }}>{hanja}</div>
-      <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 6 }}>{name}</div>
-      <div style={{ fontSize: 11, color: 'var(--text-tertiary)', display: 'flex', justifyContent: 'center', gap: 6, flexWrap: 'wrap' }}>
+      <div style={{ fontSize: 44, fontFamily: 'var(--font-serif)', color: 'var(--text-primary)', marginBottom: 6, lineHeight: 1 }}>{hanja}</div>
+      <div style={{ fontSize: 19, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 8 }}>{name}</div>
+      <div style={{ fontSize: 13, color: 'var(--text-tertiary)', display: 'flex', justifyContent: 'center', gap: 8, flexWrap: 'wrap' }}>
         {brightness && <span>{brightness}</span>}
         {mutagen && <span style={{ color: CARD_ACCENT, fontWeight: 700 }}>{mutagen}</span>}
       </div>
       {keywords && keywords.length > 0 && (
-        <div style={{ marginTop: 8, display: 'flex', justifyContent: 'center', gap: 4, flexWrap: 'wrap' }}>
+        <div style={{ marginTop: 12, display: 'flex', justifyContent: 'center', gap: 6, flexWrap: 'wrap' }}>
           {keywords.slice(0, 3).map((k, i) => (
-            <span key={i} style={{ fontSize: 10, padding: '2px 6px', borderRadius: 6, background: 'rgba(252,213,180,0.10)', color: CARD_ACCENT, border: '1px solid rgba(252,213,180,0.25)' }}>#{k}</span>
+            <span key={i} style={{ fontSize: 13, padding: '4px 10px', borderRadius: 8, background: 'rgba(252,213,180,0.10)', color: CARD_ACCENT, border: '1px solid rgba(252,213,180,0.25)' }}>#{k}</span>
           ))}
         </div>
       )}
@@ -117,13 +117,13 @@ function StarBigCard({ name, hanja, brightness, mutagen, keywords }: { name: str
 function MainStarCards({ palace }: { palace: ZamidusuPalace }) {
   if (palace.majorStars.length === 0) {
     return (
-      <div style={{ padding: '14px 16px', borderRadius: 12, background: CARD_BG, border: `1px solid ${CARD_BORDER}`, textAlign: 'center', marginBottom: 14, fontSize: 13, color: 'var(--text-tertiary)' }}>
+      <div style={{ padding: '18px 20px', borderRadius: 14, background: CARD_BG, border: `1px solid ${CARD_BORDER}`, textAlign: 'center', marginBottom: 18, fontSize: 16, color: 'var(--text-tertiary)' }}>
         명궁 공궁 — 대궁(對宮)의 별이 명궁에 비춰 들어옴
       </div>
     );
   }
   return (
-    <div style={{ display: 'flex', gap: 10, marginBottom: 14, flexWrap: 'wrap' }}>
+    <div style={{ display: 'flex', gap: 12, marginBottom: 18, flexWrap: 'wrap' }}>
       {palace.majorStars.map(s => {
         const meta = MAJOR_STARS_META[s.name];
         return (
@@ -147,21 +147,21 @@ function HelperStarsChips({ palace }: { palace: ZamidusuPalace }) {
   const other = palace.minorStars.filter(s => MINOR_STARS_META[s.name]?.category === '기타');
   if (lucky.length + unlucky.length + other.length === 0) {
     return (
-      <div style={{ padding: '12px 16px', borderRadius: 12, background: CARD_BG, border: `1px solid ${CARD_BORDER}`, textAlign: 'center', marginBottom: 14, fontSize: 13, color: 'var(--text-tertiary)' }}>
+      <div style={{ padding: '16px 18px', borderRadius: 12, background: CARD_BG, border: `1px solid ${CARD_BORDER}`, textAlign: 'center', marginBottom: 18, fontSize: 15, color: 'var(--text-tertiary)' }}>
         명궁에 보좌성 없음 — 본인 별만으로 풀어가는 인생
       </div>
     );
   }
   const Group = ({ label, stars, color, bg }: { label: string; stars: ZamidusuPalace['minorStars']; color: string; bg: string }) => (
     stars.length > 0 ? (
-      <div style={{ flex: 1, minWidth: 130, padding: 12, borderRadius: 12, background: bg, border: `1px solid ${color}55` }}>
-        <div style={{ fontSize: 11, color, fontWeight: 700, marginBottom: 8, letterSpacing: 1 }}>{label}</div>
-        <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+      <div style={{ padding: '14px 16px', borderRadius: 12, background: bg, border: `1px solid ${color}55`, marginBottom: 8 }}>
+        <div style={{ fontSize: 13, color, fontWeight: 700, marginBottom: 10, letterSpacing: 1 }}>{label}</div>
+        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
           {stars.map(s => {
             const meta = MINOR_STARS_META[s.name];
             return (
-              <span key={s.name} style={{ fontSize: 12, padding: '4px 8px', borderRadius: 6, background: `${color}15`, color: 'var(--text-primary)', fontWeight: 600 }}>
-                {meta?.name ?? s.name} <span style={{ fontFamily: 'var(--font-serif)', opacity: 0.7 }}>{meta?.hanja ?? ''}</span>
+              <span key={s.name} style={{ fontSize: 15, padding: '6px 12px', borderRadius: 8, background: `${color}15`, color: 'var(--text-primary)', fontWeight: 600 }}>
+                {meta?.name ?? s.name} <span style={{ fontFamily: 'var(--font-serif)', opacity: 0.7, fontSize: 13 }}>{meta?.hanja ?? ''}</span>
               </span>
             );
           })}
@@ -170,9 +170,9 @@ function HelperStarsChips({ palace }: { palace: ZamidusuPalace }) {
     ) : null
   );
   return (
-    <div style={{ display: 'flex', gap: 8, marginBottom: 14, flexWrap: 'wrap' }}>
-      <Group label="6 길성 (귀인·복)" stars={lucky} color="#34D399" bg="rgba(52,211,153,0.08)" />
-      <Group label="4 흉성 (압력·함정)" stars={unlucky} color="#F87171" bg="rgba(248,113,113,0.08)" />
+    <div style={{ marginBottom: 18 }}>
+      <Group label="6 길성 — 귀인·복" stars={lucky} color="#34D399" bg="rgba(52,211,153,0.08)" />
+      <Group label="4 흉성 — 압력·함정" stars={unlucky} color="#F87171" bg="rgba(248,113,113,0.08)" />
       <Group label="록존·천마" stars={other} color="#FBBF24" bg="rgba(251,191,36,0.08)" />
     </div>
   );
@@ -184,25 +184,26 @@ function PalaceMiniCard({ palace, accent }: { palace: ZamidusuPalace | undefined
   const stars = palace.majorStars.map(s => s.name).join('·') || '공궁';
   return (
     <div style={{
-      flex: 1, minWidth: 110,
-      padding: '12px 10px', borderRadius: 12,
+      padding: '14px 16px', borderRadius: 12,
       background: 'rgba(255,255,255,0.04)',
       border: `1px solid ${accent ?? CARD_BORDER}`,
     }}>
-      <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 6 }}>
-        <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)', fontFamily: 'var(--font-serif)' }}>{palace.name}</span>
-        <span style={{ fontSize: 10, color: 'var(--text-tertiary)', letterSpacing: 1 }}>{palace.heavenlyStem}{palace.earthlyBranch}</span>
+      <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 8 }}>
+        <span style={{ fontSize: 17, fontWeight: 700, color: 'var(--text-primary)', fontFamily: 'var(--font-serif)' }}>{palace.name}</span>
+        <span style={{ fontSize: 13, color: 'var(--text-tertiary)', letterSpacing: 1 }}>{palace.heavenlyStem}{palace.earthlyBranch}</span>
       </div>
-      <div style={{ fontSize: 13, color: 'var(--text-secondary)', fontWeight: 600, marginBottom: role ? 4 : 0 }}>{stars}</div>
-      {role && <div style={{ fontSize: 10, color: 'var(--text-tertiary)' }}>{role.domain}</div>}
+      <div style={{ fontSize: 16, color: 'var(--text-secondary)', fontWeight: 600, marginBottom: role ? 6 : 0 }}>{stars}</div>
+      {role && <div style={{ fontSize: 13, color: 'var(--text-tertiary)' }}>{role.domain}</div>}
     </div>
   );
 }
 
+// 모든 궁 그룹을 2 컬럼으로 통일 — 가시성 우선. 카드 자체가 커서 1행 2열 자동 wrap.
+// (3궁=2+1, 5궁=2+2+1, 4궁=2+2)
 function PalaceGroup({ chart, names, accent }: { chart: ZamidusuResult; names: string[]; accent?: string }) {
   const palaces = names.map(n => chart.palaces.find(p => p.name === n));
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: `repeat(${Math.min(names.length, 3)}, 1fr)`, gap: 8, marginBottom: 14 }}>
+    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 10, marginBottom: 18 }}>
       {palaces.map((p, i) => <PalaceMiniCard key={i} palace={p} accent={accent} />)}
     </div>
   );
@@ -219,27 +220,31 @@ function MutagenGridCards({ chart }: { chart: ZamidusuResult }) {
   const colorMap: Record<string, string> = {
     화록: '#34D399', 화권: '#FBBF24', 화과: '#60A5FA', 화기: '#F87171',
   };
+  // 4 사화는 2 컬럼 (2+2) — 카드 크게
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 8, marginBottom: 14 }}>
+    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 10, marginBottom: 18 }}>
       {order.map(t => {
         const m = muts.find(x => x.type === t);
         const meta = MUTAGEN_META[t];
         const color = colorMap[t];
         return (
           <div key={t} style={{
-            padding: '12px 14px', borderRadius: 12,
+            padding: '16px 18px', borderRadius: 14,
             background: `${color}10`, border: `1px solid ${color}40`,
           }}>
-            <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 4 }}>
-              <span style={{ fontSize: 14, fontWeight: 700, color, fontFamily: 'var(--font-serif)' }}>{meta?.name ?? t} {meta?.hanja && <span style={{ opacity: 0.6 }}>{meta.hanja}</span>}</span>
+            <div style={{ marginBottom: 8 }}>
+              <span style={{ fontSize: 18, fontWeight: 700, color, fontFamily: 'var(--font-serif)' }}>
+                {meta?.name ?? t}
+                {meta?.hanja && <span style={{ opacity: 0.6, marginLeft: 6, fontSize: 15 }}>{meta.hanja}</span>}
+              </span>
             </div>
             {m ? (
-              <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>
+              <div style={{ fontSize: 15, color: 'var(--text-secondary)' }}>
                 <span style={{ fontWeight: 700, color: 'var(--text-primary)' }}>{m.star}</span>
-                <span style={{ color: 'var(--text-tertiary)', marginLeft: 6 }}>{m.palace}</span>
+                <span style={{ color: 'var(--text-tertiary)', marginLeft: 8, fontSize: 13 }}>{m.palace}</span>
               </div>
             ) : (
-              <div style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>없음</div>
+              <div style={{ fontSize: 14, color: 'var(--text-tertiary)' }}>없음</div>
             )}
           </div>
         );
@@ -253,10 +258,10 @@ function InteractionsCards({ chart }: { chart: ZamidusuResult }) {
   const targets = ['명궁', '재백궁', '관록궁', '천이궁'];
   return (
     <>
-      <div style={{ fontSize: 11, color: 'var(--text-tertiary)', fontWeight: 600, letterSpacing: 1, marginBottom: 6 }}>
+      <div style={{ fontSize: 13, color: 'var(--text-tertiary)', fontWeight: 600, letterSpacing: 1, marginBottom: 10 }}>
         삼방사정 — 명궁에 비춰 들어오는 핵심 4 궁
       </div>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 8, marginBottom: 14 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 10, marginBottom: 18 }}>
         {targets.map(n => <PalaceMiniCard key={n} palace={chart.palaces.find(p => p.name === n)} accent="rgba(252,213,180,0.35)" />)}
       </div>
     </>
@@ -271,7 +276,7 @@ function DaehanTable({ chart, currentAge }: { chart: ZamidusuResult; currentAge?
   if (rows.length === 0) return null;
   return (
     <div style={{
-      marginBottom: 14, borderRadius: 12, overflow: 'hidden',
+      marginBottom: 18, borderRadius: 14, overflow: 'hidden',
       border: `1px solid ${CARD_BORDER}`, background: CARD_BG,
     }}>
       {rows.map((p, i) => {
@@ -279,16 +284,16 @@ function DaehanTable({ chart, currentAge }: { chart: ZamidusuResult; currentAge?
         const stars = p.majorStars.map(s => s.name).join('·') || '공궁';
         return (
           <div key={i} style={{
-            display: 'grid', gridTemplateColumns: '70px 70px 1fr', gap: 10,
-            padding: '8px 12px',
+            display: 'grid', gridTemplateColumns: '96px 90px 1fr', gap: 12,
+            padding: '14px 16px', alignItems: 'center',
             borderBottom: i === rows.length - 1 ? 'none' : '1px solid rgba(255,255,255,0.06)',
             background: isCurrent ? 'rgba(252,213,180,0.10)' : 'transparent',
           }}>
-            <div style={{ fontSize: 12, color: isCurrent ? CARD_ACCENT : 'var(--text-secondary)', fontWeight: isCurrent ? 700 : 500 }}>
+            <div style={{ fontSize: 15, color: isCurrent ? CARD_ACCENT : 'var(--text-secondary)', fontWeight: isCurrent ? 700 : 600 }}>
               {isCurrent && '★ '}{p.decadal!.startAge}~{p.decadal!.endAge}세
             </div>
-            <div style={{ fontSize: 12, color: 'var(--text-primary)', fontWeight: 600, fontFamily: 'var(--font-serif)' }}>{p.name}</div>
-            <div style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>{stars}</div>
+            <div style={{ fontSize: 16, color: 'var(--text-primary)', fontWeight: 700, fontFamily: 'var(--font-serif)' }}>{p.name}</div>
+            <div style={{ fontSize: 15, color: 'var(--text-secondary)', fontWeight: 600 }}>{stars}</div>
           </div>
         );
       })}
@@ -303,14 +308,14 @@ function SohanCard({ chart, currentAge }: { chart: ZamidusuResult; currentAge?: 
   const stars = cur.majorStars.map(s => s.name).join('·') || '공궁';
   return (
     <div style={{
-      padding: '14px 16px', borderRadius: 12, marginBottom: 14,
+      padding: '18px 20px', borderRadius: 14, marginBottom: 18,
       background: 'rgba(252,213,180,0.10)', border: `1px solid rgba(252,213,180,0.35)`,
     }}>
-      <div style={{ fontSize: 11, color: CARD_ACCENT, fontWeight: 700, letterSpacing: 1, marginBottom: 6 }}>
+      <div style={{ fontSize: 14, color: CARD_ACCENT, fontWeight: 700, letterSpacing: 1, marginBottom: 10 }}>
         ★ 올해 ({currentAge}세) 소한 — {cur.name}
       </div>
-      <div style={{ fontSize: 14, color: 'var(--text-primary)', fontWeight: 700 }}>{stars}</div>
-      <div style={{ fontSize: 11, color: 'var(--text-tertiary)', marginTop: 4 }}>{PALACE_ROLE_META[cur.name]?.domain}</div>
+      <div style={{ fontSize: 19, color: 'var(--text-primary)', fontWeight: 700, marginBottom: 6 }}>{stars}</div>
+      <div style={{ fontSize: 14, color: 'var(--text-tertiary)' }}>{PALACE_ROLE_META[cur.name]?.domain}</div>
     </div>
   );
 }
@@ -335,7 +340,7 @@ function renderSectionDataCards(
     case 'body_palace': {
       const body = chart.palaces.find(p => p.isBodyPalace);
       return body ? (
-        <div style={{ marginBottom: 14 }}>
+        <div style={{ marginBottom: 18 }}>
           <PalaceMiniCard palace={body} accent="rgba(244,114,182,0.4)" />
         </div>
       ) : null;
