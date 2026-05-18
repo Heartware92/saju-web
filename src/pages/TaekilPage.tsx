@@ -27,6 +27,7 @@ import {
   type TaekilResult,
 } from '../engine/taekil';
 import { getTaekilAdvice } from '../services/fortuneService';
+import { pickTaekilDetailHint, TAEKIL_DETAIL_MAX_LEN } from '../constants/taekilDetailHints';
 import { useLoadingGuard } from '../hooks/useLoadingGuard';
 import { truncateTaekilLabel } from '../utils/truncateTaekilLabel';
 import styles from './SajuResultPage.module.css';
@@ -68,6 +69,9 @@ export default function TaekilPage() {
   const [subItem, setSubItem] = useState<string | null>(null);
   /** category='custom' 일 때만 사용 — 사용자가 직접 입력한 행사 이름 (예: "전시회 오픈") */
   const [customLabel, setCustomLabel] = useState('');
+  /** 사용자가 선택한 행사에 대해 더 자세한 정황(100자 이내). prompt 의 [상세 입력] 블록으로 전달되어
+   *  1·2·3위 풀이와 "OO에 대한 조언" 영역이 이 입력을 반영하도록 한다. */
+  const [detail, setDetail] = useState('');
 
   const today = new Date();
   const todayYear = today.getFullYear();
@@ -104,8 +108,9 @@ export default function TaekilPage() {
     if (category === 'custom' && !customLabel.trim()) return null;
     const subSeg = subItem ? `:${subItem}` : '';
     const customSeg = category === 'custom' ? `:${customLabel.trim().slice(0, 30)}` : '';
-    return `${sajuKey(saju)}:${category}${subSeg}${customSeg}:${[...pickedDates].sort().join(',')}`;
-  }, [saju, category, subItem, pickedDates, customLabel]);
+    const detailSeg = detail.trim() ? `:d=${detail.trim().slice(0, 100)}` : '';
+    return `${sajuKey(saju)}:${category}${subSeg}${customSeg}${detailSeg}:${[...pickedDates].sort().join(',')}`;
+  }, [saju, category, subItem, pickedDates, customLabel, detail]);
 
   // 카테고리/연월 변경시 엔진 재계산 (보관함 모드에서는 스킵)
   // ★ pickedDates 가 viewMonth 밖 날짜를 포함하면 range 확장 — 여러 달 후보 통합 풀이 위해.
@@ -232,7 +237,7 @@ export default function TaekilPage() {
     setAiError(null);
     setAiLoading(true);
     try {
-      const r = await getTaekilAdvice(saju, payload, targetProfile?.id);
+      const r = await getTaekilAdvice(saju, payload, targetProfile?.id, detail.trim() || undefined);
       if (!r.success || !r.advice) {
         throw new Error(r.error || '길일 분석을 가져오지 못했어요.');
       }
@@ -476,6 +481,85 @@ export default function TaekilPage() {
               </div>
             )}
           </div>}
+
+          {/* ═══ STEP 1.5: 선택한 행사에 대한 상세 입력 (하위항목 선택 or custom 입력 후 노출) ═══ */}
+          {!isArchiveMode && (
+            <AnimatePresence>
+              {category && (
+                category === 'custom' ? customLabel.trim().length > 0 : !!subItem
+              ) && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: 'auto' }}
+                  exit={{ opacity: 0, height: 0 }}
+                  style={{ overflow: 'hidden' }}
+                >
+                  <div className={styles.section}>
+                    {/* 선택된 카테고리 표시 + 상세 입력 */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+                      <span style={{
+                        display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                        width: 24, height: 24, borderRadius: '50%',
+                        background: detail.trim().length > 0 ? 'var(--cta-primary)' : 'rgba(124,92,252,0.2)',
+                        fontSize: 12, fontWeight: 800, color: 'white',
+                      }}>2</span>
+                      <h2 style={{ margin: 0, fontSize: 16 }}>자세히 알려주세요 (선택)</h2>
+                    </div>
+
+                    {/* 선택된 행사 칩 — 사용자가 어떤 행사인지 다시 확인 */}
+                    <div style={{ marginBottom: 10 }}>
+                      <span style={{
+                        display: 'inline-flex', alignItems: 'center', gap: 6,
+                        padding: '6px 12px', borderRadius: 999,
+                        background: 'rgba(124,92,252,0.18)',
+                        border: '1px solid var(--cta-primary)',
+                        fontSize: 13, fontWeight: 700,
+                        color: 'var(--cta-primary)',
+                      }}>
+                        {catLabel}
+                        {(category === 'custom' ? customLabel : subItem) && (
+                          <>
+                            <span style={{ opacity: 0.5 }}>·</span>
+                            <span style={{ color: 'var(--text-primary)' }}>
+                              {category === 'custom' ? customLabel : subItem}
+                            </span>
+                          </>
+                        )}
+                      </span>
+                    </div>
+
+                    <textarea
+                      value={detail}
+                      onChange={e => setDetail(e.target.value.slice(0, TAEKIL_DETAIL_MAX_LEN))}
+                      placeholder={pickTaekilDetailHint(category, subItem) + ' (선택, 비워두셔도 풀이됩니다)'}
+                      rows={3}
+                      style={{
+                        width: '100%',
+                        padding: '12px 14px',
+                        borderRadius: 12,
+                        border: '1px solid var(--border-subtle)',
+                        background: 'rgba(20,12,38,0.55)',
+                        color: 'var(--text-primary)',
+                        fontSize: 14,
+                        lineHeight: 1.5,
+                        outline: 'none',
+                        resize: 'none',
+                        fontFamily: 'var(--font-body)',
+                      }}
+                    />
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 6 }}>
+                      <p style={{ fontSize: 11, color: 'var(--text-tertiary)', lineHeight: 1.5, margin: 0 }}>
+                        적어주신 정황이 1·2·3위 풀이와 조언에 반영돼요.
+                      </p>
+                      <span style={{ fontSize: 11, color: detail.length >= TAEKIL_DETAIL_MAX_LEN ? 'var(--cta-primary)' : 'var(--text-tertiary)' }}>
+                        {detail.length}/{TAEKIL_DETAIL_MAX_LEN}
+                      </span>
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          )}
 
           {/* ═══ STEP 2: 캘린더에서 날짜 선택 (하위항목 선택 or custom 입력 후 노출) ═══ */}
           <AnimatePresence>

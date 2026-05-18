@@ -1320,16 +1320,20 @@ export const getTaekilAdvice = async (
   saju: SajuResult,
   taekil: TaekilResult,
   profileId?: string,
+  /** 사용자가 100자 이내로 적은 행사 정황. prompt 의 [상세 입력] 블록으로 전달 */
+  detail?: string,
 ): Promise<TaekilAdviceResult> => {
   try {
-    const prompt = generateTaekilAdvicePrompt(saju, taekil);
-    // minContentLength 300 명시 — maxTokens 5000 의 기본 minLen (750자) 은 1개 날짜 풀이엔 과해서
-    // "응답이 너무 짧다" 오류 발생. 1개 후보도 풀이 가능하도록 300자 기준으로 완화.
-    const raw = await callGPT(prompt, 5000, 300);
+    const prompt = generateTaekilAdvicePrompt(saju, taekil, detail);
+    // top1·2·3 × (종합·조언·주의·키워드) + overall_advice + alternative 모두 출력하려면
+    // 7000 토큰 필요. minContentLength 500 으로 완화(빈 응답 방지).
+    const raw = await callGPT(prompt, 7000, 500);
     // [taekil_advice] 마커 제거하고 본문만 추출
     const match = raw.match(/\[taekil_advice\]\s*([\s\S]+)/);
     const advice = match ? match[1].trim() : raw.trim();
-    const archivedRecordId = await archiveSaju({ profileId, sourceBirth: sourceBirthFromSaju(saju), category: 'taekil', resultData: saju as unknown as Record<string, unknown>, engineResult: taekil as unknown as Record<string, unknown>, interpretation: advice }).catch(() => null);
+    // engineResult 에 detail 도 같이 저장 — archive 복원 시 같은 정황이 prompt 에 다시 들어가도록
+    const engineWithDetail = { ...(taekil as unknown as Record<string, unknown>), userDetail: detail ?? '' };
+    const archivedRecordId = await archiveSaju({ profileId, sourceBirth: sourceBirthFromSaju(saju), category: 'taekil', resultData: saju as unknown as Record<string, unknown>, engineResult: engineWithDetail, interpretation: advice }).catch(() => null);
     return { success: true, advice, ...(archivedRecordId ? { archivedRecordId } : {}) };
   } catch (error: any) {
     return { success: false, error: error.message };

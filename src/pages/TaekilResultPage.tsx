@@ -45,44 +45,88 @@ const ELEMENT_COLORS: Record<string, string> = {
 
 interface TaekilDateAdvice {
   rank: number;
+  /** "종합:" 본문 (옛 레코드 호환을 위해 summary 이름 유지) */
   summary: string;
+  /** "조언:" 본문 — 이 날 무엇을 하면 좋은지 구체 행동 */
+  advice: string;
+  /** "주의:" 본문 — 이 날 조심해야 할 점 */
+  caution: string;
+  /** "키워드:" 칩 3개 */
   keywords: string[];
 }
 
-function parseTaekilStructuredAdvice(raw: string): { dates: TaekilDateAdvice[]; avoid: string } {
+interface TaekilParsedAdvice {
+  dates: TaekilDateAdvice[];
+  avoid: string;
+  /** "OO에 대한 조언" 영역 — 1·2·3위 통합 권고 */
+  overallAdvice: string;
+  /** "추천 대체 방법" 영역 */
+  alternative: string;
+}
+
+function parseTaekilStructuredAdvice(raw: string): TaekilParsedAdvice {
   const dates: TaekilDateAdvice[] = [];
   const topRe = /\[top(\d)\]/g;
   const parts = raw.split(topRe);
   for (let i = 1; i < parts.length; i += 2) {
     const rank = parseInt(parts[i], 10);
-    const content = (parts[i + 1] ?? '').split(/\[(?:top\d|avoid)\]/)[0].trim();
-    const summaryMatch = content.match(/종합[:：]\s*([\s\S]*?)(?=\n키워드[:：]|$)/);
-    const keywordMatch = content.match(/키워드[:：]\s*(.+)/);
-    if (summaryMatch) {
+    // 다음 마커 직전까지가 이 top 의 본문 (top·avoid·overall_advice·alternative 어느 것 먼저 와도 끊음)
+    const content = (parts[i + 1] ?? '').split(/\[(?:top\d|avoid|overall_advice|alternative)\]/)[0].trim();
+
+    // 새 포맷: 종합 / 조언 / 주의 / 키워드 4 라벨
+    const extractLabel = (label: string): string => {
+      // 다음 라벨 전까지 추출
+      const re = new RegExp(`${label}[:：]\\s*([\\s\\S]*?)(?=\\n\\s*(?:종합|조언|주의|키워드|분석|시간대|개운법)[:：]|$)`);
+      const m = content.match(re);
+      return m ? m[1].trim() : '';
+    };
+    const summary = extractLabel('종합');
+    const advice = extractLabel('조언');
+    const caution = extractLabel('주의');
+    const keywordRaw = extractLabel('키워드');
+
+    if (summary || advice || caution) {
       dates.push({
         rank,
-        summary: summaryMatch[1].trim(),
-        keywords: keywordMatch
-          ? keywordMatch[1].split(/[,，]/).map(k => k.trim()).filter(Boolean)
+        summary,
+        advice,
+        caution,
+        keywords: keywordRaw
+          ? keywordRaw.split(/[,，]/).map(k => k.trim()).filter(Boolean)
           : [],
       });
     } else {
-      const extract = (label: string): string => {
-        const re = new RegExp(`${label}[:：]\\s*([\\s\\S]*?)(?=\\n(?:분석|시간대|개운법|주의|종합|키워드)[:：]|$)`);
+      // 옛 포맷(분석·시간대·개운법) fallback — 단일 summary 로 합쳐서 보존
+      const legacyExtract = (label: string): string => {
+        const re = new RegExp(`${label}[:：]\\s*([\\s\\S]*?)(?=\\n(?:분석|시간대|개운법|주의|종합|조언|키워드)[:：]|$)`);
         const m = content.match(re);
         return m ? m[1].trim() : '';
       };
-      const analysis = extract('분석');
-      const times = extract('시간대');
-      const luck = extract('개운법');
-      const caution = extract('주의');
-      const merged = [analysis, times && `추천 시간대: ${times}`, luck && `개운법: ${luck}`, caution && `주의: ${caution}`].filter(Boolean).join('\n');
-      dates.push({ rank, summary: merged || content, keywords: [] });
+      const analysis = legacyExtract('분석');
+      const times = legacyExtract('시간대');
+      const luck = legacyExtract('개운법');
+      const legacyCaution = legacyExtract('주의');
+      const merged = [analysis, times && `추천 시간대: ${times}`, luck && `개운법: ${luck}`].filter(Boolean).join('\n');
+      dates.push({
+        rank,
+        summary: merged || content,
+        advice: '',
+        caution: legacyCaution,
+        keywords: [],
+      });
     }
   }
-  const avoidMatch = raw.match(/\[avoid\]\s*([\s\S]*?)$/);
+
+  const avoidMatch = raw.match(/\[avoid\]\s*([\s\S]*?)(?=\[(?:overall_advice|alternative)\]|$)/);
   const avoid = avoidMatch ? avoidMatch[1].trim() : '';
-  return { dates, avoid };
+
+  const overallMatch = raw.match(/\[overall_advice\]\s*([\s\S]*?)(?=\[alternative\]|$)/);
+  const overallAdvice = overallMatch ? overallMatch[1].trim() : '';
+
+  const altMatch = raw.match(/\[alternative\]\s*([\s\S]*?)$/);
+  const alternative = altMatch ? altMatch[1].trim() : '';
+
+  return { dates, avoid, overallAdvice, alternative };
 }
 
 export default function TaekilResultPage() {
@@ -94,7 +138,7 @@ export default function TaekilResultPage() {
 
   const [result, setResult] = useState<TaekilResult | null>(null);
   const [aiAdvice, setAiAdvice] = useState<string>('');
-  const [parsedAdvice, setParsedAdvice] = useState<{ dates: TaekilDateAdvice[]; avoid: string } | null>(null);
+  const [parsedAdvice, setParsedAdvice] = useState<TaekilParsedAdvice | null>(null);
   const [profileId, setProfileId] = useState<string | null>(null);
   // recordId 없으면 즉시 에러 상태로 시작 → useEffect 안 sync setState 회피
   const [loading, setLoading] = useState<boolean>(!!recordId);
@@ -460,15 +504,64 @@ export default function TaekilResultPage() {
                           </div>
                         )}
 
+                        {/* 종합 / 조언 / 주의 — 새 3섹션 구조 (옛 record 는 summary 만 있을 수 있음) */}
                         {adv.summary && (
-                          <div style={{ marginBottom: 14 }}>
-                            <p style={{
-                              fontSize: 15, color: 'var(--text-secondary)',
-                              lineHeight: 1.85, margin: 0, whiteSpace: 'pre-line',
-                              fontFamily: 'var(--font-body)',
-                              letterSpacing: '0.16em',
-                            }}>
+                          <div style={{ marginBottom: adv.advice || adv.caution ? 12 : 14 }}>
+                            <div style={{ fontSize: 11, fontWeight: 800, color: 'var(--text-tertiary)', letterSpacing: '0.08em', marginBottom: 6, textTransform: 'uppercase' }}>
+                              종합
+                            </div>
+                            <p
+                              className="text-text-secondary leading-[1.85] tracking-[-0.005em]"
+                              style={{
+                                fontSize: 17, margin: 0, whiteSpace: 'pre-line',
+                                fontFamily: 'var(--font-body)',
+                              }}
+                            >
                               {adv.summary}
+                            </p>
+                          </div>
+                        )}
+                        {adv.advice && (
+                          <div style={{
+                            marginBottom: adv.caution ? 12 : 14,
+                            padding: '12px 14px',
+                            borderRadius: 12,
+                            background: 'rgba(52,211,153,0.06)',
+                            border: '1px solid rgba(52,211,153,0.22)',
+                          }}>
+                            <div style={{ fontSize: 11, fontWeight: 800, color: '#34D399', letterSpacing: '0.08em', marginBottom: 6, textTransform: 'uppercase' }}>
+                              이렇게 하면 좋아요
+                            </div>
+                            <p
+                              className="text-text-secondary leading-[1.85] tracking-[-0.005em]"
+                              style={{
+                                fontSize: 16, margin: 0, whiteSpace: 'pre-line',
+                                fontFamily: 'var(--font-body)',
+                              }}
+                            >
+                              {adv.advice}
+                            </p>
+                          </div>
+                        )}
+                        {adv.caution && (
+                          <div style={{
+                            marginBottom: 14,
+                            padding: '12px 14px',
+                            borderRadius: 12,
+                            background: 'rgba(248,113,113,0.06)',
+                            border: '1px solid rgba(248,113,113,0.22)',
+                          }}>
+                            <div style={{ fontSize: 11, fontWeight: 800, color: '#F87171', letterSpacing: '0.08em', marginBottom: 6, textTransform: 'uppercase' }}>
+                              주의할 점
+                            </div>
+                            <p
+                              className="text-text-secondary leading-[1.85] tracking-[-0.005em]"
+                              style={{
+                                fontSize: 16, margin: 0, whiteSpace: 'pre-line',
+                                fontFamily: 'var(--font-body)',
+                              }}
+                            >
+                              {adv.caution}
                             </p>
                           </div>
                         )}
@@ -563,13 +656,78 @@ export default function TaekilResultPage() {
                         }}>!</span>
                         <span style={{ fontSize: 13, fontWeight: 700, color: '#F87171' }}>피해야 할 날</span>
                       </div>
-                      <p style={{
-                        fontSize: 14, color: 'var(--text-secondary)',
-                        lineHeight: 1.85, margin: 0, whiteSpace: 'pre-line',
-                        fontFamily: 'var(--font-body)',
-                        letterSpacing: '0.16em',
-                      }}>
+                      <p
+                        className="text-text-secondary leading-[1.85] tracking-[-0.005em]"
+                        style={{
+                          fontSize: 15, margin: 0, whiteSpace: 'pre-line',
+                          fontFamily: 'var(--font-body)',
+                        }}
+                      >
                         {parsedAdvice.avoid}
+                      </p>
+                    </div>
+                  )}
+
+                  {/* "OO에 대한 조언" — 1·2·3위 통합 권고 (행사 자체에 대한 톤) */}
+                  {parsedAdvice.overallAdvice && (() => {
+                    const eventLabel = result?.subItem ?? result?.customLabel ?? result?.categoryLabel ?? '';
+                    return (
+                      <div style={{
+                        marginTop: 16,
+                        padding: '18px 16px',
+                        background: 'radial-gradient(ellipse at top, rgba(124,92,252,0.10) 0%, rgba(20,12,38,0.65) 70%)',
+                        borderRadius: 16,
+                        border: '1px solid rgba(124,92,252,0.32)',
+                        boxShadow: '0 0 24px rgba(124,92,252,0.08), inset 0 0 1px rgba(124,92,252,0.40)',
+                      }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+                          <span style={{
+                            display: 'inline-block', width: 4, height: 18, borderRadius: 2,
+                            background: 'var(--cta-primary)',
+                          }} />
+                          <span style={{ fontSize: 15, fontWeight: 800, color: 'var(--text-primary)', letterSpacing: '-0.01em' }}>
+                            {eventLabel ? `${eventLabel}에 대한 조언` : '이 행사에 대한 조언'}
+                          </span>
+                        </div>
+                        <p
+                          className="text-text-secondary leading-[1.85] tracking-[-0.005em]"
+                          style={{
+                            fontSize: 16, margin: 0, whiteSpace: 'pre-line',
+                            fontFamily: 'var(--font-body)',
+                          }}
+                        >
+                          {parsedAdvice.overallAdvice}
+                        </p>
+                      </div>
+                    );
+                  })()}
+
+                  {/* "추천 대체 방법" — 1·2·3위가 어렵거나 행사 자체를 변형할 때 */}
+                  {parsedAdvice.alternative && (
+                    <div style={{
+                      marginTop: 12,
+                      padding: '18px 16px',
+                      background: 'rgba(252,213,180,0.06)',
+                      borderRadius: 16,
+                      border: '1px solid rgba(252,213,180,0.28)',
+                    }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fcd5b4" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <polyline points="23 4 23 10 17 10" />
+                          <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" />
+                        </svg>
+                        <span style={{ fontSize: 15, fontWeight: 800, color: '#fcd5b4', letterSpacing: '-0.01em' }}>
+                          추천 대체 방법
+                        </span>
+                      </div>
+                      <p
+                        className="text-text-secondary leading-[1.85] tracking-[-0.005em]"
+                        style={{
+                          fontSize: 16, margin: 0, whiteSpace: 'pre-line',
+                          fontFamily: 'var(--font-body)',
+                        }}
+                      >
+                        {parsedAdvice.alternative}
                       </p>
                     </div>
                   )}
