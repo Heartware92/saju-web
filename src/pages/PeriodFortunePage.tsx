@@ -216,20 +216,26 @@ function ActionCardList({ bodyText, variant }: { bodyText: string; variant: 'yes
     ? { bg: 'rgba(52,211,153,0.06)', border: 'rgba(52,211,153,0.22)', accent: '#34D399' }
     : { bg: 'rgba(248,113,113,0.06)', border: 'rgba(248,113,113,0.22)', accent: '#F87171' };
 
-  // 최우선 카드 — yes 는 "가장 추천/1순위/가장 권장/최우선/★", no 는 "가장 조심/가장 경계/최우선/최대 주의/★" 매치.
-  // 없으면 첫 카드를 최우선으로.
-  const topIdx = (() => {
-    const re = variant === 'yes'
-      ? /(가장\s*추천|1\s*순위|가장\s*권장|최우선|★)/i
-      : /(가장\s*조심|가장\s*경계|최우선|최대\s*주의|★)/i;
-    const idx = paragraphs.findIndex(p => re.test(p));
-    return idx >= 0 ? idx : 0;
-  })();
+  // 최우선 카드 — prompt 룰에서 첫 문단을 1순위로 작성 강제. 항상 첫 카드.
+  const topIdx = 0;
   const topLabel = variant === 'yes' ? '가장 추천' : '가장 조심';
 
-  // 본문 앞에 붙은 prefix 정리 — 배지로 시각화하니 본문에서 제거
-  const stripPrefix = (s: string) =>
-    s.replace(/^(가장\s*추천[\s:·\-]*|\d+\s*순위[\s:·\-]*|가장\s*권장[\s:·\-]*|가장\s*조심[\s:·\-]*|가장\s*경계[\s:·\-]*|최우선[\s:·\-]*|최대\s*주의[\s:·\-]*|★[\s:·\-]*)/g, '').trim();
+  // 본문 앞에 붙은 prefix 안전망 — AI 가 룰을 어겨 "1순위는/가장 추천은/첫째/①/1)/1." 등으로 시작하면 제거.
+  //  · "1순위는" "가장 추천은" 같은 조사 변형, "1." "1)" "①" 번호 마커 모두 매칭
+  const stripPrefix = (s: string) => {
+    let out = s;
+    // 한국어 라벨 prefix + 조사 (는/은/이/가/으로/에/엔/에는) + 구분자
+    out = out.replace(/^(가장\s*추천|가장\s*조심|가장\s*권장|가장\s*경계|최우선|최대\s*주의|\d+\s*순위)\s*(는|은|이|가|으로|에는?)?\s*[:·\-,~]*\s*/u, '');
+    // 한자/원형 번호 마커: ① ② ③ ④ ⑤ ⓛ
+    out = out.replace(/^[①②③④⑤⑥⑦⑧⑨⑩]\s*[:·\-]*\s*/u, '');
+    // 평문 번호: "1." "1)" "1)" "1번"
+    out = out.replace(/^\d+\s*[\.\)번]\s*[:·\-]*\s*/u, '');
+    // 첫째/둘째/셋째
+    out = out.replace(/^(첫째|둘째|셋째|넷째)\s*[:·\-,]*\s*/u, '');
+    // 별 마커
+    out = out.replace(/^★\s*[:·\-]*\s*/u, '');
+    return out.trim();
+  };
 
   return (
     <div className="space-y-2.5">
