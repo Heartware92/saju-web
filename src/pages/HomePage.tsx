@@ -83,7 +83,7 @@ const TOP_SERVICES = [
   {
     id: 'year-fortune',
     title: '연도별 운세',
-    desc: '특정 연도 신년운세',
+    desc: '특정 연도의 운세',
     direct: '/saju/year-fortune',
     gradient: 'from-amber-500/20 to-orange-500/10',
   },
