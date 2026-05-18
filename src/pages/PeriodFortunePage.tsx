@@ -216,20 +216,20 @@ function ActionCardList({ bodyText, variant }: { bodyText: string; variant: 'yes
     ? { bg: 'rgba(52,211,153,0.06)', border: 'rgba(52,211,153,0.22)', accent: '#34D399' }
     : { bg: 'rgba(248,113,113,0.06)', border: 'rgba(248,113,113,0.22)', accent: '#F87171' };
 
-  // 최우선 카드 — yes 는 "1순위/가장 권장/최우선/★", no 는 "가장 조심/최우선/최대 주의/★" 매치.
+  // 최우선 카드 — yes 는 "가장 추천/1순위/가장 권장/최우선/★", no 는 "가장 조심/가장 경계/최우선/최대 주의/★" 매치.
   // 없으면 첫 카드를 최우선으로.
   const topIdx = (() => {
     const re = variant === 'yes'
-      ? /(1\s*순위|가장\s*권장|최우선|★)/i
+      ? /(가장\s*추천|1\s*순위|가장\s*권장|최우선|★)/i
       : /(가장\s*조심|가장\s*경계|최우선|최대\s*주의|★)/i;
     const idx = paragraphs.findIndex(p => re.test(p));
     return idx >= 0 ? idx : 0;
   })();
-  const topLabel = variant === 'yes' ? '1순위' : '가장 조심';
+  const topLabel = variant === 'yes' ? '가장 추천' : '가장 조심';
 
   // 본문 앞에 붙은 prefix 정리 — 배지로 시각화하니 본문에서 제거
   const stripPrefix = (s: string) =>
-    s.replace(/^(\d+\s*순위[\s:·\-]*|가장\s*권장[\s:·\-]*|가장\s*조심[\s:·\-]*|가장\s*경계[\s:·\-]*|최우선[\s:·\-]*|최대\s*주의[\s:·\-]*|★[\s:·\-]*)/g, '').trim();
+    s.replace(/^(가장\s*추천[\s:·\-]*|\d+\s*순위[\s:·\-]*|가장\s*권장[\s:·\-]*|가장\s*조심[\s:·\-]*|가장\s*경계[\s:·\-]*|최우선[\s:·\-]*|최대\s*주의[\s:·\-]*|★[\s:·\-]*)/g, '').trim();
 
   return (
     <div className="space-y-2.5">
