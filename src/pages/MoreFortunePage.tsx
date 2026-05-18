@@ -466,6 +466,15 @@ export default function MoreFortunePage({ category }: Props) {
       // fresh=1 진입 — 캐시 무시하고 result/sections 비워둠 → auto-start useEffect 가 새 AI 호출 트리거
       setResult(null);
       setResultSections(null);
+      // ★ name 카테고리는 한자 선택 필수 — 입력 state 도 명시적 리셋해 입력 화면 강제 진입.
+      //   reload 후에도 어딘가에서 koreanName 이 살아있어 result 가 채워지는 사고가 있어
+      //   강한 안전망으로 fresh 진입에서 항상 입력 초기화.
+      if (category === 'name') {
+        setKoreanName('');
+        setCharMeanings([]);
+        setSelectedHanjas([]);
+        setManualMode(true);
+      }
       return;
     }
     const cacheKey = buildCacheKey();
@@ -800,9 +809,6 @@ export default function MoreFortunePage({ category }: Props) {
               >
                 {cfg.ctaButton} <span style={{ opacity: 0.85, fontSize: 13 }}>🌙 {MOON_COST_PER_FORTUNE}</span>
               </button>
-              <p style={{ fontSize: 11, color: 'var(--text-tertiary)', textAlign: 'center', marginTop: 6 }}>
-                1회 🌙 {MOON_COST_PER_FORTUNE}개 소모
-              </p>
             </div>
 
             {error && (
