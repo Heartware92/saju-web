@@ -2753,6 +2753,7 @@ ${year}년 전체 기조 — 320~430자
 첫 줄: 이 해 전체를 관통하는 은유적 제목(7~12자) 1줄.
 세운 ${seWoon.gan}${seWoon.zhi}이 일간 ${pillars.day.gan}에 ${seWoon.tenGod}으로 작용하는 구체적 의미 1단락. 대운 흐름과 겹쳐 어떤 국면(도약기·축적기·전환기·수성기)인지 명확히 판정. 이 해에 가장 도드라지는 축(재물·직장·관계·건강) 중 2가지를 선정해 왜 그런지 설명. 올 한 해 핵심 주제 문장 1개로 마무리.
 ${hasJob ? `★ 직업(${jobLabel}) 가볍게 1회 자연 인용 — 어떤 국면이 이 직업에 어떻게 작용하는지 1문장.` : ''}
+${hasLove ? `★ 연애 상태(${loveLabel}) 인생 국면 호명 1회 — 미혼/연애중/기혼 별로 이 해가 어떤 인생 단계인지 짧게 (예: 싱글 = "정착 전 자유로운 시기", 연애중 = "다음 단계 결정의 시기", 기혼 = "가족 안정화 또는 변화의 해" 등 1문장).` : ''}
 
 [wealth]
 재물운 — 280~360자
@@ -2783,6 +2784,7 @@ ${loveLabel === '호감 있는 상대 있음' ? '· 호감 있는 상대 → 표
 ${loveLabel === '연애 중' ? '· 연애 중 → 관계 깊어지는 월·갈등 위험 월·다음 단계(동거·결혼·이별) 결정 시기.' : ''}
 ${loveLabel === '기혼' ? '· 기혼 → 부부 관계 흐름·자녀·가족 사건 시기·외도 함정 주의 시점.' : ''}` : '연애 상태 미입력 — 일반 기혼/미혼 구분으로 풀이.'}
 이 해 가장 좋은 인연·관계 변화 시기를 월별 흐름 참고해 구체 월로 명시. 관계 갈등이 생기기 쉬운 패턴 1가지와 해소 방향. 사랑·결혼·이별 등 결정을 내리기 좋은 조건 1가지.
+${hasJob ? `★ 직업(${jobLabel}) 영향 1문장 가볍게 — 직업의 일과·시간 패턴이 연애 가능성·만남 시간·관계 깊이에 미치는 영향 (예: 자영업·프리랜서 = 불규칙 일정이 관계 깊이에 영향 / 학생 = 시험기 만남 어려움 / 구직 중 = 자존감·여유가 관계 진전에 영향 / 야근 잦은 직장인 = 데이트 시간 확보 어려움 / 주부 = 가정 중심 관계망). 일반 가이드 베끼지 말고 입력 직업 특수성으로.` : ''}
 
 [health]
 건강운 — 220~290자
@@ -7156,15 +7158,18 @@ export interface NameAnalysisInput {
   koreanName: string;                 // 필수 — 한글 이름 (성씨 포함, 4글자 이내 권장)
   koreanInitialsElements: string[];   // 초성별 오행 계산 결과 (예: ['土','金','土'])
   charMeanings?: NameCharMeaning[];   // 선택 — 글자별 뜻+음. meaning 채워진 글자가 1개 이상이면 자원오행 분석
-  /** @deprecated 이전 보관 기록 호환용 — 신규 입력은 charMeanings 사용 */
+  /** 사용자가 직접 선택한 한자 이름 (예: "洪吉童"). hanjaResolved 와 함께 주면 AI 한자 추정 단계 생략 */
   hanjaName?: string;
+  /** 사용자가 모달에서 선택한 한자의 결정론적 메타 — 부수·획수·자원오행이 정적 데이터에서 lookup 된 값.
+   *  hanjaName 과 같은 순서. 있으면 prompt 가 "확정 한자" 모드로 동작해 AI 환각 차단. */
+  hanjaResolved?: Array<{ char: string; meaning: string; radical: string; strokes: number; jawon: string }>;
 }
 
 export const generateNameFortunePrompt = (
   result: SajuResult,
   nameInput: NameAnalysisInput,
 ): string => {
-  const { koreanName, koreanInitialsElements, charMeanings, hanjaName } = nameInput;
+  const { koreanName, koreanInitialsElements, charMeanings, hanjaName, hanjaResolved } = nameInput;
 
   // 음령오행 분포 카운트
   const countEls = (els: string[]) => {
@@ -7194,12 +7199,25 @@ export const generateNameFortunePrompt = (
   const yongSinInEum = koreanInitialsElements.includes(yongSinEl);
   const giSinInEum = !!giSinElement && koreanInitialsElements.includes(giSinElement);
 
-  // 입력 분기: 글자별 뜻이 1개라도 있으면 한자 추정 모드.
-  // 레거시 hanjaName 입력만 있을 때도 동일 모드로 간주.
+  // 입력 분기:
+  //   - hanjaResolved 가 있으면 "확정 한자" 모드 — AI 추정 단계 생략 (사용자가 모달에서 한자 직접 선택)
+  //   - charMeanings 의 meaning 이 1개라도 있으면 "한자 추정" 모드
+  //   - 둘 다 없으면 순우리말/모름 (음령오행만)
   const filledMeanings = (charMeanings ?? []).filter(c => c.sound && c.meaning && c.meaning.trim().length > 0);
   const hasAnyMeaning = filledMeanings.length > 0;
-  const isHanjaMode = hasAnyMeaning || !!hanjaName;
+  const isResolvedHanjaMode = Array.isArray(hanjaResolved) && hanjaResolved.length > 0;
+  const isHanjaMode = isResolvedHanjaMode || hasAnyMeaning || !!hanjaName;
   const isPureKorean = !isHanjaMode && (charMeanings ?? []).length > 0;
+
+  // ★ 확정 한자 블록 — 사용자가 모달에서 직접 선택한 한자의 부수·자원오행을 정적 데이터에서
+  //    lookup 해 결정론적으로 주입. AI 는 "추정·판정"이 아니라 "주어진 자원오행을 풀이"만.
+  const RESOLVED_HANJA_BLOCK = isResolvedHanjaMode
+    ? `[확정 한자 — 사용자가 직접 선택. 추정·재판정 금지]
+${hanjaResolved!.map((h, i) => `  ${i + 1}자: ${h.char} (${h.meaning}) — 부수 ${h.radical || '?'} · ${h.strokes}획${h.jawon ? ` · 자원오행 ${h.jawon}` : ' · 자원오행 미확정(부수 매핑 외)'}`).join('\n')}
+
+★ 위 한자는 사용자가 직접 선택한 확정값. **다른 한자로 바꾸거나 자원오행을 임의로 재판정하지 말 것.**
+★ 자원오행 미확정인 글자는 한자 본의로 신중히 판정하되 "추정"임을 본문에 명시.`
+    : '';
 
   // 자원오행 판정 규칙 — 부수(部首) 기반 전통 성명학 기준
   // GPT에게 결정적 규칙을 주입해 같은 한자를 매번 동일하게 판정하도록 고정
@@ -7258,7 +7276,7 @@ ${isHanjaMode
   ? '※ 글자별 뜻+음으로 한자를 확정한 뒤 자원오행 기준 용신·기신 일치 여부도 직접 판정해 풀이에 반영할 것.'
   : '※ 한자 정보가 없으므로 자원오행은 절대 임의로 부여하지 말고 음령오행 분석에 충실할 것.'}
 
-${isHanjaMode ? HANJA_INFER_RULE + '\n\n' + HANJA_RULE_BLOCK + '\n' : ''}
+${isResolvedHanjaMode ? RESOLVED_HANJA_BLOCK + '\n\n' + HANJA_RULE_BLOCK + '\n' : (isHanjaMode ? HANJA_INFER_RULE + '\n\n' + HANJA_RULE_BLOCK + '\n' : '')}
 ${MORE_COMMON_RULES}
 
 [작성 지침] ${isHanjaMode ? '450~620자' : '380~500자'} 내외. 각 단락은 빈 줄로 구분.
