@@ -628,7 +628,12 @@ export default function PeriodFortunePage({ scope }: { scope: FortuneScope | 'da
       }
       setPickedDateReport(null);
       setPickedDateReportLoading(true);
-      getPickedDateReport(saju, pickedDate, targetProfile?.id)
+      getPickedDateReport(saju, pickedDate, targetProfile?.id, {
+        jobState: targetProfile?.job_state ?? null,
+        customJobState: targetProfile?.custom_job_state ?? null,
+        loveState: targetProfile?.love_state ?? null,
+        customLoveState: targetProfile?.custom_love_state ?? null,
+      })
         .then(r => {
           if (cancelled) return;
           setPickedDateReport(r);

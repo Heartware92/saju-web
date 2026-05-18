@@ -1523,10 +1523,18 @@ export const getPickedDateReport = async (
   result: SajuResult,
   isoDate: string,
   profileId?: string,
+  /** 대표 프로필의 사용자 컨텍스트 — 각 섹션 풀이에 분산 인용해 커스텀 결과 생성.
+   *  신년운세(getNewyearReport) 와 동일 패턴. */
+  userCtx?: {
+    jobState?: string | null;
+    customJobState?: string | null;
+    loveState?: string | null;
+    customLoveState?: string | null;
+  },
 ): Promise<PickedDateReportAIResult> => {
   try {
     const todayGz = calcTodayGanZhi(result, isoDate);
-    const prompt = generatePickedDateFortunePrompt(result, todayGz, isoDate);
+    const prompt = generatePickedDateFortunePrompt(result, todayGz, isoDate, userCtx);
     const content = await callGPT(prompt, 7000);
     const sections = parsePickedDateReport(content);
     const flow = parseDateFlowScores(content);
