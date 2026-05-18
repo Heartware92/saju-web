@@ -329,8 +329,11 @@ export default function PeriodFortunePage({ scope }: { scope: FortuneScope | 'da
     }
   }, [saju, scope, pickedDate, today, targetYear]);
 
+  // source=year-fortune 으로 진입했으면 헤더 라벨을 "연도별 운세" 로 (연도는 부제로)
+  const sourceParam = searchParams?.get('source');
+  const isFromYearFortune = sourceParam === 'year-fortune';
   const pageTitle =
-    scope === 'year' ? `${targetYear} 신년운세`
+    scope === 'year' ? (isFromYearFortune ? `${targetYear}년 운세` : `${targetYear} 신년운세`)
     : scope === 'day' ? '실시간 운세'
     : '지정일 운세';
 
@@ -375,23 +378,33 @@ export default function PeriodFortunePage({ scope }: { scope: FortuneScope | 'da
   // ref guard: 동일한 호출 키에 대해 중복 API 호출 방지 (탭 전환·백그라운드 복귀 시 보호)
   const apiCalledKeyRef = useRef<string | null>(null);
 
-  // ★ fresh=1 또는 targetYear/profileId 변경 시 state 명시적 reset
+  // ★ fresh=1 또는 targetYear/profileId 변경 시 state + cache 명시적 reset
   //   router.push 만으로는 같은 component instance 라 useState 유지됨 →
   //   연도별 운세에서 다른 연도로 navigate 시 옛 결과 state 가 그대로 보이는 사고 방지.
+  //   또 useReportCacheStore 의 cached 값이 즉시 hit 되지 않도록 invalidate 강제.
   const profileIdParam = searchParams?.get('profileId') ?? null;
   const isFreshParam = searchParams?.get('fresh') === '1';
   useEffect(() => {
     if (!isFreshParam) return;
-    // fresh=1 진입 — 모든 풀이 state 강제 초기화 후 useEffect 가 새 풀이 호출하도록
+    // 1. cache 강제 invalidate — 다른 곳에서 cached 값 못 가져오도록
+    if (saju) {
+      const sk = sajuKey(saju);
+      const cache = useReportCacheStore.getState();
+      if (scope === 'year') cache.invalidate('newyear', `${sk}:${targetYear}`);
+      else if (scope === 'date' && pickedDate) cache.invalidate('period_date', `${sk}:${pickedDate}`);
+      else if (scope === 'day') cache.invalidate('period_day', `${sk}:${today}`);
+    }
+    // 2. 모든 풀이 state 강제 초기화 후 useEffect 가 새 풀이 호출하도록
     setNewyearReport(null);
     setPickedDateReport(null);
     setNewyearReportLoading(scope === 'year');
     setPickedDateReportLoading(scope === 'date');
     setCacheGate(null);
     setSavedRecordId(null);
+    setArchiveYear(null);  // 새 풀이라 archive year override 해제
     apiCalledKeyRef.current = null;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isFreshParam, targetYear, profileIdParam, scope]);
+  }, [isFreshParam, targetYear, profileIdParam, scope, saju]);
 
   // ── 보관함 재생 모드 — recordId 가 있으면 DB에서 풀이 복원, AI 호출 skip ──
   // (scope='year'·newyear / scope='date'·period 가 archive 저장됨)

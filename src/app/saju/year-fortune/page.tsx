@@ -68,7 +68,7 @@ function YearFortuneSelector() {
     archiveCategory: 'newyear',
     creditType: 'moon',
     creditCost: SUN_COST_BIG,
-    targetPath: `/saju/newyear?year=${selectedYear}`,
+    targetPath: `/saju/newyear?year=${selectedYear}&source=year-fortune`,
     profileId: selectedProfileId,
     // archiveContext 안 보냄 — 그 프로필의 모든 newyear 풀이 리스트로 노출 (isListMode)
   };
