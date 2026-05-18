@@ -1664,8 +1664,76 @@ export const parseChildrenSections = (raw: string): Partial<Record<ChildrenSecti
   parseMarkerSections(raw, CHILDREN_SECTION_KEYS);
 export const parsePersonalitySections = (raw: string): Partial<Record<PersonalitySectionKey, string>> =>
   parseMarkerSections(raw, PERSONALITY_SECTION_KEYS);
-export const parseNameSections = (raw: string): Partial<Record<NameSectionKey, string>> =>
-  parseMarkerSections(raw, NAME_SECTION_KEYS);
+/**
+ * 이름 풀이 섹션 파싱 — 마커 기반 + 본문 키워드 fallback 2단계.
+ *
+ * 1차: [summary]/[eum_ryeong]/... 마커로 분리 (정상 케이스)
+ * 2차 (fallback): Gemini 가 마커 누락한 경우 본문 키워드로 단락 추론
+ *   - 단락 사이는 빈 줄로 구분되어 있음 (AI 가 보통 단락 분리는 함)
+ *   - 키워드 매핑: 단락에 특정 표현이 있으면 그 섹션으로 매핑
+ */
+export const parseNameSections = (raw: string): Partial<Record<NameSectionKey, string>> => {
+  // 1차 시도 — 마커 기반
+  const markerResult = parseMarkerSections(raw, NAME_SECTION_KEYS);
+  // 6 섹션 중 절반 이상 잡혔으면 정상으로 인정
+  if (Object.keys(markerResult).length >= 3) return markerResult;
+
+  // 2차 fallback — 본문 키워드 기반 단락 분할
+  const trimmed = raw.trim();
+  if (!trimmed) return markerResult;
+
+  // 빈 줄로 단락 분리 — Gemini 가 마커 안 써도 단락은 분리하는 경향
+  const paragraphs = trimmed.split(/\n\s*\n+/).map(p => p.trim()).filter(Boolean);
+  if (paragraphs.length < 2) return markerResult;
+
+  // 각 단락을 어느 섹션으로 매핑할지 판정 — 키워드 우선순위
+  const classifyParagraph = (p: string, idx: number, total: number): NameSectionKey | null => {
+    const lower = p; // 한글이라 대소문자 무관
+
+    // advice — 불릿이 있거나 "조언·실천·습관" 단어
+    if (/^\s*[-·•∙]\s/.test(p) || /\b(조언|실천|습관|추천)\b/.test(lower)) {
+      // 마지막 1~2 단락만 advice 로 (앞 단락이 본문일 수 있어)
+      if (idx >= total - 3) return 'advice';
+    }
+    // numerology — "수리", "4격", "원격", "형격", "이격", "정격", "대길/대흉/길/흉" + 수 표기
+    if (/(수리|81\s*수|원격|형격|이격|정격|大吉|大凶)/.test(lower)
+        || /(\d+수\s*(대길|대흉|길|흉|평))/.test(lower)) {
+      return 'numerology';
+    }
+    // ja_won — "자원오행", "부수", "확정 한자", "한자"
+    if (/(자원오행|부수|확정\s*한자|글자별\s*한자|한자.*오행)/.test(lower)) {
+      return 'ja_won';
+    }
+    // eum_ryeong — "음령오행", "초성", "한글 이름.*오행", "발음"
+    if (/(음령오행|음령|초성|한글\s*이름.{0,5}오행|발음.{0,3}오행)/.test(lower)) {
+      return 'eum_ryeong';
+    }
+    // harmony — "조화", "사주와", "용신.*기신", "보완", "개명"
+    if (/(조화|사주와|용신.*기신|보완|개명)/.test(lower)) {
+      return 'harmony';
+    }
+    // summary — 첫 단락 또는 결론 톤
+    if (idx === 0 || /(전반적으로|결론|돕는\s*이름|중립적|거스르는)/.test(lower)) {
+      return 'summary';
+    }
+    return null;
+  };
+
+  const out: Partial<Record<NameSectionKey, string>> = {};
+  paragraphs.forEach((p, i) => {
+    const key = classifyParagraph(p, i, paragraphs.length);
+    if (key) {
+      out[key] = out[key] ? `${out[key]}\n\n${p}` : p;
+    }
+  });
+
+  // advice 가 여러 단락이면 합치고, "- " 줄을 보존
+  // summary 가 비어있으면 첫 단락을 강제로 summary 로
+  if (!out.summary && paragraphs[0]) out.summary = paragraphs[0];
+
+  // 마커 결과가 있으면 그걸 우선 (부분 매칭이라도)
+  return { ...out, ...markerResult };
+};
 
 export const getStudyShort = async (result: SajuResult, profileId?: string): Promise<FortuneResponse> => {
   try {
