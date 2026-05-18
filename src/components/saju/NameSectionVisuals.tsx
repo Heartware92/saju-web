@@ -38,6 +38,80 @@ const GRADE_COLOR: Record<string, string> = {
   '대흉': '#F87171',
 };
 
+// 81 수리 한자명 → 한글 음 매핑 (사용자 가독성을 위해 한자 옆에 한글 풀이 병기)
+// 각 수리 한자명 (예: "太極之數") → "태극지수"
+const SURI_NAME_KOREAN: Record<string, string> = {
+  '太極之數': '태극수',
+  '分離之數': '분리수',
+  '福德之數': '복덕수',
+  '破滅之數': '파멸수',
+  '福壽之數': '복수수',
+  '順成之數': '순성수',
+  '剛健之數': '강건수',
+  '健勝之數': '건승수',
+  '困窮之數': '곤궁수',
+  '空虛之數': '공허수',
+  '興旺之數': '흥왕수',
+  '薄弱之數': '박약수',
+  '智謀之數': '지모수',
+  '離散之數': '이산수',
+  '厚德之數': '후덕수',
+  '健暢之數': '건창수',
+  '發展之數': '발전수',
+  '苦難之數': '고난수',
+  '自立之數': '자립수',
+  '中折之數': '중절수',
+  '攻名之數': '공명수',
+  '立身之數': '입신수',
+  '安康之數': '안강수',
+  '變怪之數': '변괴수',
+  '波亂之數': '파란수',
+  '不安之數': '불안수',
+  '興家之數': '흥가수',
+  '僥倖之數': '요행수',
+  '升天之數': '승천수',
+  '變亂之數': '변란수',
+  '平和之數': '평화수',
+  '義俠之數': '의협수',
+  '忠實之數': '충실수',
+  '安樂之數': '안락수',
+  '退場之數': '퇴장수',
+  '高名之數': '고명수',
+  '困境之數': '곤경수',
+  '散財之數': '산재수',
+  '滅亡之數': '멸망수',
+  '大智之數': '대지수',
+  '困苦之數': '곤고수',
+  '出世之數': '출세수',
+  '變動之數': '변동수',
+  '不時之數': '불시수',
+  '浮沈之數': '부침수',
+  '達晚之數': '달만수',
+  '內憂之數': '내우수',
+  '多難之數': '다난수',
+  '善惡之數': '선악수',
+  '損失之數': '손실수',
+  '努力之數': '노력수',
+  '災難之數': '재난수',
+  '出財之數': '출재수',
+  '動搖之數': '동요수',
+  '名利之數': '명리수',
+  '衰退之數': '쇠퇴수',
+  '富榮之數': '부영수',
+  '沈淪之數': '침륜수',
+  '富貴之數': '부귀수',
+  '內外之數': '내외수',
+  '通達之數': '통달수',
+  '衰敗之數': '쇠패수',
+  '健全之數': '건전수',
+  '後困之數': '후곤수',
+  '平凡之數': '평범수',
+  '寂寞之數': '적막수',
+  '旺成之數': '왕성수',
+  '終末之數': '종말수',
+  '還元之數': '환원수',
+};
+
 // ─────────────────────────────────────────────────────────────────────────────
 // 1) 음령오행 — 음절별 카드 + 5오행 분포 막대
 // ─────────────────────────────────────────────────────────────────────────────
@@ -133,26 +207,26 @@ export function JaWonVisual({
               />
             )}
             <span
-              className="text-[36px] font-bold leading-none mt-1"
+              className="text-[40px] font-bold leading-none mt-1"
               style={{ fontFamily: 'var(--font-serif)', color: 'var(--text-primary)' }}
             >
               {h.char}
             </span>
             <span
-              className="text-[15px] font-semibold text-text-secondary mt-2 text-center leading-snug"
+              className="text-[18px] font-semibold text-text-secondary mt-2.5 text-center leading-snug"
               style={{ fontFamily: 'var(--font-body)', letterSpacing: '-0.005em' }}
             >
               {h.meaning}
             </span>
             <span
-              className="text-[12px] text-text-tertiary mt-1"
+              className="text-[14px] text-text-tertiary mt-1.5"
               style={{ fontFamily: 'var(--font-body)', letterSpacing: '-0.005em' }}
             >
               {h.radical || '?'}부 · {h.strokes}획
             </span>
             {h.jawon && (
               <span
-                className="text-[12px] font-bold mt-1"
+                className="text-[14px] font-bold mt-1.5"
                 style={{ color, fontFamily: 'var(--font-body)', letterSpacing: '0.02em' }}
               >
                 자원 {h.jawon}
@@ -198,30 +272,42 @@ export function HarmonyVisual({
   return (
     <div className="grid grid-cols-2 gap-2 mb-3">
       <div
-        className="rounded-2xl p-3 border"
+        className="rounded-2xl p-4 border"
         style={{ background: 'rgba(52,211,153,0.06)', borderColor: 'rgba(52,211,153,0.30)' }}
       >
-        <div className="flex items-center gap-1.5 mb-2">
-          <span className="inline-block w-1 h-4 rounded-full" style={{ background: '#34D399' }} />
-          <span className="text-[12px] font-bold" style={{ color: '#34D399' }}>이름의 강점</span>
+        <div className="flex items-center gap-2 mb-3">
+          <span className="inline-block w-1 h-5 rounded-full" style={{ background: '#34D399' }} />
+          <span className="text-[15px] font-bold" style={{ color: '#34D399' }}>이름의 강점</span>
         </div>
-        <ul className="space-y-1.5">
+        <ul className="space-y-2">
           {pros.map((p, i) => (
-            <li key={i} className="text-[12px] text-text-secondary leading-snug">{p}</li>
+            <li
+              key={i}
+              className="text-[15px] text-text-secondary leading-[1.7] tracking-[-0.005em]"
+              style={{ fontFamily: 'var(--font-body)' }}
+            >
+              {p}
+            </li>
           ))}
         </ul>
       </div>
       <div
-        className="rounded-2xl p-3 border"
+        className="rounded-2xl p-4 border"
         style={{ background: 'rgba(248,113,113,0.06)', borderColor: 'rgba(248,113,113,0.30)' }}
       >
-        <div className="flex items-center gap-1.5 mb-2">
-          <span className="inline-block w-1 h-4 rounded-full" style={{ background: '#F87171' }} />
-          <span className="text-[12px] font-bold" style={{ color: '#F87171' }}>보완 필요</span>
+        <div className="flex items-center gap-2 mb-3">
+          <span className="inline-block w-1 h-5 rounded-full" style={{ background: '#F87171' }} />
+          <span className="text-[15px] font-bold" style={{ color: '#F87171' }}>보완 필요</span>
         </div>
-        <ul className="space-y-1.5">
+        <ul className="space-y-2">
           {cons.map((c, i) => (
-            <li key={i} className="text-[12px] text-text-secondary leading-snug">{c}</li>
+            <li
+              key={i}
+              className="text-[15px] text-text-secondary leading-[1.7] tracking-[-0.005em]"
+              style={{ fontFamily: 'var(--font-body)' }}
+            >
+              {c}
+            </li>
           ))}
         </ul>
       </div>
@@ -282,7 +368,7 @@ export function NumerologyVisual({
 
             {/* 우측: 등급 배지 + 한자 명칭 + 의미 */}
             <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2 mb-1.5">
+              <div className="flex items-center gap-2 mb-1.5 flex-wrap">
                 <span
                   className="text-[12px] font-bold px-2 py-0.5 rounded-md"
                   style={{ background: `${color}1f`, color, border: `1px solid ${color}55` }}
@@ -295,6 +381,14 @@ export function NumerologyVisual({
                 >
                   {it.data.entry.name}
                 </span>
+                {SURI_NAME_KOREAN[it.data.entry.name] && (
+                  <span
+                    className="text-[12px] text-text-tertiary"
+                    style={{ fontFamily: 'var(--font-body)', letterSpacing: '-0.005em' }}
+                  >
+                    ({SURI_NAME_KOREAN[it.data.entry.name]})
+                  </span>
+                )}
               </div>
               <p
                 className="text-[14px] text-text-secondary leading-[1.7] tracking-[-0.005em]"

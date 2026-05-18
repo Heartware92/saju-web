@@ -17,6 +17,83 @@
 
 ---
 
+## 2026-05-18 20:55 — 이름 풀이 6 섹션 카드 분리 실패 — AI 마커 누락 사고 `[code]`
+
+### 증상
+- 사용자: "또 텍스트 쭉~ 나오고 [summary] 같은 마커도 보여, 진짜 서비스 장애가 된다"
+- 이름 풀이 결과가 6 섹션 카드(시각 컴포넌트 포함)로 분리되지 않고 단일 텍스트 블록으로 노출
+- 본문에 `[summary]` 같은 마커가 그대로 보이는 케이스
+- "다른 이름 풀이받기" 누르면 한자 선택 화면 없이 즉시 옛 결과로 가는 사고
+- 어느 시점엔 입력조차 안 됨 (한글 타이핑이 즉시 빈 칸으로 리셋)
+
+### 영향 범위
+- 더많은운세 — 이름 풀이 카테고리 전부
+- 신규 풀이 + 옛 보관함 record 양쪽 모두 깨져 보임
+- 81 수리 4격 시각 컴포넌트(`NumerologyVisual`), 한자 자원오행 카드(`JaWonVisual`), 음령오행 분포(`EumRyeongVisual`), 강점·보완 박스(`HarmonyVisual`), 조언 카드(`AdviceVisual`) 5개 시각이 전부 작동 안 함 (sections 비어서 fallback 진입)
+- 사용자 신뢰 큰 손상 — "같은 사고 또 났네" 반복 보고
+
+### 진단 과정 — 잘못된 가설도 다 기록 (다음 trace 회피용)
+1. ❌ **옛 캐시가 silent restore** 라고 추정 → `buildCacheKey` 에 `v2:` prefix 추가
+   - 효과 없음. 새 풀이에도 사고 재발
+2. ❌ **localStorage `report-cache` 잔재** 라고 추정 → handleRefetch 의 invalidate 강화
+   - 효과 없음. fresh URL reload 후에도 동일
+3. ❌ **archive 자동 진입** 으로 추정 → `findRecentArchive` 분기 검토
+   - fresh=1 면 모달 skip 분기 정상 동작. 무관
+4. ❌ **shouldAutoStart 에 name 잘못 포함** → 제거
+   - 일부 해결. 하지만 fresh URL 진입 후에도 결과 화면 표시 계속됨
+5. ❌ **silent restore useEffect 의 fresh 분기에 input state 리셋 추가**
+   - 회귀 사고: useEffect deps 에 `koreanName` 있어 무한 리셋 루프 → 사용자가 타이핑하면 즉시 ''로 리셋 → 화면 멈춤
+6. ❌ **`parseMarkerSections` 정규식 매칭 실패** 추정 → 대소문자·공백·콜론 변형 흡수 정규식 강화
+   - 부분 효과. 그래도 사고 재발
+7. ❌ **`MoreFortuneResultCard` fallback 의 마커 strip 부족** → strip 정규식 확장
+   - fallback 깔끔하게 보이긴 함. 근데 6 카드 분리 자체는 안 됨
+8. ✅ **사용자가 붙여준 raw 텍스트** 직접 분석 → 본문은 6 섹션 순서대로 정확히 쓰여 있는데 **마커 자체가 완전히 누락**
+   - Gemini 가 prompt 의 [key] 형식 규칙 무시. 마커 안 박고 단락만 죽 출력
+   - 1~7번 가설 모두 잘못 — 캐시·정규식 문제 아니라 **AI 응답 자체에 마커가 없는 것**
+
+### 진짜 원인
+**Gemini 가 prompt 의 마커 출력 규칙을 안 따름.** [summary]/[eum_ryeong]/[ja_won]/[harmony]/[numerology]/[advice] 6 마커를 본문 단락 앞에 줄 단독으로 출력해야 하는데, Gemini 가 마커 없이 단락만 쭉 작성. 본문은 가이드대로 6 섹션 순서 지키지만 마커가 없으니 `parseMarkerSections` 가 빈 객체 반환 → `setResultSections(null)` → 분기 조건 실패 → `MoreFortuneResultCard` 단일 카드 fallback.
+
+### 해결
+**3중 방어 + 1 회귀 fix**:
+
+1. **`parseNameSections` 본문 키워드 fallback** (`fortuneService.ts`)
+   - 1차: 마커 매칭. 3 섹션 미만 잡히면 2차 발동
+   - 2차: 빈 줄로 단락 분리 → 키워드로 섹션 추론
+     - "음령오행/초성/발음" → eum_ryeong
+     - "자원오행/부수/확정 한자" → ja_won
+     - "81 수리/원격/형격/N수 대길|대흉" → numerology
+     - "조화/사주와/용신.*기신/보완/개명" → harmony
+     - "- " 불릿 또는 "조언/실천/습관" (마지막 단락) → advice
+     - 첫 단락 또는 결론 톤 → summary
+   - summary 비면 첫 단락 강제
+
+2. **Prompt 최상위 강제** (`prompts.ts:generateNameFortunePrompt`)
+   ```
+   ★★★★★ 최우선 절대 규칙 — 응답의 첫 글자가 반드시 "[summary]" 마커여야 합니다.
+   ```
+   - 응답 첫 줄을 [summary] 로 시작 강제
+   - 마커 누락 시 풀이가 무너진다고 직접 경고
+   - 영문 소문자 대괄호 [key] 고정
+
+3. **`parseMarkerSections` 정규식 완화** — `i` flag + 마커 안팎 공백 + 콜론·기호 흡수. 마커는 박는데 형식이 살짝 다른 케이스 대비
+
+4. **회귀 fix**: silent restore useEffect 에 input state 리셋을 절대 넣지 말 것. deps 에 input state 가 있어 무한 리셋 루프 발생. **별도 useEffect + ref 가드** 로 1회만 발동
+
+### 재발 방지
+- **AI 응답이 prompt 형식을 따른다고 가정하지 말 것** — Gemini·OpenAI 둘 다 마커 형식 종종 무시. 마커 + 본문 패턴 + 키워드 fallback 3중 안전망 표준화
+- **새 prompt 도입 시 keyword fallback 미리 준비** — 학업·자녀·성격 등 다른 sectioned 풀이도 같은 위험. 마커 매칭 실패 케이스 fallback 추가 권장
+- **사용자 raw 텍스트를 가장 먼저 분석** — 정규식·캐시 추측보다 raw 응답 직접 읽기가 5분이면 끝남. 1~7번 가설 trace 가 1시간 이상 소비됨
+- **useEffect deps 와 setState 충돌 패턴 룰** — useEffect 안에서 state 를 reset 할 때, 그 state 가 같은 useEffect 의 deps 에 있으면 무한 루프. 별도 useEffect + ref 가드 필수
+- **검증 우선** — 5초로 raw text 그렙해서 마커 유무 확인했으면 1번 시도에 해결됐을 사고. "정규식 강화"·"캐시 무효화" 같은 추정 trace 자제
+
+### 관련
+- 해결 커밋: `67393cd` (키워드 fallback + prompt ★★★★★)
+- 추가 커밋: `9f2790a` (정규식 완화), `b581453` (무한 리셋 회귀 fix), `ad159ff` (fresh URL 입력 강제 + 코스트 문구 제거), `eb65ccb` (cacheKey v2 prefix + fallback strip)
+- 관련 파일: `src/services/fortuneService.ts` (parseNameSections), `src/constants/prompts.ts` (generateNameFortunePrompt), `src/pages/MoreFortunePage.tsx` (silent restore useEffect)
+
+---
+
 ## 2026-05-18 19:09 — Vercel 빌드 Initializing 단계 hang + 큐 적체
 
 ### 증상
