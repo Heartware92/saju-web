@@ -109,7 +109,9 @@ export default function TaekilPage() {
     const subSeg = subItem ? `:${subItem}` : '';
     const customSeg = category === 'custom' ? `:${customLabel.trim().slice(0, 30)}` : '';
     const detailSeg = detail.trim() ? `:d=${detail.trim().slice(0, 100)}` : '';
-    return `${sajuKey(saju)}:${category}${subSeg}${customSeg}${detailSeg}:${[...pickedDates].sort().join(',')}`;
+    // v2: prompt 에 [comprehensive_analysis] 마커 + 흉신 풀이 가이드 + 조언 다양화 추가됨.
+    // 옛 캐시(v1) 는 새 마커 없이 응답 → 종합 분석 섹션이 비어 미노출되는 사고 회피.
+    return `v2:${sajuKey(saju)}:${category}${subSeg}${customSeg}${detailSeg}:${[...pickedDates].sort().join(',')}`;
   }, [saju, category, subItem, pickedDates, customLabel, detail]);
 
   // 카테고리/연월 변경시 엔진 재계산 (보관함 모드에서는 스킵)
@@ -547,10 +549,7 @@ export default function TaekilPage() {
                         fontFamily: 'var(--font-body)',
                       }}
                     />
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 6 }}>
-                      <p style={{ fontSize: 11, color: 'var(--text-tertiary)', lineHeight: 1.5, margin: 0 }}>
-                        적어주신 정황이 1·2·3위 풀이와 조언에 반영돼요.
-                      </p>
+                    <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', marginTop: 6 }}>
                       <span style={{ fontSize: 11, color: detail.length >= TAEKIL_DETAIL_MAX_LEN ? 'var(--cta-primary)' : 'var(--text-tertiary)' }}>
                         {detail.length}/{TAEKIL_DETAIL_MAX_LEN}
                       </span>

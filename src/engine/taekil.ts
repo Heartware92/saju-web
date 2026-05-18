@@ -19,6 +19,7 @@ import {
   normalizeZhi,
   type SajuResult,
 } from '../utils/sajuCalculator';
+import { detectSinsal, type SinsalHit } from './taekilSinsal';
 
 // ============================================
 // 타입
@@ -90,6 +91,8 @@ export interface TaekilDay {
   luckyTime?: string;  // 길시 추천
   elementEnergy: Record<string, number>; // { 목:1~10, 화:1~10, ... }
   timeSlots: TimeSlotEnergy[];           // 12시진별 에너지
+  /** 한국 명리 표준 흉신·길신 적중 목록. 카테고리별 차등 적용. 옛 archive 호환을 위해 optional. */
+  sinsalHits?: SinsalHit[];
 }
 
 export interface TaekilResult {
@@ -348,16 +351,20 @@ function scoreOneDay(
   saju: SajuResult,
   dateStr: string,
   category: TaekilCategory,
+  subItem?: string,
 ): TaekilDay {
   const [y, m, d] = dateStr.split('-').map(Number);
   const solar = Solar.fromYmd(y, m, d);
   const lunar = solar.getLunar();
   const dayGz = lunar.getDayInGanZhi();
   const monthGz = lunar.getMonthInGanZhi();
+  const yearGz = lunar.getYearInGanZhi();
 
   const dayGan = normalizeGan(dayGz[0]);
   const dayZhi = normalizeZhi(dayGz[1]);
   const monthZhi = normalizeZhi(monthGz[1]);
+  const yearZhi = normalizeZhi(yearGz[1]);
+  const dayGzKor = `${dayGan}${dayZhi}`;
   const dayGanElement = STEM_ELEMENT[dayGan] || '';
   const dayZhiElement = BRANCH_ELEMENT[dayZhi] || '';
 
@@ -494,20 +501,47 @@ function scoreOneDay(
     }
   }
 
-  // 11) 비대칭 상향 — 좋은 점수만 끌어올림 (날짜 비교용이므로 흉일은 그대로 유지)
+  // 11) 한국 명리 흉신·길신 판정 — 카테고리별 차등 적용
+  const sinsalHits: SinsalHit[] = detectSinsal({
+    date: dateStr,
+    lunar,
+    solar,
+    dayGan,
+    dayZhi,
+    dayGz: dayGzKor,
+    monthZhi,
+    yearZhi,
+    natalDayZhi: saju.pillars.day.zhi,
+    natalYearZhi: saju.pillars.year.zhi,
+    lunarDay: lunar.getDay(),
+    category,
+    subItem,
+  });
+  for (const hit of sinsalHits) {
+    base += hit.delta;
+    reasons.push(hit.reason);
+  }
+
+  // 12) 강흉 흉신 적중 시 grade 하한 — 점수 보정만으로는 부족할 수 있어
+  // 복단일·십악대패일·수사일 같은 severe 흉신이 1개라도 적중하면 grade를 '평' 이하로 강제.
+  const hasSevereSinsal = sinsalHits.some(h => h.kind === 'severe');
+
+  // 13) 비대칭 상향 — 좋은 점수만 끌어올림 (날짜 비교용이므로 흉일은 그대로 유지)
   // 55점 초과분에 대해 1.3배 가속, 55점 이하는 변경 없음.
   // 결과: 90→100→clamp95, 80→88, 70→75, 55→55, 40→40, 5→5
   let liftedBase = base;
   if (base > 55) {
     liftedBase = 55 + (base - 55) * 1.3;
   }
-  const score = Math.max(5, Math.min(95, Math.round(liftedBase)));
+  let score = Math.max(5, Math.min(95, Math.round(liftedBase)));
+  if (hasSevereSinsal && score > 55) {
+    score = Math.min(score, 55); // 강흉 흉신 있으면 '평' 상한
+  }
   const grade = gradeFromScore(score);
   if (reasons.length === 0) {
     reasons.push(grade === '대길' || grade === '길' ? '전반적으로 무난한 길일' : '특별한 길흉 요소 없음');
   }
 
-  const yearGz = lunar.getYearInGanZhi();
   const lunarLabel = `${yearGz}년 ${monthGz}월 ${dayGz}일`;
   const luckyTime = ELEMENT_TIMES[saju.yongSinElement] || '';
 
@@ -524,6 +558,7 @@ function scoreOneDay(
     luckyTime: grade === '대길' || grade === '길' ? luckyTime : undefined,
     elementEnergy: calcDayElementEnergy(saju, dayGan, dayZhi),
     timeSlots: calcTimeSlotEnergy(saju, dayGan, dayZhi, category),
+    sinsalHits,
   };
 }
 
@@ -546,7 +581,7 @@ export function calculateTaekil(
   const cursor = new Date(start);
   while (cursor <= end) {
     const iso = cursor.toISOString().slice(0, 10);
-    days.push(scoreOneDay(saju, iso, category));
+    days.push(scoreOneDay(saju, iso, category, subItem));
     cursor.setDate(cursor.getDate() + 1);
   }
 

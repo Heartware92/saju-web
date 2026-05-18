@@ -1334,9 +1334,9 @@ export const getTaekilAdvice = async (
 ): Promise<TaekilAdviceResult> => {
   try {
     const prompt = generateTaekilAdvicePrompt(saju, taekil, detail);
-    // top1·2·3 × (종합·조언·주의·키워드) + overall_advice + alternative 모두 출력하려면
-    // 7000 토큰 필요. minContentLength 500 으로 완화(빈 응답 방지).
-    const raw = await callGPT(prompt, 7000, 500);
+    // [comprehensive_analysis] + top1·2·3 × (종합·조언·주의·키워드) + overall_advice + alternative
+    // 모두 출력하려면 9000 토큰 필요. minContentLength 700 으로 (종합 분석 추가 분량).
+    const raw = await callGPT(prompt, 9000, 700);
     // [taekil_advice] 마커 제거하고 본문만 추출
     const match = raw.match(/\[taekil_advice\]\s*([\s\S]+)/);
     const advice = match ? match[1].trim() : raw.trim();

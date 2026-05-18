@@ -8,7 +8,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { sajuDB } from '../services/supabase';
 import { useProfileStore } from '../store/useProfileStore';
 import { useUserStore } from '../store/useUserStore';
@@ -16,6 +16,7 @@ import { computeSajuFromProfile } from '../utils/profileSaju';
 import { extractMetaphor } from '../utils/parseMetaphor';
 import { BackButton } from '../components/ui/BackButton';
 import { ShareBar } from '@/components/share/ShareBar';
+import { SectionCollapsible } from '../components/saju/SectionCollapsible';
 import {
   TAEKIL_CATEGORIES,
   migrateLegacyCategory,
@@ -43,6 +44,11 @@ const ELEMENT_COLORS: Record<string, string> = {
   '목': '#2D8659', '화': '#E63946', '토': '#F4A261', '금': '#94A3B8', '수': '#3B82F6',
 };
 
+interface TaekilKeyword {
+  name: string;
+  desc: string;
+}
+
 interface TaekilDateAdvice {
   rank: number;
   /** "종합:" 본문 (옛 레코드 호환을 위해 summary 이름 유지) */
@@ -51,11 +57,13 @@ interface TaekilDateAdvice {
   advice: string;
   /** "주의:" 본문 — 이 날 조심해야 할 점 */
   caution: string;
-  /** "키워드:" 칩 3개 */
-  keywords: string[];
+  /** "키워드:" 칩 3개 — {name, desc} 형태. 옛 record 호환 위해 desc 빈문자열 허용 */
+  keywords: TaekilKeyword[];
 }
 
 interface TaekilParsedAdvice {
+  /** "종합 분석" — 사주 + 카테고리 + 정황을 엮은 커스텀 분석. 새 마커 [comprehensive_analysis] */
+  comprehensiveAnalysis: string;
   dates: TaekilDateAdvice[];
   avoid: string;
   /** "OO에 대한 조언" 영역 — 1·2·3위 통합 권고 */
@@ -64,7 +72,23 @@ interface TaekilParsedAdvice {
   alternative: string;
 }
 
+/** "정인안정=설명문" 또는 "정인안정" 형식을 파싱. = 없으면 desc 빈문자열. */
+function parseKeywordToken(token: string): TaekilKeyword | null {
+  const t = token.trim();
+  if (!t) return null;
+  const eqIdx = t.indexOf('=');
+  if (eqIdx === -1) return { name: t, desc: '' };
+  const name = t.slice(0, eqIdx).trim();
+  const desc = t.slice(eqIdx + 1).trim();
+  if (!name) return null;
+  return { name, desc };
+}
+
 function parseTaekilStructuredAdvice(raw: string): TaekilParsedAdvice {
+  // [comprehensive_analysis] 추출 — top1 또는 다른 마커 직전까지
+  const compMatch = raw.match(/\[comprehensive_analysis\]\s*([\s\S]*?)(?=\[(?:top\d|avoid|overall_advice|alternative)\]|$)/);
+  const comprehensiveAnalysis = compMatch ? compMatch[1].trim() : '';
+
   const dates: TaekilDateAdvice[] = [];
   const topRe = /\[top(\d)\]/g;
   const parts = raw.split(topRe);
@@ -92,7 +116,7 @@ function parseTaekilStructuredAdvice(raw: string): TaekilParsedAdvice {
         advice,
         caution,
         keywords: keywordRaw
-          ? keywordRaw.split(/[,，]/).map(k => k.trim()).filter(Boolean)
+          ? keywordRaw.split(/[,，]/).map(parseKeywordToken).filter((k): k is TaekilKeyword => !!k)
           : [],
       });
     } else {
@@ -126,7 +150,7 @@ function parseTaekilStructuredAdvice(raw: string): TaekilParsedAdvice {
   const altMatch = raw.match(/\[alternative\]\s*([\s\S]*?)$/);
   const alternative = altMatch ? altMatch[1].trim() : '';
 
-  return { dates, avoid, overallAdvice, alternative };
+  return { comprehensiveAnalysis, dates, avoid, overallAdvice, alternative };
 }
 
 export default function TaekilResultPage() {
@@ -140,6 +164,8 @@ export default function TaekilResultPage() {
   const [aiAdvice, setAiAdvice] = useState<string>('');
   const [parsedAdvice, setParsedAdvice] = useState<TaekilParsedAdvice | null>(null);
   const [profileId, setProfileId] = useState<string | null>(null);
+  // 키워드 칩 클릭 시 설명을 보여줄 모달. null 이면 닫힘.
+  const [activeKeyword, setActiveKeyword] = useState<TaekilKeyword | null>(null);
   // recordId 없으면 즉시 에러 상태로 시작 → useEffect 안 sync setState 회피
   const [loading, setLoading] = useState<boolean>(!!recordId);
   const [error, setError] = useState<string | null>(
@@ -396,6 +422,48 @@ export default function TaekilResultPage() {
             </div>
           )}
 
+          {/* 종합 분석 — 본인 사주 + 카테고리 + detail 을 엮은 커스텀 분석. SectionCollapsible 패턴. */}
+          {parsedAdvice?.comprehensiveAnalysis ? (
+            <div className={styles.section} style={{ marginBottom: 16 }}>
+              <SectionCollapsible
+                title="종합 분석"
+                defaultOpen={false}
+                enterDelay={0.05}
+              >
+                <p
+                  className="text-text-secondary leading-[1.9] tracking-[-0.005em] whitespace-pre-line"
+                  style={{
+                    fontSize: 17, margin: 0,
+                    fontFamily: 'var(--font-body)',
+                  }}
+                >
+                  {parsedAdvice.comprehensiveAnalysis}
+                </p>
+              </SectionCollapsible>
+            </div>
+          ) : parsedAdvice && parsedAdvice.dates.length > 0 && (
+            // 옛 record (종합 분석 마커 추가 전 풀이) — 다시 받기 안내 카드
+            <div className={styles.section} style={{ marginBottom: 16 }}>
+              <div style={{
+                padding: '18px 20px',
+                borderRadius: 14,
+                background: 'rgba(124,92,252,0.08)',
+                border: '1px solid rgba(124,92,252,0.25)',
+              }}>
+                <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--cta-primary)', marginBottom: 6 }}>
+                  종합 분석은 다시 풀이 받으면 추가돼요
+                </div>
+                <p style={{
+                  margin: 0, fontSize: 14, lineHeight: 1.7,
+                  color: 'var(--text-secondary)',
+                  fontFamily: 'var(--font-body)',
+                }}>
+                  이 풀이는 종합 분석 기능 추가 전에 받으셨어요. 같은 사주·날짜로 다시 풀이 받으시면 본인 사주와 행사를 엮은 맞춤 종합 분석이 첫 섹션에 나타나요.
+                </p>
+              </div>
+            </div>
+          )}
+
           {/* AI 상세 카드 — 오행 에너지 + 시간 에너지 + 종합 풀이 */}
           <div className={styles.section}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
@@ -452,17 +520,25 @@ export default function TaekilResultPage() {
                         </div>
 
                         {adv.keywords.length > 0 && (
-                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 14 }}>
+                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 14 }}>
                             {adv.keywords.map((kw, ki) => (
-                              <span key={ki} style={{
-                                padding: '4px 10px', borderRadius: 99,
-                                fontSize: 12, fontWeight: 700, letterSpacing: '0.02em',
-                                color: 'var(--cta-primary)',
-                                background: 'rgba(124,92,252,0.12)',
-                                border: '1px solid rgba(124,92,252,0.25)',
-                              }}>
-                                {kw}
-                              </span>
+                              <button
+                                key={ki}
+                                type="button"
+                                onClick={() => setActiveKeyword(kw)}
+                                style={{
+                                  padding: '6px 14px', borderRadius: 99,
+                                  fontSize: 13, fontWeight: 700, letterSpacing: '0.02em',
+                                  color: 'var(--cta-primary)',
+                                  background: 'rgba(124,92,252,0.12)',
+                                  border: '1px solid rgba(124,92,252,0.25)',
+                                  cursor: 'pointer',
+                                  fontFamily: 'inherit',
+                                }}
+                                aria-label={`${kw.name} 설명 보기`}
+                              >
+                                {kw.name}
+                              </button>
                             ))}
                           </div>
                         )}
@@ -523,20 +599,31 @@ export default function TaekilResultPage() {
                         )}
                         {adv.advice && (
                           <div style={{
-                            marginBottom: adv.caution ? 12 : 14,
-                            padding: '12px 14px',
-                            borderRadius: 12,
-                            background: 'rgba(52,211,153,0.06)',
-                            border: '1px solid rgba(52,211,153,0.22)',
+                            marginBottom: adv.caution ? 14 : 16,
+                            padding: '20px 20px',
+                            borderRadius: 14,
+                            background: 'rgba(52,211,153,0.08)',
+                            border: '1px solid rgba(52,211,153,0.28)',
                           }}>
-                            <div style={{ fontSize: 11, fontWeight: 800, color: '#34D399', letterSpacing: '0.08em', marginBottom: 6, textTransform: 'uppercase' }}>
+                            <div style={{
+                              fontSize: 24, fontWeight: 900,
+                              color: '#34D399',
+                              letterSpacing: '-0.02em',
+                              marginBottom: 14,
+                              fontFamily: 'var(--font-title)',
+                              lineHeight: 1.3,
+                            }}>
                               이렇게 하면 좋아요
                             </div>
                             <p
-                              className="text-text-secondary leading-[1.85] tracking-[-0.005em]"
+                              className="leading-[1.85] tracking-[-0.005em]"
                               style={{
-                                fontSize: 16, margin: 0, whiteSpace: 'pre-line',
+                                fontSize: 22,
+                                lineHeight: 1.85,
+                                margin: 0, whiteSpace: 'pre-line',
                                 fontFamily: 'var(--font-body)',
+                                fontWeight: 500,
+                                color: 'var(--text-primary)',
                               }}
                             >
                               {adv.advice}
@@ -545,20 +632,31 @@ export default function TaekilResultPage() {
                         )}
                         {adv.caution && (
                           <div style={{
-                            marginBottom: 14,
-                            padding: '12px 14px',
-                            borderRadius: 12,
-                            background: 'rgba(248,113,113,0.06)',
-                            border: '1px solid rgba(248,113,113,0.22)',
+                            marginBottom: 16,
+                            padding: '20px 20px',
+                            borderRadius: 14,
+                            background: 'rgba(248,113,113,0.08)',
+                            border: '1px solid rgba(248,113,113,0.28)',
                           }}>
-                            <div style={{ fontSize: 11, fontWeight: 800, color: '#F87171', letterSpacing: '0.08em', marginBottom: 6, textTransform: 'uppercase' }}>
+                            <div style={{
+                              fontSize: 24, fontWeight: 900,
+                              color: '#F87171',
+                              letterSpacing: '-0.02em',
+                              marginBottom: 14,
+                              fontFamily: 'var(--font-title)',
+                              lineHeight: 1.3,
+                            }}>
                               주의할 점
                             </div>
                             <p
-                              className="text-text-secondary leading-[1.85] tracking-[-0.005em]"
+                              className="leading-[1.85] tracking-[-0.005em]"
                               style={{
-                                fontSize: 16, margin: 0, whiteSpace: 'pre-line',
+                                fontSize: 22,
+                                lineHeight: 1.85,
+                                margin: 0, whiteSpace: 'pre-line',
                                 fontFamily: 'var(--font-body)',
+                                fontWeight: 500,
+                                color: 'var(--text-primary)',
                               }}
                             >
                               {adv.caution}
@@ -640,71 +738,64 @@ export default function TaekilResultPage() {
                     );
                   })}
 
-                  {/* 피해야 할 날 — 공통 섹션 패턴 (cta bar = red 로 시그널 유지) */}
+                  {/* 피해야 할 날 — SectionCollapsible 패턴, 빨강 톤 유지 */}
                   {parsedAdvice.avoid && (
-                    <section className="mt-3 rounded-2xl p-5 bg-[rgba(20,12,38,0.55)] border border-[rgba(248,113,113,0.30)]">
-                      <div className="flex items-center gap-2 mb-3">
-                        <span className="inline-block w-1 h-5 rounded-full" style={{ background: '#F87171' }} />
-                        <h3
-                          className="text-[17px] font-bold tracking-tight"
-                          style={{ fontFamily: 'var(--font-title)', color: '#F87171' }}
-                        >
-                          피해야 할 날
-                        </h3>
-                      </div>
-                      <p
-                        className="text-[17px] text-text-secondary leading-[1.85] tracking-[-0.005em] whitespace-pre-line"
-                        style={{ fontFamily: 'var(--font-body)' }}
+                    <div className="mt-3">
+                      <SectionCollapsible
+                        title="피해야 할 날"
+                        defaultOpen={false}
+                        enterDelay={0.1}
+                        barColor="#F87171"
+                        barPulseColor="#FCA5A5"
+                        borderColor="rgba(248,113,113,0.30)"
                       >
-                        {parsedAdvice.avoid}
-                      </p>
-                    </section>
+                        <p
+                          className="text-text-secondary leading-[1.85] tracking-[-0.005em] whitespace-pre-line"
+                          style={{ fontSize: 17, margin: 0, fontFamily: 'var(--font-body)' }}
+                        >
+                          {parsedAdvice.avoid}
+                        </p>
+                      </SectionCollapsible>
+                    </div>
                   )}
 
-                  {/* "OO에 대한 조언" — 다른 풀이 페이지와 동일한 공통 섹션 패턴
-                       (좌측 cta bar + 17px 굵은 헤더 + 본문) */}
+                  {/* "OO에 대한 조언" — SectionCollapsible 패턴, cta 톤 */}
                   {parsedAdvice.overallAdvice && (() => {
                     const eventLabel = result?.subItem ?? result?.customLabel ?? result?.categoryLabel ?? '';
                     return (
-                      <section className="mt-4 rounded-2xl p-5 bg-[rgba(20,12,38,0.55)] border border-[var(--border-subtle)]">
-                        <div className="flex items-center gap-2 mb-3">
-                          <span className="inline-block w-1 h-5 rounded-full bg-cta" />
-                          <h3
-                            className="text-[17px] font-bold text-text-primary tracking-tight"
-                            style={{ fontFamily: 'var(--font-title)' }}
-                          >
-                            {eventLabel ? `${eventLabel}에 대한 조언` : '이 행사에 대한 조언'}
-                          </h3>
-                        </div>
-                        <p
-                          className="text-[17px] text-text-secondary leading-[1.85] tracking-[-0.005em] whitespace-pre-line"
-                          style={{ fontFamily: 'var(--font-body)' }}
+                      <div className="mt-3">
+                        <SectionCollapsible
+                          title={eventLabel ? `${eventLabel}에 대한 조언` : '이 행사에 대한 조언'}
+                          defaultOpen={false}
+                          enterDelay={0.15}
                         >
-                          {parsedAdvice.overallAdvice}
-                        </p>
-                      </section>
+                          <p
+                            className="text-text-secondary leading-[1.85] tracking-[-0.005em] whitespace-pre-line"
+                            style={{ fontSize: 17, margin: 0, fontFamily: 'var(--font-body)' }}
+                          >
+                            {parsedAdvice.overallAdvice}
+                          </p>
+                        </SectionCollapsible>
+                      </div>
                     );
                   })()}
 
-                  {/* "추천 대체 방법" — 공통 섹션 패턴 통일 */}
+                  {/* "추천 대체 방법" — SectionCollapsible 패턴, cta 톤 */}
                   {parsedAdvice.alternative && (
-                    <section className="mt-3 rounded-2xl p-5 bg-[rgba(20,12,38,0.55)] border border-[var(--border-subtle)]">
-                      <div className="flex items-center gap-2 mb-3">
-                        <span className="inline-block w-1 h-5 rounded-full bg-cta" />
-                        <h3
-                          className="text-[17px] font-bold text-text-primary tracking-tight"
-                          style={{ fontFamily: 'var(--font-title)' }}
-                        >
-                          추천 대체 방법
-                        </h3>
-                      </div>
-                      <p
-                        className="text-[17px] text-text-secondary leading-[1.85] tracking-[-0.005em] whitespace-pre-line"
-                        style={{ fontFamily: 'var(--font-body)' }}
+                    <div className="mt-3">
+                      <SectionCollapsible
+                        title="추천 대체 방법"
+                        defaultOpen={false}
+                        enterDelay={0.2}
                       >
-                        {parsedAdvice.alternative}
-                      </p>
-                    </section>
+                        <p
+                          className="text-text-secondary leading-[1.85] tracking-[-0.005em] whitespace-pre-line"
+                          style={{ fontSize: 17, margin: 0, fontFamily: 'var(--font-body)' }}
+                        >
+                          {parsedAdvice.alternative}
+                        </p>
+                      </SectionCollapsible>
+                    </div>
                   )}
                 </>
               ) : (
@@ -754,6 +845,83 @@ export default function TaekilResultPage() {
       )}
       {/* saju ref 살림 — TS unused 방지: 향후 confirm 모달/디버그용 */}
       {!saju && null}
+
+      {/* 키워드 설명 모달 — 칩 클릭 시 열림. AI 응답의 desc 가 비어 있으면 fallback 안내. */}
+      <AnimatePresence>
+        {activeKeyword && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.18 }}
+            onClick={() => setActiveKeyword(null)}
+            style={{
+              position: 'fixed', inset: 0, zIndex: 100,
+              background: 'rgba(8,4,20,0.65)',
+              backdropFilter: 'blur(6px)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              padding: 20,
+            }}
+          >
+            <motion.div
+              initial={{ opacity: 0, y: 16, scale: 0.96 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 12, scale: 0.97 }}
+              transition={{ duration: 0.22, ease: 'easeOut' }}
+              onClick={(e) => e.stopPropagation()}
+              style={{
+                width: '100%', maxWidth: 420,
+                padding: 24,
+                borderRadius: 20,
+                background: 'rgba(20,12,38,0.95)',
+                border: '1px solid var(--cta-primary)',
+                boxShadow: '0 20px 60px rgba(124,92,252,0.35)',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
+                <span style={{
+                  display: 'inline-block', width: 4, height: 22, borderRadius: 2,
+                  background: 'var(--cta-primary)',
+                }} />
+                <h3 style={{
+                  margin: 0, fontSize: 20, fontWeight: 800,
+                  color: 'var(--text-primary)',
+                  fontFamily: 'var(--font-title)',
+                }}>
+                  {activeKeyword.name}
+                </h3>
+              </div>
+              <p
+                className="leading-[1.9]"
+                style={{
+                  margin: 0, fontSize: 17,
+                  color: 'var(--text-secondary)',
+                  fontFamily: 'var(--font-body)',
+                  whiteSpace: 'pre-line',
+                }}
+              >
+                {activeKeyword.desc || '이 키워드는 그 날의 명리적 핵심을 함축한 표현이에요. 상세 풀이는 위 종합/조언 본문에서 확인하실 수 있어요.'}
+              </p>
+              <button
+                type="button"
+                onClick={() => setActiveKeyword(null)}
+                style={{
+                  width: '100%', marginTop: 18,
+                  padding: '12px', borderRadius: 12,
+                  background: 'var(--cta-primary)',
+                  border: 'none',
+                  color: 'white',
+                  fontSize: 15, fontWeight: 700,
+                  cursor: 'pointer',
+                  fontFamily: 'inherit',
+                }}
+              >
+                닫기
+              </button>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

@@ -17,6 +17,55 @@
 
 ---
 
+## 2026-05-19 00:40 — 택일운세 흉신 모듈 작업 — 파일 분할 push 로 인한 prod 빌드 fail `[git]`
+
+### 증상
+- 사용자: "방금 배포 오류난거 같은데 어쩔때 한번씩 이렇게 배포 오류 나는 이유가 뭐지"
+- Vercel 대시보드: 최신 production deployment (commit 32d161b) `● Error` 50s 후 fail
+- prod 사이트는 직전 ready(22m 전) 빌드 그대로 노출 — 새 변경 미반영
+
+### 영향 범위
+- prod 배포 1회 fail (즉시 hotfix 가능했음)
+- prod 사이트 자체는 직전 빌드 정상 운영 중이라 사용자 체감 영향 없음
+- 단 우리가 작업한 글씨 크기·SectionCollapsible·종합 분석 마커가 prod 에 반영 안 됨
+
+### 진단 과정
+1. `vercel ls --prod` 로 최신 deployment 확인 — 50s 만에 Error
+2. `vercel inspect <url> --logs` 로 빌드 로그 수집:
+   ```
+   ./src/constants/prompts.ts:4007:26
+   Type error: Property 'sinsalHits' does not exist on type 'TaekilDay'.
+   ```
+3. `engine/taekil.ts` 의 TaekilDay 인터페이스 확인 → 우리 작업으로 `sinsalHits?: SinsalHit[]` 추가돼 있음 (workdir)
+4. `git show 32d161b -- src/constants/prompts.ts | grep -c sinsalHits` → 2개 (sinsalHits 사용 코드 push 됨)
+5. `git show 32d161b -- src/engine/taekil.ts | grep -c sinsalHits` → **0개** (인터페이스 정의 push 안 됨)
+6. `git status` → engine/taekil.ts·engine/taekilSinsal.ts·TaekilPage·TaekilResultPage·fortuneService·taekilDetailHints 모두 **uncommitted 상태**
+
+### 진짜 원인
+**파일 분할 push** — A 파일(prompts.ts)이 B 파일(engine/taekil.ts)의 새 필드를 사용하는데, A 만 commit·push 되고 B 는 workdir 에만 남음.
+
+세션 도중 사용자가 별도로 다른 작업(picked-date UI) 을 진행하며 commit 했고, 그 과정에서 prompts.ts 의 우리 변경이 일부 들어갔지만 인터페이스 정의가 있는 engine/taekil.ts 는 함께 staging 되지 않음. 32d161b commit 메시지는 우리 작업과 무관한 "시도/피하기 카드 본문 단어 박힘 해결" — 즉 다른 세션 commit 에 우리 변경 일부가 끼어들어 push 된 결과.
+
+[[feedback_multi_session_git]] 메모에 적힌 그 패턴 그대로.
+
+### 해결
+1. workdir 의 남은 변경 모두 명시적 path 로 add (git add -A 금지 메모 준수):
+   - `git add src/engine/taekil.ts src/engine/taekilSinsal.ts src/constants/taekilDetailHints.ts src/pages/TaekilPage.tsx src/pages/TaekilResultPage.tsx src/services/fortuneService.ts`
+2. 하나의 commit 으로 묶어 push — 인터페이스 + 모듈 + 사용처가 같은 deployment 에 들어가도록.
+
+### 재발 방지
+- **A 파일이 B 파일의 새 타입을 사용하면 두 파일은 반드시 같은 commit**. 분할 금지.
+- 작업 마무리 시 `git status` 로 modified 전체 확인 후 일괄 add (path 명시).
+- 멀티 세션·멀티 터미널에서 동시 작업 시: 각 세션이 자기 변경 파일만 path 로 add. GUI 의 stage all 금지.
+- 큰 변경 push 전 로컬 `npm run build` 로 prod 빌드 검증 (tsc --noEmit 만으로는 next build 의 strict 모드 차이를 못 잡을 수 있음 → 이번 사고처럼).
+
+### 관련
+- 32d161b — 빌드 fail 한 commit (prompts.ts 의 sinsalHits 만 들어감)
+- 복구 commit — 본 entry hotfix
+- [feedback_multi_session_git.md] — 동일 패턴 메모
+
+---
+
 ## 2026-05-18 20:55 — 이름 풀이 6 섹션 카드 분리 실패 — AI 마커 누락 사고 `[code]`
 
 ### 증상
