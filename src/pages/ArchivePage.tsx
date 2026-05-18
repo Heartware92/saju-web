@@ -80,6 +80,13 @@ function getSajuRoute(record: SajuRecord): string {
     basic: '/saju/result',
   };
   const base = map[cat] ?? '/archive';
+  // newyear 의 연도별 운세 record 는 source 파라미터도 함께 — 헤더·로딩 라벨 분기용
+  if (cat === 'newyear') {
+    const src = (record.engine_result as { source?: string } | null)?.source;
+    if (src === 'year-fortune') {
+      return `${base}?recordId=${record.id}&source=year-fortune`;
+    }
+  }
   return `${base}?recordId=${record.id}`;
 }
 
@@ -203,7 +210,11 @@ export default function ArchivePage() {
             <div className="space-y-3">
               {sajuSorted.length > 0 ? (
                 sajuSorted.map((record) => {
-                  const categoryLabel = SAJU_CATEGORY_LABEL[record.category] ?? record.category;
+                  // 연도별 운세 진입한 newyear record 는 라벨을 "연도별 운세" 로
+                  const engineSource = (record.engine_result as { source?: string } | null)?.source;
+                  const categoryLabel = record.category === 'newyear' && engineSource === 'year-fortune'
+                    ? '연도별 운세'
+                    : SAJU_CATEGORY_LABEL[record.category] ?? record.category;
                   const color = SAJU_CATEGORY_COLOR[record.category] ?? '#94a3b8';
                   const profileLabel = getProfileLabel(record);
                   return (

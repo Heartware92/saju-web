@@ -64,7 +64,7 @@ function YearFortuneSelector() {
   const canSubmit = !!selectedProfile && selectedYear >= MIN_YEAR && selectedYear <= MAX_YEAR;
 
   const gateConfig: Omit<QuickFortuneGateProps, 'onClose'> = {
-    serviceName: `${selectedYear}년 신년운세`,
+    serviceName: `${selectedYear}년도 운세 풀이`,
     archiveCategory: 'newyear',
     creditType: 'moon',
     creditCost: SUN_COST_BIG,

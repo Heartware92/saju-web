@@ -333,7 +333,7 @@ export default function PeriodFortunePage({ scope }: { scope: FortuneScope | 'da
   const sourceParam = searchParams?.get('source');
   const isFromYearFortune = sourceParam === 'year-fortune';
   const pageTitle =
-    scope === 'year' ? (isFromYearFortune ? `${targetYear}년 운세` : `${targetYear} 신년운세`)
+    scope === 'year' ? (isFromYearFortune ? `${targetYear}년도 운세 풀이` : `${targetYear} 신년운세`)
     : scope === 'day' ? '실시간 운세'
     : '지정일 운세';
 
@@ -583,7 +583,7 @@ export default function PeriodFortunePage({ scope }: { scope: FortuneScope | 'da
         customJobState: targetProfile?.custom_job_state ?? null,
         loveState: targetProfile?.love_state ?? null,
         customLoveState: targetProfile?.custom_love_state ?? null,
-      })
+      }, isFromYearFortune)
         .then(r => {
           if (cancelled) return;
           setNewyearReport(r);
@@ -728,7 +728,7 @@ export default function PeriodFortunePage({ scope }: { scope: FortuneScope | 'da
     if (scope === 'year') {
       return (
         <FortuneProfileSelect
-          serviceName={`${targetYear} 신년운세`}
+          serviceName={isFromYearFortune ? `${targetYear}년도 운세 풀이` : `${targetYear} 신년운세`}
           archiveCategory="newyear"
           archiveContext={{ key: 'year', value: String(targetYear) }}
           creditType="moon"
@@ -780,7 +780,7 @@ export default function PeriodFortunePage({ scope }: { scope: FortuneScope | 'da
   if (scope === 'year' && newyearReportLoading) {
     return (
       <AILoadingBar
-        label={`${targetYear}년 신년운세 풀이중`}
+        label={isFromYearFortune ? `${targetYear}년도 운세 풀이중` : `${targetYear}년 신년운세 풀이중`}
         minLabel="20초"
         maxLabel="1분"
         estimatedSeconds={40}

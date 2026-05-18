@@ -1387,6 +1387,8 @@ export const getNewyearReport = async (
     loveState?: string | null;
     customLoveState?: string | null;
   },
+  /** 연도별 운세 메뉴에서 진입한 경우 true — archive 의 engine_result.source 에 박혀 보관함 라벨 분기 */
+  isYearFortune?: boolean,
 ): Promise<NewyearReportAIResult> => {
   try {
     // ★ saju.seWoon 은 calculateSeWoon 의 12년 윈도우 (currentYear -7 ~ +4) 만 가짐
@@ -1444,7 +1446,8 @@ export const getNewyearReport = async (
       engineResult: {
         year,
         isoDate: String(year),
-        categoryLabel: `${year}년 신년운세`,
+        categoryLabel: isYearFortune ? `${year}년도 운세 풀이` : `${year}년 신년운세`,
+        source: isYearFortune ? 'year-fortune' : 'newyear',
         seWoon,
         currentDaeWoon,
       } as unknown as Record<string, unknown>,
