@@ -71,6 +71,8 @@ function YearFortuneSelector() {
     targetPath: `/saju/newyear?year=${selectedYear}&source=year-fortune`,
     profileId: selectedProfileId,
     // archiveContext 안 보냄 — 그 프로필의 모든 newyear 풀이 리스트로 노출 (isListMode)
+    // sourceFilter='year-fortune' — 신년운세 (홈에서 직접 진입한 record) 는 제외, 연도별 운세 record 만
+    sourceFilter: 'year-fortune',
   };
 
   return (

@@ -235,6 +235,8 @@ export async function findArchiveList(params: {
   gender: 'male' | 'female';
   profile_id?: string;
   limit?: number;
+  /** engine_result.source 로 필터 — 같은 category 안에서 진입 흐름별 분리 (예: newyear vs year-fortune) */
+  sourceFilter?: string;
 }): Promise<ArchiveListItem[]> {
   try {
     const user = await auth.getCurrentUser();
@@ -249,6 +251,10 @@ export async function findArchiveList(params: {
       .order('created_at', { ascending: false });
     if (params.profile_id) {
       q = q.eq('profile_id', params.profile_id);
+    }
+    if (params.sourceFilter) {
+      // jsonb engine_result->>source 가 정확히 일치하는 record 만
+      q = q.eq('engine_result->>source', params.sourceFilter);
     }
     if (params.limit) {
       q = q.limit(params.limit);

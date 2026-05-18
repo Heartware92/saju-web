@@ -23,6 +23,8 @@ export interface QuickFortuneGateProps {
   onClose?: () => void;
   /** 명시 시 이 프로필 사용 (미지정 시 대표 프로필 자동) — 연도별 운세처럼 사용자가 직접 프로필 선택하는 케이스용 */
   profileId?: string;
+  /** archive list 모드에서 engine_result.source 필터 — 같은 category 안에서 진입 흐름별 분리 (예: 연도별 운세는 source='year-fortune' 만) */
+  sourceFilter?: string;
 }
 
 export function QuickFortuneGate({
@@ -35,6 +37,7 @@ export function QuickFortuneGate({
   targetPath,
   onClose,
   profileId,
+  sourceFilter,
 }: QuickFortuneGateProps) {
   const router = useRouter();
   const pathname = usePathname();
@@ -100,6 +103,7 @@ export function QuickFortuneGate({
         birth_date: primaryProfile.birth_date,
         gender: primaryProfile.gender,
         profile_id: primaryProfile.id,
+        sourceFilter,
       }).then(list => {
         if (!cancelled) {
           setArchiveList(list);
@@ -126,7 +130,7 @@ export function QuickFortuneGate({
     }
     return () => { cancelled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [initialized, primaryProfile?.id, archiveCategory, contextKey, isListMode]);
+  }, [initialized, primaryProfile?.id, archiveCategory, contextKey, isListMode, sourceFilter]);
 
   useEffect(() => {
     if (checking) return;
