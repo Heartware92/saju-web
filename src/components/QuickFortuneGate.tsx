@@ -131,7 +131,7 @@ export function QuickFortuneGate({
 
   const navigate = useCallback(
     (extra?: string) => {
-      if (!primaryProfile) return;
+      if (!primaryProfile || !navPath) return;
       // ★ targetPath 가 이미 ?year=... 같은 query 를 포함할 수 있음 (예: 연도별 운세)
       //   "?" 가 두 번 들어가 URL parsing 깨지지 않도록 separator 분기
       const separator = navPath.includes('?') ? '&' : '?';
