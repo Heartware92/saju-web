@@ -393,7 +393,9 @@ export default function MoreFortunePage({ category }: Props) {
     const sk = sajuKey(saju);
     if (category === 'name') {
       const meaningsKey = charMeanings.map((m) => (m || '').trim()).join('|');
-      return `${sk}:${koreanName.trim()}|${meaningsKey}`;
+      // 한자 선택값이 다르면 다른 풀이로 인식해야 함 — 같은 뜻이라도 한자 다르면 자원오행 다름
+      const hanjasKey = selectedHanjas.map((h) => h ?? '').join('|');
+      return `${sk}:${koreanName.trim()}|${meaningsKey}|${hanjasKey}`;
     }
     return sk;
   };
@@ -437,7 +439,7 @@ export default function MoreFortunePage({ category }: Props) {
     setResult(null);
     setResultSections(null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [category, saju, koreanName, charMeanings, dreamText, isArchiveMode, freshParam]);
+  }, [category, saju, koreanName, charMeanings, selectedHanjas, dreamText, isArchiveMode, freshParam]);
 
   // auto-start: 모달에서 "새로 풀이 받기" 클릭 후 소개 페이지 건너뛰고 바로 풀이
   // ★ shouldAutoStart 는 freshParam=true 일 때만 true → 무조건 force=true 로 호출.
