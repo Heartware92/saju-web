@@ -482,49 +482,6 @@ export default function TaekilResultPage() {
             </div>
           )}
 
-          {/* 종합 분석 — 본인 사주 + 카테고리 + detail 을 엮은 커스텀 분석. SectionCollapsible 패턴.
-              ★ defaultOpen=true — 1순위 정보라 펼쳐서 시작 (이전 false 가 "종합 분석이 안 보인다" 사고의 진짜 원인). */}
-          {parsedAdvice?.comprehensiveAnalysis ? (
-            <div className={styles.section} style={{ marginBottom: 16 }}>
-              <SectionCollapsible
-                title="종합 분석"
-                defaultOpen={true}
-                enterDelay={0.05}
-              >
-                <p
-                  className="text-text-secondary leading-[1.9] tracking-[-0.005em] whitespace-pre-line"
-                  style={{
-                    fontSize: 17, margin: 0,
-                    fontFamily: 'var(--font-body)',
-                  }}
-                >
-                  {renderEmphasis(parsedAdvice.comprehensiveAnalysis)}
-                </p>
-              </SectionCollapsible>
-            </div>
-          ) : parsedAdvice && parsedAdvice.dates.length > 0 && (
-            // 옛 record (종합 분석 마커 추가 전 풀이) — 다시 받기 안내 카드
-            <div className={styles.section} style={{ marginBottom: 16 }}>
-              <div style={{
-                padding: '18px 20px',
-                borderRadius: 14,
-                background: 'rgba(124,92,252,0.08)',
-                border: '1px solid rgba(124,92,252,0.25)',
-              }}>
-                <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--cta-primary)', marginBottom: 6 }}>
-                  종합 분석은 다시 풀이 받으면 추가돼요
-                </div>
-                <p style={{
-                  margin: 0, fontSize: 14, lineHeight: 1.7,
-                  color: 'var(--text-secondary)',
-                  fontFamily: 'var(--font-body)',
-                }}>
-                  이 풀이는 종합 분석 기능 추가 전에 받으셨어요. 같은 사주·날짜로 다시 풀이 받으시면 본인 사주와 행사를 엮은 맞춤 종합 분석이 첫 섹션에 나타나요.
-                </p>
-              </div>
-            </div>
-          )}
-
           {/* AI 상세 카드 — 오행 에너지 + 시간 에너지 + 종합 풀이 */}
           <div className={styles.section}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
@@ -793,6 +750,50 @@ export default function TaekilResultPage() {
                       </div>
                     );
                   })}
+
+                  {/* 종합 분석 — 본인 사주 + 카테고리 + detail 을 엮은 커스텀 분석.
+                      날짜별 상세 풀이(1·2·3위 카드들) 다음 위치 — 사용자 동선에 맞춤 (2026-05-19).
+                      ★ defaultOpen=true — 1순위 정보라 펼쳐서 시작. */}
+                  {parsedAdvice?.comprehensiveAnalysis ? (
+                    <div className="mt-3">
+                      <SectionCollapsible
+                        title="종합 분석"
+                        defaultOpen={true}
+                        enterDelay={0.05}
+                      >
+                        <p
+                          className="text-text-secondary leading-[1.9] tracking-[-0.005em] whitespace-pre-line"
+                          style={{
+                            fontSize: 17, margin: 0,
+                            fontFamily: 'var(--font-body)',
+                          }}
+                        >
+                          {renderEmphasis(parsedAdvice.comprehensiveAnalysis)}
+                        </p>
+                      </SectionCollapsible>
+                    </div>
+                  ) : parsedAdvice && parsedAdvice.dates.length > 0 && (
+                    // 옛 record (종합 분석 마커 추가 전 풀이) — 다시 받기 안내 카드
+                    <div className="mt-3">
+                      <div style={{
+                        padding: '18px 20px',
+                        borderRadius: 14,
+                        background: 'rgba(124,92,252,0.08)',
+                        border: '1px solid rgba(124,92,252,0.25)',
+                      }}>
+                        <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--cta-primary)', marginBottom: 6 }}>
+                          종합 분석은 다시 풀이 받으면 추가돼요
+                        </div>
+                        <p style={{
+                          margin: 0, fontSize: 14, lineHeight: 1.7,
+                          color: 'var(--text-secondary)',
+                          fontFamily: 'var(--font-body)',
+                        }}>
+                          이 풀이는 종합 분석 기능 추가 전에 받으셨어요. 같은 사주·날짜로 다시 풀이 받으시면 본인 사주와 행사를 엮은 맞춤 종합 분석이 추가돼요.
+                        </p>
+                      </div>
+                    </div>
+                  )}
 
                   {/* 피해야 할 날 — SectionCollapsible 패턴, 빨강 톤 유지 */}
                   {parsedAdvice.avoid && (
