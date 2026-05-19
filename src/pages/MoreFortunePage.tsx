@@ -563,22 +563,15 @@ export default function MoreFortunePage({ category }: Props) {
       }
     }
 
-    // 캐시 우선 — 같은 입력 재진입 시 silent restore
-    // ★ force=true (새로 풀이받기·다시 풀이받기) 면 캐시 검사 자체를 우회하여
-    //   메모리 캐시·보관함 잔여물이 새 풀이 흐름을 가로채지 못하게 보장
+    // ★ handleRead 의 cache 검사 분기 제거 (2026-05-19 사고 fix)
+    //   - 옛 분기는 cache hit 시 setResult(cached.data) 만 하고 setResultSections 누락 →
+    //     단일 카드 fallback + [total]·[diagnosis] 등 raw 마커 본문 노출 사고
+    //   - 사용자가 "풀이 시작" 버튼을 누른 액션은 항상 새 호출 의도
+    //   - 페이지 재진입의 silent restore 는 useEffect (line 487~528) 가 별도 처리하며
+    //     거기선 카테고리별 sections parser 를 호출하므로 안전
+    //   ※ cacheKey·kindKey 변수는 응답 저장(setReport) 분기에 그대로 필요 — 정의만 유지.
     const cacheKey = buildCacheKey();
     const kindKey = `more:${category}` as const;
-    if (!force && cacheKey) {
-      const cached = useReportCacheStore.getState().getReport<string>(kindKey, cacheKey);
-      if (cached?.error) {
-        setError(cached.error);
-        return;
-      }
-      if (cached?.data) {
-        setResult(cached.data);
-        return;
-      }
-    }
 
     if (moonBalance < MOON_COST_PER_FORTUNE) {
       setError('달 크레딧이 부족해요. 크레딧을 충전해주세요.');
@@ -1477,6 +1470,18 @@ function MoreFortuneDreamCard({
   isArchiveMode: boolean;
   onReset: () => void;
 }) {
+  // ★ 안전망 — 옛 record / AI 마커 잔존으로 본문에 [marker] 가 그대로 들어가는 사고 차단.
+  //   parseDreamSections 의 fallback (전체를 oriental 에 보존) 경로에서 발생 가능.
+  //   다른 카테고리 마커(예: [total], [eum_ryeong])도 함께 strip.
+  const stripMarkers = (s: string) =>
+    s.replace(/^\s*\[[a-z_]+\]\s*$/gmi, '').replace(/\n{3,}/g, '\n\n').trim();
+
+  diagnosis = stripMarkers(diagnosis);
+  symbols = stripMarkers(symbols);
+  oriental = stripMarkers(oriental);
+  western = stripMarkers(western);
+  action = stripMarkers(action);
+
   // 진단 본문에서 첫 줄(태그 라인)과 나머지(근거 본문) 분리
   const diagnosisLines = diagnosis.trim().split('\n').map(l => l.trim()).filter(Boolean);
   const diagnosisTag = diagnosisLines[0] ?? '';

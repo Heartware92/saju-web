@@ -17,6 +17,50 @@
 
 ---
 
+## 2026-05-19 17:30 — handleRead cache hit 시 setResultSections 누락 — 옛 결과 + raw 마커 본문 노출 `[code]`
+
+### 증상
+- 사용자(꿈해몽): 같은 텍스트를 한 글자도 안 틀리고 다시 입력 → "그전 결과물도 나오고 [total] 막 이런것도 그대로 나오는 페이지 렌더링"
+- 사용자(이름 풀이): "또 api 호출이 안되고 그전 결과값을 바로 비춰져버리는.. 로딩창이 생략되는 현상"
+- API 호출 안 됨 + 옛 결과 즉시 표시 + 본문에 [total] / [diagnosis] / [eum_ryeong] 같은 raw 마커 노출
+
+### 영향 범위
+- 더많은운세 — dream / name / study / children / personality 5개 카테고리 모두 동일 버그
+- 같은 입력 반복 시도 → 새 풀이 받을 수 없는 사용자 경험
+- 본문에 raw 마커 노출 → 서비스 신뢰 손상
+
+### 진단 과정
+1. INCIDENTS.md 의 이름풀이 entry (2026-05-18 20:55) 확인 — AI 마커 누락 사고였음. 다른 원인.
+2. `MoreFortunePage.tsx:566~581` 의 handleRead cache hit 분기 검사:
+   ```ts
+   if (cached?.data) {
+     setResult(cached.data);   // ← result 만 set
+     return;                    // ← setResultSections 호출 안 함
+   }
+   ```
+3. useEffect 의 silent restore (line 487~528) 와 비교 — 거기선 카테고리별 parseStudy/Children/Personality/Name/DreamSections 모두 호출하며 setResultSections 함께 채움.
+4. handleRead 의 cache hit 분기만 setResultSections 누락 → resultSections=null 상태 유지 → 렌더 분기 `(!resultSections || ...)` true → **MoreFortuneResultCard 단일 카드 fallback**
+5. 단일 카드는 dream 의 5섹션 마커 strip 안 함 → 본문에 [total]·[diagnosis] 같은 raw 마커 그대로 노출
+
+### 진짜 원인
+**`handleRead` 의 cache hit 분기가 `setResult` 만 하고 `setResultSections` 를 호출하지 않아**, 카테고리별 sections 렌더 분기를 통과하지 못하고 단일 카드 fallback 으로 빠짐. fallback 카드는 마커 strip 정규식이 5섹션 마커를 포함하지 않아 raw 마커 본문 노출.
+
+### 해결
+1. handleRead 의 cache hit 분기 통째 제거 — 사용자가 "풀이 시작" 버튼 누른 액션은 항상 새 호출 의도. 페이지 재진입의 silent restore 는 useEffect 가 별도 처리하며 거기선 sections parser 함께 호출하므로 안전.
+2. cacheKey·kindKey 변수는 응답 저장(setReport) 분기에 필요하므로 정의만 유지.
+3. MoreFortuneDreamCard 본문에 안전망 — `[a-z_]+` 패턴 마커 strip (parseDreamSections fallback 경로에서 [total] 같은 다른 카테고리 마커가 들어와도 strip).
+
+### 재발 방지
+- **cache hit 분기에서 setResult 만 호출하고 setResultSections 누락하지 말 것**. 두 state 는 짝.
+- 사용자 버튼 액션은 새 호출 의도가 기본. cache 는 useEffect 의 silent restore 경로에서만.
+- 새 마커 추가 시 단일 카드 fallback 의 strip 정규식도 함께 확장 검토.
+
+### 관련
+- 파일: `src/pages/MoreFortunePage.tsx` handleRead·MoreFortuneDreamCard
+- 이전 이름풀이 사고 (다른 원인): 본 파일 2026-05-18 20:55 entry
+
+---
+
 ## 2026-05-19 16:31 — 꿈해몽 5섹션 확장 작업 — 파일 분할 push 로 인한 prod 빌드 fail `[git]` `[재발]`
 
 ### 증상
