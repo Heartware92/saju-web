@@ -1,18 +1,38 @@
 import { ReactNode } from 'react';
 
 /**
- * AI 풀이 본문에서 `**핵심 문장**` 마커를 강조 렌더로 변환.
+ * AI 풀이 본문에서 다양한 강조 마커를 시각 렌더로 변환.
  *
- * 정통사주 프롬프트에 "각 섹션 본문 핵심 문장 1~2개를 `**...**` 형태로 표기" 룰을 넣어
- * LLM 이 생성 단계에서 직접 핵심 문장을 마킹하게 한 뒤, 이 유틸이 마커를 시각 강조로 변환한다.
+ * 정통사주(SajuResultPage) 본문 전용. 두 스타일:
+ *  1) `**문장**` — 큰 강조 (19px 볼드). 정통사주 KEY_SENTENCE_EMPHASIS_RULE 룰.
+ *  2) 「」 / 〔〕 / 『』 / '...' / "..." — 일반 강조 (17px 볼드 + text-primary 화이트).
  *
- * - 기존 색상 강조(`highlightSajuTerms`) 대신 사용. 키워드 단위 색상 분산 → 의미 단위 강조 한 곳 집중.
- * - 마커가 없는 옛 record 는 plain 텍스트로 그대로 렌더 (호환).
- * - 중첩 마커는 첫 매치만 인정.
+ * AI 가 SYSTEM_PROMPT 의 「」 룰을 자주 어기고 한국어 자연 인용으로 '...' 를 쓰는
+ * 현실 반영. 마커 「」 '...' "..." 자체는 유지 (제거 X). 별표는 제거.
  */
 
-// `**문장**` — 비탐욕 매칭. 줄바꿈 허용(s flag 대신 [\s\S]).
-const EMPHASIS_PATTERN = /\*\*([\s\S]+?)\*\*/g;
+// 별표 마커 — 큰 강조 (정통사주 핵심 문장)
+const BIG_EMPHASIS_RE = /\*\*([\s\S]+?)\*\*/g;
+// 일반 강조 마커 — 한글 괄호 + 작은/큰 따옴표 (ASCII + curly), 길이 2~40자
+const SMALL_EMPHASIS_RE = /(「[^「」\n]+?」|〔[^〔〕\n]+?〕|『[^『』\n]+?』|['‘][^'’\n]{2,40}['’]|["“][^"”\n]{2,40}["”])/g;
+
+// 통합 — alternation. 별표를 먼저 두어 우선 매칭.
+const COMBINED_RE = new RegExp(
+  `(${BIG_EMPHASIS_RE.source}|${SMALL_EMPHASIS_RE.source})`,
+  'g',
+);
+
+function isSmallEmphasis(part: string): boolean {
+  if (!part) return false;
+  const first = part[0];
+  const last = part[part.length - 1];
+  if (first === '「' && last === '」') return true;
+  if (first === '〔' && last === '〕') return true;
+  if (first === '『' && last === '』') return true;
+  if ((first === "'" || first === '‘') && (last === "'" || last === '’')) return true;
+  if ((first === '"' || first === '“') && (last === '"' || last === '”')) return true;
+  return false;
+}
 
 export function renderEmphasizedBody(text: string): ReactNode[] {
   if (!text) return [text];
@@ -21,21 +41,38 @@ export function renderEmphasizedBody(text: string): ReactNode[] {
   let lastIndex = 0;
   let match: RegExpExecArray | null;
   // 새 RegExp 인스턴스 — exec 의 lastIndex 가 함수 호출 사이에 누수되지 않게.
-  const re = new RegExp(EMPHASIS_PATTERN.source, 'g');
+  const re = new RegExp(COMBINED_RE.source, 'g');
 
   while ((match = re.exec(text)) !== null) {
     if (match.index > lastIndex) {
       nodes.push(text.slice(lastIndex, match.index));
     }
-    nodes.push(
-      <strong
-        key={`em-${match.index}`}
-        className="font-bold text-text-primary text-[19px] leading-[1.85]"
-      >
-        {match[1]}
-      </strong>,
-    );
-    lastIndex = match.index + match[0].length;
+    const full = match[0];
+    if (full.startsWith('**') && full.endsWith('**')) {
+      // 별표 마커 — 큰 강조. 마커 제거 + 19px 볼드.
+      nodes.push(
+        <strong
+          key={`big-${match.index}`}
+          className="font-bold text-text-primary text-[19px] leading-[1.85]"
+        >
+          {full.slice(2, -2)}
+        </strong>,
+      );
+    } else if (isSmallEmphasis(full)) {
+      // 한글괄호·따옴표 — 일반 강조. 마커 유지 + 17px 볼드 + 화이트.
+      nodes.push(
+        <strong
+          key={`sm-${match.index}`}
+          style={{ color: 'var(--text-primary)', fontWeight: 700 }}
+        >
+          {full}
+        </strong>,
+      );
+    } else {
+      // 매칭은 됐는데 분류 안 됨 — 안전망: 원문 그대로.
+      nodes.push(full);
+    }
+    lastIndex = match.index + full.length;
   }
 
   if (lastIndex < text.length) {
