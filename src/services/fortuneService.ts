@@ -1535,7 +1535,19 @@ export const getPickedDateReport = async (
   try {
     const todayGz = calcTodayGanZhi(result, isoDate);
     const prompt = generatePickedDateFortunePrompt(result, todayGz, isoDate, userCtx);
-    const content = await callGPT(prompt, 7000);
+
+    // 2-pass 분할 (13 섹션, 3400~4400자):
+    //   1차: [date_essence] [date_timeflow] [date_wealth] [date_career] [date_love] [date_health] [date_relation] (7)
+    //   2차: [date_study] [date_yes] [date_no] [date_people] [date_remedy] [date_closing] (6)
+    const pass1Prompt = prompt + '\n\n★ 이번 응답에서는 [date_flow] 데이터 줄과 [date_essence] [date_timeflow] [date_wealth] [date_career] [date_love] [date_health] [date_relation] 섹션만 출력하세요. 나머지는 다음 호출에서 작성합니다. 각 섹션 분량 지침을 충실히 따라 깊이 있게 작성하세요.';
+    const pass1Content = await callGPT(pass1Prompt, 7000, undefined, { allowTruncated: true, timeoutMs: 90_000 });
+
+    const pass2Prompt = prompt
+      + '\n\n★ 이번 응답에서는 [date_study] [date_yes] [date_no] [date_people] [date_remedy] [date_closing] 섹션만 출력하세요. 앞의 섹션들은 이미 완료되었습니다. 각 섹션 분량 지침을 충실히 따라 깊이 있게 작성하세요.'
+      + `\n\n[이미 작성된 1차 내용 — 참고만, 출력하지 말 것]\n${pass1Content}`;
+    const pass2Content = await callGPT(pass2Prompt, 6000, undefined, { allowTruncated: true, timeoutMs: 90_000 });
+
+    const content = `${pass1Content}\n\n${pass2Content}`;
     const sections = parsePickedDateReport(content);
     const flow = parseDateFlowScores(content);
     const archivedRecordId = await archiveSaju({
