@@ -165,7 +165,7 @@ function RemedyCardGrid({ bodyText }: { bodyText: string }) {
 
   if (matched.length < 2) {
     return (
-      <div className="text-[15px] text-text-secondary leading-[1.85] space-y-3">
+      <div className="text-[17px] text-text-secondary leading-[1.85] tracking-[-0.005em] space-y-3">
         {paragraphs.map((para, pi) => (
           <p key={pi} className="whitespace-pre-line">{para}</p>
         ))}
@@ -176,7 +176,7 @@ function RemedyCardGrid({ bodyText }: { bodyText: string }) {
   return (
     <div className="space-y-2.5">
       {unmatched.length > 0 && (
-        <p className="text-[14px] text-text-secondary leading-[1.85] mb-1">{unmatched.join(' ')}</p>
+        <p className="text-[17px] text-text-secondary leading-[1.85] tracking-[-0.005em] mb-1">{unmatched.join(' ')}</p>
       )}
       {matched.map((card, i) => (
         <motion.div
@@ -184,10 +184,10 @@ function RemedyCardGrid({ bodyText }: { bodyText: string }) {
           initial={{ opacity: 0, y: 4 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.05 * i }}
-          className="rounded-xl px-4 py-3 bg-[rgba(139,92,246,0.08)] border border-[rgba(139,92,246,0.15)]"
+          className="rounded-xl px-4 py-3.5 bg-[rgba(139,92,246,0.08)] border border-[rgba(139,92,246,0.15)]"
         >
           <div className="text-[17px] font-bold text-cta mb-2">{card.label}</div>
-          <p className="text-[14px] text-text-secondary leading-[1.85]">{card.text}</p>
+          <p className="text-[17px] text-text-secondary leading-[1.85] tracking-[-0.005em]">{card.text}</p>
         </motion.div>
       ))}
     </div>
@@ -260,7 +260,7 @@ function ActionCardList({ bodyText, variant }: { bodyText: string; variant: 'yes
                 </span>
               </div>
             )}
-            <p className="text-[15px] text-text-secondary leading-[1.85] tracking-[-0.005em] whitespace-pre-line">
+            <p className="text-[17px] text-text-secondary leading-[1.85] tracking-[-0.005em] whitespace-pre-line">
               {stripPrefix(para)}
             </p>
           </motion.div>
