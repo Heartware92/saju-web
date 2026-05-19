@@ -17,6 +17,64 @@
 
 ---
 
+## 2026-05-19 16:31 — 꿈해몽 5섹션 확장 작업 — 파일 분할 push 로 인한 prod 빌드 fail `[git]` `[재발]`
+
+### 증상
+- 사용자: 종합 분석 fix (9d5594e defaultOpen=true) 가 prod 에 반영 안 됨
+- 사용자 화면에 여전히 종합 풀이 안 보임. "강력새로고침 + 새 풀이 + 보관함 다 안 보임"
+- 본 세션이 3번 fix 시도 후에야 prod 빌드 실패 확인 — 너무 늦게 발견
+
+### 영향 범위
+- 9d5594e (defaultOpen=true), c812b17 (번호+한글 마커), e2f082b 등 본 세션의 모든 후속 fix 가 prod 반영 안 됨
+- prod 사이트는 직전 ready 빌드 그대로 노출 — 새 변경 미반영
+- 본 세션이 데이터·파싱·UI 만 의심하고 prod 빌드 상태를 처음부터 확인 안 한 게 진단 지연
+
+### 진단 과정
+1. Supabase MCP/CLI 로 raw 직접 조회 — `[comprehensive_analysis]` 마커 정상 확인 (3번)
+2. Node.js 로 parseTaekilStructuredAdvice 시뮬레이션 — comprehensiveAnalysis 446자 추출 정상
+3. SectionCollapsible defaultOpen=false 의심 → true 변경 (9d5594e) — 이것도 prod 반영 안 됨
+4. **마지막에야** `vercel ls --prod` 로 빌드 상태 확인 — 최신 배포 Error 발견
+5. `vercel inspect --logs` 로 에러 메시지:
+   ```
+   ./src/pages/MoreFortunePage.tsx:45:3
+   Type error: Module '"../services/fortuneService"' has no exported member 'parseDreamSymbols'.
+   ```
+6. `git log -S "parseDreamSymbols"` → 780b993 (강조 변환 확장) 에 MoreFortunePage.tsx 만 들어가고 fortuneService.ts 누락
+7. `git diff src/services/fortuneService.ts` → 워킹 디렉토리에 parseDreamSymbols/parseDreamAction/parseDreamSections 새 시그니처 모두 존재. **즉 다른 세션이 push 단계에서 fortuneService.ts 누락**
+
+### 진짜 원인
+**파일 분할 push 재발** — 직전 사고 (2026-05-19 00:40) 와 동일 패턴.
+- A 파일 (MoreFortunePage.tsx) 이 B 파일 (fortuneService.ts) 의 새 export 사용
+- A 만 push, B 는 워킹 디렉토리에 남음
+- [[feedback_multi_session_git]] 메모에 적힌 패턴 — INCIDENTS.md 직전 entry 와 같은 사고
+
+본 세션은 이 사고가 있는 줄도 모르고 데이터·파싱·UI 만 의심 — Vercel 빌드 상태 확인이 1순위 진단 항목이어야 했음.
+
+### 해결
+```bash
+git add src/services/fortuneService.ts  # 다른 세션 작업이지만 빌드 막혀 비상 fix
+npm run build  # 통과 확인
+git commit -m "fix(build): fortuneService.ts 미푸시로 인한 prod 빌드 깨짐 복구"
+git push
+```
+
+### 재발 방지
+1. **"prod 에 fix 반영 안 됨" 신고 시 1순위 확인: Vercel 빌드 상태**
+   - 데이터·파싱·UI 의심 전에 `vercel ls --prod` 부터.
+   - 본 세션 INCIDENTS.md 룰 강화 후보.
+2. push 전 체크 (이전 사고 재발 방지 룰):
+   - `git status` 로 워킹 디렉토리 비었는지 확인
+   - 새로 추가한 함수/export 가 import 측 파일과 함께 staged 됐는지 확인
+3. 멀티 세션 작업 시 한 기능의 모든 파일을 한 커밋에 묶을 것
+
+### 관련
+- 커밋: 9d5594e (본 세션 fix), 780b993 (분할 push 사고 commit), 82db25c (꿈해몽 작업 시작)
+- 파일: src/services/fortuneService.ts, src/pages/MoreFortunePage.tsx
+- 이전 동일 사고: 본 파일 직전 entry (2026-05-19 00:40)
+- 관련 메모: [[feedback_multi_session_git]]
+
+---
+
 ## 2026-05-19 00:40 — 택일운세 흉신 모듈 작업 — 파일 분할 push 로 인한 prod 빌드 fail `[git]`
 
 ### 증상
