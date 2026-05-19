@@ -1872,6 +1872,21 @@ export const getNameFortune = async (
  * 꿈 해몽 — 사주 무관, 꿈 내용만으로 해석.
  * dreamText는 선명 모드의 원문 또는 흐릿 모드에서 구조화 입력을 composeDreamTextFromStructured로 합성한 텍스트.
  */
+/** 꿈해몽 응답에서 [oriental_interpretation] / [western_interpretation] 두 섹션 추출.
+ *  마커 누락 시 fallback: 전체를 oriental 에 넣음 (옛 record·AI 마커 누락 모두 대응). */
+export const parseDreamSections = (raw: string): { oriental: string; western: string } => {
+  if (!raw) return { oriental: '', western: '' };
+  const orMatch = raw.match(/\[oriental_interpretation\]\s*([\s\S]*?)(?=\[western_interpretation\]|$)/);
+  const weMatch = raw.match(/\[western_interpretation\]\s*([\s\S]*?)$/);
+  const oriental = orMatch ? orMatch[1].trim() : '';
+  const western = weMatch ? weMatch[1].trim() : '';
+  if (!oriental && !western) {
+    // 마커 모두 누락 — 옛 record 또는 AI 마커 누락. 전체를 동양식에 보존.
+    return { oriental: raw.trim(), western: '' };
+  }
+  return { oriental, western };
+};
+
 export const getDreamInterpretation = async (
   dreamText: string,
   profileId?: string,
@@ -1880,8 +1895,15 @@ export const getDreamInterpretation = async (
     if (!dreamText || dreamText.trim().length < 5) {
       return { success: false, error: '꿈 내용을 조금 더 적어주세요. (등장물·행동·감정 중 하나만이라도 있으면 좋아요)' };
     }
-    const content = await callGPT(generateDreamInterpretationPrompt(dreamText), MORE_FORTUNE_CONFIGS.dream.maxTokens);
+    // 2섹션(동양 700~950자 + 서양 1100~1500자 = 총 2200자+) 한국어는 1자≈2.5토큰 →
+    // 약 5500 토큰 필요. 5000 으로는 두번째 마커 누락 위험 있어 8000 으로 여유.
+    const content = await callGPT(generateDreamInterpretationPrompt(dreamText), 8000, 800);
+    const parsed = parseDreamSections(content);
     archiveSaju({ profileId, category: 'dream', engineResult: { dreamText } as Record<string, unknown>, interpretation: content, creditType: 'moon', creditUsed: 1 });
-    return { success: true, content };
+    return {
+      success: true,
+      content,
+      sections: { oriental: parsed.oriental, western: parsed.western },
+    };
   } catch (e: any) { return { success: false, error: e.message }; }
 };

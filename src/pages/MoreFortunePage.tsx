@@ -41,6 +41,7 @@ import {
   parseChildrenSections,
   parsePersonalitySections,
   parseNameSections,
+  parseDreamSections,
 } from '../services/fortuneService';
 import { sajuDB } from '../services/supabase';
 import { findRecentArchive, type ArchiveCategory } from '../services/archiveService';
@@ -299,6 +300,10 @@ export default function MoreFortunePage({ category }: Props) {
         } else if (record.category === 'name') {
           const out = parseNameSections(content) as Record<string, string>;
           setResultSections(Object.keys(out).length > 0 ? out : null);
+        } else if (record.category === 'dream') {
+          // 옛 record (마커 없는 단일 본문) 는 parseDreamSections 의 fallback 으로 oriental 에 전체 보존
+          const out = parseDreamSections(content);
+          setResultSections((out.oriental || out.western) ? out as Record<string, string> : null);
         } else {
           setResultSections(null);
         }
@@ -438,7 +443,8 @@ export default function MoreFortunePage({ category }: Props) {
     if (category === 'dream') {
       const t = dreamText.trim();
       if (!t) return null;
-      return `dream:${t}`;
+      // v2: 동양식·서양식 2섹션 출력 prompt 로 변경. 옛 캐시(v1, 단일 본문) 자동 무효화.
+      return `dream:v2:${t}`;
     }
     if (!saju) return null;
     const sk = sajuKey(saju);
@@ -501,6 +507,9 @@ export default function MoreFortunePage({ category }: Props) {
         } else if (category === 'name') {
           const out = parseNameSections(cached.data) as Record<string, string>;
           setResultSections(Object.keys(out).length > 0 ? out : null);
+        } else if (category === 'dream') {
+          const out = parseDreamSections(cached.data);
+          setResultSections((out.oriental || out.western) ? out as Record<string, string> : null);
         } else {
           setResultSections(null);
         }
@@ -840,7 +849,7 @@ export default function MoreFortunePage({ category }: Props) {
           </div>
         )}
 
-        {/* 결과 — 학업·자녀·성격은 섹션별 카드 / 그 외는 단일 카드 */}
+        {/* 결과 — 학업·자녀·성격은 섹션별 카드 / 꿈해몽은 동양식·서양식 2섹션 / 그 외는 단일 카드 */}
         <AnimatePresence>
           {result && resultSections && (category === 'study' || category === 'children' || category === 'personality' || category === 'name') && (
             <MoreFortuneSectionedCard
@@ -854,7 +863,26 @@ export default function MoreFortunePage({ category }: Props) {
               }}
             />
           )}
-          {result && (!resultSections || !(category === 'study' || category === 'children' || category === 'personality' || category === 'name')) && (
+          {/* 꿈해몽 — 동양식·서양식 2섹션 (SectionCollapsible). 첫 섹션만 펼침, 둘째는 접힘. */}
+          {result && category === 'dream' && resultSections && (resultSections.oriental || resultSections.western) && (
+            <MoreFortuneDreamCard
+              title={`${cfg.title} 풀이`}
+              oriental={resultSections.oriental ?? ''}
+              western={resultSections.western ?? ''}
+              isArchiveMode={isArchiveMode}
+              onReset={() => {
+                setResult(null);
+                setResultSections(null);
+                setError(null);
+                setManualMode(true);
+                useReportCacheStore.getState().invalidate(`more:dream` as const);
+                setDreamText('');
+                setDreamValid(false);
+                setDreamInputResetKey(k => k + 1);
+              }}
+            />
+          )}
+          {result && (!resultSections || !(category === 'study' || category === 'children' || category === 'personality' || category === 'name' || category === 'dream')) && (
             <MoreFortuneResultCard
               title={`${cfg.title} 풀이`}
               text={result}
@@ -1406,6 +1434,127 @@ function MoreFortuneResultCard({
               {category === 'name' ? '다른 이름 풀이받기' : category === 'dream' ? '다른 꿈 풀이받기' : '다시 풀이 받기'}
             </button>
           )}
+        </div>
+      )}
+    </motion.div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 꿈해몽 결과 카드 — 동양식·서양식 2섹션 (SectionCollapsible)
+//   정통사주·이름풀이와 동일 스타일·애니메이션. 첫 섹션(동양식)만 펼침 디폴트.
+//   각 섹션 첫 줄이 은유 제목이면 metaphorTitle prop 으로 카드 헤더에 노출.
+//   서양식 본문이 비어 있으면 (옛 record / AI 마커 누락) 동양식만 렌더.
+// ─────────────────────────────────────────────────────────────────────────────
+function MoreFortuneDreamCard({
+  title,
+  oriental,
+  western,
+  isArchiveMode,
+  onReset,
+}: {
+  title: string;
+  oriental: string;
+  western: string;
+  isArchiveMode: boolean;
+  onReset: () => void;
+}) {
+  const sections = ([
+    { key: 'oriental' as const, label: '동양식 해몽', text: oriental.trim() },
+    { key: 'western' as const, label: '서양식 해몽', text: western.trim() },
+  ] satisfies { key: 'oriental' | 'western'; label: string; text: string }[])
+    .filter(s => s.text.length > 0);
+
+  return (
+    <motion.div
+      key="dream-sectioned"
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.35 }}
+      style={{ paddingTop: 4 }}
+    >
+      {/* 카드 헤더 — 다른 결과 페이지와 일관된 cta bar + 17px 굵은 제목 */}
+      <div className="flex items-center gap-2 mb-3 pl-1">
+        <span className="inline-block w-1 h-5 rounded-full bg-cta" />
+        <div
+          className="text-[17px] font-bold text-text-primary tracking-tight"
+          style={{ fontFamily: 'var(--font-title)' }}
+        >
+          {title}
+        </div>
+      </div>
+
+      <div className="flex flex-col gap-3">
+        {sections.map((s, idx) => {
+          const { metaphorTitle, bodyText } = extractMetaphor(s.text);
+          // 본문 단락 분할 — 빈 줄 기준
+          const paragraphs = bodyText.split(/\n\n+/).map(p => p.trim()).filter(Boolean);
+          return (
+            <SectionCollapsible
+              key={s.key}
+              title={s.label}
+              metaphorTitle={metaphorTitle}
+              defaultOpen={idx === 0}
+              enterDelay={idx * 0.06}
+            >
+              <div className="text-[17px] text-text-secondary leading-[1.9] tracking-[-0.005em] space-y-3">
+                {paragraphs.map((para, pi) => {
+                  // 단락 안 "- " 불릿 라인은 별도 리스트로 (동양식 마지막 단락의 실천 처방용)
+                  const lines = para.split('\n');
+                  const items: { type: 'text' | 'bullet'; content: string }[] = [];
+                  for (const line of lines) {
+                    const t = line.trim();
+                    if (!t) continue;
+                    const m = t.match(/^[-·•∙]\s*(.+)$/);
+                    if (m) {
+                      items.push({ type: 'bullet', content: m[1].trim() });
+                    } else if (items.length > 0 && items[items.length - 1].type === 'text') {
+                      items[items.length - 1].content += ' ' + t;
+                    } else {
+                      items.push({ type: 'text', content: t });
+                    }
+                  }
+                  return (
+                    <div key={pi} className="space-y-2.5">
+                      {items.map((it, ii) =>
+                        it.type === 'bullet' ? (
+                          <div key={ii} className="flex items-start gap-2 pl-1">
+                            <span className="text-cta shrink-0 mt-[6px] leading-none">·</span>
+                            <span className="flex-1">{it.content}</span>
+                          </div>
+                        ) : (
+                          <p key={ii} className="whitespace-pre-line">{it.content}</p>
+                        )
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </SectionCollapsible>
+          );
+        })}
+      </div>
+
+      {/* 하단 액션 — 보관함 모드면 "보관함으로" 숨김(상단 BackButton 으로 복귀), 아니면 다시 풀이 */}
+      {!isArchiveMode && (
+        <div style={{ marginTop: 18, display: 'flex', gap: 8 }}>
+          <button
+            onClick={onReset}
+            style={{
+              flex: 1,
+              padding: '12px',
+              background: 'transparent',
+              border: '1px solid var(--border-subtle)',
+              borderRadius: 10,
+              color: 'var(--text-secondary)',
+              fontSize: 13,
+              cursor: 'pointer',
+              fontFamily: 'inherit',
+            }}
+          >
+            다른 꿈 풀이받기
+          </button>
         </div>
       )}
     </motion.div>

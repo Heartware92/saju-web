@@ -135,7 +135,9 @@ export const MORE_FORTUNE_CONFIGS: Record<MoreFortuneId, MoreFortuneConfig> = {
     shortDesc: '꿈의 현실 힌트',
     longDesc: '간밤에 꾼 꿈을 적어주세요. 주공해몽·한국 민속 해몽 전통과 현대 심리 해석을 결합한 지식베이스로, 꿈속 상징·맥락·감정을 함께 풀어 현실의 힌트를 구체적으로 짚어드려요. (꿈은 사주와 무관하게 꿈 자체로 해석합니다)',
     ctaButton: '내 꿈 풀이 보기',
-    maxTokens: 2500,
+    // 2섹션 (동양식 700~950자 + 서양식 1100~1500자) 출력 위해 5000.
+    // service 에서 직접 override 하므로 표시용. parseDreamSections 가 분리.
+    maxTokens: 5000,
     needsDreamInput: true,
   },
 };
