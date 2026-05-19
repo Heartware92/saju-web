@@ -19,7 +19,9 @@ import { after } from 'next/server';
 import { supabaseAdmin } from '@/services/supabaseAdmin';
 import { runJungtongsajuJob } from '@/services/jungtongsajuJob.server';
 import { runGunghapJob } from '@/services/gunghapJob.server';
+import { runNewyearJob } from '@/services/newyearJob.server';
 import type { SajuResult } from '@/utils/sajuCalculator';
+import type { PeriodFortune } from '@/engine/periodFortune';
 
 // Vercel Fluid Compute — 정통사주 2-pass 60~120초 + retry 여유
 export const maxDuration = 300;
@@ -59,7 +61,24 @@ interface GunghapJobBody extends BaseJobBody {
   engineResult: Record<string, unknown>;
 }
 
-type CreateJobBody = TraditionalJobBody | GunghapJobBody;
+interface NewyearJobBody extends BaseJobBody {
+  category: 'newyear';
+  /** PeriodFortune 객체 — server 가 generateNewyearReportPrompt 에 전달 */
+  fortune: PeriodFortune;
+  /** 대상 연도 — 신년운세 또는 연도별 운세 */
+  year: number;
+  /** 대표 프로필 사용자 컨텍스트 — 각 섹션 풀이에 분산 인용 (옵션) */
+  userCtx?: {
+    jobState?: string | null;
+    customJobState?: string | null;
+    loveState?: string | null;
+    customLoveState?: string | null;
+  };
+  /** 연도별 운세에서 진입한 경우 true — engine_result.source 분기 */
+  isYearFortune?: boolean;
+}
+
+type CreateJobBody = TraditionalJobBody | GunghapJobBody | NewyearJobBody;
 
 // 카테고리별 차감 정책 — 다른 운세 추가 시 여기 항목만 추가하면 됨.
 // reason 값은 클라이언트의 CHARGE_REASONS.{category} 와 반드시 동일해야 함
@@ -70,6 +89,7 @@ const CATEGORY_POLICY: Record<
 > = {
   traditional: { creditCost: 10, reason: '정통사주' }, // CHARGE_REASONS.traditional 과 일치
   gunghap: { creditCost: 10, reason: '궁합' },         // CHARGE_REASONS.gunghap 과 일치
+  newyear: { creditCost: 10, reason: '신년운세' },     // CHARGE_REASONS.newyear 와 일치
 };
 
 const CREDIT_TYPE = 'moon';
@@ -111,6 +131,11 @@ export async function POST(request: NextRequest) {
       }
       if (!body.partnerName) {
         return NextResponse.json({ error: '상대방 정보가 부족해요.' }, { status: 400 });
+      }
+    }
+    if (body.category === 'newyear') {
+      if (!body.fortune || typeof body.year !== 'number') {
+        return NextResponse.json({ error: '신년운세 입력이 부족해요.' }, { status: 400 });
       }
     }
 
@@ -193,6 +218,18 @@ export async function POST(request: NextRequest) {
       insertRow.engine_result = body.engineResult;
       insertRow.partner_name = body.partnerName;
       insertRow.partner_birth_date = body.partnerBirthDate ?? null;
+    } else if (body.category === 'newyear') {
+      // engine_result — getNewyearReport 의 archiveSaju 분기와 동등.
+      // year·isoDate·categoryLabel·source 가 보관함 라벨·정렬·필터에 사용됨.
+      insertRow.engine_result = {
+        year: body.year,
+        isoDate: String(body.year),
+        categoryLabel: body.isYearFortune ? `${body.year}년도 운세 풀이` : `${body.year}년 신년운세`,
+        source: body.isYearFortune ? 'year-fortune' : 'newyear',
+        // seWoon·currentDaeWoon 은 server 잡 처리기가 sajuResult.seWoon 에서 자동 계산해 사용.
+        // archive 보관용 메타로 함께 저장 (재계산 비용 절감).
+        seWoon: body.sajuResult.seWoon.find((s) => s.year === body.year) ?? null,
+      };
     }
 
     const { data: inserted, error: insertError } = await supabaseAdmin
@@ -232,6 +269,17 @@ export async function POST(request: NextRequest) {
             recordId: jobId,
             userId,
             prompt: body.prompt,
+            consumeIdempotencyKey: consumeKey,
+            creditAmount: policy.creditCost,
+          });
+        } else if (body.category === 'newyear') {
+          await runNewyearJob({
+            recordId: jobId,
+            userId,
+            sajuResult: body.sajuResult,
+            fortune: body.fortune,
+            year: body.year,
+            userCtx: body.userCtx,
             consumeIdempotencyKey: consumeKey,
             creditAmount: policy.creditCost,
           });

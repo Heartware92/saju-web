@@ -23,8 +23,9 @@ import { useReportCacheStore, sajuKey, type ReportKind } from '../store/useRepor
 import { RestoreReportModal } from '../components/RestoreReportModal';
 import { FortuneProfileSelect } from '../components/FortuneProfileSelect';
 import { QuickFortuneGate } from '../components/QuickFortuneGate';
-import { sajuDB } from '../services/supabase';
+import { sajuDB, supabase } from '../services/supabase';
 import { parseNewyearReport } from '../services/fortuneService';
+import { useFortuneJob } from '../hooks/useFortuneJob';
 import { findRecentArchive } from '../services/archiveService';
 import { BackButton } from '../components/ui/BackButton';
 import { SUN_COST_BIG, CHARGE_REASONS } from '../constants/creditCosts';
@@ -351,8 +352,14 @@ export default function PeriodFortunePage({ scope }: { scope: FortuneScope | 'da
   const searchParams = useSearchParams();
   const profileId = searchParams?.get('profileId') ?? null;
   const recordId = searchParams?.get('recordId') ?? null;
+  const urlJobId = searchParams?.get('jobId') ?? null;
   const isArchiveMode = !!recordId;
-  const needsProfileSelect = !profileId && !isArchiveMode;
+  const needsProfileSelect = !profileId && !isArchiveMode && !urlJobId;
+
+  // 백그라운드 잡 시스템 — scope='year' 의 신년운세에 적용. scope='date' 는 옛 흐름.
+  const [createdJobId, setCreatedJobId] = useState<string | null>(null);
+  const effectiveJobId = urlJobId ?? createdJobId;
+  const { job: fortuneJob } = useFortuneJob(effectiveJobId);
   const { user } = useUserStore();
   const { profiles, fetchProfiles, hydrated, loading: profilesLoading, lastFetchedAt } = useProfileStore();
 
@@ -557,6 +564,52 @@ export default function PeriodFortunePage({ scope }: { scope: FortuneScope | 'da
     return () => { cancelled = true; };
   }, [recordId, scope]);
 
+  // ── 잡 결과 → state 동기화 (scope='year' 신년운세 전용) ──
+  // useFortuneJob 가 saju_records row 변경을 push. status·interpretation 을
+  // 기존 newyearReport state 에 매핑. archive 모드(?recordId) 는 별도 useEffect.
+  useEffect(() => {
+    if (scope !== 'year') return;
+    if (isArchiveMode) return;
+    if (!fortuneJob) return;
+    if (fortuneJob.status === 'done') {
+      const content = fortuneJob.interpretationDetailed ?? '';
+      const sections = parseNewyearReport(content);
+      setNewyearReport(
+        Object.keys(sections).length > 0
+          ? { success: true, sections }
+          : { success: true, rawText: content },
+      );
+      setSavedRecordId(fortuneJob.jobId);
+      setNewyearReportLoading(false);
+    } else if (fortuneJob.status === 'failed') {
+      setNewyearReport({
+        success: false,
+        error: fortuneJob.errorMessage ?? '풀이 생성에 실패했어요. 크레딧은 자동 환불됐어요.',
+      });
+      setNewyearReportLoading(false);
+    } else if (fortuneJob.status === 'processing' && fortuneJob.interpretationBasic) {
+      // 1차 partial 도착 — 부분 렌더 켜고 2차는 백그라운드 진행 (정통사주 Phase 1.5 패턴)
+      const content = fortuneJob.interpretationBasic;
+      const sections = parseNewyearReport(content);
+      if (Object.keys(sections).length > 0) {
+        setNewyearReport({ success: true, sections });
+      }
+      setSavedRecordId(fortuneJob.jobId);
+      setNewyearReportLoading(true);
+    } else {
+      // pending — 진행 시작 전 모래시계
+      setNewyearReportLoading(true);
+    }
+  }, [
+    scope,
+    isArchiveMode,
+    fortuneJob?.status,
+    fortuneJob?.interpretationDetailed,
+    fortuneJob?.interpretationBasic,
+    fortuneJob?.errorMessage,
+    fortuneJob?.jobId,
+  ]);
+
   // ── 로딩 안전장치: 70초 초과 시 강제 해제 ──
   const [yearTimedOut] = useLoadingGuard(newyearReportLoading, 140_000);
   const [dateTimedOut] = useLoadingGuard(pickedDateReportLoading, 140_000);
@@ -683,38 +736,77 @@ export default function PeriodFortunePage({ scope }: { scope: FortuneScope | 'da
         return;
       }
 
+      // 이미 잡 ID 가 있으면 (URL ?jobId 또는 직전에 createdJobId 설정) 새로 만들지 않음.
+      // useFortuneJob 가 구독, 동기화 useEffect 가 setNewyearReport 처리.
+      if (effectiveJobId) return;
+
       setNewyearReport(null);
       setNewyearReportLoading(true);
-      getNewyearReport(saju, fortune, targetYear, targetProfile?.id, {
-        jobState: targetProfile?.job_state ?? null,
-        customJobState: targetProfile?.custom_job_state ?? null,
-        loveState: targetProfile?.love_state ?? null,
-        customLoveState: targetProfile?.custom_love_state ?? null,
-      }, isFromYearFortune)
-        .then(r => {
-          if (cancelled) return;
-          setNewyearReport(r);
-          // archive 저장이 완료된 경우 ShareBar 즉시 노출
-          if (r.success && r.archivedRecordId) {
-            setSavedRecordId(r.archivedRecordId);
-          }
-          const cache = useReportCacheStore.getState();
-          if (r.success) {
-            cache.setReport('newyear', cacheKey, r);
-            if (!cache.isCharged('newyear', cacheKey)) {
-              cache.markCharged('newyear', cacheKey);
-              chargeRef.current('moon', SUN_COST_BIG, CHARGE_REASONS.newyear, `newyear:${cacheKey}`)
-                .catch(e => console.error('[charge:newyear] failed', e));
+      // 백그라운드 잡 생성 — 차감·INSERT·archive 모두 서버.
+      // setLoading(false) 는 잡 결과 동기화 useEffect 가 책임 (가이드 4.8 finally 충돌 차단).
+      (async () => {
+        try {
+          const { data: sessionData } = await supabase.auth.getSession();
+          const accessToken = sessionData.session?.access_token;
+          if (!accessToken) {
+            if (!cancelled) {
+              setNewyearReport({ success: false, error: '로그인이 만료됐어요. 다시 로그인해주세요.' });
+              setNewyearReportLoading(false);
             }
-          } else if (r.error) {
-            cache.setError('newyear', cacheKey, r.error);
+            return;
           }
-        })
-        .catch((err: any) => {
+          const minuteBucket = Math.floor(Date.now() / 60000);
+          const idempotencyKey = `${sajuKey(saju)}:${targetYear}:${isFromYearFortune ? 'yf' : 'ny'}:${minuteBucket}`;
+          const res = await fetch('/api/fortune/jobs/create', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${accessToken}` },
+            body: JSON.stringify({
+              category: 'newyear',
+              sajuResult: saju,
+              fortune,
+              year: targetYear,
+              userCtx: {
+                jobState: targetProfile?.job_state ?? null,
+                customJobState: targetProfile?.custom_job_state ?? null,
+                loveState: targetProfile?.love_state ?? null,
+                customLoveState: targetProfile?.custom_love_state ?? null,
+              },
+              isYearFortune: isFromYearFortune,
+              profileId: targetProfile?.id,
+              sourceBirth: {
+                birthDate: targetProfile?.birth_date ?? '',
+                birthTime: targetProfile?.birth_time ?? null,
+                birthPlace: targetProfile?.birth_place ?? null,
+                gender: (targetProfile?.gender ?? 'male') as 'male' | 'female',
+                calendarType: (targetProfile?.calendar_type ?? 'solar') as 'solar' | 'lunar',
+              },
+              idempotencyKey,
+            }),
+          });
+          if (!res.ok) {
+            const errData = await res.json().catch(() => ({}));
+            if (!cancelled) {
+              setNewyearReport({ success: false, error: errData.error || '풀이 요청에 실패했어요.' });
+              setNewyearReportLoading(false);
+            }
+            return;
+          }
+          const { jobId } = (await res.json()) as { jobId: string; deduplicated?: boolean };
           if (cancelled) return;
-          useReportCacheStore.getState().setError('newyear', cacheKey, err?.message || '오류가 발생했어요.');
-        })
-        .finally(() => { if (!cancelled) setNewyearReportLoading(false); });
+          // URL ?jobId 로 replace — 새로고침·재진입 시 같은 잡 재구독.
+          const newUrl = new URL(window.location.href);
+          newUrl.searchParams.set('jobId', jobId);
+          window.history.replaceState(null, '', newUrl.toString());
+          setCreatedJobId(jobId);
+          // setNewyearReportLoading(false) 는 동기화 useEffect 가 status='done' 시 호출.
+        } catch (e) {
+          if (!cancelled) {
+            const msg = e instanceof Error ? e.message : '풀이 요청 중 오류';
+            setNewyearReport({ success: false, error: msg });
+            setNewyearReportLoading(false);
+          }
+        }
+      })();
       return;
     }
 
@@ -896,6 +988,7 @@ export default function PeriodFortunePage({ scope }: { scope: FortuneScope | 'da
         minLabel="20초"
         maxLabel="1분"
         estimatedSeconds={40}
+        startedAt={fortuneJob?.startedAt}
         messages={NEWYEAR_MESSAGES}
         topContent={
           <motion.div

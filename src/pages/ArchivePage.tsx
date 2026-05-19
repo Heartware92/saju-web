@@ -72,6 +72,15 @@ function getSajuRoute(record: SajuRecord): string {
   if (cat === 'gunghap' && isPendingJob) {
     return `/saju/gunghap?jobId=${record.id}`;
   }
+  if (cat === 'newyear' && isPendingJob) {
+    // newyear record 의 engine_result.source 가 'year-fortune' 인 경우엔 /saju/year-fortune 로
+    // 보내야 하지만 진행 중 상태에선 URL 만 매칭하면 됨 — page.tsx 는 같은 PeriodFortunePage 사용.
+    const src = (record.engine_result as { source?: string } | null)?.source;
+    if (src === 'year-fortune') {
+      return `/saju/year-fortune?jobId=${record.id}`;
+    }
+    return `/saju/newyear?jobId=${record.id}`;
+  }
 
   const moreCategories = [
     'love', 'wealth', 'career', 'health', 'study', 'people',
