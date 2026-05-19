@@ -689,6 +689,10 @@ export default function GunghapPage() {
     setError('');
     // catch 단계에서 negative cache 에 저장할 키. pet/normal 분기 어디서 실패했는지 추적.
     let activeCacheKey: string | null = null;
+    // 잡이 생성된 경우 finally 의 setLoading(false) skip — loading state 관리 책임은
+    // 잡 동기화 useEffect 가 가짐 (status='done'/'failed' 도착 시 false). finally 가
+    // setLoading(false) 호출하면 잡 결과 도착 직전에 빈 결과 화면이 0.1~1초 깜빡임.
+    let jobCreated = false;
     try {
       const myResult = computeSajuFromProfile(selectedProfile);
       if (!myResult) throw new Error('내 사주 계산 실패');
@@ -730,6 +734,8 @@ export default function GunghapPage() {
         activeCacheKey = petCacheKey;
         const petPrompt = generatePetGunghapPrompt(myResult, selectedProfile.name, petTrimmed);
         // 백그라운드 잡 생성 — 차감·INSERT·archive 모두 서버에서 처리. 클라는 jobId 만 받고 빠짐.
+        // jobCreated=true 로 finally 의 setLoading(false) skip → 잡 동기화 useEffect 가 책임.
+        jobCreated = true;
         const minuteBucket = Math.floor(Date.now() / 60000);
         await createGunghapJob({
           prompt: petPrompt,
@@ -889,6 +895,8 @@ export default function GunghapPage() {
 
       // 백그라운드 잡 생성 — 차감·INSERT·archive 모두 서버. 결과는 useFortuneJob → 동기화 useEffect 가
       // parseGunghapHeader → setResult + setGunghapTitle/Score/Domain 으로 매핑.
+      // jobCreated=true 로 finally 의 setLoading(false) skip → 잡 동기화 useEffect 가 책임.
+      jobCreated = true;
       const minuteBucket = Math.floor(Date.now() / 60000);
       await createGunghapJob({
         prompt,
@@ -939,8 +947,14 @@ export default function GunghapPage() {
       if (activeCacheKey) {
         useReportCacheStore.getState().setError('gunghap', activeCacheKey, msg);
       }
+      // catch 단계로 떨어진 경우 잡 동기화 useEffect 가 책임지지 못하므로 loading 해제 필요.
+      jobCreated = false;
     } finally {
-      setLoading(false);
+      // 잡이 생성된 경우 (jobCreated=true) loading 해제는 잡 결과 동기화 useEffect 가 책임.
+      // 그 외 (캐시 hit·검증 실패·catch) 만 여기서 직접 해제.
+      if (!jobCreated) {
+        setLoading(false);
+      }
     }
   };
 
