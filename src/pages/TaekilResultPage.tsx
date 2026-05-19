@@ -100,20 +100,36 @@ function parseTaekilStructuredAdvice(raw: string): TaekilParsedAdvice {
     .replace(/\[?\s*overall[\s_-]*advice\s*\]?\s*[:：]?/gi, '\n[overall_advice]\n')
     .replace(/\[?\s*alternative\s*\]?\s*[:：]?/gi, '\n[alternative]\n')
     .replace(/\[?\s*avoid\s*\]?\s*[:：]?/gi, '\n[avoid]\n')
-    // 한글 마커 변형 → 표준 마커로 치환 (라벨 "종합:", "조언:" 과 충돌 방지 위해 줄 시작 + 단독)
-    .replace(/^[ \t]*[<\[\(]?\s*1\s*(?:위|순위)\s*[>\]\)]?\s*[:：]?\s*$/gm, '[top1]')
-    .replace(/^[ \t]*[<\[\(]?\s*2\s*(?:위|순위)\s*[>\]\)]?\s*[:：]?\s*$/gm, '[top2]')
-    .replace(/^[ \t]*[<\[\(]?\s*3\s*(?:위|순위)\s*[>\]\)]?\s*[:：]?\s*$/gm, '[top3]')
-    .replace(/^[ \t]*[<\[\(]?\s*종합\s*분석\s*[>\]\)]?\s*[:：]?\s*$/gm, '[comprehensive_analysis]')
-    .replace(/^[ \t]*[<\[\(]?\s*(?:전체|전반)\s*조언\s*[>\]\)]?\s*[:：]?\s*$/gm, '[overall_advice]')
-    .replace(/^[ \t]*[<\[\(]?\s*(?:대체|대안)\s*(?:방법|방안)\s*[>\]\)]?\s*[:：]?\s*$/gm, '[alternative]')
-    .replace(/^[ \t]*[<\[\(]?\s*피해야\s*할?\s*날\s*[>\]\)]?\s*[:：]?\s*$/gm, '[avoid]')
+    // 한글 마커 변형 → 표준 마커로 치환.
+    // 줄 시작에 마커 + (콜론·공백 후 같은 줄 본문) 또는 (줄 끝) 두 케이스 모두 잡음.
+    // 라벨 "종합:", "조언:" 과 충돌 방지 — "종합 분석" / "전체·전반 조언" 만 매치, 단독 "종합"·"조언" 은 라벨로 보존.
+    .replace(/^[ \t]*[<\[\(]?\s*1\s*(?:위|순위)\s*[>\]\)]?\s*[:：]?[ \t]*/gm, '[top1]\n')
+    .replace(/^[ \t]*[<\[\(]?\s*2\s*(?:위|순위)\s*[>\]\)]?\s*[:：]?[ \t]*/gm, '[top2]\n')
+    .replace(/^[ \t]*[<\[\(]?\s*3\s*(?:위|순위)\s*[>\]\)]?\s*[:：]?[ \t]*/gm, '[top3]\n')
+    .replace(/^[ \t]*[<\[\(]?\s*종합\s*분석\s*[>\]\)]?\s*[:：]?[ \t]*/gm, '[comprehensive_analysis]\n')
+    .replace(/^[ \t]*[<\[\(]?\s*(?:전체|전반)\s*조언\s*[>\]\)]?\s*[:：]?[ \t]*/gm, '[overall_advice]\n')
+    .replace(/^[ \t]*[<\[\(]?\s*(?:대체|대안)\s*(?:방법|방안)\s*[>\]\)]?\s*[:：]?[ \t]*/gm, '[alternative]\n')
+    .replace(/^[ \t]*[<\[\(]?\s*피해야\s*할?\s*날\s*[>\]\)]?\s*[:：]?[ \t]*/gm, '[avoid]\n')
     // 같은 마커가 연속해서 들어간 케이스 정리 ([top1]\n[top1] → [top1])
     .replace(/(\[(?:top\d|comprehensive_analysis|overall_advice|alternative|avoid)\])\s*\1/g, '$1');
 
   // [comprehensive_analysis] 추출 — top1 또는 다른 마커 직전까지
   const compMatch = normalized.match(/\[comprehensive_analysis\]\s*([\s\S]*?)(?=\[(?:top\d|avoid|overall_advice|alternative)\]|$)/);
-  const comprehensiveAnalysis = compMatch ? compMatch[1].trim() : '';
+  let comprehensiveAnalysis = compMatch ? compMatch[1].trim() : '';
+
+  // ── fallback 추출 ──
+  // [comprehensive_analysis] 마커가 정규화 후에도 없는 경우 (LLM 이 마커를 완전 누락 + 첫 줄부터 본문 시작),
+  // [top1] 마커 직전까지의 본문 덩어리가 50자 이상이면 그것을 종합 분석으로 인정.
+  // ([taekil_advice] 마커는 제외)
+  if (!comprehensiveAnalysis) {
+    const firstTopIdx = normalized.search(/\[top\d\]/);
+    if (firstTopIdx > 0) {
+      const beforeTop = normalized.slice(0, firstTopIdx)
+        .replace(/^\s*\[taekil_advice\]\s*/i, '')
+        .trim();
+      if (beforeTop.length >= 50) comprehensiveAnalysis = beforeTop;
+    }
+  }
 
   const dates: TaekilDateAdvice[] = [];
   const topRe = /\[top(\d)\]/g;
