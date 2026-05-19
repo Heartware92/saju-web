@@ -584,13 +584,101 @@ export function ParentingVisual({ saju }: { saju: SajuResult }) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// 5) 자녀와의 궁합 — 일지 합/충/형/파/해 칩 그룹
+// 5) 자녀와의 궁합 — 일지 합/충/형/파/해를 띠 단위 일상어로 변환
 // ─────────────────────────────────────────────────────────────────────────────
+const ZHI_CHARS = ['자', '축', '인', '묘', '진', '사', '오', '미', '신', '유', '술', '해'];
+const ZHI_TO_TTI: Record<string, string> = {
+  '자': '쥐', '축': '소', '인': '호랑이', '묘': '토끼', '진': '용', '사': '뱀',
+  '오': '말', '미': '양', '신': '원숭이', '유': '닭', '술': '개', '해': '돼지',
+};
+
+interface SimplifiedCompat {
+  ttis: string[];          // 띠 글자들 (예: ['원숭이'])
+  verb: string;            // 일상어 (예: '잘 통함')
+  subtitle: string;        // 명리 원문 부제 (예: '신사 합 · 육합')
+  kind: 'good' | 'caution';
+}
+
+function simplifyInteraction(
+  type: '합' | '충' | '형' | '파' | '해',
+  desc: string,
+  dayZhi: string,
+): SimplifiedCompat | null {
+  // 첫 단어(공백 전) 에서 지지 글자 추출
+  const firstWord = desc.split(/\s+/)[0] || '';
+  const zhisInFirst: string[] = [];
+  for (const ch of firstWord) {
+    if (ZHI_CHARS.includes(ch)) zhisInFirst.push(ch);
+  }
+  if (zhisInFirst.length === 0) return null;
+
+  // 일지 제외한 다른 지지들
+  const others = zhisInFirst.filter((z) => z !== dayZhi);
+  if (others.length === 0) return null;
+
+  // 중복 제거
+  const uniqueOthers = Array.from(new Set(others));
+  const ttis = uniqueOthers.map((z) => ZHI_TO_TTI[z] ?? z);
+
+  // 일상어 동사 + 부제 결정
+  let verb = '';
+  let subKind = '';
+  let kind: 'good' | 'caution';
+  if (type === '합') {
+    kind = 'good';
+    if (desc.includes('삼합')) { verb = '강력한 시너지'; subKind = '삼합'; }
+    else if (desc.includes('방합')) { verb = '같은 방향'; subKind = '방합'; }
+    else if (desc.includes('반합')) { verb = '결이 비슷함'; subKind = '반합'; }
+    else if (desc.includes('육합')) { verb = '잘 통함'; subKind = '육합'; }
+    else { verb = '잘 어울림'; subKind = '합'; }
+  } else if (type === '충') { kind = 'caution'; verb = '정면 부딪침'; subKind = '충'; }
+  else if (type === '형')   { kind = 'caution'; verb = '마찰 가능';   subKind = '형'; }
+  else if (type === '파')   { kind = 'caution'; verb = '약속 어긋남'; subKind = '파'; }
+  else                      { kind = 'caution'; verb = '감정 손상';   subKind = '해'; }
+
+  const subtitle = `${firstWord} ${subKind}`;
+  return { ttis, verb, subtitle, kind };
+}
+
+function SimplifiedChip({
+  item,
+  color,
+}: {
+  item: SimplifiedCompat;
+  color: string;
+}) {
+  return (
+    <span
+      className="inline-flex flex-col items-start rounded-xl px-3.5 py-2 border"
+      style={{
+        background: `${color}15`,
+        borderColor: `${color}55`,
+        minWidth: 0,
+      }}
+    >
+      <span className="text-[15px] font-bold leading-tight" style={{ color: 'var(--text-primary)' }}>
+        {item.ttis.join('·')}띠
+        <span className="text-text-tertiary mx-1.5 font-normal">—</span>
+        <span style={{ color }}>{item.verb}</span>
+      </span>
+      <span className="text-[11.5px] text-text-tertiary mt-0.5">{item.subtitle}</span>
+    </span>
+  );
+}
+
 export function CompatibilityVisual({ saju }: { saju: SajuResult }) {
   const dayZhi = saju.pillars.day.zhi;
   const items = saju.interactions.filter((i) => i.description.includes(dayZhi));
-  const goods = items.filter((i) => i.type === '합');
-  const cautions = items.filter((i) => ['충', '형', '파', '해'].includes(i.type));
+  const goods: SimplifiedCompat[] = [];
+  const cautions: SimplifiedCompat[] = [];
+  for (const it of items) {
+    const s = simplifyInteraction(it.type, it.description, dayZhi);
+    if (!s) continue;
+    if (s.kind === 'good') goods.push(s);
+    else cautions.push(s);
+  }
+
+  const dayTti = ZHI_TO_TTI[dayZhi] ?? dayZhi;
 
   return (
     <div className="space-y-2.5 mb-3">
@@ -604,15 +692,18 @@ export function CompatibilityVisual({ saju }: { saju: SajuResult }) {
         <div className="flex items-center gap-2">
           <span className="inline-block w-1 h-5 rounded-full" style={{ background: SIGNAL_COLOR.good }} />
           <span className="text-[15px] font-bold tracking-[0.04em]" style={{ color: SIGNAL_COLOR.good }}>
-            잘 맞는 결 <span className="text-text-tertiary font-normal text-[13px]">(일지 {dayZhi})</span>
+            잘 맞는 자녀 띠
+            <span className="text-text-tertiary font-normal text-[13px] ml-1.5">(나는 {dayTti}띠 기준)</span>
           </span>
         </div>
         {goods.length === 0 ? (
-          <span className="text-[14px] text-text-tertiary leading-snug">합 신호 없음 — 본문 띠 추천 참고</span>
+          <span className="text-[14px] text-text-tertiary leading-snug">
+            특별히 잘 맞는 띠 신호 없음 — 본문 추천 띠 참고
+          </span>
         ) : (
           <div className="flex flex-wrap gap-2">
             {goods.map((g, i) => (
-              <MiniChip key={i} label={g.description} color={SIGNAL_COLOR.good} />
+              <SimplifiedChip key={i} item={g} color={SIGNAL_COLOR.good} />
             ))}
           </div>
         )}
@@ -633,15 +724,17 @@ export function CompatibilityVisual({ saju }: { saju: SajuResult }) {
             className="text-[15px] font-bold tracking-[0.04em]"
             style={{ color: cautions.length > 0 ? SIGNAL_COLOR.warn : SIGNAL_COLOR.info }}
           >
-            조심할 결
+            조심할 자녀 띠
           </span>
         </div>
         {cautions.length === 0 ? (
-          <span className="text-[14px] text-text-tertiary leading-snug">충·형·파·해 신호 없음</span>
+          <span className="text-[14px] text-text-tertiary leading-snug">
+            크게 부딪치는 띠 신호 없음 — 평이한 관계
+          </span>
         ) : (
           <div className="flex flex-wrap gap-2">
             {cautions.map((c, i) => (
-              <MiniChip key={i} label={`${c.type} ${c.description}`} color={SIGNAL_COLOR.warn} />
+              <SimplifiedChip key={i} item={c} color={SIGNAL_COLOR.warn} />
             ))}
           </div>
         )}
