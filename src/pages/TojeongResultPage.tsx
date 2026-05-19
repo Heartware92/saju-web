@@ -136,7 +136,12 @@ const ELEMENT_HAN_TO_KOR: Record<string, string> = {
 function parseMonthlyEntries(raw: string): { month: number; keyword: string; text: string }[] {
   const entries: { month: number; keyword: string; text: string }[] = [];
   const seen = new Set<number>();
-  const cleaned = raw.replace(/\[\/?[a-zA-Z_]+\]/g, '').trim();
+  // 영문 마커 ([chongun], [monthly] 등) + 한글 마커 ([은유], [요약], [핵심] 등) 모두 strip.
+  // [은유] 마커가 본문에 노출되던 사고 (2026-05-19) — prompt 수정 + 이 정규식 한글 확장으로 2축 방어.
+  const cleaned = raw
+    .replace(/\[\/?[a-zA-Z_]+\]/g, '')
+    .replace(/\[(?:은유|요약|핵심|metaphor|summary)\]/g, '')
+    .trim();
   const parts = cleaned.split(/(?=\d{1,2}월\s*[—\-–]\s*)/);
   for (const part of parts) {
     const m = part.match(/^(\d{1,2})월\s*[—\-–]\s*(.+?)[\n\r]/);
