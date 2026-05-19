@@ -933,20 +933,6 @@ export default function PeriodFortunePage({ scope }: { scope: FortuneScope | 'da
             </div>
           </motion.div>
         }
-        bottomContent={
-          // 잘못 클릭한 날짜를 되돌릴 수 있도록 — 캘린더 화면으로 복귀.
-          // 풀이는 백그라운드 진행 중일 수 있지만 화면만 복귀, 사용자가 다른 날짜 재선택하면 새 풀이 시작.
-          <button
-            onClick={() => {
-              setDateConfirmed(false);
-              setPickedDateReport(null);
-              setPickedDateReportLoading(false);
-            }}
-            className="text-[14px] px-5 py-2.5 rounded-xl bg-white/5 border border-white/15 text-text-secondary hover:text-text-primary hover:border-white/25 active:scale-[0.97] transition-all"
-          >
-            취소하고 다른 날짜 선택
-          </button>
-        }
       />
     );
   }
@@ -976,13 +962,26 @@ export default function PeriodFortunePage({ scope }: { scope: FortuneScope | 'da
               과거·미래 어떤 날짜든 가능합니다. 일진·세운·월운·대운 4개 층을 함께 풀어 그 날의 핵심·시간대 흐름·시도하면 좋은 일·피할 일·인연·처방까지 7가지 관점으로 알려드려요.
             </p>
           </div>
+          {/* 캘린더 클릭 = 날짜 선택만 (highlight). 풀이는 아래 버튼으로 명시적 확정.
+              잘못 클릭해도 다른 날짜 클릭으로 자유롭게 재선택 가능. */}
           <CalendarPicker
             value={pickedDate}
-            onChange={(iso) => {
-              setPickedDate(iso);
-              setDateConfirmed(true);
-            }}
+            onChange={(iso) => setPickedDate(iso)}
           />
+          <button
+            type="button"
+            onClick={() => setDateConfirmed(true)}
+            disabled={!pickedDate}
+            className="w-full py-3.5 rounded-xl font-bold text-[15px] transition-all"
+            style={{
+              background: pickedDate ? 'var(--cta-primary)' : 'rgba(124,92,252,0.3)',
+              color: '#fff',
+              cursor: pickedDate ? 'pointer' : 'not-allowed',
+              opacity: pickedDate ? 1 : 0.6,
+            }}
+          >
+            {pickedDate ? `${pickedDate} 풀이 보기` : '날짜를 선택해주세요'}
+          </button>
         </div>
       )}
 
