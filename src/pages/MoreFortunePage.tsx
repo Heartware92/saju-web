@@ -1636,34 +1636,36 @@ function MoreFortuneDreamCard({
                 </div>
                 {actionItems.length > 0 && (
                   <div style={{
-                    marginTop: 16, padding: 14,
+                    marginTop: 18, padding: 16,
                     background: 'rgba(124,92,252,0.06)',
                     border: '1px solid rgba(124,92,252,0.20)',
                     borderRadius: 12,
                     display: 'grid',
-                    gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))',
-                    gap: 10,
+                    gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))',
+                    gap: 12,
                   }}>
                     {actionItems.map((it, ii) => (
                       <div key={ii} style={{
-                        padding: '10px 12px',
+                        padding: '16px 18px',
                         background: 'rgba(20,12,38,0.5)',
-                        borderRadius: 10,
+                        borderRadius: 12,
                         border: '1px solid rgba(255,255,255,0.06)',
                       }}>
                         <div style={{
-                          fontSize: 11, fontWeight: 700,
+                          fontSize: 16, fontWeight: 800,
                           color: 'var(--cta-primary)',
-                          letterSpacing: '0.02em',
-                          marginBottom: 4,
+                          letterSpacing: '-0.01em',
+                          marginBottom: 8,
                           fontFamily: 'var(--font-title)',
+                          lineHeight: 1.3,
                         }}>
                           {it.key}
                         </div>
                         <div style={{
-                          fontSize: 14, fontWeight: 600,
+                          fontSize: 19, fontWeight: 600,
                           color: 'var(--text-primary)',
                           lineHeight: 1.5,
+                          fontFamily: 'var(--font-body)',
                         }}>
                           {it.value}
                         </div>
