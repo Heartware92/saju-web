@@ -10,7 +10,8 @@
  * 같은 코스믹 톤(2열 그리드 · 색칩 · 라디얼 그라데이션).
  */
 
-import type { SajuResult, DaeWoon, SeWoon } from '../../utils/sajuCalculator';
+import type { SajuResult, DaeWoon } from '../../utils/sajuCalculator';
+import { buildMonthlyFlow } from '../../engine/periodFortune';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 색 매핑 (NameSectionVisuals 와 동일 — 톤 통일)
@@ -230,17 +231,50 @@ function careerHintLabel(saju: SajuResult, counts: TenGodCounts): {
   return map[basis] ?? map.인성;
 }
 
-// 자녀 인연 활성 대운/세운 (자녀성 십성이 걸린 운)
-function findChildActiveLuck(saju: SajuResult): { dae: DaeWoon[]; se: SeWoon[] } {
+interface ActiveMonth {
+  year: number;
+  month: number;
+  gan: string;
+  zhi: string;
+  tenGod: string;
+}
+
+// 자녀 인연 활성 대운 + 월 단위 활성 시기 (가임기 상한 적용)
+// ★ 가임기 상한 — 임신·출산 카테고리이므로 시작 나이 50세 이하만 표시.
+//   대운은 시작 나이 ≤ 50 (현재 대운 포함). 월 단위는 향후 3년 안 자녀성 활성한 월만.
+//   사용자가 이미 50 초과면 월 단위는 비움 (출산 시기 표시 무의미).
+function findChildActiveLuck(saju: SajuResult): { dae: DaeWoon[]; months: ActiveMonth[] } {
   const target = saju.gender === 'male' ? ['정관', '편관'] : ['식신', '상관'];
   const now = new Date().getFullYear();
+  const birthYear = saju.solarDate ? new Date(saju.solarDate).getFullYear() : 0;
+  const FERTILITY_AGE_LIMIT = 50;
+  const MONTH_HORIZON_YEARS = 3; // 향후 3년 안 월 단위
+  const currentAge = birthYear > 0 ? now - birthYear : 0;
+
   const dae = saju.daeWoon
-    .filter((d) => d.gan && d.endAge >= now && (target.includes(d.tenGod) || target.includes(d.tenGodZhi)))
+    .filter((d) => {
+      if (!d.gan) return false;
+      if (d.endAge < now) return false;
+      if (!(target.includes(d.tenGod) || target.includes(d.tenGodZhi))) return false;
+      const startAgeYears = birthYear > 0 ? d.startAge - birthYear : d.startAge;
+      return startAgeYears <= FERTILITY_AGE_LIMIT;
+    })
     .slice(0, 3);
-  const se = saju.seWoon
-    .filter((s) => s.year >= now && s.year <= now + 6 && (target.includes(s.tenGod) || target.includes(s.tenGodZhi)))
-    .slice(0, 4);
-  return { dae, se };
+
+  const months: ActiveMonth[] = [];
+  if (currentAge <= FERTILITY_AGE_LIMIT) {
+    for (let y = now; y <= now + MONTH_HORIZON_YEARS; y++) {
+      // 해당 연도 본인 나이가 가임기 상한 넘으면 stop
+      if (birthYear > 0 && y - birthYear > FERTILITY_AGE_LIMIT) break;
+      const flow = buildMonthlyFlow(saju, y);
+      for (const m of flow) {
+        if (target.includes(m.tenGod) || target.includes(m.tenGodZhi)) {
+          months.push({ year: y, month: m.month, gan: m.gan, zhi: m.zhi, tenGod: m.tenGod });
+        }
+      }
+    }
+  }
+  return { dae, months };
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -654,12 +688,20 @@ export function CareerHintVisual({ saju }: { saju: SajuResult }) {
 // 7) 임신·출산 좋은 시기 — 향후 대운 + 자녀성 활성 세운 타임라인
 // ─────────────────────────────────────────────────────────────────────────────
 export function TimingVisual({ saju }: { saju: SajuResult }) {
-  const { dae, se } = findChildActiveLuck(saju);
+  const { dae, months } = findChildActiveLuck(saju);
   const birthYear = saju.solarDate ? new Date(saju.solarDate).getFullYear() : 0;
   const targetGroup = saju.gender === 'male' ? '관성' : '식상';
 
+  // 연도별 그룹핑 (월 단위)
+  const monthsByYear = months.reduce<Record<number, ActiveMonth[]>>((acc, m) => {
+    (acc[m.year] = acc[m.year] || []).push(m);
+    return acc;
+  }, {});
+  const sortedYears = Object.keys(monthsByYear).map(Number).sort((a, b) => a - b);
+
   return (
     <div className="mb-3 space-y-2.5">
+      {/* 활성 대운 (가임기 ~50세) */}
       <div
         className="rounded-2xl p-4 border"
         style={{ background: 'rgba(20,12,38,0.55)', borderColor: `${SIGNAL_COLOR.cta}45` }}
@@ -667,12 +709,12 @@ export function TimingVisual({ saju }: { saju: SajuResult }) {
         <div className="flex items-center gap-2 mb-3">
           <span className="inline-block w-1 h-5 rounded-full" style={{ background: SIGNAL_COLOR.cta }} />
           <span className="text-[15px] font-bold tracking-[0.04em]" style={{ color: SIGNAL_COLOR.cta }}>
-            자녀성({targetGroup}) 활성 대운
+            자녀성({targetGroup}) 활성 대운 <span className="text-text-tertiary font-normal text-[13px]">(가임기 한정)</span>
           </span>
         </div>
         {dae.length === 0 ? (
           <span className="text-[14px] text-text-tertiary leading-snug">
-            향후 대운 중 자녀성 활성 흐름 없음 — 본문의 세운·달 신호 위주
+            가임기 내 자녀성 활성 대운 없음 — 본문의 월 단위 신호 위주
           </span>
         ) : (
           <div className="flex flex-wrap gap-2">
@@ -699,6 +741,7 @@ export function TimingVisual({ saju }: { saju: SajuResult }) {
         )}
       </div>
 
+      {/* 월 단위 활성 시기 — 향후 3년, 연도 그룹 */}
       <div
         className="rounded-2xl p-4 border"
         style={{ background: 'rgba(20,12,38,0.55)', borderColor: `${SIGNAL_COLOR.good}45` }}
@@ -706,30 +749,51 @@ export function TimingVisual({ saju }: { saju: SajuResult }) {
         <div className="flex items-center gap-2 mb-3">
           <span className="inline-block w-1 h-5 rounded-full" style={{ background: SIGNAL_COLOR.good }} />
           <span className="text-[15px] font-bold tracking-[0.04em]" style={{ color: SIGNAL_COLOR.good }}>
-            자녀성 활성 세운
+            자녀성 활성 월 <span className="text-text-tertiary font-normal text-[13px]">(향후 3년)</span>
           </span>
         </div>
-        {se.length === 0 ? (
+        {sortedYears.length === 0 ? (
           <span className="text-[14px] text-text-tertiary leading-snug">
-            향후 6년 내 자녀성 활성 세운 없음 — 본문 월 단위 신호 확인
+            가임기 종료 또는 향후 3년 내 자녀성 활성 월 없음
           </span>
         ) : (
-          <div className="flex flex-wrap gap-2">
-            {se.map((s, i) => (
-              <span
-                key={i}
-                className="inline-flex items-center gap-2 rounded-xl px-3.5 py-2 text-[14px] font-bold border"
-                style={{
-                  background: `${SIGNAL_COLOR.good}1a`,
-                  color: 'var(--text-primary)',
-                  borderColor: `${SIGNAL_COLOR.good}55`,
-                }}
-              >
-                <span style={{ color: SIGNAL_COLOR.good }}>{s.year}년</span>
-                <span style={{ fontFamily: 'var(--font-serif)' }}>{s.gan}{s.zhi}</span>
-                <span className="text-text-tertiary font-normal">{s.tenGod}</span>
-              </span>
-            ))}
+          <div className="space-y-3">
+            {sortedYears.map((year) => {
+              const items = monthsByYear[year];
+              const ageThisYear = birthYear > 0 ? year - birthYear : null;
+              return (
+                <div key={year}>
+                  <div className="flex items-baseline gap-2 mb-1.5">
+                    <span
+                      className="text-[15px] font-bold"
+                      style={{ color: SIGNAL_COLOR.good, fontFamily: 'var(--font-serif)' }}
+                    >
+                      {year}년
+                    </span>
+                    {ageThisYear !== null && (
+                      <span className="text-[12px] text-text-tertiary">만 {ageThisYear - 1}세</span>
+                    )}
+                  </div>
+                  <div className="flex flex-wrap gap-1.5">
+                    {items.map((m, i) => (
+                      <span
+                        key={i}
+                        className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[13px] font-bold border"
+                        style={{
+                          background: `${SIGNAL_COLOR.good}14`,
+                          color: 'var(--text-primary)',
+                          borderColor: `${SIGNAL_COLOR.good}44`,
+                        }}
+                      >
+                        <span style={{ color: SIGNAL_COLOR.good }}>{m.month}월</span>
+                        <span style={{ fontFamily: 'var(--font-serif)' }}>{m.gan}{m.zhi}</span>
+                        <span className="text-text-tertiary font-normal text-[12px]">{m.tenGod}</span>
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
           </div>
         )}
       </div>
