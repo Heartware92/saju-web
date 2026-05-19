@@ -77,6 +77,8 @@ import {
   resolveHanjasForVisual,
   extractBullets,
 } from '@/components/saju/NameSectionVisuals';
+import { renderChildrenSectionVisual } from '@/components/saju/ChildrenSectionVisuals';
+import type { SajuResult } from '@/utils/sajuCalculator';
 
 interface Props {
   /** 카테고리 id. /saju/more/[category] 동적 라우트에서 주입된다. */
@@ -853,6 +855,7 @@ export default function MoreFortunePage({ category }: Props) {
           {result && resultSections && (category === 'study' || category === 'children' || category === 'personality' || category === 'name') && (
             <MoreFortuneSectionedCard
               nameVisualContext={category === 'name' ? nameVisualContext : null}
+              childrenSaju={category === 'children' ? saju : null}
               title={`${cfg.title} 풀이`}
               sections={resultSections}
               category={category}
@@ -1837,6 +1840,7 @@ function MoreFortuneSectionedCard({
   isArchiveMode,
   onReset,
   nameVisualContext,
+  childrenSaju,
 }: {
   title: string;
   sections: Record<string, string>;
@@ -1852,6 +1856,7 @@ function MoreFortuneSectionedCard({
     giSinEl: string;
     jawonElements: string[];
   } | null;
+  childrenSaju?: SajuResult | null;
 }) {
   const keys =
     category === 'study' ? STUDY_SECTION_KEYS
@@ -1913,6 +1918,11 @@ function MoreFortuneSectionedCard({
             renderBody = ex.rest;
           }
 
+          // children 카테고리: 섹션별 시각 데이터 카드 (자녀성·시주·12운성·합충·대운 타임라인 등)
+          const childrenVisualNode = category === 'children' && childrenSaju
+            ? renderChildrenSectionVisual(key, childrenSaju)
+            : null;
+
           return (
             <SectionCollapsible
               key={key}
@@ -1922,6 +1932,7 @@ function MoreFortuneSectionedCard({
               enterDelay={idx * 0.05}
             >
               {nameVisualNode}
+              {childrenVisualNode}
               {category === 'name' && key === 'advice' && nameAdviceBullets.length > 0 && (
                 <AdviceVisual bullets={nameAdviceBullets} />
               )}
