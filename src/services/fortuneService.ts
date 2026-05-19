@@ -1874,19 +1874,84 @@ export const getNameFortune = async (
  * 꿈 해몽 — 사주 무관, 꿈 내용만으로 해석.
  * dreamText는 선명 모드의 원문 또는 흐릿 모드에서 구조화 입력을 composeDreamTextFromStructured로 합성한 텍스트.
  */
-/** 꿈해몽 응답에서 [oriental_interpretation] / [western_interpretation] 두 섹션 추출.
- *  마커 누락 시 fallback: 전체를 oriental 에 넣음 (옛 record·AI 마커 누락 모두 대응). */
-export const parseDreamSections = (raw: string): { oriental: string; western: string } => {
-  if (!raw) return { oriental: '', western: '' };
-  const orMatch = raw.match(/\[oriental_interpretation\]\s*([\s\S]*?)(?=\[western_interpretation\]|$)/);
-  const weMatch = raw.match(/\[western_interpretation\]\s*([\s\S]*?)$/);
-  const oriental = orMatch ? orMatch[1].trim() : '';
-  const western = weMatch ? weMatch[1].trim() : '';
-  if (!oriental && !western) {
-    // 마커 모두 누락 — 옛 record 또는 AI 마커 누락. 전체를 동양식에 보존.
-    return { oriental: raw.trim(), western: '' };
+/**
+ * 꿈해몽 응답에서 5섹션 추출.
+ * - [diagnosis] / [symbols] / [oriental_interpretation] / [western_interpretation] / [action]
+ * - 마커 모두 누락 시 fallback: 전체를 oriental 에 보존 (옛 record 호환).
+ *
+ * 세부 파싱(symbols 카드·action items)은 UI 에서 parseDreamSymbols / parseDreamAction 으로.
+ */
+export const parseDreamSections = (raw: string): {
+  diagnosis: string;
+  symbols: string;
+  oriental: string;
+  western: string;
+  action: string;
+} => {
+  const empty = { diagnosis: '', symbols: '', oriental: '', western: '', action: '' };
+  if (!raw) return empty;
+  const keys = ['diagnosis', 'symbols', 'oriental_interpretation', 'western_interpretation', 'action'];
+  const sec = (key: string): string => {
+    const others = keys.filter(k => k !== key).join('|');
+    const re = new RegExp(`\\[${key}\\]\\s*([\\s\\S]*?)(?=\\[(?:${others})\\]|$)`);
+    const m = raw.match(re);
+    return m ? m[1].trim() : '';
+  };
+  const diagnosis = sec('diagnosis');
+  const symbols = sec('symbols');
+  const oriental = sec('oriental_interpretation');
+  const western = sec('western_interpretation');
+  const action = sec('action');
+  if (!diagnosis && !symbols && !oriental && !western && !action) {
+    // 옛 record 또는 AI 마커 모두 누락. 전체를 동양식에 보존.
+    return { ...empty, oriental: raw.trim() };
   }
-  return { oriental, western };
+  return { diagnosis, symbols, oriental, western, action };
+};
+
+/** symbols 본문 → { name, traditional, modern }[]. 각 줄 "이름=전통의미 / 현대의미" 형식. */
+export const parseDreamSymbols = (raw: string): { name: string; traditional: string; modern: string }[] => {
+  if (!raw) return [];
+  const out: { name: string; traditional: string; modern: string }[] = [];
+  for (const line of raw.split('\n')) {
+    const t = line.trim();
+    if (!t) continue;
+    const eq = t.indexOf('=');
+    if (eq === -1) continue;
+    const name = t.slice(0, eq).trim();
+    const rest = t.slice(eq + 1);
+    const slash = rest.indexOf(' / ');
+    const traditional = (slash === -1 ? rest : rest.slice(0, slash)).trim()
+      .replace(/^전통\s*[:：]\s*/, '');
+    const modern = (slash === -1 ? '' : rest.slice(slash + 3)).trim()
+      .replace(/^현대\s*[:：]\s*/, '');
+    if (name) out.push({ name, traditional, modern });
+  }
+  return out.slice(0, 5);
+};
+
+/** action 본문 → { body, items }. 화이트리스트 키로 시작하는 줄은 items 로, 그 외는 body 로. */
+const ACTION_KEY_WHITELIST = new Set([
+  '색', '방향', '시간', '숫자', '활동', '보석',
+  '액막이', '환경', '조심할 시간', '조심할 방향', '조심할 색', '보호',
+]);
+export const parseDreamAction = (raw: string): { body: string; items: { key: string; value: string }[] } => {
+  if (!raw) return { body: '', items: [] };
+  const bodyLines: string[] = [];
+  const items: { key: string; value: string }[] = [];
+  for (const line of raw.split('\n')) {
+    const t = line.trim();
+    const m = t.match(/^([가-힣\s]+?)\s*[:：]\s*(.+)$/);
+    if (m && ACTION_KEY_WHITELIST.has(m[1].trim())) {
+      items.push({ key: m[1].trim(), value: m[2].trim() });
+    } else {
+      bodyLines.push(line);
+    }
+  }
+  return {
+    body: bodyLines.join('\n').replace(/\n{3,}/g, '\n\n').trim(),
+    items: items.slice(0, 6),
+  };
 };
 
 export const getDreamInterpretation = async (
@@ -1897,15 +1962,20 @@ export const getDreamInterpretation = async (
     if (!dreamText || dreamText.trim().length < 5) {
       return { success: false, error: '꿈 내용을 조금 더 적어주세요. (등장물·행동·감정 중 하나만이라도 있으면 좋아요)' };
     }
-    // 2섹션(동양 700~950자 + 서양 1100~1500자 = 총 2200자+) 한국어는 1자≈2.5토큰 →
-    // 약 5500 토큰 필요. 5000 으로는 두번째 마커 누락 위험 있어 8000 으로 여유.
-    const content = await callGPT(generateDreamInterpretationPrompt(dreamText), 8000, 800);
+    // 5섹션 (진단 + 상징 + 동양 + 서양 + 실천) 한국어 약 3000자 ≈ 7500 토큰 필요. 10000 으로 여유.
+    const content = await callGPT(generateDreamInterpretationPrompt(dreamText), 10000, 1000);
     const parsed = parseDreamSections(content);
     archiveSaju({ profileId, category: 'dream', engineResult: { dreamText } as Record<string, unknown>, interpretation: content, creditType: 'moon', creditUsed: 1 });
     return {
       success: true,
       content,
-      sections: { oriental: parsed.oriental, western: parsed.western },
+      sections: {
+        diagnosis: parsed.diagnosis,
+        symbols: parsed.symbols,
+        oriental: parsed.oriental,
+        western: parsed.western,
+        action: parsed.action,
+      },
     };
   } catch (e: any) { return { success: false, error: e.message }; }
 };

@@ -1,55 +1,41 @@
 /**
- * 본문 강조 변환 — 다양한 인용 마커 → 볼드 + text-primary 화이트
+ * 본문 강조 변환 — `**핵심 문장**` 마커만 매칭.
  *
- * 매칭 패턴:
- *  · 한글 괄호: 「」 〔〕 『』  (SYSTEM_PROMPT 권장 — 자주 안 지켜짐)
- *  · 작은따옴표: '...' '...' (AI 가 한국어에서 자연 인용으로 가장 많이 씀)
- *  · 큰따옴표: "..." "..." (직접 인용 — 강조 의도일 때만 짧은 길이)
+ * SYSTEM_PROMPT 의 [핵심 문장 강조 규칙] 에 따라 AI 가 한 섹션 최대 1~2 문장만
+ * `**...**` 별표로 강조. 클라이언트는 그 마커를 볼드 + text-primary 화이트로 변환
+ * (마커 ** 자체는 제거).
  *
- * 길이 제한 — 2~40자: 너무 짧거나 긴 건 강조 아닌 일반 인용일 가능성.
- * 마커 자체는 유지 (제거 X).
+ * 일반 인용 ('...' "..." 「」) 은 매칭 안 함 — 의도되지 않은 강조 노이즈 차단.
  */
 
 import React from 'react';
 
-// 한글 괄호 — 항상 매칭
-const KOREAN_BRACKET_RE = /(「[^「」\n]+?」|〔[^〔〕\n]+?〕|『[^『』\n]+?』)/g;
-// 작은따옴표 (ASCII ' + curly ' ') — 길이 2~40자
-const SINGLE_QUOTE_RE = /(['‘][^'’\n]{2,40}['’])/g;
-// 큰따옴표 (ASCII " + curly " ") — 길이 2~40자
-const DOUBLE_QUOTE_RE = /(["“][^"”\n]{2,40}["”])/g;
-
-const COMBINED_RE = new RegExp(
-  `(${KOREAN_BRACKET_RE.source}|${SINGLE_QUOTE_RE.source}|${DOUBLE_QUOTE_RE.source})`,
-  'g'
-);
-
-function isEmphasisPart(part: string): boolean {
-  if (!part) return false;
-  const first = part[0];
-  const last = part[part.length - 1];
-  if (first === '「' && last === '」') return true;
-  if (first === '〔' && last === '〕') return true;
-  if (first === '『' && last === '』') return true;
-  if ((first === "'" || first === '‘') && (last === "'" || last === '’')) return true;
-  if ((first === '"' || first === '“') && (last === '"' || last === '”')) return true;
-  return false;
-}
+// 비탐욕 매칭. 줄바꿈 허용([\s\S]).
+const EMPHASIS_RE = /\*\*([\s\S]+?)\*\*/g;
 
 export function renderEmphasis(text: string): React.ReactNode[] {
   if (!text) return [text];
-  const parts = text.split(COMBINED_RE).filter(Boolean);
-  return parts.map((part, i) => {
-    if (isEmphasisPart(part)) {
-      return (
-        <strong
-          key={i}
-          style={{ color: 'var(--text-primary)', fontWeight: 700 }}
-        >
-          {part}
-        </strong>
-      );
+  const nodes: React.ReactNode[] = [];
+  let lastIndex = 0;
+  let match: RegExpExecArray | null;
+  const re = new RegExp(EMPHASIS_RE.source, 'g');
+
+  while ((match = re.exec(text)) !== null) {
+    if (match.index > lastIndex) {
+      nodes.push(text.slice(lastIndex, match.index));
     }
-    return <span key={i}>{part}</span>;
-  });
+    nodes.push(
+      <strong
+        key={`em-${match.index}`}
+        style={{ color: 'var(--text-primary)', fontWeight: 700 }}
+      >
+        {match[1]}
+      </strong>,
+    );
+    lastIndex = match.index + match[0].length;
+  }
+  if (lastIndex < text.length) {
+    nodes.push(text.slice(lastIndex));
+  }
+  return nodes.length > 0 ? nodes : [text];
 }
