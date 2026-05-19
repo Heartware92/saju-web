@@ -150,13 +150,26 @@ export default function SajuResultPage() {
         error: fortuneJob.errorMessage ?? '풀이 생성에 실패했어요. 크레딧은 자동 환불됐어요.',
       });
       setReportLoading(false);
+    } else if (fortuneJob.status === 'processing' && fortuneJob.interpretationBasic) {
+      // Phase 1.5 — 1차(Core 4섹션) partial 도착. 부분 렌더 켜고 2차는 백그라운드 진행.
+      // hasAnySections 분기가 partial sections 를 감지해 로딩 화면 → 결과 화면 전환.
+      const content = fortuneJob.interpretationBasic;
+      const sections = parseJungtongsaju(content);
+      if (Object.keys(sections).length > 0) {
+        setReport({ success: true, sections });
+        firstPassReceivedRef.current = true; // 2차 도착 시 스크롤 점프 방지
+      }
+      setSavedRecordId(fortuneJob.jobId);
+      // reportLoading 은 true 유지 — 2차가 끝나야 완료
+      setReportLoading(true);
     } else {
-      // pending / processing — 진행 중. 모래시계 화면 유지.
+      // pending — 진행 시작 전 모래시계 (또는 1차 마커 파싱 실패로 partial 없음)
       setReportLoading(true);
     }
   }, [
     fortuneJob?.status,
     fortuneJob?.interpretationDetailed,
+    fortuneJob?.interpretationBasic,
     fortuneJob?.errorMessage,
     fortuneJob?.jobId,
     isArchiveMode,

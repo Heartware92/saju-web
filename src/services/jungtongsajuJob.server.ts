@@ -86,6 +86,11 @@ export async function runJungtongsajuJob(input: RunJungtongsajuJobInput): Promis
       return;
     }
 
+    // ── Phase 1.5: 1차 partial UPDATE ──
+    // status='processing' 유지하면서 interpretation_basic 에 1차 본문 저장.
+    // 클라이언트가 Realtime 으로 받아 즉시 부분 렌더 (옛 onCoreReady 점진 노출 회복).
+    await markPartial(recordId, coreContent);
+
     // ── 1차 별칭 추출 (2차 차단용) ──
     const forbiddenAliases = extractMetaphorAliases(coreContent);
 
@@ -152,6 +157,19 @@ export async function runJungtongsajuJob(input: RunJungtongsajuJobInput): Promis
 // ─────────────────────────────────────────────────────────────────────────────
 // 헬퍼
 // ─────────────────────────────────────────────────────────────────────────────
+async function markPartial(recordId: string, coreContent: string): Promise<void> {
+  // 1차 결과를 interpretation_basic 에 저장 — status 는 'processing' 유지.
+  // 클라이언트 Realtime 구독이 즉시 받아 부분 렌더.
+  const { error } = await supabaseAdmin
+    .from('saju_records')
+    .update({ interpretation_basic: coreContent })
+    .eq('id', recordId);
+  if (error) {
+    // partial 실패는 치명적이지 않음 — 최종 markDone 으로도 결과 표시 가능
+    console.warn('[jungtongsajuJob] 1차 partial UPDATE 실패 (계속 진행):', error);
+  }
+}
+
 async function markDone(
   recordId: string,
   fullContent: string,
