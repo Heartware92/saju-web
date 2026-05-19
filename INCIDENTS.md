@@ -72,6 +72,66 @@
 
 ---
 
+## 2026-05-20 12:00 — 지정일 풀이 보기 버튼 클릭 후 로딩 화면 멈춤 `[code]` `[useEffect]`
+
+### 증상
+- 사용자: "방금 수정한 다음 로딩 페이지에서 멈춰서 결과가 안 나옴"
+- 03c437d 커밋 (캘린더 onChange 분리 + "풀이 보기" 버튼) 직후 발생
+- 풀이 보기 버튼 누른 후 API 호출 자체가 시작되지 않음
+
+### 영향 범위
+- 지정일 운세 — 사용자가 캘린더에서 날짜 선택 후 "풀이 보기" 버튼 클릭하는 메인 흐름
+- 03c437d 배포 후 신규 풀이 모두 실패 (보관함 진입은 영향 없음)
+
+### 진단 과정
+1. 풀이 호출 useEffect (PeriodFortunePage.tsx:582) 의 effectKey 정의 확인:
+   ```ts
+   const effectKey = `${sajuKey(saju)}:${scope}:${scope==='year' ? targetYear : scope==='date' ? pickedDate : today}`;
+   ```
+   → ★ dateConfirmed 가 effectKey 에 미포함.
+2. 라인 588 의 중복 호출 방지:
+   ```ts
+   if (refetchNonce === 0 && apiCalledKeyRef.current === effectKey) return;
+   ```
+3. 라인 662 의 apiCalledKeyRef set 위치:
+   - peekCache 후, fetch 분기 직전
+   - dateConfirmed=false 일 때도 set 됨
+4. 라인 717 fetch 분기에서 `if (!dateConfirmed) return;` early return — 하지만 그 위에서 ref 이미 오염.
+
+### 진짜 원인
+**effectKey 가 dateConfirmed 를 포함하지 않아 apiCalledKeyRef 오염**:
+- [1] 페이지 진입 (dateConfirmed=false, pickedDate=today)
+  → useEffect 1회차: peekCache·archive check skip
+  → 라인 662 에서 apiCalledKeyRef.current = effectKey set
+  → 라인 717 fetch 분기에서 early return (dateConfirmed false)
+- [2] 사용자 "풀이 보기" 클릭 → setDateConfirmed(true)
+  → useEffect 2회차: effectKey 동일 (pickedDate 안 변함, dateConfirmed effectKey 미포함)
+  → apiCalledKeyRef.current === effectKey → ★ 라인 588 early return!
+  → fetch 시작 안 됨
+
+03c437d 이전엔 캘린더 onChange 가 setPickedDate + setDateConfirmed(true) 동시 호출 → useEffect 1회만 실행되어 오염 없음.
+
+### 해결
+useEffect 첫 줄에 캘린더 단계 일찍 종료 추가:
+```ts
+if (scope === 'date' && !dateConfirmed) return;
+```
+apiCalledKeyRef.current set 자체를 skip → dateConfirmed=true 시 useEffect 재실행에서 ref 비어 있으니 정상 fetch.
+
+### 재발 방지
+1. **useEffect 의 중복 방지 ref 키는 분기 조건과 다른 모든 상태를 포함**해야 함.
+   - effectKey 에 들어가는 변수는 "이 키가 같으면 fetch 다시 안 한다" 의미.
+   - 분기 조건 (`if (!dateConfirmed) return`) 으로 fetch 막는 단계에서도 ref set 하면 다음 호출에서 같은 키로 skip → 사고.
+   - 분기 조건 미충족 시 early return 으로 ref 오염 자체 차단이 안전.
+2. UI 흐름을 2단계로 분리할 때 (캘린더 → 버튼) — 두 단계 사이에 useEffect 재실행 trigger 가 있는지 검토.
+
+### 관련
+- 커밋: 03c437d (사고 발생), 본 entry hotfix
+- 파일: src/pages/PeriodFortunePage.tsx 풀이 호출 useEffect
+- 관련 변수: apiCalledKeyRef, effectKey, dateConfirmed
+
+---
+
 ## 2026-05-19 17:30 — handleRead cache hit 시 setResultSections 누락 — 옛 결과 + raw 마커 본문 노출 `[code]`
 
 ### 증상

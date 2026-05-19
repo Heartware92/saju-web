@@ -582,6 +582,11 @@ export default function PeriodFortunePage({ scope }: { scope: FortuneScope | 'da
   useEffect(() => {
     if (isArchiveMode) return;
     if (!saju || !fortune) return;
+    // ★ 지정일 운세 — 캘린더 선택 단계 (dateConfirmed=false) 에서는 useEffect 일찍 종료.
+    //   apiCalledKeyRef.current 오염 방지 — 사용자가 "풀이 보기" 버튼 눌러 dateConfirmed=true
+    //   되면 같은 effectKey 로 useEffect 재실행되는데, 오염된 ref 와 같으니 early return 하는
+    //   사고 (2026-05-20 commit 03c437d 이후 발생) 차단.
+    if (scope === 'date' && !dateConfirmed) return;
 
     // 중복 호출 방지: 이미 동일 키로 호출이 시작되었으면 skip (탭 복귀·프로필 hydration 방어)
     const effectKey = `${sajuKey(saju)}:${scope}:${scope === 'year' ? targetYear : scope === 'date' ? pickedDate : today}`;
