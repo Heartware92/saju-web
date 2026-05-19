@@ -38,9 +38,18 @@ export const CHARGE_REASONS = {
   today: '실시간 운세',
   gunghap: '궁합',
   date: '지정일 운세',
+  /** 백그라운드 잡 시스템의 server CATEGORY_POLICY 는 'period' 키 사용 — 보관함 category 와 동일.
+   *  reason 문자열은 위 'date' 와 일치 (가이드 4.7 일관성). */
+  period: '지정일 운세',
   taekil: '택일',
   tojeong: '토정비결',
   zamidusu: '자미두수',
+  // ── 더많은 운세 5종 (활성) — server CATEGORY_POLICY 와 reason 1:1 일치 (가이드 4.7) ──
+  study: '학업·시험운',
+  children: '자녀·출산운',
+  personality: '성격 분석',
+  name: '이름 풀이',
+  dream: '꿈해몽',
   tarot: '타로',
   tarotHybrid: '타로·사주 하이브리드',
   consultation: '상담소 질문',
