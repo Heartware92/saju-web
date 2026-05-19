@@ -30,12 +30,12 @@ import { RestoreReportModal } from '../components/RestoreReportModal';
 import { QuickFortuneGate } from '../components/QuickFortuneGate';
 import { findRecentArchive } from '../services/archiveService';
 import {
-  getZamidusuReading,
   parseZamidusuSections,
   stripAllSectionTags,
   type ZamidusuAIResult,
 } from '../services/fortuneService';
-import { sajuDB } from '../services/supabase';
+import { sajuDB, supabase } from '../services/supabase';
+import { useFortuneJob } from '../hooks/useFortuneJob';
 import { SUN_COST_BIG, CHARGE_REASONS } from '../constants/creditCosts';
 import { ZAMIDUSU_SECTION_KEYS, ZAMIDUSU_SECTION_LABELS } from '../constants/prompts';
 import { MAJOR_STARS_META, MINOR_STARS_META, MUTAGEN_META, PALACE_ROLE_META } from '../engine/zamidusu/knowledge';
@@ -399,8 +399,14 @@ export default function ZamidusuResultPage() {
   const router = useRouter();
   const profileId = searchParams?.get('profileId') ?? null;
   const recordId = searchParams?.get('recordId') ?? null;
+  const urlJobId = searchParams?.get('jobId') ?? null;
   const isArchiveMode = !!recordId;
-  const needsProfileSelect = !profileId && !isArchiveMode && !(searchParams?.get('year') && searchParams?.get('month') && searchParams?.get('day'));
+  const needsProfileSelect = !profileId && !isArchiveMode && !urlJobId && !(searchParams?.get('year') && searchParams?.get('month') && searchParams?.get('day'));
+
+  // 백그라운드 잡 시스템 — Phase 4
+  const [createdJobId, setCreatedJobId] = useState<string | null>(null);
+  const effectiveJobId = urlJobId ?? createdJobId;
+  const { job: fortuneJob } = useFortuneJob(effectiveJobId);
   const { profiles, fetchProfiles, hydrated, loading: profilesLoading, lastFetchedAt } = useProfileStore();
   const targetProfile = useMemo(() => {
     if (profileId) return profiles.find(p => p.id === profileId) ?? null;
@@ -574,6 +580,8 @@ export default function ZamidusuResultPage() {
   const aiStartedRef = useRef(false);
   useEffect(() => {
     if (isArchiveMode) return;
+    // ★ 가이드 4.10 — ?jobId 진입 또는 새 잡 생성된 경우 cacheGate/findRecentArchive skip
+    if (effectiveJobId) return;
     if (!chart || !cacheKey) return;
 
     let cancelled = false;
@@ -631,42 +639,65 @@ export default function ZamidusuResultPage() {
       aiStartedRef.current = true;
 
       setAiLoading(true);
-      timeoutId = setTimeout(() => {
-        if (cancelled) return;
-        const timeoutMsg = '응답이 너무 오래 걸려요. 아래 명반은 정상이니 확인하시고, 풀이는 다시 시도해주세요.';
-        setAiResult({ success: false, error: timeoutMsg });
-        setAiLoading(false);
-        useReportCacheStore.getState().setError('zamidusu', cacheKey, timeoutMsg);
-      }, 45_000);
-
-      getZamidusuReading(chart, sourceBirth, targetProfile?.id)
-        .then(r => {
-          if (cancelled) return;
-          clearTimeout(timeoutId);
-          setAiResult(r);
-          setAiLoading(false);
-          // archive 저장이 완료된 경우 ShareBar 즉시 노출
-          if (r.success && r.archivedRecordId) setSavedRecordId(r.archivedRecordId);
-          const cache = useReportCacheStore.getState();
-          if (r.success) {
-            cache.setReport('zamidusu', cacheKey, r);
-            if (!cache.isCharged('zamidusu', cacheKey)) {
-              cache.markCharged('zamidusu', cacheKey);
-              chargeRef.current('moon', SUN_COST_BIG, CHARGE_REASONS.zamidusu, `zamidusu:${cacheKey}`)
-                .catch(e => console.error('[charge:zamidusu] failed', e));
+      // 새 잡 시스템 — 옛 timeout·cache.setReport·chargeForContent 모두 서버 책임으로 대체.
+      // setLoading(false) 는 잡 결과 동기화 useEffect 가 status='done' 시 호출 (가이드 4.8).
+      void (async () => {
+        try {
+          const { data: sessionData } = await supabase.auth.getSession();
+          const accessToken = sessionData.session?.access_token;
+          if (!accessToken) {
+            if (!cancelled) {
+              setAiResult({ success: false, error: '로그인이 만료됐어요. 다시 로그인해주세요.' });
+              setAiLoading(false);
             }
-          } else if (r.error) {
-            cache.setError('zamidusu', cacheKey, r.error);
+            return;
           }
-        })
-        .catch(err => {
+          const minuteBucket = Math.floor(Date.now() / 60000);
+          const idempotencyKey = `${cacheKey}:${minuteBucket}`;
+          const res = await fetch('/api/fortune/jobs/create', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${accessToken}` },
+            body: JSON.stringify({
+              category: 'zamidusu',
+              // zamidusu 는 SajuResult 없음 — chart(ZamidusuResult) 자체가 result_data 보존
+              sajuResult: chart as unknown as Record<string, unknown>,
+              zamidusuResult: chart,
+              profileId: targetProfile?.id,
+              sourceBirth: sourceBirth
+                ? {
+                    birthDate: sourceBirth.birth_date,
+                    birthTime: null,
+                    birthPlace: null,
+                    gender: sourceBirth.gender,
+                    calendarType: sourceBirth.calendar_type ?? 'solar',
+                  }
+                : null,
+              idempotencyKey,
+            }),
+          });
+          if (!res.ok) {
+            const errData = await res.json().catch(() => ({}));
+            if (!cancelled) {
+              setAiResult({ success: false, error: errData.error || '풀이 요청에 실패했어요.' });
+              setAiLoading(false);
+            }
+            return;
+          }
+          const { jobId } = (await res.json()) as { jobId: string };
           if (cancelled) return;
-          clearTimeout(timeoutId);
-          const msg = err?.message || '풀이를 불러오지 못했어요';
-          setAiResult({ success: false, error: msg });
-          setAiLoading(false);
-          useReportCacheStore.getState().setError('zamidusu', cacheKey, msg);
-        });
+          const newUrl = new URL(window.location.href);
+          newUrl.searchParams.set('jobId', jobId);
+          window.history.replaceState(null, '', newUrl.toString());
+          setCreatedJobId(jobId);
+          // 이후 잡 동기화 useEffect 가 setAiResult·setAiLoading(false) 책임
+        } catch (err) {
+          if (!cancelled) {
+            const msg = err instanceof Error ? err.message : '풀이를 불러오지 못했어요';
+            setAiResult({ success: false, error: msg });
+            setAiLoading(false);
+          }
+        }
+      })();
     };
 
     run();
@@ -675,7 +706,48 @@ export default function ZamidusuResultPage() {
       if (timeoutId) clearTimeout(timeoutId);
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [chart, cacheKey, isArchiveMode, refetchNonce]);
+  }, [chart, cacheKey, isArchiveMode, refetchNonce, effectiveJobId]);
+
+  // ── 잡 결과 → state 동기화 (백그라운드 잡 시스템) ──
+  useEffect(() => {
+    if (isArchiveMode) return;
+    if (!fortuneJob) return;
+    if (fortuneJob.status === 'done') {
+      const content = fortuneJob.interpretationDetailed ?? '';
+      const sections = parseZamidusuSections(content);
+      setAiResult(
+        Object.keys(sections).length > 0
+          ? { success: true, content, sections }
+          : { success: true, content, sections: undefined },
+      );
+      setSavedRecordId(fortuneJob.jobId);
+      setAiLoading(false);
+    } else if (fortuneJob.status === 'failed') {
+      setAiResult({
+        success: false,
+        error: fortuneJob.errorMessage ?? '풀이 생성에 실패했어요. 크레딧은 자동 환불됐어요.',
+      });
+      setAiLoading(false);
+    } else if (fortuneJob.status === 'processing' && fortuneJob.interpretationBasic) {
+      // 1차 partial 도착 — 부분 렌더
+      const content = fortuneJob.interpretationBasic;
+      const sections = parseZamidusuSections(content);
+      if (Object.keys(sections).length > 0) {
+        setAiResult({ success: true, content, sections });
+      }
+      setSavedRecordId(fortuneJob.jobId);
+      setAiLoading(true);
+    } else {
+      setAiLoading(true);
+    }
+  }, [
+    fortuneJob?.status,
+    fortuneJob?.interpretationDetailed,
+    fortuneJob?.interpretationBasic,
+    fortuneJob?.errorMessage,
+    fortuneJob?.jobId,
+    isArchiveMode,
+  ]);
 
   // ── 시각화 데이터 (chart 가 null 일 수 있으므로 가드. 훅 순서 보장 위해 early return 앞에 둠) ──
   const currentAge = useMemo(() => {
@@ -794,6 +866,7 @@ export default function ZamidusuResultPage() {
         minLabel="15초"
         maxLabel="40초"
         estimatedSeconds={25}
+        startedAt={fortuneJob?.startedAt}
         messages={LOADING_MESSAGES}
         topContent={
           <motion.div
@@ -814,24 +887,12 @@ export default function ZamidusuResultPage() {
   const aiFailed = !!aiResult && !aiResult.success;
 
   const retryAI = () => {
+    if (!chart) return;
     aiStartedRef.current = false;
     setAiResult(null);
-    setAiLoading(false);
-    // effect가 chart 의존성이라 chart 여전히 같으면 재실행 안 됨 → 강제로 state 초기화 후
-    // 즉시 수동 재호출
-    if (!chart) return;
-    aiStartedRef.current = true;
+    setCreatedJobId(null);  // 새 잡 생성 트리거
     setAiLoading(true);
-    getZamidusuReading(chart, sourceBirth, targetProfile?.id)
-      .then(r => {
-        setAiResult(r);
-        setAiLoading(false);
-        if (r.success && r.archivedRecordId) setSavedRecordId(r.archivedRecordId);
-      })
-      .catch(err => {
-        setAiResult({ success: false, error: err?.message || '풀이를 불러오지 못했어요' });
-        setAiLoading(false);
-      });
+    setRefetchNonce(n => n + 1);
   };
 
   return (

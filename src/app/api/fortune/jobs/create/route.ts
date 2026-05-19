@@ -20,8 +20,12 @@ import { supabaseAdmin } from '@/services/supabaseAdmin';
 import { runJungtongsajuJob } from '@/services/jungtongsajuJob.server';
 import { runGunghapJob } from '@/services/gunghapJob.server';
 import { runNewyearJob } from '@/services/newyearJob.server';
+import { runTojeongJob } from '@/services/tojeongJob.server';
+import { runZamidusuJob } from '@/services/zamidusuJob.server';
 import type { SajuResult } from '@/utils/sajuCalculator';
 import type { PeriodFortune } from '@/engine/periodFortune';
+import type { TojeongResult } from '@/engine/tojeong';
+import type { ZamidusuResult } from '@/engine/zamidusu';
 
 // Vercel Fluid Compute — 정통사주 2-pass 60~120초 + retry 여유
 export const maxDuration = 300;
@@ -78,7 +82,28 @@ interface NewyearJobBody extends BaseJobBody {
   isYearFortune?: boolean;
 }
 
-type CreateJobBody = TraditionalJobBody | GunghapJobBody | NewyearJobBody;
+interface TojeongJobBody extends BaseJobBody {
+  category: 'tojeong';
+  /** TojeongResult — server 가 generateTojeongPass1/Pass2Prompt 에 전달 */
+  tojeongResult: TojeongResult;
+  /** 사주+토정 하이브리드 — 분야별 풀이 깊이 ↑ (옵션) */
+  saju?: SajuResult;
+  /** 사용자 정황 — 분산 인용 매트릭스 (옵션) */
+  userCtx?: {
+    jobState?: string | null;
+    customJobState?: string | null;
+    loveState?: string | null;
+    customLoveState?: string | null;
+  };
+}
+
+interface ZamidusuJobBody extends BaseJobBody {
+  category: 'zamidusu';
+  /** ZamidusuResult — server 가 generateZamidusuPrompt 에 전달 */
+  zamidusuResult: ZamidusuResult;
+}
+
+type CreateJobBody = TraditionalJobBody | GunghapJobBody | NewyearJobBody | TojeongJobBody | ZamidusuJobBody;
 
 // 카테고리별 차감 정책 — 다른 운세 추가 시 여기 항목만 추가하면 됨.
 // reason 값은 클라이언트의 CHARGE_REASONS.{category} 와 반드시 동일해야 함
@@ -90,6 +115,8 @@ const CATEGORY_POLICY: Record<
   traditional: { creditCost: 10, reason: '정통사주' }, // CHARGE_REASONS.traditional 과 일치
   gunghap: { creditCost: 10, reason: '궁합' },         // CHARGE_REASONS.gunghap 과 일치
   newyear: { creditCost: 10, reason: '신년운세' },     // CHARGE_REASONS.newyear 와 일치
+  tojeong: { creditCost: 10, reason: '토정비결' },     // CHARGE_REASONS.tojeong 과 일치
+  zamidusu: { creditCost: 10, reason: '자미두수' },    // CHARGE_REASONS.zamidusu 와 일치
 };
 
 const CREDIT_TYPE = 'moon';
@@ -136,6 +163,16 @@ export async function POST(request: NextRequest) {
     if (body.category === 'newyear') {
       if (!body.fortune || typeof body.year !== 'number') {
         return NextResponse.json({ error: '신년운세 입력이 부족해요.' }, { status: 400 });
+      }
+    }
+    if (body.category === 'tojeong') {
+      if (!body.tojeongResult) {
+        return NextResponse.json({ error: '토정비결 입력이 부족해요.' }, { status: 400 });
+      }
+    }
+    if (body.category === 'zamidusu') {
+      if (!body.zamidusuResult) {
+        return NextResponse.json({ error: '자미두수 입력이 부족해요.' }, { status: 400 });
       }
     }
 
@@ -226,10 +263,14 @@ export async function POST(request: NextRequest) {
         isoDate: String(body.year),
         categoryLabel: body.isYearFortune ? `${body.year}년도 운세 풀이` : `${body.year}년 신년운세`,
         source: body.isYearFortune ? 'year-fortune' : 'newyear',
-        // seWoon·currentDaeWoon 은 server 잡 처리기가 sajuResult.seWoon 에서 자동 계산해 사용.
-        // archive 보관용 메타로 함께 저장 (재계산 비용 절감).
         seWoon: body.sajuResult.seWoon.find((s) => s.year === body.year) ?? null,
       };
+    } else if (body.category === 'tojeong') {
+      // engine_result 에 TojeongResult 자체 저장 (보관함 재생용)
+      insertRow.engine_result = body.tojeongResult as unknown as Record<string, unknown>;
+    } else if (body.category === 'zamidusu') {
+      // engine_result 에 ZamidusuResult 자체 저장
+      insertRow.engine_result = body.zamidusuResult as unknown as Record<string, unknown>;
     }
 
     const { data: inserted, error: insertError } = await supabaseAdmin
@@ -280,6 +321,24 @@ export async function POST(request: NextRequest) {
             fortune: body.fortune,
             year: body.year,
             userCtx: body.userCtx,
+            consumeIdempotencyKey: consumeKey,
+            creditAmount: policy.creditCost,
+          });
+        } else if (body.category === 'tojeong') {
+          await runTojeongJob({
+            recordId: jobId,
+            userId,
+            tojeongResult: body.tojeongResult,
+            sajuResult: body.saju,
+            userCtx: body.userCtx,
+            consumeIdempotencyKey: consumeKey,
+            creditAmount: policy.creditCost,
+          });
+        } else if (body.category === 'zamidusu') {
+          await runZamidusuJob({
+            recordId: jobId,
+            userId,
+            zamidusuResult: body.zamidusuResult,
             consumeIdempotencyKey: consumeKey,
             creditAmount: policy.creditCost,
           });

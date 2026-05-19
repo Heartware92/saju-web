@@ -81,6 +81,12 @@ function getSajuRoute(record: SajuRecord): string {
     }
     return `/saju/newyear?jobId=${record.id}`;
   }
+  if (cat === 'tojeong' && isPendingJob) {
+    return `/saju/tojeong?jobId=${record.id}`;
+  }
+  if (cat === 'zamidusu' && isPendingJob) {
+    return `/saju/zamidusu?jobId=${record.id}`;
+  }
 
   const moreCategories = [
     'love', 'wealth', 'career', 'health', 'study', 'people',

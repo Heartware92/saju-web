@@ -20,7 +20,9 @@ import { useCreditStore } from '../store/useCreditStore';
 import { useReportCacheStore, type ReportKind } from '../store/useReportCacheStore';
 import { RestoreReportModal } from '../components/RestoreReportModal';
 import { QuickFortuneGate } from '../components/QuickFortuneGate';
-import { getTojeongReading, parseTojeongSections, parseTojeongScores, stripAllSectionTags, type TojeongAIResult } from '../services/fortuneService';
+import { parseTojeongSections, parseTojeongScores, stripAllSectionTags, type TojeongAIResult } from '../services/fortuneService';
+import { supabase } from '../services/supabase';
+import { useFortuneJob } from '../hooks/useFortuneJob';
 import { sajuDB } from '../services/supabase';
 import { findRecentArchive } from '../services/archiveService';
 import { AILoadingBar } from '../components/AILoadingBar';
@@ -285,8 +287,14 @@ export default function TojeongResultPage() {
   const router = useRouter();
   const profileId = searchParams?.get('profileId') ?? null;
   const recordId = searchParams?.get('recordId') ?? null;
+  const urlJobId = searchParams?.get('jobId') ?? null;
   const isArchiveMode = !!recordId;
-  const needsProfileSelect = !profileId && !isArchiveMode && !searchParams?.get('year');
+  const needsProfileSelect = !profileId && !isArchiveMode && !urlJobId && !searchParams?.get('year');
+
+  // 백그라운드 잡 시스템 — Phase 4 (가이드 4.10 가드 적용 필수)
+  const [createdJobId, setCreatedJobId] = useState<string | null>(null);
+  const effectiveJobId = urlJobId ?? createdJobId;
+  const { job: fortuneJob } = useFortuneJob(effectiveJobId);
   const { profiles, fetchProfiles, hydrated, loading: profilesLoading, lastFetchedAt } = useProfileStore();
   const targetProfile = useMemo(() => {
     if (profileId) return profiles.find(p => p.id === profileId) ?? null;
@@ -425,74 +433,71 @@ export default function TojeongResultPage() {
   const retryTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => {
     if (isArchiveMode) return;
+    // ★ 가이드 4.10: ?jobId 진입 또는 새 잡 생성된 경우 cacheGate/findRecentArchive
+    //   분기 전체 skip. saju_records 가 잡 모드의 단일 source of truth.
+    if (effectiveJobId) return;
     if (!tojeong || !cacheKey) return;
 
     let cancelled = false;
-
     const isFresh = searchParams?.get('fresh') === '1';
 
-    // 페이지 사이드 자동 재시도 — 백엔드 4단 폴백이 모두 실패해 빈 결과를 받았을 때
-    // 4초 대기 후 한 번 더 호출. 사용자 입장에서는 길어진 단일 로딩 안에서 처리됨.
-    // 2회 모두 실패해도 무료 결정론적 풀이가 페이지의 결과로 노출되므로 화면은 절대 비지 않음.
-    const MAX_PAGE_ATTEMPTS = 2;
-
-    const scheduleRetry = (nextIdx: number) => {
-      retryTimeoutRef.current = setTimeout(() => {
-        retryTimeoutRef.current = null;
-        if (cancelled) {
-          // cleanup 된 경우 더 이상 재시도 안 하고 로딩 풀어둠 (이후 remount 대비)
-          setAiLoading(false);
-          return;
-        }
-        void fetchOnce(nextIdx);
-      }, 4_000);
-    };
-
-    // ★ 핵심 안전망: 모든 종착점에서 setAiLoading(false) 호출 보장.
-    // cancelled 가 true 라도 setState 는 무시 처리 (React 18 은 unmounted 컴포넌트의
-    // setState 를 안전하게 ignore 함). 결과 페이지에서 응답을 받았는데도 화면이 안
-    // 풀리던 사고의 진짜 원인 — "if (cancelled) return" 으로 setAiLoading(false) 가
-    // skip 되는 경로를 모두 막는다.
-    const fetchOnce = async (attemptIdx: number): Promise<void> => {
+    // 새 잡 생성 — 옛 4단 폴백·retry 로직은 server 잡 처리기 + 자동 환불로 대체.
+    const fetchOnce = async (): Promise<void> => {
       try {
-        const r = await getTojeongReading(tojeong, sourceBirth, targetProfile?.id, saju ?? undefined, {
-          jobState: targetProfile?.job_state ?? null,
-          customJobState: targetProfile?.custom_job_state ?? null,
-          loveState: targetProfile?.love_state ?? null,
-          customLoveState: targetProfile?.custom_love_state ?? null,
-        });
-        if (r.content) {
-          if (!cancelled) {
-            setAiContent(r.content);
-            if (r.sections) setAiSections(r.sections);
-            if (r.domainScores) setAiDomainScores(r.domainScores);
-            if (r.archivedRecordId) setSavedRecordId(r.archivedRecordId);
-          }
-          // cache · charge 는 cancelled 와 무관하게 진행 (한 번 받은 결과는 보존)
-          const cache = useReportCacheStore.getState();
-          cache.setReport('tojeong', cacheKey, r.content);
-          if (!cache.isCharged('tojeong', cacheKey)) {
-            cache.markCharged('tojeong', cacheKey);
-            chargeRef.current('moon', SUN_COST_BIG, CHARGE_REASONS.tojeong, `tojeong:${cacheKey}`)
-              .catch(e => console.error('[charge:tojeong] failed', e));
-          }
+        const { data: sessionData } = await supabase.auth.getSession();
+        const accessToken = sessionData.session?.access_token;
+        if (!accessToken) {
+          setAiError('로그인이 만료됐어요. 다시 로그인해주세요.');
           setAiLoading(false);
           return;
         }
-        if (attemptIdx + 1 < MAX_PAGE_ATTEMPTS && !cancelled) {
-          aiAttemptCountRef.current = attemptIdx + 1;
-          scheduleRetry(attemptIdx + 1);
+        const minuteBucket = Math.floor(Date.now() / 60000);
+        const idempotencyKey = `${cacheKey}:${minuteBucket}`;
+        const res = await fetch('/api/fortune/jobs/create', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${accessToken}` },
+          body: JSON.stringify({
+            category: 'tojeong',
+            sajuResult: saju,
+            tojeongResult: tojeong,
+            saju: saju,
+            userCtx: {
+              jobState: targetProfile?.job_state ?? null,
+              customJobState: targetProfile?.custom_job_state ?? null,
+              loveState: targetProfile?.love_state ?? null,
+              customLoveState: targetProfile?.custom_love_state ?? null,
+            },
+            profileId: targetProfile?.id,
+            sourceBirth: sourceBirth
+              ? {
+                  birthDate: sourceBirth.birth_date,
+                  birthTime: null,
+                  birthPlace: null,
+                  gender: sourceBirth.gender,
+                  calendarType: sourceBirth.calendar_type ?? 'solar',
+                }
+              : null,
+            idempotencyKey,
+          }),
+        });
+        if (!res.ok) {
+          const errData = await res.json().catch(() => ({}));
+          setAiError(errData.error || '풀이 요청에 실패했어요.');
+          setAiLoading(false);
           return;
         }
-        // 더 이상 재시도 없음 — 항상 로딩 풀기 (cancelled 여부 무관)
-        setAiLoading(false);
-      } catch {
-        if (attemptIdx + 1 < MAX_PAGE_ATTEMPTS && !cancelled) {
-          aiAttemptCountRef.current = attemptIdx + 1;
-          scheduleRetry(attemptIdx + 1);
-          return;
+        const { jobId } = (await res.json()) as { jobId: string };
+        if (cancelled) return;
+        const newUrl = new URL(window.location.href);
+        newUrl.searchParams.set('jobId', jobId);
+        window.history.replaceState(null, '', newUrl.toString());
+        setCreatedJobId(jobId);
+        // 이후 잡 동기화 useEffect 가 setAiContent·setAiLoading(false) 책임 (가이드 4.8)
+      } catch (e) {
+        if (!cancelled) {
+          setAiError(e instanceof Error ? e.message : '풀이 요청 중 오류가 발생했어요.');
+          setAiLoading(false);
         }
-        setAiLoading(false);
       }
     };
 
@@ -547,7 +552,7 @@ export default function TojeongResultPage() {
       aiAttemptCountRef.current = 0;
 
       setAiLoading(true);
-      void fetchOnce(0);
+      void fetchOnce();
     };
 
     run();
@@ -559,43 +564,58 @@ export default function TojeongResultPage() {
       }
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tojeong, cacheKey, isArchiveMode, refetchNonce]);
+  }, [tojeong, cacheKey, isArchiveMode, refetchNonce, effectiveJobId]);
+
+  // ── 잡 결과 → state 동기화 (백그라운드 잡 시스템) ──
+  // archive 모드는 별도 useEffect. 새 잡 흐름에서 status 변경 시 setAiContent 매핑.
+  useEffect(() => {
+    if (isArchiveMode) return;
+    if (!fortuneJob) return;
+    if (fortuneJob.status === 'done') {
+      const content = fortuneJob.interpretationDetailed ?? '';
+      setAiContent(content);
+      const sections = parseTojeongSections(content);
+      if (Object.keys(sections).length > 0) setAiSections(sections);
+      const scores = parseTojeongScores(content);
+      if (scores) setAiDomainScores(scores);
+      setSavedRecordId(fortuneJob.jobId);
+      setAiLoading(false);
+    } else if (fortuneJob.status === 'failed') {
+      setAiError(fortuneJob.errorMessage ?? '풀이 생성에 실패했어요. 크레딧은 자동 환불됐어요.');
+      setAiLoading(false);
+    } else if (fortuneJob.status === 'processing' && fortuneJob.interpretationBasic) {
+      // 1차 partial 도착 — 부분 렌더 (정통사주 Phase 1.5 패턴)
+      const content = fortuneJob.interpretationBasic;
+      setAiContent(content);
+      const sections = parseTojeongSections(content);
+      if (Object.keys(sections).length > 0) setAiSections(sections);
+      const scores = parseTojeongScores(content);
+      if (scores) setAiDomainScores(scores);
+      setSavedRecordId(fortuneJob.jobId);
+      setAiLoading(true);
+    } else {
+      setAiLoading(true);
+    }
+  }, [
+    fortuneJob?.status,
+    fortuneJob?.interpretationDetailed,
+    fortuneJob?.interpretationBasic,
+    fortuneJob?.errorMessage,
+    fortuneJob?.jobId,
+    isArchiveMode,
+  ]);
 
   const retryAI = () => {
     if (!tojeong || !cacheKey) return;
     useReportCacheStore.getState().invalidate('tojeong', cacheKey);
-    aiStartedRef.current = true;
+    aiStartedRef.current = false;  // useEffect 가 fetchOnce 다시 호출
     setAiContent(null);
     setAiSections(null);
     setAiDomainScores(null);
     setAiError(null);
+    setCreatedJobId(null);  // 새 잡 생성 트리거
     setAiLoading(true);
-    getTojeongReading(tojeong, sourceBirth, targetProfile?.id, saju ?? undefined, {
-      jobState: targetProfile?.job_state ?? null,
-      customJobState: targetProfile?.custom_job_state ?? null,
-      loveState: targetProfile?.love_state ?? null,
-      customLoveState: targetProfile?.custom_love_state ?? null,
-    })
-      .then((r: TojeongAIResult) => {
-        if (r.content) {
-          setAiContent(r.content);
-          if (r.sections) setAiSections(r.sections);
-          if (r.domainScores) setAiDomainScores(r.domainScores);
-          // archive 저장이 완료된 경우 ShareBar 즉시 노출
-          if (r.archivedRecordId) setSavedRecordId(r.archivedRecordId);
-          const cache = useReportCacheStore.getState();
-          cache.setReport('tojeong', cacheKey, r.content);
-          if (!cache.isCharged('tojeong', cacheKey)) {
-            cache.markCharged('tojeong', cacheKey);
-            chargeRef.current('moon', SUN_COST_BIG, CHARGE_REASONS.tojeong, `tojeong:${cacheKey}`)
-              .catch(e => console.error('[charge:tojeong] failed', e));
-          }
-        }
-        setAiLoading(false);
-      })
-      .catch(() => {
-        setAiLoading(false);
-      });
+    setRefetchNonce(n => n + 1);
   };
 
   if (needsProfileSelect) {
@@ -649,6 +669,7 @@ export default function TojeongResultPage() {
         minLabel="15초"
         maxLabel="45초"
         estimatedSeconds={25}
+        startedAt={fortuneJob?.startedAt}
         messages={TOJEONG_MESSAGES}
         topContent={
           <motion.div
