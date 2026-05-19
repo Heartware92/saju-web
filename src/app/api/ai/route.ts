@@ -1,241 +1,39 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { callAI } from '@/lib/ai/aiClients';
 
 // Vercel Pro 플랜 maxDuration 한도 활용 — 300s 무료
 // 정통사주 2차(8섹션 동시) + Gemini stall + retry + OpenAI 폴백 모두 수용
 export const maxDuration = 300;
 
-interface AIResult {
-  content: string;
-  /** true면 max_tokens 한도에 걸려 응답이 잘림. 호출자에서 안내·재시도 처리 필요. */
-  truncated: boolean;
-  /** 어느 제공자가 실제 응답했는지 — 디버깅용. */
-  provider?: 'gemini' | 'openai';
-}
-
-// ── Gemini API (1순위) ───────────────────────────────────────────────────────
-const GEMINI_API_URL =
-  'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent';
-
-/** Gemini 1회 호출 — 5xx/429 재시도는 호출자가 담당. */
-async function callGeminiOnce(
-  prompt: string,
-  maxTokens: number,
-  systemPrompt: string,
-  temperature: number = 0.4,
-  jsonMode: boolean = false,
-): Promise<{ ok: true; data: AIResult } | { ok: false; status: number | null; msg: string; retryable: boolean }> {
-  const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) return { ok: false, status: null, msg: 'NO_GEMINI_KEY', retryable: false };
-
-  try {
-    // ★ Gemini 2.5 Flash thinking 토큰 누수 대응:
-    // thinkingBudget=0 이어도 thinking 토큰이 maxOutputTokens 를 잠식해 빈 텍스트가
-    // 반환되는 알려진 이슈가 다수 보고됨 (google AI Developers Forum,
-    // langchain-google#1020, python-genai#782, ha-llmvision#609).
-    // → maxOutputTokens 에 30% 마진 추가 + 상한 8192. 호출자가 받는 컨텐츠 길이엔
-    //   영향 없음(빈 응답 회피 목적).
-    const adjustedMaxOutputTokens = Math.min(Math.ceil(maxTokens * 1.3), 8192);
-
-    const generationConfig: Record<string, unknown> = {
-      temperature,
-      maxOutputTokens: adjustedMaxOutputTokens,
-      thinkingConfig: { thinkingBudget: 0, includeThoughts: false },
-    };
-    if (jsonMode) {
-      // Gemini structured output — JSON 응답 강제. 분류기 등 schema-bound 호출용.
-      generationConfig.responseMimeType = 'application/json';
-    }
-
-    const res = await fetch(`${GEMINI_API_URL}?key=${apiKey}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        systemInstruction: { parts: [{ text: systemPrompt }] },
-        contents: [{ role: 'user', parts: [{ text: prompt }] }],
-        generationConfig,
-      }),
-    });
-
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({}));
-      const msg = err?.error?.message ?? '';
-      const retryable = res.status >= 500 || res.status === 429;
-      return { ok: false, status: res.status, msg, retryable };
-    }
-
-    const data = await res.json();
-    const candidate = data.candidates?.[0];
-    const parts: any[] = candidate?.content?.parts ?? [];
-    const finishReason = candidate?.finishReason;
-    // 2.5-flash 의 thinking 파트(thought:true) 가 parts[0] 에 올 수 있어 실제 텍스트 파트 검색
-    const textPart = parts.find((p: any) => p.text && !p.thought) ?? parts[0];
-    const text: string = textPart?.text ?? '';
-
-    // ★ 빈 텍스트 + MAX_TOKENS → Gemini thinking 누수 사고. OpenAI 폴백 유도.
-    // SAFETY/RECITATION 같은 다른 비정상 finishReason 도 동일 처리.
-    if (!text.trim()) {
-      console.warn('[AI] Gemini 빈 응답 — finishReason:', finishReason, 'promptLen:', prompt.length, 'maxTokens:', maxTokens);
-      return {
-        ok: false,
-        status: null,
-        msg: `Gemini empty text (finishReason=${finishReason ?? 'unknown'})`,
-        // MAX_TOKENS 인 경우 같은 prompt 로 재시도해봐야 같은 결과 — retryable=false 로
-        // callGeminiWithRetry 를 빠르게 빠져나가 OpenAI 폴백으로 진입.
-        retryable: false,
-      };
-    }
-
-    return {
-      ok: true,
-      data: {
-        content: text,
-        truncated: finishReason === 'MAX_TOKENS',
-        provider: 'gemini',
-      },
-    };
-  } catch (e: any) {
-    // 네트워크 실패 — 재시도 가능
-    return { ok: false, status: null, msg: e?.message ?? 'fetch failed', retryable: true };
-  }
-}
-
-/** Gemini 호출 + 5xx/429/네트워크 실패 시 백오프 재시도 (총 3회 시도). */
-async function callGeminiWithRetry(
-  prompt: string,
-  maxTokens: number,
-  systemPrompt: string,
-  temperature: number = 0.4,
-  jsonMode: boolean = false,
-): Promise<{ ok: true; data: AIResult } | { ok: false; status: number | null; msg: string }> {
-  const backoffsMs = [200, 800, 1600];
-  let lastStatus: number | null = null;
-  let lastMsg = '';
-
-  for (let attempt = 0; attempt <= backoffsMs.length; attempt++) {
-    const r = await callGeminiOnce(prompt, maxTokens, systemPrompt, temperature, jsonMode);
-    if (r.ok) return r;
-
-    lastStatus = r.status;
-    lastMsg = r.msg;
-
-    if (!r.retryable || attempt >= backoffsMs.length) break;
-
-    const wait = backoffsMs[attempt];
-    console.warn(`[AI] Gemini ${r.status ?? 'NET'} 재시도 ${attempt + 1}/${backoffsMs.length} (${wait}ms 대기): ${r.msg}`);
-    await new Promise((res) => setTimeout(res, wait));
-  }
-
-  return { ok: false, status: lastStatus, msg: lastMsg };
-}
-
-// ── OpenAI API (2순위 폴백) ──────────────────────────────────────────────────
-// gpt-4o-mini — 한국어 품질 좋고 안정성 매우 높음 (5xx 거의 없음)
-const OPENAI_API_URL = 'https://api.openai.com/v1/chat/completions';
-const OPENAI_MODEL = 'gpt-4o-mini';
-
-async function callOpenAI(
-  prompt: string,
-  maxTokens: number,
-  systemPrompt: string,
-  temperature: number = 0.4,
-  jsonMode: boolean = false,
-): Promise<AIResult> {
-  const apiKey = process.env.OPENAI_API_KEY;
-  if (!apiKey) throw new Error('NO_OPENAI_KEY');
-
-  const body: Record<string, unknown> = {
-    model: OPENAI_MODEL,
-    messages: [
-      { role: 'system', content: systemPrompt },
-      { role: 'user', content: prompt },
-    ],
-    temperature,
-    max_tokens: maxTokens,
-  };
-  if (jsonMode) {
-    // OpenAI JSON mode — prompt 에 "JSON" 단어 포함 필수 (분류기 prompt 에 이미 포함)
-    body.response_format = { type: 'json_object' };
-  }
-
-  const res = await fetch(OPENAI_API_URL, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${apiKey}`,
-    },
-    body: JSON.stringify(body),
-  });
-
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error(`OpenAI ${res.status}: ${err?.error?.message || ''}`);
-  }
-
-  const data = await res.json();
-  const choice = data.choices?.[0];
-  return {
-    content: choice?.message?.content ?? '',
-    truncated: choice?.finish_reason === 'length',
-    provider: 'openai',
-  };
-}
-
-// ── 메인 핸들러 ────────────────────────────────────────────────────────────
+// ── 메인 핸들러 — 클라이언트 호출용 단순 wrapper ────────────────────────────
+// 백그라운드 잡 처리기는 이 route 를 거치지 않고 callAI() 를 직접 import 해서 호출.
 export async function POST(request: NextRequest) {
   try {
-    const { prompt, maxTokens = 1000, systemPrompt, temperature = 0.4, jsonMode = false } = await request.json();
-    const sys =
-      systemPrompt ||
-      '당신은 정통 사주명리 전문가입니다. 핵심만 간결하게, 실용적으로 답변하세요. 한국어로 작성하며 이모지는 최소화하세요.';
+    const { prompt, maxTokens = 1000, systemPrompt, temperature = 0.4, jsonMode = false } =
+      await request.json();
 
-    if (!process.env.GEMINI_API_KEY && !process.env.OPENAI_API_KEY) {
+    const result = await callAI(prompt, maxTokens, { systemPrompt, temperature, jsonMode });
+    return NextResponse.json({
+      content: result.content,
+      truncated: result.truncated,
+      provider: result.provider,
+    });
+  } catch (error) {
+    const msg = error instanceof Error ? error.message : '서버 오류가 발생했어요.';
+    if (msg === 'AI_NOT_CONFIGURED') {
       return NextResponse.json(
         { error: '서비스가 설정되어 있지 않아요. 관리자에게 문의해주세요.' },
         { status: 500 },
       );
     }
-
-    // ── 1순위: Gemini (재시도 3회 포함) ──
-    if (process.env.GEMINI_API_KEY) {
-      const geminiResult = await callGeminiWithRetry(prompt, maxTokens, sys, temperature, jsonMode);
-      if (geminiResult.ok) {
-        return NextResponse.json({
-          content: geminiResult.data.content,
-          truncated: geminiResult.data.truncated,
-          provider: 'gemini',
-        });
-      }
-      console.error('[AI] Gemini 모든 재시도 실패:', geminiResult.status, geminiResult.msg);
-      // → OpenAI 폴백으로 자동 진행
+    if (msg === 'AI_ALL_PROVIDERS_FAILED' || msg.startsWith('OpenAI ')) {
+      return NextResponse.json(
+        { error: '서비스가 일시적으로 응답이 없어요. 1~2분 후 다시 시도해주세요. (재시도 시 재차감 없음)' },
+        { status: 503 },
+      );
     }
-
-    // ── 2순위: OpenAI gpt-4o-mini 폴백 ──
-    if (process.env.OPENAI_API_KEY) {
-      try {
-        console.warn('[AI] OpenAI gpt-4o-mini 폴백 시도');
-        const r = await callOpenAI(prompt, maxTokens, sys, temperature, jsonMode);
-        return NextResponse.json({
-          content: r.content,
-          truncated: r.truncated,
-          provider: 'openai',
-        });
-      } catch (openaiErr: any) {
-        console.error('[AI] OpenAI 폴백도 실패:', openaiErr.message);
-        return NextResponse.json(
-          { error: '서비스가 일시적으로 응답이 없어요. 1~2분 후 다시 시도해주세요. (재시도 시 재차감 없음)' },
-          { status: 503 },
-        );
-      }
-    }
-
-    // GEMINI_API_KEY 만 있고 모든 재시도 실패 — OpenAI 키 없음
     return NextResponse.json(
-      { error: '서비스가 일시적으로 응답하지 않아요. 잠시 후 다시 시도해주세요. (재시도 시 재차감 없음)' },
-      { status: 503 },
-    );
-  } catch (error: any) {
-    return NextResponse.json(
-      { error: error.message || '서버 오류가 발생했어요. 잠시 후 다시 시도해주세요.' },
+      { error: msg || '서버 오류가 발생했어요. 잠시 후 다시 시도해주세요.' },
       { status: 500 },
     );
   }

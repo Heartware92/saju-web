@@ -71,6 +71,13 @@ export interface SajuRecord {
   partner_birth_date?: string | null;
   /** 공유 링크용 토큰 — 최초 공유 시 생성 */
   share_token?: string | null;
+  /** 백그라운드 잡 상태 — 신규 컬럼 (037 마이그레이션). 옛 row 는 'done' default. */
+  status?: 'pending' | 'processing' | 'done' | 'failed';
+  /** 잡 실패 시 사유 또는 partial 경고. */
+  error_message?: string | null;
+  /** 잡 시작·완료 타임스탬프. */
+  started_at?: string | null;
+  completed_at?: string | null;
 }
 
 export interface TarotRecord {
