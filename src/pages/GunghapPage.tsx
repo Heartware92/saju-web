@@ -967,6 +967,7 @@ export default function GunghapPage() {
         minLabel="25초"
         maxLabel="1분"
         estimatedSeconds={40}
+        startedAt={fortuneJob?.startedAt}
         messages={[
           '두 사람의 원국을 비교하는 중입니다',
           '합충 관계와 오행 조화를 분석하는 중입니다',

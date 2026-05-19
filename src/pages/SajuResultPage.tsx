@@ -450,6 +450,7 @@ export default function SajuResultPage() {
         minLabel="30초"
         maxLabel="1분 30초"
         estimatedSeconds={70}
+        startedAt={fortuneJob?.startedAt}
         messages={JUNGTONGSAJU_MESSAGES}
         topContent={
           <motion.div

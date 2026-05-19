@@ -13,6 +13,19 @@ interface AILoadingBarProps {
   topContent?: React.ReactNode;
   // inline 모드: 카드 안에 삽입 (full-screen이 아닌 경우)
   inline?: boolean;
+  /**
+   * 잡 시작 시각 (ISO timestamp). 페이지 새로고침·재진입 시 mount 시점이 아닌
+   * 실제 잡 시작부터의 경과를 반영한 progress 로 시작.
+   * 백그라운드 잡 시스템(saju_records.started_at) 과 연결.
+   */
+  startedAt?: string | null;
+}
+
+// 비대칭 점근선: estimatedSeconds 시점에서 ~86% 도달, 이후 천천히 92%로 수렴
+// progress(t) = 92 * (1 - exp(-k*t)),  k = 2/estimatedSeconds
+function progressFromElapsed(elapsedSec: number, estimatedSeconds: number): number {
+  const k = 2 / estimatedSeconds;
+  return Math.min(92, 92 * (1 - Math.exp(-k * Math.max(0, elapsedSec))));
 }
 
 export function AILoadingBar({
@@ -23,21 +36,37 @@ export function AILoadingBar({
   messages,
   topContent,
   inline = false,
+  startedAt,
 }: AILoadingBarProps) {
-  const [progress, setProgress] = useState(0);
+  const [progress, setProgress] = useState<number>(() => {
+    if (!startedAt) return 0;
+    const elapsedSec = (Date.now() - new Date(startedAt).getTime()) / 1000;
+    return progressFromElapsed(elapsedSec, estimatedSeconds);
+  });
   const [msgIdx, setMsgIdx] = useState(0);
 
-  // 비대칭 점근선: estimatedSeconds 시점에서 ~86% 도달, 이후 천천히 92%로 수렴
+  // startedAt prop 늦게 도착(useFortuneJob select 결과)했을 때 즉시 보정.
+  useEffect(() => {
+    if (!startedAt) return;
+    const elapsedSec = (Date.now() - new Date(startedAt).getTime()) / 1000;
+    setProgress(progressFromElapsed(elapsedSec, estimatedSeconds));
+  }, [startedAt, estimatedSeconds]);
+
+  // 진행 timer.
+  //   startedAt 있음: 매 tick 실제 elapsed 기반 재계산 → 새로고침해도 정확한 %
+  //   startedAt 없음: mount 시점 기준 점근선 (기존 동작 — 새 잡 처음 생성 등)
   useEffect(() => {
     const k = 2 / estimatedSeconds;
     const timer = setInterval(() => {
-      setProgress(p => {
-        const delta = (92 - p) * k * 0.5;
-        return Math.min(92, p + delta);
-      });
+      if (startedAt) {
+        const elapsedSec = (Date.now() - new Date(startedAt).getTime()) / 1000;
+        setProgress(progressFromElapsed(elapsedSec, estimatedSeconds));
+      } else {
+        setProgress(p => Math.min(92, p + (92 - p) * k * 0.5));
+      }
     }, 500);
     return () => clearInterval(timer);
-  }, [estimatedSeconds]);
+  }, [estimatedSeconds, startedAt]);
 
   // 분석 메시지 순환
   useEffect(() => {
