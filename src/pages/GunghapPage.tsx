@@ -7,7 +7,8 @@ import { useProfileStore } from '../store/useProfileStore';
 import { useUserStore } from '../store/useUserStore';
 import { useCreditStore } from '../store/useCreditStore';
 import { useReportCacheStore, sajuKey } from '../store/useReportCacheStore';
-import { sajuDB } from '../services/supabase';
+import { sajuDB, supabase } from '../services/supabase';
+import { useFortuneJob } from '../hooks/useFortuneJob';
 import { BackButton } from '../components/ui/BackButton';
 import { SUN_COST_BIG, CHARGE_REASONS } from '../constants/creditCosts';
 import { extractMetaphor } from '../utils/parseMetaphor';
@@ -293,6 +294,7 @@ export default function GunghapPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const urlRecordId = searchParams?.get('recordId') ?? null;
+  const urlJobId = searchParams?.get('jobId') ?? null;
   const { user } = useUserStore();
   const { profiles, addProfile } = useProfileStore();
 
@@ -300,7 +302,13 @@ export default function GunghapPage() {
   const [activeRecordId, setActiveRecordId] = useState<string | null>(urlRecordId);
   const isArchiveMode = !!activeRecordId;
 
-  const [step, setStep] = useState<Step>(urlRecordId ? 'result' : 'landing');
+  // 백그라운드 잡 시스템 — ?jobId 진입 또는 새 잡 생성 후 setCreatedJobId.
+  // 정통사주(SajuResultPage)와 동일 패턴. useFortuneJob 으로 saju_records Realtime 구독.
+  const [createdJobId, setCreatedJobId] = useState<string | null>(null);
+  const effectiveJobId = urlJobId ?? createdJobId;
+  const { job: fortuneJob } = useFortuneJob(effectiveJobId);
+
+  const [step, setStep] = useState<Step>(urlRecordId || urlJobId ? 'result' : 'landing');
   const [category, setCategory] = useState<GunghapCategory>('lover');
   const [customLabel, setCustomLabel] = useState('');
   const [myRole, setMyRole] = useState('');
@@ -397,6 +405,38 @@ export default function GunghapPage() {
       }
     }
   }, [category, roleSwapped]);
+
+  // ── 잡 결과 → state 동기화 ──
+  // useFortuneJob 으로 받은 saju_records row 의 status·interpretation 을
+  // 기존 result/gunghapTitle/Score/Domain state 에 매핑. archive 모드는 별도 useEffect.
+  useEffect(() => {
+    if (isArchiveMode) return;
+    if (!fortuneJob) return;
+    if (fortuneJob.status === 'done') {
+      const content = fortuneJob.interpretationDetailed ?? '';
+      const { title, score, domainScores, body } = parseGunghapHeader(content);
+      setResult(body);
+      setGunghapTitle(title);
+      setGunghapScore(score);
+      setGunghapDomainScores(domainScores);
+      setSavedRecordId(fortuneJob.jobId);
+      setStep('result');
+      setLoading(false);
+    } else if (fortuneJob.status === 'failed') {
+      setError(fortuneJob.errorMessage ?? '풀이 생성에 실패했어요. 크레딧은 자동 환불됐어요.');
+      setLoading(false);
+    } else {
+      // pending / processing — 진행 중. 결과 페이지 진입 + 로딩 화면 유지.
+      setStep('result');
+      setLoading(true);
+    }
+  }, [
+    fortuneJob?.status,
+    fortuneJob?.interpretationDetailed,
+    fortuneJob?.errorMessage,
+    fortuneJob?.jobId,
+    isArchiveMode,
+  ]);
 
   // ── 보관함 재생 모드 — activeRecordId 가 있으면 DB 에서 풀이 텍스트 + 메타 + 사주 복원 ──
   useEffect(() => {
@@ -505,6 +545,62 @@ export default function GunghapPage() {
     return selectedCat?.label ?? '';
   };
 
+  // ── 백그라운드 잡 생성 헬퍼 ──
+  // POST /api/fortune/jobs/create → jobId 받음 → URL ?jobId 로 replace.
+  // 이후 useFortuneJob 이 saju_records Realtime 구독, 결과 도착 시 동기화 useEffect 가 setResult.
+  const createGunghapJob = async (input: {
+    prompt: string;
+    sajuResult: SajuResult;
+    profileId: string;
+    sourceBirth: {
+      birthDate: string;
+      birthTime: string | null;
+      birthPlace: string | null;
+      gender: 'male' | 'female';
+      calendarType: 'solar' | 'lunar';
+    };
+    partnerName: string;
+    partnerBirthDate: string | null;
+    engineResult: Record<string, unknown>;
+    idempotencyKey: string;
+  }): Promise<void> => {
+    const { data: sessionData } = await supabase.auth.getSession();
+    const accessToken = sessionData.session?.access_token;
+    if (!accessToken) {
+      throw new Error('로그인이 만료됐어요. 다시 로그인해주세요.');
+    }
+    const res = await fetch('/api/fortune/jobs/create', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${accessToken}`,
+      },
+      body: JSON.stringify({
+        category: 'gunghap',
+        prompt: input.prompt,
+        sajuResult: input.sajuResult,
+        profileId: input.profileId,
+        sourceBirth: input.sourceBirth,
+        partnerName: input.partnerName,
+        partnerBirthDate: input.partnerBirthDate,
+        engineResult: input.engineResult,
+        idempotencyKey: input.idempotencyKey,
+      }),
+    });
+    if (!res.ok) {
+      const errData = await res.json().catch(() => ({}));
+      throw new Error(errData.error || '풀이 요청에 실패했어요.');
+    }
+    const { jobId } = (await res.json()) as { jobId: string; deduplicated?: boolean };
+    // URL ?jobId 로 replace — 새로고침·재진입 시 같은 잡 재구독.
+    const newUrl = new URL(window.location.href);
+    newUrl.searchParams.set('jobId', jobId);
+    window.history.replaceState(null, '', newUrl.toString());
+    setCreatedJobId(jobId);
+    setStep('result');
+    // 이후 잡 결과 동기화 useEffect 가 알아서 status 별 분기 (processing → loading, done → setResult).
+  };
+
   const handleAnalyze = async () => {
     if (!selectedProfile || !isOtherValid) return;
     setLoading(true);
@@ -551,47 +647,29 @@ export default function GunghapPage() {
         setForceNewReading(false);
         activeCacheKey = petCacheKey;
         const petPrompt = generatePetGunghapPrompt(myResult, selectedProfile.name, petTrimmed);
-        const petText = await callGunghapGPT(petPrompt);
-        const petCleaned = petText
-          .replace(
-            /^\s*\[?(?:pet|secret_crush|som|lover|spouse|ex|soulmate|rival|friend|mentor|family|parent_child|sibling|work|business|general)_gunghap\]?\s*\n?/i,
-            '',
-          )
-          .trim();
-        setResult(petCleaned);
-        setStep('result');
-        const cache = useReportCacheStore.getState();
-        cache.setReport('gunghap', petCacheKey, petCleaned);
-        if (!cache.isCharged('gunghap', petCacheKey)) {
-          cache.markCharged('gunghap', petCacheKey);
-          useCreditStore.getState()
-            .chargeForContent('moon', SUN_COST_BIG, CHARGE_REASONS.gunghap, `gunghap:${petCacheKey}`)
-            .catch(e => console.error('[charge:gunghap-pet] failed', e));
-        }
-        // 보관함 저장 — 반려동물 분기. partner.birth_date 는 비어있어 메타로만 보존.
-        archiveSaju({
+        // 백그라운드 잡 생성 — 차감·INSERT·archive 모두 서버에서 처리. 클라는 jobId 만 받고 빠짐.
+        const minuteBucket = Math.floor(Date.now() / 60000);
+        await createGunghapJob({
+          prompt: petPrompt,
+          sajuResult: myResult,
           profileId: selectedProfile.id,
           sourceBirth: {
-            birth_date: selectedProfile.birth_date,
-            birth_time: selectedProfile.birth_time ?? undefined,
+            birthDate: selectedProfile.birth_date,
+            birthTime: selectedProfile.birth_time ?? null,
+            birthPlace: selectedProfile.birth_place ?? null,
             gender: selectedProfile.gender,
-            calendar_type: selectedProfile.calendar_type,
+            calendarType: selectedProfile.calendar_type,
           },
-          category: 'gunghap',
+          partnerName: petTrimmed.name || '반려동물',
+          partnerBirthDate: petTrimmed.birthDate ?? null,
           engineResult: {
             gunghapCategory: 'pet',
             pet: petTrimmed,
             myRole: myRole.trim(),
             otherRole: otherRole.trim(),
-          } as unknown as Record<string, unknown>,
-          interpretation: petCleaned,
-          partner: {
-            name: petTrimmed.name || '반려동물',
-            birth_date: petTrimmed.birthDate ?? '',
           },
-          creditType: 'moon',
-          creditUsed: SUN_COST_BIG,
-        }).catch(() => {});
+          idempotencyKey: `${petCacheKey}:${minuteBucket}`,
+        });
         return;
       }
 
@@ -727,39 +805,22 @@ export default function GunghapPage() {
       prompt = injectRoleContext(prompt, myName, myRole, otherName, otherRole);
       prompt = wrapWithTitleScore(prompt);
 
-      const text = await callGunghapGPT(prompt);
-      // 프롬프트 차원에서 제거했지만, 과거 패턴 잔재 방어용 — 대괄호 유무 관계없이 첫 줄의 xxx_gunghap 태그 소거
-      const tagCleaned = text
-        .replace(
-          /^\s*\[?(?:secret_crush|som|lover|spouse|ex|soulmate|rival|friend|mentor|family|parent_child|sibling|work|business|general)_gunghap\]?\s*\n?/i,
-          '',
-        )
-        .trim();
-      const { title, score, domainScores, body } = parseGunghapHeader(tagCleaned);
-      setGunghapTitle(title);
-      setGunghapScore(score);
-      setGunghapDomainScores(domainScores);
-      const cleaned = body;
-      setResult(cleaned);
-      setStep('result');
-      const cache = useReportCacheStore.getState();
-      cache.setReport('gunghap', cacheKey, cleaned);
-      if (!cache.isCharged('gunghap', cacheKey)) {
-        cache.markCharged('gunghap', cacheKey);
-        useCreditStore.getState()
-          .chargeForContent('moon', SUN_COST_BIG, CHARGE_REASONS.gunghap, `gunghap:${cacheKey}`)
-          .catch(e => console.error('[charge:gunghap] failed', e));
-      }
-      // 보관함 저장 — 카테고리/역할/상대방 메타 포함. archiveService 가 sourceBirth 로 자동 프로필 매칭.
-      archiveSaju({
+      // 백그라운드 잡 생성 — 차감·INSERT·archive 모두 서버. 결과는 useFortuneJob → 동기화 useEffect 가
+      // parseGunghapHeader → setResult + setGunghapTitle/Score/Domain 으로 매핑.
+      const minuteBucket = Math.floor(Date.now() / 60000);
+      await createGunghapJob({
+        prompt,
+        sajuResult: myResult,
         profileId: selectedProfile.id,
         sourceBirth: {
-          birth_date: selectedProfile.birth_date,
-          birth_time: selectedProfile.birth_time ?? undefined,
+          birthDate: selectedProfile.birth_date,
+          birthTime: selectedProfile.birth_time ?? null,
+          birthPlace: selectedProfile.birth_place ?? null,
           gender: selectedProfile.gender,
-          calendar_type: selectedProfile.calendar_type,
+          calendarType: selectedProfile.calendar_type,
         },
-        category: 'gunghap',
+        partnerName: otherName,
+        partnerBirthDate: otherBase.birth_date || null,
         engineResult: {
           gunghapCategory: category,
           customLabel: category === 'custom' ? customLabel.trim() : undefined,
@@ -768,15 +829,9 @@ export default function GunghapPage() {
           partnerBirthTime: otherBase.birth_time ?? undefined,
           partnerCalendarType: otherBase.calendar_type ?? 'solar',
           partnerGender: otherBase.gender ?? 'female',
-        } as unknown as Record<string, unknown>,
-        interpretation: tagCleaned,
-        partner: {
-          name: otherName,
-          birth_date: otherBase.birth_date,
         },
-        creditType: 'moon',
-        creditUsed: SUN_COST_BIG,
-      }).catch(() => {});
+        idempotencyKey: `${cacheKey}:${minuteBucket}`,
+      });
 
       // 직접 입력 모드일 때 상대방 정보를 추가 프로필로 자동 저장
       if (otherMode === 'manual' && other.name.trim()) {

@@ -64,9 +64,13 @@ function getSajuRoute(record: SajuRecord): string {
   const isPendingJob =
     record.status === 'pending' || record.status === 'processing' || record.status === 'failed';
 
-  // 백그라운드 잡 시스템 — 정통사주에 우선 적용. 다른 카테고리는 옛 ?recordId 흐름 유지.
+  // 백그라운드 잡 시스템 — 진행 중/실패 row 는 jobId 모드로 (Realtime 구독).
+  // 새 카테고리 마이그레이션 시 여기 if 분기 추가. docs/ASYNC_FORTUNE_JOBS.md 참조.
   if (cat === 'traditional' && isPendingJob) {
     return `/saju/result?jobId=${record.id}`;
+  }
+  if (cat === 'gunghap' && isPendingJob) {
+    return `/saju/gunghap?jobId=${record.id}`;
   }
 
   const moreCategories = [

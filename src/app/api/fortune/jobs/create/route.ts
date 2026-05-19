@@ -1,54 +1,87 @@
 // POST /api/fortune/jobs/create
-// 정통사주(traditional) 백그라운드 잡 생성.
+// 백그라운드 풀이 잡 생성 endpoint.
 //
 // 흐름:
-//   1. Authorization: Bearer <access_token> 검증 → user 확인
-//   2. consume_credit_atomic — 잔액 부족 시 402, 중복 idempotency 시 통과
-//   3. saju_records INSERT (status='pending', result_data=sajuResult)
-//   4. after(runJungtongsajuJob(...)) — 응답 반환 후 백그라운드 실행
-//   5. { jobId } 즉시 반환
+//   1. Bearer 토큰 검증 → user 확인
+//   2. category 별 body 검증
+//   3. consume_credit_atomic — 잔액 부족 시 402, 중복 idempotency 시 통과
+//   4. saju_records INSERT (status='pending') — category 별 컬럼 분기
+//   5. after(runXxxJob(...)) — 응답 반환 후 백그라운드 실행
+//   6. { jobId } 즉시 반환
 //
-// 클라이언트는 jobId 받자마자 결과 페이지(?jobId=xxx) 로 이동, Realtime 으로 진행 추적.
+// 카테고리:
+//   - 'traditional': 정통사주 (2-pass). prompt 는 서버가 sajuResult 로 생성.
+//   - 'gunghap'    : 궁합 (1-pass). prompt 는 클라가 완성해서 전달.
+// 새 카테고리 추가 시 docs/ASYNC_FORTUNE_JOBS.md 표준 패턴 참조.
 
 import { NextRequest, NextResponse } from 'next/server';
 import { after } from 'next/server';
 import { supabaseAdmin } from '@/services/supabaseAdmin';
 import { runJungtongsajuJob } from '@/services/jungtongsajuJob.server';
+import { runGunghapJob } from '@/services/gunghapJob.server';
 import type { SajuResult } from '@/utils/sajuCalculator';
 
 // Vercel Fluid Compute — 정통사주 2-pass 60~120초 + retry 여유
 export const maxDuration = 300;
 
-interface CreateJobBody {
-  category: 'traditional';
-  sajuResult: SajuResult;
+interface SourceBirth {
+  birthDate: string;
+  birthTime: string | null;
+  birthPlace: string | null;
+  gender: 'male' | 'female';
+  calendarType: 'solar' | 'lunar';
+}
+
+interface BaseJobBody {
   /** birth_profiles.id (보관함 프로필 매칭용, 옵션) */
   profileId?: string;
   /** 사주 입력의 원본 (보관함 birth 매칭용) */
-  sourceBirth: {
-    birthDate: string;
-    birthTime: string | null;
-    birthPlace: string | null;
-    gender: 'male' | 'female';
-    calendarType: 'solar' | 'lunar';
-  };
+  sourceBirth: SourceBirth;
   /** 클라이언트가 생성한 멱등 키 — 네트워크 재시도 시 중복 잡 방지 */
   idempotencyKey: string;
+  /** 보관함에 저장될 SajuResult (result_data 컬럼). */
+  sajuResult: SajuResult;
 }
 
-const TRADITIONAL_CREDIT_COST = 10; // MOON_COST_BIG
-const TRADITIONAL_REASON = '정통 사주';
+interface TraditionalJobBody extends BaseJobBody {
+  category: 'traditional';
+}
+
+interface GunghapJobBody extends BaseJobBody {
+  category: 'gunghap';
+  /** 클라가 14개 카테고리 분기 + role injection + title/score 래퍼까지 완성한 prompt. */
+  prompt: string;
+  /** 상대방 이름 (보관함 partner_name 컬럼). pet 카테고리는 동물 이름. */
+  partnerName: string;
+  /** 상대방 생년월일 (옵션 — pet 등은 빈). */
+  partnerBirthDate: string | null;
+  /** 보관함 engine_result — 궁합 카테고리·역할·custom 라벨 등 보존. */
+  engineResult: Record<string, unknown>;
+}
+
+type CreateJobBody = TraditionalJobBody | GunghapJobBody;
+
+// 카테고리별 차감 정책 — 다른 운세 추가 시 여기 항목만 추가하면 됨.
+// reason 값은 클라이언트의 CHARGE_REASONS.{category} 와 반드시 동일해야 함
+// (거래 내역 credit_transactions.reason 라벨 일관성).
+const CATEGORY_POLICY: Record<
+  CreateJobBody['category'],
+  { creditCost: number; reason: string }
+> = {
+  traditional: { creditCost: 10, reason: '정통사주' }, // CHARGE_REASONS.traditional 과 일치
+  gunghap: { creditCost: 10, reason: '궁합' },         // CHARGE_REASONS.gunghap 과 일치
+};
+
 const CREDIT_TYPE = 'moon';
 
 export async function POST(request: NextRequest) {
   try {
-    // ── 1. Auth: Bearer 토큰 검증 ──
+    // ── 1. Auth ──
     const authHeader = request.headers.get('Authorization');
     const token = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : null;
     if (!token) {
       return NextResponse.json({ error: '인증이 필요해요.' }, { status: 401 });
     }
-
     const { data: userData, error: userError } = await supabaseAdmin.auth.getUser(token);
     if (userError || !userData.user) {
       return NextResponse.json({ error: '로그인이 만료됐어요. 다시 로그인해 주세요.' }, { status: 401 });
@@ -63,25 +96,33 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: '잘못된 요청 형식이에요.' }, { status: 400 });
     }
 
-    if (body.category !== 'traditional') {
-      return NextResponse.json(
-        { error: '아직 정통사주만 지원해요.' },
-        { status: 400 },
-      );
-    }
     if (!body.sajuResult || !body.sourceBirth || !body.idempotencyKey) {
       return NextResponse.json({ error: '필수 정보가 부족해요.' }, { status: 400 });
     }
 
+    const policy = CATEGORY_POLICY[body.category];
+    if (!policy) {
+      return NextResponse.json({ error: `지원하지 않는 카테고리예요: ${body.category}` }, { status: 400 });
+    }
+
+    if (body.category === 'gunghap') {
+      if (!body.prompt || body.prompt.length < 100) {
+        return NextResponse.json({ error: '궁합 prompt 가 비어있어요.' }, { status: 400 });
+      }
+      if (!body.partnerName) {
+        return NextResponse.json({ error: '상대방 정보가 부족해요.' }, { status: 400 });
+      }
+    }
+
     // ── 3. 크레딧 차감 (idempotency 보장) ──
-    const consumeKey = `traditional:${body.idempotencyKey}`;
+    const consumeKey = `${body.category}:${body.idempotencyKey}`;
     const { data: consumeResult, error: consumeError } = await supabaseAdmin.rpc(
       'consume_credit_atomic',
       {
         p_user_id: userId,
         p_credit_type: CREDIT_TYPE,
-        p_amount: TRADITIONAL_CREDIT_COST,
-        p_reason: TRADITIONAL_REASON,
+        p_amount: policy.creditCost,
+        p_reason: policy.reason,
         p_idempotency_key: consumeKey,
       },
     );
@@ -90,8 +131,6 @@ export async function POST(request: NextRequest) {
       console.error('[jobs/create] consume RPC 에러:', consumeError);
       return NextResponse.json({ error: '결제 처리 중 오류가 발생했어요.' }, { status: 500 });
     }
-
-    // 'ok' = 신규 차감, 'duplicate' = 같은 idempotency_key 로 이미 차감됨 → 이미 잡이 있을 가능성
     if (consumeResult === 'insufficient') {
       return NextResponse.json(
         { error: '달 크레딧이 부족해요. 충전 후 다시 시도해주세요.' },
@@ -109,15 +148,13 @@ export async function POST(request: NextRequest) {
         .from('saju_records')
         .select('id, status')
         .eq('user_id', userId)
-        .eq('category', 'traditional')
+        .eq('category', body.category)
         .order('created_at', { ascending: false })
         .limit(1)
         .maybeSingle();
       if (existing) {
-        // 이미 진행 중이거나 완료된 잡 — 동일 jobId 반환 (재처리 없음)
         return NextResponse.json({ jobId: existing.id, deduplicated: true });
       }
-      // 차감은 됐는데 잡 record 가 없는 비정상 케이스 — 아래로 진행해 record 생성
     }
 
     // ── 4. 프로필 매칭 (보관함 정렬용) ──
@@ -134,24 +171,33 @@ export async function POST(request: NextRequest) {
       resolvedProfileId = profile?.id ?? null;
     }
 
-    // ── 5. saju_records INSERT (status='pending') ──
+    // ── 5. saju_records INSERT (카테고리별 컬럼 분기) ──
+    const insertRow: Record<string, unknown> = {
+      user_id: userId,
+      category: body.category,
+      birth_date: body.sourceBirth.birthDate,
+      birth_time: body.sourceBirth.birthTime,
+      birth_place: body.sourceBirth.birthPlace,
+      gender: body.sourceBirth.gender,
+      calendar_type: body.sourceBirth.calendarType,
+      result_data: body.sajuResult as unknown as Record<string, unknown>,
+      credit_type: CREDIT_TYPE,
+      credit_used: policy.creditCost,
+      is_detailed: true,
+      status: 'pending',
+    };
+
+    if (body.category === 'traditional') {
+      insertRow.engine_result = resolvedProfileId ? { profile_id: resolvedProfileId } : null;
+    } else if (body.category === 'gunghap') {
+      insertRow.engine_result = body.engineResult;
+      insertRow.partner_name = body.partnerName;
+      insertRow.partner_birth_date = body.partnerBirthDate ?? null;
+    }
+
     const { data: inserted, error: insertError } = await supabaseAdmin
       .from('saju_records')
-      .insert({
-        user_id: userId,
-        category: 'traditional',
-        birth_date: body.sourceBirth.birthDate,
-        birth_time: body.sourceBirth.birthTime,
-        birth_place: body.sourceBirth.birthPlace,
-        gender: body.sourceBirth.gender,
-        calendar_type: body.sourceBirth.calendarType,
-        result_data: body.sajuResult as unknown as Record<string, unknown>,
-        engine_result: resolvedProfileId ? { profile_id: resolvedProfileId } : null,
-        credit_type: CREDIT_TYPE,
-        credit_used: TRADITIONAL_CREDIT_COST,
-        is_detailed: true,
-        status: 'pending',
-      })
+      .insert(insertRow)
       .select('id')
       .single();
 
@@ -161,8 +207,8 @@ export async function POST(request: NextRequest) {
       await supabaseAdmin.rpc('refund_credit_atomic', {
         p_user_id: userId,
         p_credit_type: CREDIT_TYPE,
-        p_amount: TRADITIONAL_CREDIT_COST,
-        p_reason: '정통사주 잡 생성 실패 자동 환불',
+        p_amount: policy.creditCost,
+        p_reason: `${policy.reason} 잡 생성 실패 자동 환불`,
         p_idempotency_key: `refund:${consumeKey}`,
       });
       return NextResponse.json({ error: '잡 생성에 실패했어요.' }, { status: 500 });
@@ -170,20 +216,28 @@ export async function POST(request: NextRequest) {
 
     const jobId = inserted.id;
 
-    // ── 6. 백그라운드 잡 시작 — after() 로 응답 후에도 실행 보장 ──
+    // ── 6. 백그라운드 잡 시작 ──
     after(async () => {
       try {
-        await runJungtongsajuJob({
-          recordId: jobId,
-          userId,
-          sajuResult: body.sajuResult,
-          consumeIdempotencyKey: consumeKey,
-          creditAmount: TRADITIONAL_CREDIT_COST,
-        });
+        if (body.category === 'traditional') {
+          await runJungtongsajuJob({
+            recordId: jobId,
+            userId,
+            sajuResult: body.sajuResult,
+            consumeIdempotencyKey: consumeKey,
+            creditAmount: policy.creditCost,
+          });
+        } else if (body.category === 'gunghap') {
+          await runGunghapJob({
+            recordId: jobId,
+            userId,
+            prompt: body.prompt,
+            consumeIdempotencyKey: consumeKey,
+            creditAmount: policy.creditCost,
+          });
+        }
       } catch (e) {
-        // runJungtongsajuJob 내부에서 모든 에러를 status='failed' + 환불로 처리하지만
-        // 마지막 안전망 — 여기까지 throw 되면 로그만 남김
-        console.error('[jobs/create] runJungtongsajuJob 치명적 누락 에러:', e);
+        console.error('[jobs/create] runXxxJob 치명적 누락 에러:', e);
       }
     });
 
