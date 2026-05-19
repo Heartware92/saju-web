@@ -85,13 +85,39 @@ function parseKeywordToken(token: string): TaekilKeyword | null {
 }
 
 function parseTaekilStructuredAdvice(raw: string): TaekilParsedAdvice {
+  // ── 마커 변형 정규화 ──
+  // LLM 이 [top1] 대신 "1위", "1순위", "## 1위", "**1위**", "<1위>" 등으로 답하는 경우가 있어
+  // 표준 마커로 통일 후 파싱. 같은 패턴을 comprehensive_analysis / overall_advice / alternative / avoid 에도 적용.
+  // (대소문자·공백·마크다운 변형 모두 [표준마커] 로 치환)
+  let normalized = raw
+    // 마크다운 헤딩·볼드·이탤릭·앵글브라켓 제거
+    .replace(/^[ \t]*#{1,6}[ \t]*/gm, '')
+    .replace(/\*\*([^*\n]+)\*\*/g, '$1')
+    .replace(/__([^_\n]+)__/g, '$1')
+    // 영문 마커가 변형돼 들어오는 경우 (대소문자, 언더바·하이픈 변형)
+    .replace(/\[?\s*top[\s_-]*([123])\s*\]?\s*[:：]?/gi, '\n[top$1]\n')
+    .replace(/\[?\s*comprehensive[\s_-]*analysis\s*\]?\s*[:：]?/gi, '\n[comprehensive_analysis]\n')
+    .replace(/\[?\s*overall[\s_-]*advice\s*\]?\s*[:：]?/gi, '\n[overall_advice]\n')
+    .replace(/\[?\s*alternative\s*\]?\s*[:：]?/gi, '\n[alternative]\n')
+    .replace(/\[?\s*avoid\s*\]?\s*[:：]?/gi, '\n[avoid]\n')
+    // 한글 마커 변형 → 표준 마커로 치환 (라벨 "종합:", "조언:" 과 충돌 방지 위해 줄 시작 + 단독)
+    .replace(/^[ \t]*[<\[\(]?\s*1\s*(?:위|순위)\s*[>\]\)]?\s*[:：]?\s*$/gm, '[top1]')
+    .replace(/^[ \t]*[<\[\(]?\s*2\s*(?:위|순위)\s*[>\]\)]?\s*[:：]?\s*$/gm, '[top2]')
+    .replace(/^[ \t]*[<\[\(]?\s*3\s*(?:위|순위)\s*[>\]\)]?\s*[:：]?\s*$/gm, '[top3]')
+    .replace(/^[ \t]*[<\[\(]?\s*종합\s*분석\s*[>\]\)]?\s*[:：]?\s*$/gm, '[comprehensive_analysis]')
+    .replace(/^[ \t]*[<\[\(]?\s*(?:전체|전반)\s*조언\s*[>\]\)]?\s*[:：]?\s*$/gm, '[overall_advice]')
+    .replace(/^[ \t]*[<\[\(]?\s*(?:대체|대안)\s*(?:방법|방안)\s*[>\]\)]?\s*[:：]?\s*$/gm, '[alternative]')
+    .replace(/^[ \t]*[<\[\(]?\s*피해야\s*할?\s*날\s*[>\]\)]?\s*[:：]?\s*$/gm, '[avoid]')
+    // 같은 마커가 연속해서 들어간 케이스 정리 ([top1]\n[top1] → [top1])
+    .replace(/(\[(?:top\d|comprehensive_analysis|overall_advice|alternative|avoid)\])\s*\1/g, '$1');
+
   // [comprehensive_analysis] 추출 — top1 또는 다른 마커 직전까지
-  const compMatch = raw.match(/\[comprehensive_analysis\]\s*([\s\S]*?)(?=\[(?:top\d|avoid|overall_advice|alternative)\]|$)/);
+  const compMatch = normalized.match(/\[comprehensive_analysis\]\s*([\s\S]*?)(?=\[(?:top\d|avoid|overall_advice|alternative)\]|$)/);
   const comprehensiveAnalysis = compMatch ? compMatch[1].trim() : '';
 
   const dates: TaekilDateAdvice[] = [];
   const topRe = /\[top(\d)\]/g;
-  const parts = raw.split(topRe);
+  const parts = normalized.split(topRe);
   for (let i = 1; i < parts.length; i += 2) {
     const rank = parseInt(parts[i], 10);
     // 다음 마커 직전까지가 이 top 의 본문 (top·avoid·overall_advice·alternative 어느 것 먼저 와도 끊음)
@@ -141,13 +167,13 @@ function parseTaekilStructuredAdvice(raw: string): TaekilParsedAdvice {
     }
   }
 
-  const avoidMatch = raw.match(/\[avoid\]\s*([\s\S]*?)(?=\[(?:overall_advice|alternative)\]|$)/);
+  const avoidMatch = normalized.match(/\[avoid\]\s*([\s\S]*?)(?=\[(?:overall_advice|alternative)\]|$)/);
   const avoid = avoidMatch ? avoidMatch[1].trim() : '';
 
-  const overallMatch = raw.match(/\[overall_advice\]\s*([\s\S]*?)(?=\[alternative\]|$)/);
+  const overallMatch = normalized.match(/\[overall_advice\]\s*([\s\S]*?)(?=\[alternative\]|$)/);
   const overallAdvice = overallMatch ? overallMatch[1].trim() : '';
 
-  const altMatch = raw.match(/\[alternative\]\s*([\s\S]*?)$/);
+  const altMatch = normalized.match(/\[alternative\]\s*([\s\S]*?)$/);
   const alternative = altMatch ? altMatch[1].trim() : '';
 
   return { comprehensiveAnalysis, dates, avoid, overallAdvice, alternative };
@@ -799,19 +825,59 @@ export default function TaekilResultPage() {
                   )}
                 </>
               ) : (
-                <div style={{
-                  padding: 16,
-                  background: 'rgba(20,12,38,0.55)',
-                  borderRadius: 14,
-                  border: '1px solid var(--border-subtle)',
-                  fontSize: 15,
-                  color: 'var(--text-secondary)',
-                  lineHeight: 1.85,
-                  whiteSpace: 'pre-line',
-                  fontFamily: 'var(--font-body)',
-                  letterSpacing: '0.16em',
-                }}>
-                  {extractMetaphor(aiAdvice.replace(/^\s*\[(?:top\d|avoid)\].*$/gm, '')).bodyText}
+                // dates.length === 0 fallback — AI가 표준 마커를 한 개도 출력하지 않은 경우.
+                // 본문은 보존하되 사용자에게 명확히 "응답 형식 이상" 안내 + 다시 풀이 받기 유도.
+                <div>
+                  <div style={{
+                    padding: '18px 20px',
+                    borderRadius: 14,
+                    background: 'rgba(248,113,113,0.06)',
+                    border: '1px solid rgba(248,113,113,0.22)',
+                    marginBottom: 12,
+                  }}>
+                    <div style={{
+                      fontSize: 15, fontWeight: 800, color: '#F87171',
+                      marginBottom: 8, letterSpacing: '-0.01em',
+                    }}>
+                      AI 응답 형식이 일시적으로 어긋났어요
+                    </div>
+                    <p style={{
+                      margin: 0, fontSize: 14, lineHeight: 1.7,
+                      color: 'var(--text-secondary)',
+                      fontFamily: 'var(--font-body)',
+                    }}>
+                      카드 분할이 적용되지 않은 본문이 아래에 표시돼요. 같은 사주·날짜로 다시 풀이 받으시면 정상 카드 형식으로 보입니다.
+                      반복되면 문의하기로 알려주세요.
+                    </p>
+                    <button
+                      onClick={() => {
+                        const qs = profileId ? `?profileId=${profileId}&fresh=1` : '?fresh=1';
+                        router.push(`/saju/taekil${qs}`);
+                      }}
+                      style={{
+                        marginTop: 12, padding: '10px 16px', borderRadius: 10,
+                        background: 'var(--cta-primary)', color: '#fff',
+                        border: 'none', fontWeight: 700, fontSize: 13,
+                        cursor: 'pointer',
+                      }}
+                    >
+                      다시 풀이 받기
+                    </button>
+                  </div>
+                  <div style={{
+                    padding: 16,
+                    background: 'rgba(20,12,38,0.55)',
+                    borderRadius: 14,
+                    border: '1px solid var(--border-subtle)',
+                    fontSize: 15,
+                    color: 'var(--text-secondary)',
+                    lineHeight: 1.85,
+                    whiteSpace: 'pre-line',
+                    fontFamily: 'var(--font-body)',
+                    letterSpacing: '0.02em',
+                  }}>
+                    {extractMetaphor(aiAdvice.replace(/^\s*\[(?:top\d|avoid|comprehensive_analysis|overall_advice|alternative)\].*$/gm, '')).bodyText}
+                  </div>
                 </div>
               )}
             </div>
