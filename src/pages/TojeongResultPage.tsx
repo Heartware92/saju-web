@@ -13,6 +13,7 @@ import { buildTojeongReading, type TojeongReading } from '../engine/tojeong/read
 import type { GwaeGrade } from '../engine/tojeong/gwae-table';
 import { useProfileStore } from '../store/useProfileStore';
 import { extractMetaphor } from '../utils/parseMetaphor';
+import { renderEmphasis } from '../utils/renderEmphasis';
 import { SectionCollapsible } from '../components/saju/SectionCollapsible';
 import { useCreditStore } from '../store/useCreditStore';
 import { useReportCacheStore, type ReportKind } from '../store/useReportCacheStore';
@@ -244,7 +245,7 @@ function TojeongMonthlyCards({
                   className="text-[16px] text-text-secondary leading-[1.85] tracking-[-0.005em]"
                   style={{ fontFamily: 'var(--font-body)' }}
                 >
-                  {m.text}
+                  {renderEmphasis(m.text)}
                 </p>
               </div>
             </div>
@@ -832,7 +833,7 @@ export default function TojeongResultPage() {
                 className="text-[15px] text-text-secondary leading-[1.85] tracking-[-0.005em]"
                 style={{ fontFamily: 'var(--font-body)' }}
               >
-                {p}
+                {renderEmphasis(p)}
               </p>
             ))}
           </div>
@@ -1010,7 +1011,7 @@ export default function TojeongResultPage() {
                     {/* AI 본문 — 실생활 적용·실천 풀이 */}
                     <div className="text-[17px] text-text-secondary leading-[1.85] tracking-[-0.005em] space-y-3">
                       {bodyText.split(/\n\n+/).map((para, pi) => (
-                        <p key={pi} className="whitespace-pre-line">{para.trim()}</p>
+                        <p key={pi} className="whitespace-pre-line">{renderEmphasis(para.trim())}</p>
                       ))}
                     </div>
                   </div>

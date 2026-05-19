@@ -23,6 +23,7 @@ import { SectionCollapsible } from '../components/saju/SectionCollapsible';
 import styles from './ZamidusuResultPage.module.css';
 import { useProfileStore } from '../store/useProfileStore';
 import { extractMetaphor } from '../utils/parseMetaphor';
+import { renderEmphasis } from '../utils/renderEmphasis';
 import { useCreditStore } from '../store/useCreditStore';
 import { useReportCacheStore, type ReportKind } from '../store/useReportCacheStore';
 import { RestoreReportModal } from '../components/RestoreReportModal';
@@ -1314,7 +1315,7 @@ export default function ZamidusuResultPage() {
                       margin: i === 0 ? 0 : '14px 0 0',
                     }}
                   >
-                    {p}
+                    {renderEmphasis(p)}
                   </p>
                 ));
               })()}

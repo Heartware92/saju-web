@@ -15,6 +15,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { useProfileStore } from '../store/useProfileStore';
 import { extractMetaphor } from '../utils/parseMetaphor';
+import { renderEmphasis } from '../utils/renderEmphasis';
 import { SectionCollapsible } from '../components/saju/SectionCollapsible';
 import { useUserStore } from '../store/useUserStore';
 import { useCreditStore } from '../store/useCreditStore';
@@ -167,7 +168,7 @@ function RemedyCardGrid({ bodyText }: { bodyText: string }) {
     return (
       <div className="text-[17px] text-text-secondary leading-[1.85] tracking-[-0.005em] space-y-3">
         {paragraphs.map((para, pi) => (
-          <p key={pi} className="whitespace-pre-line">{para}</p>
+          <p key={pi} className="whitespace-pre-line">{renderEmphasis(para)}</p>
         ))}
       </div>
     );
@@ -187,7 +188,7 @@ function RemedyCardGrid({ bodyText }: { bodyText: string }) {
           className="rounded-xl px-4 py-3.5 bg-[rgba(139,92,246,0.08)] border border-[rgba(139,92,246,0.15)]"
         >
           <div className="text-[17px] font-bold text-cta mb-2">{card.label}</div>
-          <p className="text-[17px] text-text-secondary leading-[1.85] tracking-[-0.005em]">{card.text}</p>
+          <p className="text-[17px] text-text-secondary leading-[1.85] tracking-[-0.005em]">{renderEmphasis(card.text)}</p>
         </motion.div>
       ))}
     </div>
@@ -206,7 +207,7 @@ function ActionCardList({ bodyText, variant }: { bodyText: string; variant: 'yes
     return (
       <div className="text-[17px] text-text-secondary leading-[1.85] tracking-[-0.005em] space-y-3">
         {paragraphs.map((para, pi) => (
-          <p key={pi} className="whitespace-pre-line">{para}</p>
+          <p key={pi} className="whitespace-pre-line">{renderEmphasis(para)}</p>
         ))}
       </div>
     );
@@ -261,7 +262,7 @@ function ActionCardList({ bodyText, variant }: { bodyText: string; variant: 'yes
               </div>
             )}
             <p className="text-[17px] text-text-secondary leading-[1.85] tracking-[-0.005em] whitespace-pre-line">
-              {stripPrefix(para)}
+              {renderEmphasis(stripPrefix(para))}
             </p>
           </motion.div>
         );
@@ -1763,7 +1764,7 @@ function TimeFlowSectionView({
     return (
       <div className="text-[17px] text-text-secondary leading-[1.85] tracking-[-0.005em] space-y-3">
         {paragraphs.map((para, pi) => (
-          <p key={pi} className="whitespace-pre-line">{para}</p>
+          <p key={pi} className="whitespace-pre-line">{renderEmphasis(para)}</p>
         ))}
       </div>
     );
@@ -1972,7 +1973,7 @@ function TimeFlowSectionView({
                   className="text-[15px] text-text-secondary leading-[1.85] tracking-[-0.005em]"
                   style={{ fontFamily: 'var(--font-body)' }}
                 >
-                  {para}
+                  {renderEmphasis(para)}
                 </p>
               ))}
             </div>
