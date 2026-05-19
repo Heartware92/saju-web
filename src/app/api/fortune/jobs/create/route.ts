@@ -22,6 +22,10 @@ import { runGunghapJob } from '@/services/gunghapJob.server';
 import { runNewyearJob } from '@/services/newyearJob.server';
 import { runTojeongJob } from '@/services/tojeongJob.server';
 import { runZamidusuJob } from '@/services/zamidusuJob.server';
+import { runTaekilJob } from '@/services/taekilJob.server';
+import { runTodayJob } from '@/services/todayJob.server';
+import { runPickedDateJob } from '@/services/pickedDateJob.server';
+import { runMoreFortuneJob, type MoreFortuneCategory } from '@/services/moreFortuneJob.server';
 import type { SajuResult } from '@/utils/sajuCalculator';
 import type { PeriodFortune } from '@/engine/periodFortune';
 import type { TojeongResult } from '@/engine/tojeong';
@@ -103,7 +107,51 @@ interface ZamidusuJobBody extends BaseJobBody {
   zamidusuResult: ZamidusuResult;
 }
 
-type CreateJobBody = TraditionalJobBody | GunghapJobBody | NewyearJobBody | TojeongJobBody | ZamidusuJobBody;
+interface TaekilJobBody extends BaseJobBody {
+  category: 'taekil';
+  /** 클라가 완성한 prompt (generateTaekilAdvicePrompt + detail) */
+  prompt: string;
+  /** archive engine_result 에 저장될 TaekilResult + userDetail */
+  engineResult: Record<string, unknown>;
+}
+
+interface TodayJobBody extends BaseJobBody {
+  category: 'today';
+  /** 클라가 완성한 prompt (generateTodayFortuneV3Prompt + classifications) */
+  prompt: string;
+  /** archive engine_result — isoDate·todayGz 등 */
+  engineResult: Record<string, unknown>;
+}
+
+interface PickedDateJobBody extends BaseJobBody {
+  /** 지정일 운세는 archive category='period' (DB 라벨 호환) */
+  category: 'period';
+  /** 클라가 완성한 base prompt (generatePickedDateFortunePrompt) */
+  prompt: string;
+  /** archive engine_result — isoDate·todayGz */
+  engineResult: Record<string, unknown>;
+}
+
+interface MoreFortuneJobBody extends BaseJobBody {
+  category: MoreFortuneCategory;  // 'study' | 'children' | 'personality' | 'name' | 'dream'
+  /** 클라가 완성한 prompt (generateXxxShortPrompt / generateNameFortunePrompt / generateDreamInterpretationPrompt) */
+  prompt: string;
+  /** name 한자 모드처럼 maxTokens 가 동적인 경우 override */
+  maxTokens?: number;
+  /** archive engine_result — name 의 charMeanings, dream 의 dreamText 등 카테고리별 메타 */
+  engineResult?: Record<string, unknown>;
+}
+
+type CreateJobBody =
+  | TraditionalJobBody
+  | GunghapJobBody
+  | NewyearJobBody
+  | TojeongJobBody
+  | ZamidusuJobBody
+  | TaekilJobBody
+  | TodayJobBody
+  | PickedDateJobBody
+  | MoreFortuneJobBody;
 
 // 카테고리별 차감 정책 — 다른 운세 추가 시 여기 항목만 추가하면 됨.
 // reason 값은 클라이언트의 CHARGE_REASONS.{category} 와 반드시 동일해야 함
@@ -112,11 +160,20 @@ const CATEGORY_POLICY: Record<
   CreateJobBody['category'],
   { creditCost: number; reason: string }
 > = {
-  traditional: { creditCost: 10, reason: '정통사주' }, // CHARGE_REASONS.traditional 과 일치
-  gunghap: { creditCost: 10, reason: '궁합' },         // CHARGE_REASONS.gunghap 과 일치
-  newyear: { creditCost: 10, reason: '신년운세' },     // CHARGE_REASONS.newyear 와 일치
-  tojeong: { creditCost: 10, reason: '토정비결' },     // CHARGE_REASONS.tojeong 과 일치
-  zamidusu: { creditCost: 10, reason: '자미두수' },    // CHARGE_REASONS.zamidusu 와 일치
+  traditional: { creditCost: 10, reason: '정통사주' },
+  gunghap: { creditCost: 10, reason: '궁합' },
+  newyear: { creditCost: 10, reason: '신년운세' },
+  tojeong: { creditCost: 10, reason: '토정비결' },
+  zamidusu: { creditCost: 10, reason: '자미두수' },
+  taekil: { creditCost: 10, reason: '택일' },
+  today: { creditCost: 5, reason: '실시간 운세' },    // MOON_COST_MORE = 5
+  period: { creditCost: 10, reason: '지정일 운세' },  // archive category='period'
+  // 더많은 운세 5개 — MOON_COST_MORE = 5 (실시간과 동일)
+  study: { creditCost: 5, reason: '학업·시험운' },
+  children: { creditCost: 5, reason: '자녀·출산운' },
+  personality: { creditCost: 5, reason: '성격 분석' },
+  name: { creditCost: 5, reason: '이름 풀이' },
+  dream: { creditCost: 5, reason: '꿈해몽' },
 };
 
 const CREDIT_TYPE = 'moon';
@@ -173,6 +230,18 @@ export async function POST(request: NextRequest) {
     if (body.category === 'zamidusu') {
       if (!body.zamidusuResult) {
         return NextResponse.json({ error: '자미두수 입력이 부족해요.' }, { status: 400 });
+      }
+    }
+    if (body.category === 'taekil' || body.category === 'today' || body.category === 'period') {
+      if (!body.prompt || body.prompt.length < 100) {
+        return NextResponse.json({ error: `${policy.reason} prompt 가 비어있어요.` }, { status: 400 });
+      }
+    }
+    const moreCats: MoreFortuneCategory[] = ['study', 'children', 'personality', 'name', 'dream'];
+    if (moreCats.includes(body.category as MoreFortuneCategory)) {
+      const moreBody = body as MoreFortuneJobBody;
+      if (!moreBody.prompt || moreBody.prompt.length < 50) {
+        return NextResponse.json({ error: `${policy.reason} prompt 가 비어있어요.` }, { status: 400 });
       }
     }
 
@@ -266,11 +335,18 @@ export async function POST(request: NextRequest) {
         seWoon: body.sajuResult.seWoon.find((s) => s.year === body.year) ?? null,
       };
     } else if (body.category === 'tojeong') {
-      // engine_result 에 TojeongResult 자체 저장 (보관함 재생용)
       insertRow.engine_result = body.tojeongResult as unknown as Record<string, unknown>;
     } else if (body.category === 'zamidusu') {
-      // engine_result 에 ZamidusuResult 자체 저장
       insertRow.engine_result = body.zamidusuResult as unknown as Record<string, unknown>;
+    } else if (
+      body.category === 'taekil'
+      || body.category === 'today'
+      || body.category === 'period'
+    ) {
+      insertRow.engine_result = body.engineResult ?? null;
+    } else if (moreCats.includes(body.category as MoreFortuneCategory)) {
+      const moreBody = body as MoreFortuneJobBody;
+      insertRow.engine_result = moreBody.engineResult ?? null;
     }
 
     const { data: inserted, error: insertError } = await supabaseAdmin
@@ -339,6 +415,41 @@ export async function POST(request: NextRequest) {
             recordId: jobId,
             userId,
             zamidusuResult: body.zamidusuResult,
+            consumeIdempotencyKey: consumeKey,
+            creditAmount: policy.creditCost,
+          });
+        } else if (body.category === 'taekil') {
+          await runTaekilJob({
+            recordId: jobId,
+            userId,
+            prompt: body.prompt,
+            consumeIdempotencyKey: consumeKey,
+            creditAmount: policy.creditCost,
+          });
+        } else if (body.category === 'today') {
+          await runTodayJob({
+            recordId: jobId,
+            userId,
+            prompt: body.prompt,
+            consumeIdempotencyKey: consumeKey,
+            creditAmount: policy.creditCost,
+          });
+        } else if (body.category === 'period') {
+          await runPickedDateJob({
+            recordId: jobId,
+            userId,
+            prompt: body.prompt,
+            consumeIdempotencyKey: consumeKey,
+            creditAmount: policy.creditCost,
+          });
+        } else if (moreCats.includes(body.category as MoreFortuneCategory)) {
+          const moreBody = body as MoreFortuneJobBody;
+          await runMoreFortuneJob({
+            recordId: jobId,
+            userId,
+            category: moreBody.category as MoreFortuneCategory,
+            prompt: moreBody.prompt,
+            maxTokens: moreBody.maxTokens,
             consumeIdempotencyKey: consumeKey,
             creditAmount: policy.creditCost,
           });

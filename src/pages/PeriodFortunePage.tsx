@@ -564,6 +564,50 @@ export default function PeriodFortunePage({ scope }: { scope: FortuneScope | 'da
     return () => { cancelled = true; };
   }, [recordId, scope]);
 
+  // ── 잡 결과 → state 동기화 (scope='date' 지정일 운세) ──
+  useEffect(() => {
+    if (scope !== 'date') return;
+    if (isArchiveMode) return;
+    if (!fortuneJob) return;
+    if (fortuneJob.status === 'done') {
+      const content = fortuneJob.interpretationDetailed ?? '';
+      const sections = parsePickedDateReport(content);
+      const flow = parseDateFlowScores(content);
+      setPickedDateReport(
+        Object.keys(sections).length > 0
+          ? { success: true, sections, rawText: content, flow }
+          : { success: true, rawText: content, flow },
+      );
+      setSavedRecordId(fortuneJob.jobId);
+      setPickedDateReportLoading(false);
+    } else if (fortuneJob.status === 'failed') {
+      setPickedDateReport({
+        success: false,
+        error: fortuneJob.errorMessage ?? '풀이 생성에 실패했어요. 크레딧은 자동 환불됐어요.',
+      });
+      setPickedDateReportLoading(false);
+    } else if (fortuneJob.status === 'processing' && fortuneJob.interpretationBasic) {
+      const content = fortuneJob.interpretationBasic;
+      const sections = parsePickedDateReport(content);
+      const flow = parseDateFlowScores(content);
+      if (Object.keys(sections).length > 0) {
+        setPickedDateReport({ success: true, sections, rawText: content, flow });
+      }
+      setSavedRecordId(fortuneJob.jobId);
+      setPickedDateReportLoading(true);
+    } else {
+      setPickedDateReportLoading(true);
+    }
+  }, [
+    scope,
+    isArchiveMode,
+    fortuneJob?.status,
+    fortuneJob?.interpretationDetailed,
+    fortuneJob?.interpretationBasic,
+    fortuneJob?.errorMessage,
+    fortuneJob?.jobId,
+  ]);
+
   // ── 잡 결과 → state 동기화 (scope='year' 신년운세 전용) ──
   // useFortuneJob 가 saju_records row 변경을 push. status·interpretation 을
   // 기존 newyearReport state 에 매핑. archive 모드(?recordId) 는 별도 useEffect.
@@ -829,38 +873,75 @@ export default function PeriodFortunePage({ scope }: { scope: FortuneScope | 'da
         setPickedDateReportLoading(false);
         return;
       }
+      if (effectiveJobId) return;  // 이미 잡 있음 (가이드 4.10)
       setPickedDateReport(null);
       setPickedDateReportLoading(true);
-      getPickedDateReport(saju, pickedDate, targetProfile?.id, {
-        jobState: targetProfile?.job_state ?? null,
-        customJobState: targetProfile?.custom_job_state ?? null,
-        loveState: targetProfile?.love_state ?? null,
-        customLoveState: targetProfile?.custom_love_state ?? null,
-      })
-        .then(r => {
-          if (cancelled) return;
-          setPickedDateReport(r);
-          // archive 저장이 완료된 경우 ShareBar 즉시 노출
-          if (r.success && r.archivedRecordId) {
-            setSavedRecordId(r.archivedRecordId);
-          }
-          const cache = useReportCacheStore.getState();
-          if (r.success) {
-            cache.setReport('period_date', cacheKey, r);
-            if (!cache.isCharged('period_date', cacheKey)) {
-              cache.markCharged('period_date', cacheKey);
-              chargeRef.current('moon', SUN_COST_BIG, CHARGE_REASONS.date, `period_date:${cacheKey}`)
-                .catch(e => console.error('[charge:period_date] failed', e));
+      (async () => {
+        try {
+          const { data: sessionData } = await supabase.auth.getSession();
+          const accessToken = sessionData.session?.access_token;
+          if (!accessToken) {
+            if (!cancelled) {
+              setPickedDateReport({ success: false, error: '로그인이 만료됐어요.' });
+              setPickedDateReportLoading(false);
             }
-          } else if (r.error) {
-            cache.setError('period_date', cacheKey, r.error);
+            return;
           }
-        })
-        .catch((err: any) => {
+          // server 가 generatePickedDateFortunePrompt 호출하기 위해 클라가 만든 prompt 전달.
+          // 한 가지 문제: generatePickedDateFortunePrompt 가 fortuneService.ts(클라) 에서 호출됨.
+          // 여기선 prompts.ts 의 함수를 직접 import 해서 호출.
+          const { generatePickedDateFortunePrompt } = await import('@/constants/prompts');
+          const { calcTodayGanZhi } = await import('@/services/fortuneService');
+          const todayGz = calcTodayGanZhi(saju, pickedDate);
+          const prompt = generatePickedDateFortunePrompt(saju, todayGz, pickedDate, {
+            jobState: targetProfile?.job_state ?? null,
+            customJobState: targetProfile?.custom_job_state ?? null,
+            loveState: targetProfile?.love_state ?? null,
+            customLoveState: targetProfile?.custom_love_state ?? null,
+          });
+          const minuteBucket = Math.floor(Date.now() / 60000);
+          const idempotencyKey = `period:${sajuKey(saju)}:${pickedDate}:${minuteBucket}`;
+          const res = await fetch('/api/fortune/jobs/create', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${accessToken}` },
+            body: JSON.stringify({
+              category: 'period',
+              sajuResult: saju,
+              prompt,
+              profileId: targetProfile?.id,
+              sourceBirth: {
+                birthDate: targetProfile?.birth_date ?? '',
+                birthTime: targetProfile?.birth_time ?? null,
+                birthPlace: targetProfile?.birth_place ?? null,
+                gender: (targetProfile?.gender ?? 'male') as 'male' | 'female',
+                calendarType: (targetProfile?.calendar_type ?? 'solar') as 'solar' | 'lunar',
+              },
+              engineResult: { isoDate: pickedDate, todayGz },
+              idempotencyKey,
+            }),
+          });
+          if (!res.ok) {
+            const errData = await res.json().catch(() => ({}));
+            if (!cancelled) {
+              setPickedDateReport({ success: false, error: errData.error || '풀이 요청에 실패했어요.' });
+              setPickedDateReportLoading(false);
+            }
+            return;
+          }
+          const { jobId } = (await res.json()) as { jobId: string };
           if (cancelled) return;
-          useReportCacheStore.getState().setError('period_date', cacheKey, err?.message || '오류가 발생했어요.');
-        })
-        .finally(() => { if (!cancelled) setPickedDateReportLoading(false); });
+          const newUrl = new URL(window.location.href);
+          newUrl.searchParams.set('jobId', jobId);
+          window.history.replaceState(null, '', newUrl.toString());
+          setCreatedJobId(jobId);
+        } catch (e) {
+          if (!cancelled) {
+            const msg = e instanceof Error ? e.message : '풀이 요청 중 오류';
+            setPickedDateReport({ success: false, error: msg });
+            setPickedDateReportLoading(false);
+          }
+        }
+      })();
       return;
     }
 

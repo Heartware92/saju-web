@@ -26,7 +26,8 @@ import {
   type TaekilDay,
   type TaekilResult,
 } from '../engine/taekil';
-import { getTaekilAdvice } from '../services/fortuneService';
+import { supabase } from '../services/supabase';
+import { generateTaekilAdvicePrompt } from '../constants/prompts';
 import { pickTaekilDetailHint, TAEKIL_DETAIL_MAX_LEN } from '../constants/taekilDetailHints';
 import { useLoadingGuard } from '../hooks/useLoadingGuard';
 import { truncateTaekilLabel } from '../utils/truncateTaekilLabel';
@@ -239,28 +240,42 @@ export default function TaekilPage() {
     setAiError(null);
     setAiLoading(true);
     try {
-      const r = await getTaekilAdvice(saju, payload, targetProfile?.id, detail.trim() || undefined);
-      if (!r.success || !r.advice) {
-        throw new Error(r.error || '길일 분석을 가져오지 못했어요.');
+      const { data: sessionData } = await supabase.auth.getSession();
+      const accessToken = sessionData.session?.access_token;
+      if (!accessToken) throw new Error('로그인이 만료됐어요. 다시 로그인해주세요.');
+
+      const prompt = generateTaekilAdvicePrompt(saju, payload, detail.trim() || undefined);
+      const minuteBucket = Math.floor(Date.now() / 60000);
+      const idempotencyKey = `${taekilCacheKey}:${minuteBucket}`;
+      const res = await fetch('/api/fortune/jobs/create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${accessToken}` },
+        body: JSON.stringify({
+          category: 'taekil',
+          sajuResult: saju,
+          prompt,
+          profileId: targetProfile?.id,
+          sourceBirth: {
+            birthDate: targetProfile?.birth_date ?? '',
+            birthTime: targetProfile?.birth_time ?? null,
+            birthPlace: targetProfile?.birth_place ?? null,
+            gender: (targetProfile?.gender ?? 'male') as 'male' | 'female',
+            calendarType: (targetProfile?.calendar_type ?? 'solar') as 'solar' | 'lunar',
+          },
+          engineResult: { ...(payload as unknown as Record<string, unknown>), userDetail: detail.trim() },
+          idempotencyKey,
+        }),
+      });
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.error || '풀이 요청에 실패했어요.');
       }
-      const cache = useReportCacheStore.getState();
-      cache.setReport('taekil', taekilCacheKey, r.advice);
-      if (!cache.isCharged('taekil', taekilCacheKey)) {
-        cache.markCharged('taekil', taekilCacheKey);
-        useCreditStore.getState()
-          .chargeForContent('moon', SUN_COST_BIG, CHARGE_REASONS.taekil, `taekil:${taekilCacheKey}`)
-          .catch(e => console.error('[charge:taekil] failed', e));
-      }
-      // archive 성공 시 결과 페이지로 navigate, 실패 시 에러
-      if (r.archivedRecordId) {
-        router.push(`/saju/taekil/result?recordId=${r.archivedRecordId}`);
-      } else {
-        throw new Error('결과 저장에 실패했어요. 잠시 후 다시 시도해주세요.');
-      }
+      const { jobId } = (await res.json()) as { jobId: string };
+      // 결과 페이지로 navigate — TaekilResultPage 가 ?jobId 로 Realtime 구독
+      router.push(`/saju/taekil/result?jobId=${jobId}`);
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : '오류가 발생했어요.';
       setAiError(msg);
-      useReportCacheStore.getState().setError('taekil', taekilCacheKey, msg);
       setAiLoading(false);
     }
   };

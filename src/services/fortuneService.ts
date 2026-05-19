@@ -1018,7 +1018,7 @@ const ZHI_HANJA: Record<string, string> = {
 };
 
 /** 오늘 일진(日辰) 간지 계산 + 원국과의 합충 분석 */
-function calcTodayGanZhi(result: SajuResult, isoDate: string): TodayGanZhi {
+export function calcTodayGanZhi(result: SajuResult, isoDate: string): TodayGanZhi {
   const [y, m, d] = isoDate.split('-').map(Number);
   const solar = Solar.fromYmd(y, m, d);
   const lunar = solar.getLunar();

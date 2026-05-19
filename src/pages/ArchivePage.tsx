@@ -87,6 +87,12 @@ function getSajuRoute(record: SajuRecord): string {
   if (cat === 'zamidusu' && isPendingJob) {
     return `/saju/zamidusu?jobId=${record.id}`;
   }
+  if (cat === 'taekil' && isPendingJob) {
+    return `/saju/taekil/result?jobId=${record.id}`;
+  }
+  if (cat === 'period' && isPendingJob) {
+    return `/saju/date?jobId=${record.id}`;
+  }
 
   const moreCategories = [
     'love', 'wealth', 'career', 'health', 'study', 'people',

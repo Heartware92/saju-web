@@ -10,6 +10,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { sajuDB } from '../services/supabase';
+import { useFortuneJob } from '../hooks/useFortuneJob';
 import { useProfileStore } from '../store/useProfileStore';
 import { useUserStore } from '../store/useUserStore';
 import { computeSajuFromProfile } from '../utils/profileSaju';
@@ -217,6 +218,7 @@ export default function TaekilResultPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const recordId = searchParams?.get('recordId') ?? null;
+  const urlJobId = searchParams?.get('jobId') ?? null;
   const { user } = useUserStore();
   const { profiles, fetchProfiles } = useProfileStore();
 
@@ -226,11 +228,49 @@ export default function TaekilResultPage() {
   const [profileId, setProfileId] = useState<string | null>(null);
   // 키워드 칩 클릭 시 설명을 보여줄 모달. null 이면 닫힘.
   const [activeKeyword, setActiveKeyword] = useState<TaekilKeyword | null>(null);
-  // recordId 없으면 즉시 에러 상태로 시작 → useEffect 안 sync setState 회피
-  const [loading, setLoading] = useState<boolean>(!!recordId);
+  // recordId 또는 jobId 없으면 즉시 에러 상태로 시작
+  const [loading, setLoading] = useState<boolean>(!!recordId || !!urlJobId);
   const [error, setError] = useState<string | null>(
-    recordId ? null : '잘못된 접근이에요. recordId 가 없습니다.'
+    (recordId || urlJobId) ? null : '잘못된 접근이에요. recordId 또는 jobId 가 없습니다.'
   );
+
+  // 백그라운드 잡 시스템 — ?jobId 진입 시 useFortuneJob 으로 saju_records 구독
+  const { job: fortuneJob } = useFortuneJob(urlJobId);
+
+  // ── 잡 결과 → state 동기화 ──
+  useEffect(() => {
+    if (!urlJobId) return;
+    if (!fortuneJob) return;
+    if (fortuneJob.status === 'done') {
+      const content = fortuneJob.interpretationDetailed ?? '';
+      setAiAdvice(content);
+      setParsedAdvice(parseTaekilStructuredAdvice(content));
+      const engine = fortuneJob.engineResult as unknown as TaekilResult | null;
+      if (engine) {
+        const migrated = migrateLegacyCategory(engine.category as string) ?? engine.category;
+        setResult({ ...engine, category: migrated });
+      }
+      setLoading(false);
+    } else if (fortuneJob.status === 'failed') {
+      setError(fortuneJob.errorMessage ?? '풀이 생성에 실패했어요. 크레딧은 자동 환불됐어요.');
+      setLoading(false);
+    } else {
+      // pending/processing — 모래시계
+      setLoading(true);
+      // engine_result 가 있으면 결과 화면 진입 (택일 카테고리·picked days 등)
+      const engine = fortuneJob.engineResult as unknown as TaekilResult | null;
+      if (engine) {
+        const migrated = migrateLegacyCategory(engine.category as string) ?? engine.category;
+        setResult({ ...engine, category: migrated });
+      }
+    }
+  }, [
+    urlJobId,
+    fortuneJob?.status,
+    fortuneJob?.interpretationDetailed,
+    fortuneJob?.errorMessage,
+    fortuneJob?.engineResult,
+  ]);
 
   useEffect(() => {
     if (user) fetchProfiles();
