@@ -42,6 +42,8 @@ import {
   parsePersonalitySections,
   parseNameSections,
   parseDreamSections,
+  parseDreamSymbols,
+  parseDreamAction,
 } from '../services/fortuneService';
 import { sajuDB } from '../services/supabase';
 import { findRecentArchive, type ArchiveCategory } from '../services/archiveService';
@@ -63,6 +65,7 @@ import {
   NAME_SECTION_KEYS, NAME_SECTION_LABELS,
 } from '../constants/prompts';
 import { SectionCollapsible } from '@/components/saju/SectionCollapsible';
+import { renderEmphasis } from '@/utils/renderEmphasis';
 import { HanjaPickerModal } from '@/components/saju/HanjaPickerModal';
 import type { HanjaCandidate } from '@/lib/data/hanjaByKoreanSound';
 import {
@@ -1391,7 +1394,7 @@ function MoreFortuneResultCard({
             key={i}
             className="text-[17px] text-text-secondary leading-[1.85] whitespace-pre-line tracking-[-0.005em]"
           >
-            {p}
+            {renderEmphasis(p)}
           </p>
         ))}
       </div>
@@ -1521,10 +1524,10 @@ function MoreFortuneDreamCard({
                         it.type === 'bullet' ? (
                           <div key={ii} className="flex items-start gap-2 pl-1">
                             <span className="text-cta shrink-0 mt-[6px] leading-none">·</span>
-                            <span className="flex-1">{it.content}</span>
+                            <span className="flex-1">{renderEmphasis(it.content)}</span>
                           </div>
                         ) : (
-                          <p key={ii} className="whitespace-pre-line">{it.content}</p>
+                          <p key={ii} className="whitespace-pre-line">{renderEmphasis(it.content)}</p>
                         )
                       )}
                     </div>

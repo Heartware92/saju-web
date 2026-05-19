@@ -17,6 +17,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { useProfileStore } from '../store/useProfileStore';
 import { extractMetaphor } from '../utils/parseMetaphor';
+import { renderEmphasis } from '../utils/renderEmphasis';
 import { SectionCollapsible } from '../components/saju/SectionCollapsible';
 import { useCreditStore } from '../store/useCreditStore';
 import { useReportCacheStore, sajuKey, type ReportKind } from '../store/useReportCacheStore';
@@ -1042,7 +1043,7 @@ export default function TodayFortunePage() {
               >
                 <div className="text-[17px] text-text-secondary leading-[1.85] tracking-[-0.005em] space-y-3">
                   {bodyText.split(/\n\n+/).map((para, pi) => (
-                    <p key={pi} className="whitespace-pre-line">{para.trim()}</p>
+                    <p key={pi} className="whitespace-pre-line">{renderEmphasis(para.trim())}</p>
                   ))}
                 </div>
               </SectionCollapsible>

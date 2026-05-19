@@ -11,6 +11,7 @@ import { sajuDB } from '../services/supabase';
 import { BackButton } from '../components/ui/BackButton';
 import { SUN_COST_BIG, CHARGE_REASONS } from '../constants/creditCosts';
 import { extractMetaphor } from '../utils/parseMetaphor';
+import { renderEmphasis } from '../utils/renderEmphasis';
 import { SectionCollapsible } from '../components/saju/SectionCollapsible';
 import { computeSajuFromProfile } from '../utils/profileSaju';
 import type { BirthProfile } from '../types/credit';
@@ -1619,7 +1620,7 @@ export default function GunghapPage() {
                   <div className="p-5 rounded-2xl bg-[rgba(20,12,38,0.55)] border border-[var(--border-subtle)]">
                     <div className="text-[17px] text-text-secondary leading-[1.85] tracking-[-0.005em] space-y-3">
                       {cleanedText.split(/\n\n+/).map((para, pi) => (
-                        <p key={pi} className="whitespace-pre-line">{para.trim()}</p>
+                        <p key={pi} className="whitespace-pre-line">{renderEmphasis(para.trim())}</p>
                       ))}
                     </div>
                   </div>
@@ -1649,7 +1650,7 @@ export default function GunghapPage() {
                         {pBody && (
                           <div className="text-[17px] text-text-secondary leading-[1.85] tracking-[-0.005em] space-y-3">
                             {pBody.split(/\n\n+/).map((para, pi) => (
-                              <p key={pi} className="whitespace-pre-line">{para.trim()}</p>
+                              <p key={pi} className="whitespace-pre-line">{renderEmphasis(para.trim())}</p>
                             ))}
                           </div>
                         )}
@@ -1669,7 +1670,7 @@ export default function GunghapPage() {
                       >
                         <div className="text-[17px] text-text-secondary leading-[1.85] tracking-[-0.005em] space-y-3">
                           {bodyText.split(/\n\n+/).map((para, pi) => (
-                            <p key={pi} className="whitespace-pre-line">{para.trim()}</p>
+                            <p key={pi} className="whitespace-pre-line">{renderEmphasis(para.trim())}</p>
                           ))}
                         </div>
                       </SectionCollapsible>

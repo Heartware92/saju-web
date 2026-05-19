@@ -7,6 +7,7 @@ import { TAROT_DECK, ELEMENT_COLORS, getCardImg } from '../engine/tarot/deck';
 import { buildTarotReading, type DrawnCard, type TarotReading } from '../engine/tarot/reading';
 import { formatTodayString, formatMonthString } from '../utils/tarotSeed';
 import { extractMetaphor } from '../utils/parseMetaphor';
+import { renderEmphasis } from '../utils/renderEmphasis';
 import { useProfileStore } from '../store/useProfileStore';
 import { useUserStore } from '../store/useUserStore';
 import { useCreditStore } from '../store/useCreditStore';
@@ -267,13 +268,13 @@ function AIBodyChildren({ body, color }: { body: string; color: string }) {
               {trimmed.split('\n').map((line, j) => (
                 <li key={j} className="flex gap-2">
                   <span style={{ color }} className="shrink-0">·</span>
-                  <span>{line.replace(/^[-·]\s*/, '').trim()}</span>
+                  <span>{renderEmphasis(line.replace(/^[-·]\s*/, '').trim())}</span>
                 </li>
               ))}
             </ul>
           );
         }
-        return <p key={i} className="whitespace-pre-line">{trimmed}</p>;
+        return <p key={i} className="whitespace-pre-line">{renderEmphasis(trimmed)}</p>;
       })}
     </div>
   );

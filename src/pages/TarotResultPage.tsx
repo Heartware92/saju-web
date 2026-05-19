@@ -18,6 +18,7 @@ import { TAROT_DECK, ELEMENT_COLORS, getCardImg, type TarotCard } from '../engin
 import { TAROT_SPREAD_LABEL } from '../constants/adminLabels';
 import { BackButton } from '../components/ui/BackButton';
 import { SectionCollapsible } from '../components/saju/SectionCollapsible';
+import { renderEmphasis } from '../utils/renderEmphasis';
 import { useScrollToTopOnLoad } from '../hooks/useScrollToTopOnLoad';
 import { ShareBar } from '@/components/share/ShareBar';
 
@@ -232,7 +233,7 @@ export default function TarotResultPage() {
                 style={{ fontFamily: 'var(--font-body)' }}
               >
                 {interpretation.split(/\n\n+/).map((para, pi) => (
-                  <p key={pi} className="whitespace-pre-line">{para.trim()}</p>
+                  <p key={pi} className="whitespace-pre-line">{renderEmphasis(para.trim())}</p>
                 ))}
               </div>
             </section>
@@ -252,7 +253,7 @@ export default function TarotResultPage() {
                   style={{ fontFamily: 'var(--font-body)' }}
                 >
                   {s.body.split(/\n\n+/).map((para, pi) => (
-                    <p key={pi} className="whitespace-pre-line">{para.trim()}</p>
+                    <p key={pi} className="whitespace-pre-line">{renderEmphasis(para.trim())}</p>
                   ))}
                 </div>
               </SectionCollapsible>
