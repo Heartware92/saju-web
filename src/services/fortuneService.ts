@@ -1334,9 +1334,11 @@ export const getTaekilAdvice = async (
 ): Promise<TaekilAdviceResult> => {
   try {
     const prompt = generateTaekilAdvicePrompt(saju, taekil, detail);
-    // [comprehensive_analysis] + top1·2·3 × (종합·조언·주의·키워드) + overall_advice + alternative
-    // 모두 출력하려면 9000 토큰 필요. minContentLength 700 으로 (종합 분석 추가 분량).
-    const raw = await callGPT(prompt, 9000, 700);
+    // [comprehensive_analysis] + top1·2·3 × (종합·조언·주의·키워드) + avoid + overall_advice + alternative.
+    // 총 2300~2900자 (출산 2400~3000자) 풍부 풀이 위해 maxTokens 12000.
+    // 한국어 토큰 비율 보수적으로 잡아 응답 잘림 방지. timeoutMs 180초 — 분량 늘어난 만큼 여유 확보.
+    // minContentLength 1500 — 새 하한선 분량 미달 시 callGPT 가 재시도.
+    const raw = await callGPT(prompt, 12000, 1500, { timeoutMs: 180_000 });
     // [taekil_advice] 마커 제거하고 본문만 추출
     const match = raw.match(/\[taekil_advice\]\s*([\s\S]+)/);
     const advice = match ? match[1].trim() : raw.trim();

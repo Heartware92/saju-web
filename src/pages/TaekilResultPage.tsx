@@ -632,12 +632,12 @@ export default function TaekilResultPage() {
                             border: '1px solid rgba(52,211,153,0.28)',
                           }}>
                             <div style={{
-                              fontSize: 24, fontWeight: 900,
+                              fontSize: 17, fontWeight: 900,
                               color: '#34D399',
-                              letterSpacing: '-0.02em',
-                              marginBottom: 14,
+                              letterSpacing: '-0.01em',
+                              marginBottom: 12,
                               fontFamily: 'var(--font-title)',
-                              lineHeight: 1.3,
+                              lineHeight: 1.4,
                             }}>
                               이렇게 하면 좋아요
                             </div>
@@ -663,12 +663,12 @@ export default function TaekilResultPage() {
                             border: '1px solid rgba(248,113,113,0.28)',
                           }}>
                             <div style={{
-                              fontSize: 24, fontWeight: 900,
+                              fontSize: 17, fontWeight: 900,
                               color: '#F87171',
-                              letterSpacing: '-0.02em',
-                              marginBottom: 14,
+                              letterSpacing: '-0.01em',
+                              marginBottom: 12,
                               fontFamily: 'var(--font-title)',
-                              lineHeight: 1.3,
+                              lineHeight: 1.4,
                             }}>
                               주의할 점
                             </div>
