@@ -17,6 +17,7 @@ import { extractMetaphor } from '../utils/parseMetaphor';
 import { BackButton } from '../components/ui/BackButton';
 import { ShareBar } from '@/components/share/ShareBar';
 import { SectionCollapsible } from '../components/saju/SectionCollapsible';
+import { renderEmphasis } from '../utils/renderEmphasis';
 import {
   TAEKIL_CATEGORIES,
   migrateLegacyCategory,
@@ -481,12 +482,13 @@ export default function TaekilResultPage() {
             </div>
           )}
 
-          {/* 종합 분석 — 본인 사주 + 카테고리 + detail 을 엮은 커스텀 분석. SectionCollapsible 패턴. */}
+          {/* 종합 분석 — 본인 사주 + 카테고리 + detail 을 엮은 커스텀 분석. SectionCollapsible 패턴.
+              ★ defaultOpen=true — 1순위 정보라 펼쳐서 시작 (이전 false 가 "종합 분석이 안 보인다" 사고의 진짜 원인). */}
           {parsedAdvice?.comprehensiveAnalysis ? (
             <div className={styles.section} style={{ marginBottom: 16 }}>
               <SectionCollapsible
                 title="종합 분석"
-                defaultOpen={false}
+                defaultOpen={true}
                 enterDelay={0.05}
               >
                 <p
@@ -496,7 +498,7 @@ export default function TaekilResultPage() {
                     fontFamily: 'var(--font-body)',
                   }}
                 >
-                  {parsedAdvice.comprehensiveAnalysis}
+                  {renderEmphasis(parsedAdvice.comprehensiveAnalysis)}
                 </p>
               </SectionCollapsible>
             </div>
@@ -807,7 +809,7 @@ export default function TaekilResultPage() {
                           className="text-text-secondary leading-[1.85] tracking-[-0.005em] whitespace-pre-line"
                           style={{ fontSize: 17, margin: 0, fontFamily: 'var(--font-body)' }}
                         >
-                          {parsedAdvice.avoid}
+                          {renderEmphasis(parsedAdvice.avoid)}
                         </p>
                       </SectionCollapsible>
                     </div>
@@ -827,7 +829,7 @@ export default function TaekilResultPage() {
                             className="text-text-secondary leading-[1.85] tracking-[-0.005em] whitespace-pre-line"
                             style={{ fontSize: 17, margin: 0, fontFamily: 'var(--font-body)' }}
                           >
-                            {parsedAdvice.overallAdvice}
+                            {renderEmphasis(parsedAdvice.overallAdvice)}
                           </p>
                         </SectionCollapsible>
                       </div>
@@ -846,7 +848,7 @@ export default function TaekilResultPage() {
                           className="text-text-secondary leading-[1.85] tracking-[-0.005em] whitespace-pre-line"
                           style={{ fontSize: 17, margin: 0, fontFamily: 'var(--font-body)' }}
                         >
-                          {parsedAdvice.alternative}
+                          {renderEmphasis(parsedAdvice.alternative)}
                         </p>
                       </SectionCollapsible>
                     </div>
