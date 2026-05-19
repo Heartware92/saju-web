@@ -9,10 +9,16 @@
 
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { creditDB, auth } from '../services/supabase';
+import { creditDB, auth, supabase } from '../services/supabase';
 import type { CreditType, CreditTransaction } from '../types/credit';
+import type { RealtimeChannel } from '@supabase/supabase-js';
 
 const STALE_MS = 30_000; // 30초 내 재조회 생략
+
+// 모듈 단일 채널 — user_credits Realtime 구독.
+// store state 가 아닌 module-level closure 로 보관해 zustand persist 가 직렬화 시도하지 않음.
+// 로그인/로그아웃 시 useUserStore 가 subscribeToBalance / unsubscribeFromBalance 로 라이프사이클 관리.
+let creditRealtimeChannel: RealtimeChannel | null = null;
 
 interface CreditState {
   /** @deprecated 항상 0. 단일 달 시스템 도입(2026-05-16)으로 폐지. moonBalance 만 사용 */
@@ -44,6 +50,15 @@ interface CreditState {
   purchaseConsultationPack: (payWith: 'sun' | 'moon') => Promise<boolean>;
   /** @deprecated 팩 정책 폐지. */
   useConsultationQuestion: () => boolean;
+
+  /**
+   * user_credits Realtime 구독 시작 — 차감·환불·충전 등 어떤 경로로든
+   * 본인 row 가 변경되면 자동으로 moonBalance 갱신. 멱등 (이미 구독 중이면 재구독).
+   * useUserStore 가 로그인 직후 호출.
+   */
+  subscribeToBalance: (userId: string) => void;
+  /** 로그아웃·언마운트 시 호출. */
+  unsubscribeFromBalance: () => void;
 
   reset: () => void;
 }
@@ -187,7 +202,51 @@ export const useCreditStore = create<CreditState>()(
       /** @deprecated 팩 정책 폐지. */
       useConsultationQuestion: () => false,
 
+      subscribeToBalance: (userId: string) => {
+        // 기존 채널 정리 — 사용자 전환 등으로 같은 store 에 재호출 가능
+        if (creditRealtimeChannel) {
+          void supabase.removeChannel(creditRealtimeChannel);
+          creditRealtimeChannel = null;
+        }
+
+        creditRealtimeChannel = supabase
+          .channel(`user-credits:${userId}`)
+          .on(
+            'postgres_changes',
+            {
+              event: 'UPDATE',
+              schema: 'public',
+              table: 'user_credits',
+              filter: `user_id=eq.${userId}`,
+            },
+            (payload) => {
+              const row = payload.new as Record<string, unknown>;
+              const newMoonBalance = row.moon_balance;
+              if (typeof newMoonBalance === 'number') {
+                set({
+                  moonBalance: newMoonBalance,
+                  // lastFetched 갱신 — Realtime push 가 곧 최신값이므로 STALE_MS 캐시도 신규로 인정
+                  lastFetched: Date.now(),
+                });
+              }
+            },
+          )
+          .subscribe();
+      },
+
+      unsubscribeFromBalance: () => {
+        if (creditRealtimeChannel) {
+          void supabase.removeChannel(creditRealtimeChannel);
+          creditRealtimeChannel = null;
+        }
+      },
+
       reset: () => {
+        // 채널 정리 — 로그아웃 시 호출되므로 다음 사용자 구독과 충돌 차단
+        if (creditRealtimeChannel) {
+          void supabase.removeChannel(creditRealtimeChannel);
+          creditRealtimeChannel = null;
+        }
         set({
           sunBalance: 0,
           moonBalance: 0,

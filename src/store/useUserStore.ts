@@ -42,6 +42,8 @@ export const useUserStore = create<UserState>()(
           if (session?.user) {
             set({ user: session.user, loading: false });
             useCreditStore.getState().fetchBalance(session.user.id);
+            // Realtime user_credits 구독 — 어디서 차감·환불·충전되든 자동 반영
+            useCreditStore.getState().subscribeToBalance(session.user.id);
             useProfileStore.getState().fetchProfiles({ userId: session.user.id });
           } else {
             set({ user: null, loading: false });
@@ -51,9 +53,11 @@ export const useUserStore = create<UserState>()(
             if (session?.user) {
               set({ user: session.user });
               useCreditStore.getState().fetchBalance(session.user.id);
+              useCreditStore.getState().subscribeToBalance(session.user.id);
               useProfileStore.getState().fetchProfiles({ userId: session.user.id });
             } else {
               set({ user: null });
+              // reset() 내부에서 unsubscribe 도 처리됨
               useCreditStore.getState().reset();
               useProfileStore.getState().reset();
             }
