@@ -57,9 +57,18 @@ function getProfileLabel(record: SajuRecord): string {
   return record.profile_name;
 }
 
-/** 사주 카테고리 → 결과 페이지 URL. recordId 를 쿼리로 붙인다. */
+/** 사주 카테고리 → 결과 페이지 URL. recordId 를 쿼리로 붙인다.
+ *  단, 정통사주(traditional) + 진행 중·실패 잡은 ?jobId 로 진입해 Realtime 구독. */
 function getSajuRoute(record: SajuRecord): string {
   const cat = record.category;
+  const isPendingJob =
+    record.status === 'pending' || record.status === 'processing' || record.status === 'failed';
+
+  // 백그라운드 잡 시스템 — 정통사주에 우선 적용. 다른 카테고리는 옛 ?recordId 흐름 유지.
+  if (cat === 'traditional' && isPendingJob) {
+    return `/saju/result?jobId=${record.id}`;
+  }
+
   const moreCategories = [
     'love', 'wealth', 'career', 'health', 'study', 'people',
     'children', 'personality', 'name', 'dream',
@@ -244,6 +253,18 @@ export default function ArchivePage() {
                               <p className="text-[12px] text-text-secondary truncate mb-1">
                                 {profileLabel}
                               </p>
+                              {/* 백그라운드 잡 상태 배지 — 진행 중/실패만 노출 (done 은 표시 X) */}
+                              {(record.status === 'pending' || record.status === 'processing') && (
+                                <span className="inline-flex items-center gap-1.5 text-[11px] text-amber-300 bg-amber-500/10 border border-amber-500/30 rounded px-1.5 py-0.5 mt-0.5">
+                                  <span className="w-2.5 h-2.5 border-2 border-amber-300 border-t-transparent rounded-full animate-spin" />
+                                  풀이 준비 중…
+                                </span>
+                              )}
+                              {record.status === 'failed' && (
+                                <span className="inline-flex items-center gap-1 text-[11px] text-red-300 bg-red-500/10 border border-red-500/30 rounded px-1.5 py-0.5 mt-0.5">
+                                  실패 · 자동 환불됨
+                                </span>
+                              )}
                             </div>
                             <span className="text-[10px] text-text-tertiary flex-shrink-0 whitespace-nowrap mt-1">
                               {formatDate(record.created_at)}

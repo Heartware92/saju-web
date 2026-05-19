@@ -6,14 +6,13 @@ import { motion } from 'framer-motion';
 import { Lunar } from 'lunar-javascript';
 import { calculateSaju, type SajuResult } from '../utils/sajuCalculator';
 import {
-  getJungtongsajuReport,
   parseJungtongsaju,
   parseAdviceMeta,
   stripAllSectionTags,
   type JungtongsajuAIResult,
 } from '../services/fortuneService';
-import { sajuDB } from '../services/supabase';
-import { findRecentArchive } from '../services/archiveService';
+import { sajuDB, supabase } from '../services/supabase';
+import { useFortuneJob } from '../hooks/useFortuneJob';
 import { JUNGTONGSAJU_SECTION_KEYS, JUNGTONGSAJU_SECTION_LABELS } from '../constants/prompts';
 import { useProfileStore } from '../store/useProfileStore';
 import { useCreditStore } from '../store/useCreditStore';
@@ -61,8 +60,9 @@ export default function SajuResultPage() {
   const router = useRouter();
   const profileId = searchParams?.get('profileId') ?? null;
   const recordId = searchParams?.get('recordId') ?? null;
+  const urlJobId = searchParams?.get('jobId') ?? null;
   const isArchiveMode = !!recordId;
-  const needsProfileSelect = !profileId && !isArchiveMode && !(searchParams?.get('year') && searchParams?.get('month') && searchParams?.get('day'));
+  const needsProfileSelect = !profileId && !isArchiveMode && !urlJobId && !(searchParams?.get('year') && searchParams?.get('month') && searchParams?.get('day'));
   const { profiles, fetchProfiles, hydrated, loading: profilesLoading, lastFetchedAt } = useProfileStore();
   const targetProfile = useMemo(() => {
     if (profileId) return profiles.find(p => p.id === profileId) ?? null;
@@ -120,6 +120,47 @@ export default function SajuResultPage() {
   const chargeRef = useRef(chargeForContent);
   chargeRef.current = chargeForContent;
   const apiCalledKeyRef = useRef<string | null>(null);
+
+  // ── 백그라운드 잡 시스템 ──
+  // urlJobId : ?jobId=xxx 로 직접 진입 (보관함·재방문·새로고침)
+  // createdJobId : birth 파라미터로 진입해서 새로 만든 잡
+  // 둘 중 effective 한 id 가 있으면 useFortuneJob 이 saju_records 를 Realtime 구독한다.
+  const [createdJobId, setCreatedJobId] = useState<string | null>(null);
+  const effectiveJobId = urlJobId ?? createdJobId;
+  const { job: fortuneJob } = useFortuneJob(effectiveJobId);
+
+  // 잡 결과 → report state 동기화. archive 모드(recordId)는 별도 useEffect 가 처리.
+  useEffect(() => {
+    if (isArchiveMode) return;
+    if (!fortuneJob) return;
+    if (fortuneJob.status === 'done') {
+      const content = fortuneJob.interpretationDetailed ?? '';
+      const sections = parseJungtongsaju(content);
+      const adviceMeta = sections.advice ? parseAdviceMeta(sections.advice) : undefined;
+      setReport(
+        Object.keys(sections).length > 0
+          ? { success: true, sections, adviceMeta }
+          : { success: true, rawText: content },
+      );
+      setSavedRecordId(fortuneJob.jobId);
+      setReportLoading(false);
+    } else if (fortuneJob.status === 'failed') {
+      setReport({
+        success: false,
+        error: fortuneJob.errorMessage ?? '풀이 생성에 실패했어요. 크레딧은 자동 환불됐어요.',
+      });
+      setReportLoading(false);
+    } else {
+      // pending / processing — 진행 중. 모래시계 화면 유지.
+      setReportLoading(true);
+    }
+  }, [
+    fortuneJob?.status,
+    fortuneJob?.interpretationDetailed,
+    fortuneJob?.errorMessage,
+    fortuneJob?.jobId,
+    isArchiveMode,
+  ]);
 
   useEffect(() => { fetchProfiles(); }, [fetchProfiles]);
 
@@ -231,114 +272,115 @@ export default function SajuResultPage() {
     }
   }, [reportTimedOut, report]);
 
-  // ── 보관함 DB 확인 → AI 호출 (순차 실행) ──
-  // 보관함 체크를 먼저 완료한 뒤, 기존 풀이가 없을 때만 AI 호출
+  // ── 백그라운드 잡 생성 ──
+  // birth 파라미터로 진입했고 아직 잡이 없으면 /api/fortune/jobs/create 호출.
+  // 잡 생성 후 URL 을 ?jobId=xxx 로 replace 하여 새로고침·탭 복귀·재진입 시
+  // useFortuneJob 이 같은 잡을 재구독 → AI 재호출 0.
   useEffect(() => {
     if (isArchiveMode) return;
     if (!result) return;
+    if (effectiveJobId) return;       // 이미 잡 있음 (URL ?jobId 또는 createdJobId)
+    if (needsProfileSelect) return;
 
-    const isFresh = searchParams?.get('fresh') === '1';
-
-    // 중복 호출 방지 (탭 복귀·프로필 hydration 방어)
-    const effectKey = sajuKey(result);
-    if (!isFresh && refetchNonce === 0 && apiCalledKeyRef.current === effectKey) return;
+    const effectKey = `${result.pillars.year.gan}${result.pillars.year.zhi}-${result.pillars.month.gan}${result.pillars.month.zhi}-${result.pillars.day.gan}${result.pillars.day.zhi}`;
+    if (apiCalledKeyRef.current === effectKey) return;
+    apiCalledKeyRef.current = effectKey;
 
     let cancelled = false;
-
-    if (isFresh) {
-      setReport(null);
-      setReportLoading(true);
-      setSavedRecordId(null);
-      // 새 풀이 시작 시 ref reset — 이번 풀이의 1차 partial 이 도착하기 전까지는 false 유지
-      firstPassReceivedRef.current = false;
-      const cacheKey = sajuKey(result);
-      useReportCacheStore.getState().invalidate('jungtong', cacheKey);
-    }
+    setReportLoading(true);
 
     const run = async () => {
-      const cacheKey = sajuKey(result);
-
-      // ★ cache 우선 — 메모리 unload→reload 시에도 모달 없이 즉시 복원
-      // archive 체크보다 먼저 검사: 캐시가 곧 사용자가 마지막에 본 화면이므로 그대로 표시.
-      if (!isFresh && refetchNonce === 0) {
-        const cached = useReportCacheStore.getState().getReport<JungtongsajuAIResult>('jungtong', cacheKey);
-        if (cached?.error) {
-          setReport({ success: false, error: cached.error });
-          return;
-        }
-        if (cached?.data) {
-          setReport(cached.data);
-          return;
-        }
-      }
-
-      if (refetchNonce === 0 && targetProfile && !isFresh) {
-        try {
-          const found = await findRecentArchive({
-            category: 'traditional',
-            birth_date: targetProfile.birth_date,
-            gender: targetProfile.gender,
-            profile_id: targetProfile.id,
-          });
-          if (cancelled) return;
-          if (found) {
-            setSavedRecordId(found.id);
+      try {
+        const { data: sessionData } = await supabase.auth.getSession();
+        const accessToken = sessionData.session?.access_token;
+        if (!accessToken) {
+          if (!cancelled) {
+            setReport({ success: false, error: '로그인이 만료됐어요. 다시 로그인해주세요.' });
             setReportLoading(false);
-            setCacheGate({
-              kind: 'jungtong',
-              key: '',
-              restore: () => {
-                const params = new URLSearchParams(window.location.search);
-                params.set('recordId', found.id);
-                router.replace(`${window.location.pathname}?${params.toString()}`);
-              },
-            });
-            return;
           }
-        } catch { /* ignore */ }
+          return;
+        }
+
+        // birth source — 서버 보관함 매칭에 쓰이는 원본 정보
+        const yStr = searchParams?.get('year');
+        const mStr = searchParams?.get('month');
+        const dStr = searchParams?.get('day');
+        const hourStr = searchParams?.get('hour');
+        const minuteStr = searchParams?.get('minute');
+        const genderStr = (searchParams?.get('gender') || 'male') as 'male' | 'female';
+        const calendarType = (searchParams?.get('calendarType') || 'solar') as 'solar' | 'lunar';
+        const unknownTime = searchParams?.get('unknownTime') === 'true';
+
+        const birthDate = yStr && mStr && dStr
+          ? `${yStr.padStart(4, '0')}-${mStr.padStart(2, '0')}-${dStr.padStart(2, '0')}`
+          : targetProfile?.birth_date ?? '';
+        const birthTime = unknownTime
+          ? null
+          : hourStr && minuteStr
+            ? `${hourStr.padStart(2, '0')}:${minuteStr.padStart(2, '0')}`
+            : targetProfile?.birth_time ?? null;
+        const birthPlace = targetProfile?.birth_place ?? '서울';
+
+        // idempotencyKey — birth + 1분 단위 시각. 같은 사용자가 1분 내 같은 birth 로
+        // 재요청(예: 더블 클릭, 네트워크 재시도) 시 서버에서 중복 차감 차단.
+        const minuteBucket = Math.floor(Date.now() / 60000);
+        const idempotencyKey = `${birthDate}:${birthTime ?? 'unknown'}:${genderStr}:${calendarType}:${minuteBucket}`;
+
+        const res = await fetch('/api/fortune/jobs/create', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${accessToken}`,
+          },
+          body: JSON.stringify({
+            category: 'traditional',
+            sajuResult: result,
+            profileId: targetProfile?.id,
+            sourceBirth: {
+              birthDate,
+              birthTime,
+              birthPlace,
+              gender: genderStr,
+              calendarType,
+            },
+            idempotencyKey,
+          }),
+        });
+
+        if (!res.ok) {
+          const errData = await res.json().catch(() => ({}));
+          if (!cancelled) {
+            setReport({ success: false, error: errData.error || '풀이 요청에 실패했어요.' });
+            setReportLoading(false);
+          }
+          return;
+        }
+
+        const { jobId } = (await res.json()) as { jobId: string; deduplicated?: boolean };
         if (cancelled) return;
+
+        // URL ?jobId 로 replace — birth 파라미터 제거. 새로고침·재진입 시 같은 잡 재구독.
+        const newUrl = new URL(window.location.href);
+        ['year', 'month', 'day', 'hour', 'minute', 'gender', 'calendarType', 'longitude', 'unknownTime', 'fresh', 'targetDate']
+          .forEach((k) => newUrl.searchParams.delete(k));
+        newUrl.searchParams.set('jobId', jobId);
+        window.history.replaceState(null, '', newUrl.toString());
+
+        setCreatedJobId(jobId);
+        // 이후 useFortuneJob 이 Realtime 구독을 시작하고
+        // 결과 동기화 useEffect 가 status='done' 도착 시 setReport.
+      } catch (e) {
+        if (!cancelled) {
+          const msg = e instanceof Error ? e.message : '풀이 요청 중 오류가 발생했어요.';
+          setReport({ success: false, error: msg });
+          setReportLoading(false);
+        }
       }
-
-      if (report || reportLoading) return;
-
-      apiCalledKeyRef.current = effectKey;
-      setReportLoading(true);
-      getJungtongsajuReport(result, (partial) => {
-        if (cancelled) return;
-        // 1차 partial 도착 마킹 → 2차 setReport 시점에 스크롤 점프 방지
-        firstPassReceivedRef.current = true;
-        setReport(partial);
-      }, targetProfile?.id)
-        .then(r => {
-          if (cancelled) return;
-          setReport(r);
-          // archive 저장이 완료된 경우 ShareBar 즉시 노출
-          if (r.success && r.archivedRecordId) {
-            setSavedRecordId(r.archivedRecordId);
-          }
-          const cache = useReportCacheStore.getState();
-          if (r.success) {
-            cache.setReport('jungtong', cacheKey, r);
-            if (!cache.isCharged('jungtong', cacheKey)) {
-              cache.markCharged('jungtong', cacheKey);
-              chargeRef.current('moon', SUN_COST_BIG, CHARGE_REASONS.traditional, `jungtong:${cacheKey}`)
-                .catch(e => console.error('[charge:traditional] failed', e));
-            }
-          } else if (r.error) {
-            cache.setError('jungtong', cacheKey, r.error);
-          }
-        })
-        .catch((err: any) => {
-          if (cancelled) return;
-          useReportCacheStore.getState().setError('jungtong', cacheKey, err?.message || '오류가 발생했어요.');
-        })
-        .finally(() => { if (!cancelled) setReportLoading(false); });
     };
 
-    run();
+    void run();
     return () => { cancelled = true; };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [result, isArchiveMode, refetchNonce]);
+  }, [result, isArchiveMode, effectiveJobId, needsProfileSelect, searchParams, targetProfile]);
 
   // ── 프로필 선택 가드 ──────────────────────────────────
   if (needsProfileSelect) {

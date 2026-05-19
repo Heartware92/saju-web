@@ -368,7 +368,7 @@ export const sajuDB = {
     //   같은 무거운 필드는 여전히 제외.
     const { data, error } = await supabase
       .from('saju_records')
-      .select('id, user_id, profile_id, profile_name, partner_name, partner_birth_date, birth_date, birth_time, birth_place, gender, calendar_type, category, created_at, is_detailed, credit_type, credit_used, engine_result')
+      .select('id, user_id, profile_id, profile_name, partner_name, partner_birth_date, birth_date, birth_time, birth_place, gender, calendar_type, category, created_at, is_detailed, credit_type, credit_used, engine_result, status, error_message')
       .eq('user_id', userId)
       .order('created_at', { ascending: false })
       .limit(limit);

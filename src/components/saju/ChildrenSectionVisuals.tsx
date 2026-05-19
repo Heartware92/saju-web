@@ -10,7 +10,8 @@
  * 같은 코스믹 톤(2열 그리드 · 색칩 · 라디얼 그라데이션).
  */
 
-import type { SajuResult, DaeWoon, SeWoon } from '../../utils/sajuCalculator';
+import type { SajuResult, DaeWoon } from '../../utils/sajuCalculator';
+import { buildMonthlyFlow } from '../../engine/periodFortune';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 색 매핑 (NameSectionVisuals 와 동일 — 톤 통일)
@@ -181,18 +182,18 @@ function temperamentLabel(saju: SajuResult): {
   const artStages = ['목욕', '태'];
   const studyStages = ['관대', '건록']; // 일부 중첩 — fallback
   if (activeStages.includes(stage)) {
-    return { type: '활동적 기질', color: SIGNAL_COLOR.warn, reason: `시지 ${stage} — 에너지·도전형` };
+    return { type: '활동적 기질', color: SIGNAL_COLOR.warn, reason: `12운성 ${stage} — 에너지·도전형` };
   }
   if (artStages.includes(stage)) {
-    return { type: '예술적 기질', color: SIGNAL_COLOR.info, reason: `시지 ${stage} — 감수성·표현형` };
+    return { type: '예술적 기질', color: SIGNAL_COLOR.info, reason: `12운성 ${stage} — 감수성·표현형` };
   }
   if (studyStages.includes(stage)) {
-    return { type: '학구적 기질', color: '#3b82f6', reason: `시지 ${stage} — 집중·탐구형` };
+    return { type: '학구적 기질', color: '#3b82f6', reason: `12운성 ${stage} — 집중·탐구형` };
   }
   if (calmStages.includes(stage)) {
-    return { type: '차분한 기질', color: SIGNAL_COLOR.good, reason: `시지 ${stage} — 관찰·내면형` };
+    return { type: '차분한 기질', color: SIGNAL_COLOR.good, reason: `12운성 ${stage} — 관찰·내면형` };
   }
-  return { type: '균형 기질', color: SIGNAL_COLOR.info, reason: `시지 ${stage}` };
+  return { type: '균형 기질', color: SIGNAL_COLOR.info, reason: `12운성 ${stage}` };
 }
 
 // 자녀 진로 힌트 (시주 천간 십성 기준 + 자녀성 그룹 보조)
@@ -230,17 +231,50 @@ function careerHintLabel(saju: SajuResult, counts: TenGodCounts): {
   return map[basis] ?? map.인성;
 }
 
-// 자녀 인연 활성 대운/세운 (자녀성 십성이 걸린 운)
-function findChildActiveLuck(saju: SajuResult): { dae: DaeWoon[]; se: SeWoon[] } {
+interface ActiveMonth {
+  year: number;
+  month: number;
+  gan: string;
+  zhi: string;
+  tenGod: string;
+}
+
+// 자녀 인연 활성 대운 + 월 단위 활성 시기 (가임기 상한 적용)
+// ★ 가임기 상한 — 임신·출산 카테고리이므로 시작 나이 50세 이하만 표시.
+//   대운은 시작 나이 ≤ 50 (현재 대운 포함). 월 단위는 향후 3년 안 자녀성 활성한 월만.
+//   사용자가 이미 50 초과면 월 단위는 비움 (출산 시기 표시 무의미).
+function findChildActiveLuck(saju: SajuResult): { dae: DaeWoon[]; months: ActiveMonth[] } {
   const target = saju.gender === 'male' ? ['정관', '편관'] : ['식신', '상관'];
   const now = new Date().getFullYear();
+  const birthYear = saju.solarDate ? new Date(saju.solarDate).getFullYear() : 0;
+  const FERTILITY_AGE_LIMIT = 50;
+  const MONTH_HORIZON_YEARS = 3; // 향후 3년 안 월 단위
+  const currentAge = birthYear > 0 ? now - birthYear : 0;
+
   const dae = saju.daeWoon
-    .filter((d) => d.gan && d.endAge >= now && (target.includes(d.tenGod) || target.includes(d.tenGodZhi)))
+    .filter((d) => {
+      if (!d.gan) return false;
+      if (d.endAge < now) return false;
+      if (!(target.includes(d.tenGod) || target.includes(d.tenGodZhi))) return false;
+      const startAgeYears = birthYear > 0 ? d.startAge - birthYear : d.startAge;
+      return startAgeYears <= FERTILITY_AGE_LIMIT;
+    })
     .slice(0, 3);
-  const se = saju.seWoon
-    .filter((s) => s.year >= now && s.year <= now + 6 && (target.includes(s.tenGod) || target.includes(s.tenGodZhi)))
-    .slice(0, 4);
-  return { dae, se };
+
+  const months: ActiveMonth[] = [];
+  if (currentAge <= FERTILITY_AGE_LIMIT) {
+    for (let y = now; y <= now + MONTH_HORIZON_YEARS; y++) {
+      // 해당 연도 본인 나이가 가임기 상한 넘으면 stop
+      if (birthYear > 0 && y - birthYear > FERTILITY_AGE_LIMIT) break;
+      const flow = buildMonthlyFlow(saju, y);
+      for (const m of flow) {
+        if (target.includes(m.tenGod) || target.includes(m.tenGodZhi)) {
+          months.push({ year: y, month: m.month, gan: m.gan, zhi: m.zhi, tenGod: m.tenGod });
+        }
+      }
+    }
+  }
+  return { dae, months };
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -249,7 +283,7 @@ function findChildActiveLuck(saju: SajuResult): { dae: DaeWoon[]; se: SeWoon[] }
 function MiniChip({ label, color, subtle }: { label: string; color: string; subtle?: boolean }) {
   return (
     <span
-      className="inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[12px] font-bold border"
+      className="inline-flex items-center gap-1 rounded-full px-3 py-1.5 text-[14px] font-bold border"
       style={{
         background: subtle ? `${color}15` : `${color}25`,
         color,
@@ -274,7 +308,7 @@ export function ChildFortuneVisual({ saju }: { saju: SajuResult }) {
   const hour = saju.pillars.hour;
 
   return (
-    <div className="grid grid-cols-2 gap-2 mb-3">
+    <div className="grid grid-cols-2 gap-2.5 mb-3">
       {/* 좌: 자녀성 강도 큰 카드 */}
       <div
         className="rounded-2xl p-4 border flex flex-col gap-2"
@@ -284,28 +318,28 @@ export function ChildFortuneVisual({ saju }: { saju: SajuResult }) {
           boxShadow: `0 0 18px ${badge.color}12`,
         }}
       >
-        <span className="text-[12px] font-bold tracking-[0.06em]" style={{ color: badge.color }}>
+        <span className="text-[14px] font-bold tracking-[0.04em]" style={{ color: badge.color }}>
           자녀성 {star.group}
         </span>
         <div className="flex items-end gap-1">
           <span
-            className="text-[32px] font-bold leading-none"
+            className="text-[40px] font-bold leading-none"
             style={{ fontFamily: 'var(--font-serif)', color: badge.color, textShadow: `0 0 18px ${badge.color}55` }}
           >
             {total}
           </span>
-          <span className="text-[13px] text-text-tertiary pb-1">개</span>
+          <span className="text-[15px] text-text-tertiary pb-1.5">개</span>
         </div>
-        <span className="text-[12px] text-text-secondary leading-snug">
+        <span className="text-[14px] text-text-secondary leading-snug">
           {star.sub[0]} {a} · {star.sub[1]} {b}
         </span>
         <span
-          className="inline-block text-[12px] font-bold px-2 py-0.5 rounded-md mt-1 w-fit"
+          className="inline-block text-[14px] font-bold px-2.5 py-1 rounded-md mt-1 w-fit"
           style={{ background: `${badge.color}22`, color: badge.color, border: `1px solid ${badge.color}55` }}
         >
           {badge.label}
         </span>
-        <span className="text-[11.5px] text-text-tertiary leading-snug">{badge.desc}</span>
+        <span className="text-[13px] text-text-tertiary leading-snug">{badge.desc}</span>
       </div>
 
       {/* 우: 시주(자녀궁) 정보 */}
@@ -316,35 +350,35 @@ export function ChildFortuneVisual({ saju }: { saju: SajuResult }) {
           borderColor: `${SIGNAL_COLOR.info}45`,
         }}
       >
-        <span className="text-[12px] font-bold tracking-[0.06em]" style={{ color: SIGNAL_COLOR.info }}>
+        <span className="text-[14px] font-bold tracking-[0.04em]" style={{ color: SIGNAL_COLOR.info }}>
           자녀궁 (시주)
         </span>
         {saju.hourUnknown ? (
           <>
             <span
-              className="text-[18px] font-bold leading-tight"
+              className="text-[20px] font-bold leading-tight"
               style={{ color: 'var(--text-primary)', fontFamily: 'var(--font-serif)' }}
             >
               시간 미상
             </span>
-            <span className="text-[11.5px] text-text-tertiary leading-snug">
+            <span className="text-[13px] text-text-tertiary leading-snug">
               연·월·일주 + 대운·세운 기준으로 풀이
             </span>
           </>
         ) : (
           <>
             <span
-              className="text-[22px] font-bold leading-tight"
+              className="text-[28px] font-bold leading-tight"
               style={{ color: 'var(--text-primary)', fontFamily: 'var(--font-serif)' }}
             >
               {hour.gan}
               {hour.zhi}
             </span>
-            <div className="flex flex-wrap gap-1 mt-0.5">
+            <div className="flex flex-wrap gap-1.5 mt-0.5">
               <MiniChip label={`12운성 ${hour.twelveStage}`} color={SIGNAL_COLOR.info} subtle />
               {hour.isKongmang && <MiniChip label="공망" color={SIGNAL_COLOR.warn} />}
             </div>
-            <span className="text-[11.5px] text-text-tertiary leading-snug">
+            <span className="text-[13px] text-text-tertiary leading-snug">
               지장간 {hour.hiddenStems.join('·') || '-'}
             </span>
           </>
@@ -364,7 +398,7 @@ export function PregnancyVisual({ saju }: { saju: SajuResult }) {
   const strength = saju.strengthStatus; // 신강·신약·중화·태강·태약
 
   return (
-    <div className="grid grid-cols-2 gap-2 mb-3">
+    <div className="grid grid-cols-2 gap-2.5 mb-3">
       <div
         className="rounded-2xl p-4 border flex flex-col gap-2"
         style={{
@@ -373,16 +407,16 @@ export function PregnancyVisual({ saju }: { saju: SajuResult }) {
           boxShadow: `0 0 18px ${type.color}12`,
         }}
       >
-        <span className="text-[12px] font-bold tracking-[0.06em]" style={{ color: type.color }}>
+        <span className="text-[14px] font-bold tracking-[0.04em]" style={{ color: type.color }}>
           임신·출산 체질
         </span>
         <span
-          className="text-[17px] font-bold leading-tight"
+          className="text-[20px] font-bold leading-tight"
           style={{ color: 'var(--text-primary)', fontFamily: 'var(--font-title)' }}
         >
           {type.type}
         </span>
-        <span className="text-[11.5px] text-text-tertiary leading-snug">{type.reason}</span>
+        <span className="text-[13px] text-text-tertiary leading-snug">{type.reason}</span>
       </div>
 
       <div
@@ -393,19 +427,19 @@ export function PregnancyVisual({ saju }: { saju: SajuResult }) {
         }}
       >
         <span
-          className="text-[12px] font-bold tracking-[0.06em]"
+          className="text-[14px] font-bold tracking-[0.04em]"
           style={{ color: anti.active ? SIGNAL_COLOR.bad : SIGNAL_COLOR.good }}
         >
           자녀성 막는 기운
         </span>
         <span
-          className="text-[17px] font-bold leading-tight"
+          className="text-[20px] font-bold leading-tight"
           style={{ color: 'var(--text-primary)', fontFamily: 'var(--font-title)' }}
         >
           {anti.active ? anti.label : '없음'}
         </span>
-        <span className="text-[11.5px] text-text-tertiary leading-snug">{anti.desc}</span>
-        <div className="flex flex-wrap gap-1 mt-0.5">
+        <span className="text-[13px] text-text-tertiary leading-snug">{anti.desc}</span>
+        <div className="flex flex-wrap gap-1.5 mt-0.5">
           <MiniChip label={`일간 ${strength}`} color={SIGNAL_COLOR.info} subtle />
         </div>
       </div>
@@ -420,7 +454,7 @@ export function TemperamentVisual({ saju }: { saju: SajuResult }) {
   const temp = temperamentLabel(saju);
   const hour = saju.pillars.hour;
   return (
-    <div className="grid grid-cols-2 gap-2 mb-3">
+    <div className="grid grid-cols-2 gap-2.5 mb-3">
       <div
         className="rounded-2xl p-4 border flex flex-col gap-2"
         style={{
@@ -429,16 +463,16 @@ export function TemperamentVisual({ saju }: { saju: SajuResult }) {
           boxShadow: `0 0 18px ${temp.color}10`,
         }}
       >
-        <span className="text-[12px] font-bold tracking-[0.06em]" style={{ color: temp.color }}>
+        <span className="text-[14px] font-bold tracking-[0.04em]" style={{ color: temp.color }}>
           기질 유형
         </span>
         <span
-          className="text-[17px] font-bold leading-tight"
+          className="text-[20px] font-bold leading-tight"
           style={{ color: 'var(--text-primary)', fontFamily: 'var(--font-title)' }}
         >
           {temp.type}
         </span>
-        <span className="text-[11.5px] text-text-tertiary leading-snug">{temp.reason}</span>
+        <span className="text-[13px] text-text-tertiary leading-snug">{temp.reason}</span>
       </div>
 
       <div
@@ -448,35 +482,35 @@ export function TemperamentVisual({ saju }: { saju: SajuResult }) {
           borderColor: `${SIGNAL_COLOR.info}45`,
         }}
       >
-        <span className="text-[12px] font-bold tracking-[0.06em]" style={{ color: SIGNAL_COLOR.info }}>
+        <span className="text-[14px] font-bold tracking-[0.04em]" style={{ color: SIGNAL_COLOR.info }}>
           시지 데이터
         </span>
         {saju.hourUnknown ? (
           <>
             <span
-              className="text-[17px] font-bold leading-tight"
+              className="text-[20px] font-bold leading-tight"
               style={{ color: 'var(--text-primary)', fontFamily: 'var(--font-serif)' }}
             >
               시간 미상
             </span>
-            <span className="text-[11.5px] text-text-tertiary leading-snug">
+            <span className="text-[13px] text-text-tertiary leading-snug">
               일주 ({saju.pillars.day.gan}{saju.pillars.day.zhi}) 기준 추정
             </span>
           </>
         ) : (
           <>
             <span
-              className="text-[20px] font-bold leading-tight"
+              className="text-[26px] font-bold leading-tight"
               style={{ color: 'var(--text-primary)', fontFamily: 'var(--font-serif)' }}
             >
               {hour.zhi}
-              <span className="text-[13px] text-text-tertiary font-normal ml-1">({hour.zhiElement})</span>
+              <span className="text-[15px] text-text-tertiary font-normal ml-1.5">({hour.zhiElement})</span>
             </span>
-            <div className="flex flex-wrap gap-1 mt-0.5">
+            <div className="flex flex-wrap gap-1.5 mt-0.5">
               <MiniChip label={hour.twelveStage} color={SIGNAL_COLOR.info} subtle />
               {hour.sinSal12 && <MiniChip label={hour.sinSal12} color={SIGNAL_COLOR.cta} subtle />}
             </div>
-            <span className="text-[11.5px] text-text-tertiary leading-snug">
+            <span className="text-[13px] text-text-tertiary leading-snug">
               지장간 {hour.hiddenStems.join('·') || '-'}
             </span>
           </>
@@ -498,39 +532,39 @@ export function ParentingVisual({ saju }: { saju: SajuResult }) {
   return (
     <div className="rounded-2xl p-4 border mb-3" style={{ background: 'rgba(20,12,38,0.55)', borderColor: `${style.color}45` }}>
       <div className="flex items-center justify-between mb-3">
-        <span className="text-[12px] font-bold tracking-[0.06em]" style={{ color: style.color }}>
+        <span className="text-[14px] font-bold tracking-[0.04em]" style={{ color: style.color }}>
           양육 성향
         </span>
         <span
-          className="text-[12px] font-bold px-2 py-0.5 rounded-md"
+          className="text-[14px] font-bold px-2.5 py-1 rounded-md"
           style={{ background: `${style.color}22`, color: style.color, border: `1px solid ${style.color}55` }}
         >
           {style.dominant}형
         </span>
       </div>
       <span
-        className="block text-[17px] font-bold leading-tight mb-2"
+        className="block text-[20px] font-bold leading-tight mb-2"
         style={{ color: 'var(--text-primary)', fontFamily: 'var(--font-title)' }}
       >
         {style.style}
       </span>
-      <span className="block text-[11.5px] text-text-tertiary leading-snug mb-3">{style.desc}</span>
+      <span className="block text-[13px] text-text-tertiary leading-snug mb-4">{style.desc}</span>
 
-      <div className="space-y-1.5">
+      <div className="space-y-2.5">
         {(['인성', '식상', '관성', '재성', '비겁'] as const).map((key) => {
           const v = groups[key];
           const pct = Math.round((v / max) * 100);
           const isDom = key === style.dominant;
           const color = isDom ? style.color : '#64748b';
           return (
-            <div key={key} className="flex items-center gap-2">
+            <div key={key} className="flex items-center gap-3">
               <span
-                className="text-[11.5px] font-bold w-10 shrink-0"
+                className="text-[14px] font-bold w-11 shrink-0"
                 style={{ color: isDom ? style.color : 'var(--text-secondary)' }}
               >
                 {key}
               </span>
-              <div className="flex-1 h-2 rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.05)' }}>
+              <div className="flex-1 h-2.5 rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.05)' }}>
                 <div
                   className="h-full rounded-full transition-all"
                   style={{
@@ -540,7 +574,7 @@ export function ParentingVisual({ saju }: { saju: SajuResult }) {
                   }}
                 />
               </div>
-              <span className="text-[11px] text-text-tertiary w-8 text-right shrink-0">{v}</span>
+              <span className="text-[13px] text-text-tertiary w-8 text-right shrink-0">{v}</span>
             </div>
           );
         })}
@@ -559,21 +593,24 @@ export function CompatibilityVisual({ saju }: { saju: SajuResult }) {
   const cautions = items.filter((i) => ['충', '형', '파', '해'].includes(i.type));
 
   return (
-    <div className="grid grid-cols-2 gap-2 mb-3">
+    <div className="space-y-2.5 mb-3">
       <div
-        className="rounded-2xl p-4 border flex flex-col gap-2"
+        className="rounded-2xl p-4 border flex flex-col gap-2.5"
         style={{
           background: 'rgba(20,12,38,0.55)',
           borderColor: `${SIGNAL_COLOR.good}45`,
         }}
       >
-        <span className="text-[12px] font-bold tracking-[0.06em]" style={{ color: SIGNAL_COLOR.good }}>
-          잘 맞는 결 (일지 {dayZhi})
-        </span>
+        <div className="flex items-center gap-2">
+          <span className="inline-block w-1 h-5 rounded-full" style={{ background: SIGNAL_COLOR.good }} />
+          <span className="text-[15px] font-bold tracking-[0.04em]" style={{ color: SIGNAL_COLOR.good }}>
+            잘 맞는 결 <span className="text-text-tertiary font-normal text-[13px]">(일지 {dayZhi})</span>
+          </span>
+        </div>
         {goods.length === 0 ? (
-          <span className="text-[12px] text-text-tertiary leading-snug">합 신호 없음 — 본문 띠 추천 참고</span>
+          <span className="text-[14px] text-text-tertiary leading-snug">합 신호 없음 — 본문 띠 추천 참고</span>
         ) : (
-          <div className="flex flex-wrap gap-1.5">
+          <div className="flex flex-wrap gap-2">
             {goods.map((g, i) => (
               <MiniChip key={i} label={g.description} color={SIGNAL_COLOR.good} />
             ))}
@@ -581,22 +618,28 @@ export function CompatibilityVisual({ saju }: { saju: SajuResult }) {
         )}
       </div>
       <div
-        className="rounded-2xl p-4 border flex flex-col gap-2"
+        className="rounded-2xl p-4 border flex flex-col gap-2.5"
         style={{
           background: 'rgba(20,12,38,0.55)',
           borderColor: cautions.length > 0 ? `${SIGNAL_COLOR.warn}55` : `${SIGNAL_COLOR.info}45`,
         }}
       >
-        <span
-          className="text-[12px] font-bold tracking-[0.06em]"
-          style={{ color: cautions.length > 0 ? SIGNAL_COLOR.warn : SIGNAL_COLOR.info }}
-        >
-          조심할 결
-        </span>
+        <div className="flex items-center gap-2">
+          <span
+            className="inline-block w-1 h-5 rounded-full"
+            style={{ background: cautions.length > 0 ? SIGNAL_COLOR.warn : SIGNAL_COLOR.info }}
+          />
+          <span
+            className="text-[15px] font-bold tracking-[0.04em]"
+            style={{ color: cautions.length > 0 ? SIGNAL_COLOR.warn : SIGNAL_COLOR.info }}
+          >
+            조심할 결
+          </span>
+        </div>
         {cautions.length === 0 ? (
-          <span className="text-[12px] text-text-tertiary leading-snug">충·형·파·해 신호 없음</span>
+          <span className="text-[14px] text-text-tertiary leading-snug">충·형·파·해 신호 없음</span>
         ) : (
-          <div className="flex flex-wrap gap-1.5">
+          <div className="flex flex-wrap gap-2">
             {cautions.map((c, i) => (
               <MiniChip key={i} label={`${c.type} ${c.description}`} color={SIGNAL_COLOR.warn} />
             ))}
@@ -616,23 +659,23 @@ export function CareerHintVisual({ saju }: { saju: SajuResult }) {
 
   return (
     <div
-      className="rounded-2xl p-4 border mb-3 flex flex-col gap-2"
+      className="rounded-2xl p-4 border mb-3 flex flex-col gap-2.5"
       style={{
         background: `linear-gradient(135deg, rgba(20,12,38,0.65) 0%, ${hint.color}14 60%, rgba(20,12,38,0.55) 100%)`,
         borderColor: `${hint.color}55`,
         boxShadow: `0 0 18px ${hint.color}10`,
       }}
     >
-      <span className="text-[12px] font-bold tracking-[0.06em]" style={{ color: hint.color }}>
+      <span className="text-[14px] font-bold tracking-[0.04em]" style={{ color: hint.color }}>
         자녀 진로 유형
       </span>
       <span
-        className="text-[17px] font-bold leading-tight"
+        className="text-[20px] font-bold leading-tight"
         style={{ color: 'var(--text-primary)', fontFamily: 'var(--font-title)' }}
       >
         {hint.type}
       </span>
-      <div className="flex flex-wrap gap-1.5 mt-1">
+      <div className="flex flex-wrap gap-2 mt-1">
         {hint.fields.map((f, i) => (
           <MiniChip key={i} label={f} color={hint.color} subtle />
         ))}
@@ -645,36 +688,43 @@ export function CareerHintVisual({ saju }: { saju: SajuResult }) {
 // 7) 임신·출산 좋은 시기 — 향후 대운 + 자녀성 활성 세운 타임라인
 // ─────────────────────────────────────────────────────────────────────────────
 export function TimingVisual({ saju }: { saju: SajuResult }) {
-  const { dae, se } = findChildActiveLuck(saju);
-  const now = new Date().getFullYear();
+  const { dae, months } = findChildActiveLuck(saju);
   const birthYear = saju.solarDate ? new Date(saju.solarDate).getFullYear() : 0;
   const targetGroup = saju.gender === 'male' ? '관성' : '식상';
 
+  // 연도별 그룹핑 (월 단위)
+  const monthsByYear = months.reduce<Record<number, ActiveMonth[]>>((acc, m) => {
+    (acc[m.year] = acc[m.year] || []).push(m);
+    return acc;
+  }, {});
+  const sortedYears = Object.keys(monthsByYear).map(Number).sort((a, b) => a - b);
+
   return (
-    <div className="mb-3 space-y-2">
+    <div className="mb-3 space-y-2.5">
+      {/* 활성 대운 (가임기 ~50세) */}
       <div
         className="rounded-2xl p-4 border"
         style={{ background: 'rgba(20,12,38,0.55)', borderColor: `${SIGNAL_COLOR.cta}45` }}
       >
-        <div className="flex items-center justify-between mb-2">
-          <span className="text-[12px] font-bold tracking-[0.06em]" style={{ color: SIGNAL_COLOR.cta }}>
-            자녀성({targetGroup}) 활성 대운
+        <div className="flex items-center gap-2 mb-3">
+          <span className="inline-block w-1 h-5 rounded-full" style={{ background: SIGNAL_COLOR.cta }} />
+          <span className="text-[15px] font-bold tracking-[0.04em]" style={{ color: SIGNAL_COLOR.cta }}>
+            자녀성({targetGroup}) 활성 대운 <span className="text-text-tertiary font-normal text-[13px]">(가임기 한정)</span>
           </span>
-          <span className="text-[11px] text-text-tertiary">3개 표시</span>
         </div>
         {dae.length === 0 ? (
-          <span className="text-[12px] text-text-tertiary leading-snug">
-            향후 대운 중 자녀성 활성 흐름 없음 — 본문의 세운·달 신호 위주
+          <span className="text-[14px] text-text-tertiary leading-snug">
+            가임기 내 자녀성 활성 대운 없음 — 본문의 월 단위 신호 위주
           </span>
         ) : (
-          <div className="flex flex-wrap gap-1.5">
+          <div className="flex flex-wrap gap-2">
             {dae.map((d, i) => {
               const as = birthYear > 0 ? d.startAge - birthYear : d.startAge;
               const ae = birthYear > 0 ? d.endAge - birthYear : d.endAge;
               return (
                 <span
                   key={i}
-                  className="inline-flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-[12px] font-bold border"
+                  className="inline-flex items-center gap-2 rounded-xl px-3.5 py-2 text-[14px] font-bold border"
                   style={{
                     background: `${SIGNAL_COLOR.cta}1a`,
                     color: 'var(--text-primary)',
@@ -691,37 +741,59 @@ export function TimingVisual({ saju }: { saju: SajuResult }) {
         )}
       </div>
 
+      {/* 월 단위 활성 시기 — 향후 3년, 연도 그룹 */}
       <div
         className="rounded-2xl p-4 border"
         style={{ background: 'rgba(20,12,38,0.55)', borderColor: `${SIGNAL_COLOR.good}45` }}
       >
-        <div className="flex items-center justify-between mb-2">
-          <span className="text-[12px] font-bold tracking-[0.06em]" style={{ color: SIGNAL_COLOR.good }}>
-            자녀성 활성 세운 (향후 6년)
+        <div className="flex items-center gap-2 mb-3">
+          <span className="inline-block w-1 h-5 rounded-full" style={{ background: SIGNAL_COLOR.good }} />
+          <span className="text-[15px] font-bold tracking-[0.04em]" style={{ color: SIGNAL_COLOR.good }}>
+            자녀성 활성 월 <span className="text-text-tertiary font-normal text-[13px]">(향후 3년)</span>
           </span>
-          <span className="text-[11px] text-text-tertiary">{now}~{now + 6}년</span>
         </div>
-        {se.length === 0 ? (
-          <span className="text-[12px] text-text-tertiary leading-snug">
-            향후 6년 내 자녀성 활성 세운 없음 — 본문 월 단위 신호 확인
+        {sortedYears.length === 0 ? (
+          <span className="text-[14px] text-text-tertiary leading-snug">
+            가임기 종료 또는 향후 3년 내 자녀성 활성 월 없음
           </span>
         ) : (
-          <div className="flex flex-wrap gap-1.5">
-            {se.map((s, i) => (
-              <span
-                key={i}
-                className="inline-flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-[12px] font-bold border"
-                style={{
-                  background: `${SIGNAL_COLOR.good}1a`,
-                  color: 'var(--text-primary)',
-                  borderColor: `${SIGNAL_COLOR.good}55`,
-                }}
-              >
-                <span style={{ color: SIGNAL_COLOR.good }}>{s.year}년</span>
-                <span style={{ fontFamily: 'var(--font-serif)' }}>{s.gan}{s.zhi}</span>
-                <span className="text-text-tertiary font-normal">{s.tenGod}</span>
-              </span>
-            ))}
+          <div className="space-y-3">
+            {sortedYears.map((year) => {
+              const items = monthsByYear[year];
+              const ageThisYear = birthYear > 0 ? year - birthYear : null;
+              return (
+                <div key={year}>
+                  <div className="flex items-baseline gap-2 mb-1.5">
+                    <span
+                      className="text-[15px] font-bold"
+                      style={{ color: SIGNAL_COLOR.good, fontFamily: 'var(--font-serif)' }}
+                    >
+                      {year}년
+                    </span>
+                    {ageThisYear !== null && (
+                      <span className="text-[12px] text-text-tertiary">만 {ageThisYear - 1}세</span>
+                    )}
+                  </div>
+                  <div className="flex flex-wrap gap-1.5">
+                    {items.map((m, i) => (
+                      <span
+                        key={i}
+                        className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[13px] font-bold border"
+                        style={{
+                          background: `${SIGNAL_COLOR.good}14`,
+                          color: 'var(--text-primary)',
+                          borderColor: `${SIGNAL_COLOR.good}44`,
+                        }}
+                      >
+                        <span style={{ color: SIGNAL_COLOR.good }}>{m.month}월</span>
+                        <span style={{ fontFamily: 'var(--font-serif)' }}>{m.gan}{m.zhi}</span>
+                        <span className="text-text-tertiary font-normal text-[12px]">{m.tenGod}</span>
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
           </div>
         )}
       </div>
