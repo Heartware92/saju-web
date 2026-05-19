@@ -9,6 +9,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { calculateTojeong, type TojeongResult } from '../engine/tojeong';
+import { computeSajuFromProfile } from '../utils/profileSaju';
 import { buildTojeongReading, type TojeongReading } from '../engine/tojeong/reading';
 import type { GwaeGrade } from '../engine/tojeong/gwae-table';
 import { useProfileStore } from '../store/useProfileStore';
@@ -291,6 +292,14 @@ export default function TojeongResultPage() {
   const chargeRef = useRef(chargeForContent);
   chargeRef.current = chargeForContent;
 
+  // ★ 사주+토정 하이브리드 — targetProfile 로부터 사주 명식 계산.
+  // 토정 풀이에 일간·용신·격국·대운 인용해 다른 서비스가 못 하는 깊이.
+  // targetProfile 없으면 (URL 직접 진입) saju 없이 진행 → AI 가 사주 인용 없이 토정만 풀이.
+  const saju = useMemo(() => {
+    if (!targetProfile) return null;
+    return computeSajuFromProfile(targetProfile);
+  }, [targetProfile]);
+
   // AI 내러티브 — 진입 즉시 자동 호출
   const [aiContent, setAiContent] = useState<string | null>(null);
   const [aiSections, setAiSections] = useState<Partial<Record<TojeongSectionKey, string>> | null>(null);
@@ -370,7 +379,8 @@ export default function TojeongResultPage() {
     try {
       const t = calculateTojeong(year, month, day, calendarType, targetYear);
       const r = buildTojeongReading(t);
-      const key = `${calendarType}_${year}-${month}-${day}_${targetYear}`;
+      // ★ v3 prefix — 11섹션 + 사주 하이브리드 + userCtx 변경에 따라 옛 캐시 자동 무효화.
+      const key = `v3_${calendarType}_${year}-${month}-${day}_${targetYear}`;
       return { tojeong: t, reading: r, cacheKey: key };
     } catch {
       return { tojeong: null, reading: null, cacheKey: null };
@@ -440,7 +450,12 @@ export default function TojeongResultPage() {
     // skip 되는 경로를 모두 막는다.
     const fetchOnce = async (attemptIdx: number): Promise<void> => {
       try {
-        const r = await getTojeongReading(tojeong, sourceBirth, targetProfile?.id);
+        const r = await getTojeongReading(tojeong, sourceBirth, targetProfile?.id, saju ?? undefined, {
+          jobState: targetProfile?.job_state ?? null,
+          customJobState: targetProfile?.custom_job_state ?? null,
+          loveState: targetProfile?.love_state ?? null,
+          customLoveState: targetProfile?.custom_love_state ?? null,
+        });
         if (r.content) {
           if (!cancelled) {
             setAiContent(r.content);
@@ -550,7 +565,12 @@ export default function TojeongResultPage() {
     setAiDomainScores(null);
     setAiError(null);
     setAiLoading(true);
-    getTojeongReading(tojeong, sourceBirth, targetProfile?.id)
+    getTojeongReading(tojeong, sourceBirth, targetProfile?.id, saju ?? undefined, {
+      jobState: targetProfile?.job_state ?? null,
+      customJobState: targetProfile?.custom_job_state ?? null,
+      loveState: targetProfile?.love_state ?? null,
+      customLoveState: targetProfile?.custom_love_state ?? null,
+    })
       .then((r: TojeongAIResult) => {
         if (r.content) {
           setAiContent(r.content);
@@ -1019,6 +1039,8 @@ export default function TojeongResultPage() {
               );
             }
 
+            // warning 섹션 — 빨강 톤 (택일 "피해야 할 날" 과 동일 시그널)
+            const isWarning = key === 'warning';
             return (
               <SectionCollapsible
                 key={key}
@@ -1026,10 +1048,15 @@ export default function TojeongResultPage() {
                 metaphorTitle={metaphorTitle}
                 defaultOpen={idx === 0}
                 enterDelay={0.15 + idx * 0.05}
+                {...(isWarning ? {
+                  barColor: '#F87171',
+                  barPulseColor: '#FCA5A5',
+                  borderColor: 'rgba(248,113,113,0.30)',
+                } : {})}
               >
                 <div className="text-[17px] text-text-secondary leading-[1.85] tracking-[-0.005em] space-y-3">
                   {bodyText.split(/\n\n+/).map((para, pi) => (
-                    <p key={pi} className="whitespace-pre-line">{para.trim()}</p>
+                    <p key={pi} className="whitespace-pre-line">{renderEmphasis(para.trim())}</p>
                   ))}
                 </div>
               </SectionCollapsible>

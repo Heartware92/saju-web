@@ -416,12 +416,13 @@ export function parseNumberedSections(raw: string): Array<{ title: string; body:
   return out.filter(s => s.body.length > 0);
 }
 
-/** [key] 델리미터로 토정비결 섹션 파싱 */
+/** [key] 델리미터로 토정비결 섹션 파싱. TOJEONG_SECTION_KEYS 에 정의된 모든 키 동적 매치. */
 export function parseTojeongSections(raw: string): Partial<Record<TojeongSectionKey, string>> {
   const out: Partial<Record<TojeongSectionKey, string>> = {};
-  const re = /^\s*\[(chongun|gwae|monthly|wealth|love|health|career|advice)\]\s*$/m;
+  // 신규 키 (business_move, warning) 도 자동 포함 — TOJEONG_SECTION_KEYS 변경 시 정규식 자동 갱신.
+  const pattern = TOJEONG_SECTION_KEYS.join('|');
+  const re = new RegExp(`^\\s*\\[(${pattern})\\]\\s*$`, 'm');
   const parts = raw.split(re);
-  // parts: ['', 'chongun', '본문...', 'gwae', '본문...', ...]
   for (let i = 1; i < parts.length; i += 2) {
     const key = parts[i] as TojeongSectionKey;
     const body = (parts[i + 1] ?? '').trim();
@@ -443,10 +444,19 @@ export const getTojeongReading = async (
   tj: TojeongResult,
   sourceBirth?: { birth_date: string; gender: 'male' | 'female'; calendar_type?: 'solar' | 'lunar' },
   profileId?: string,
+  /** ★ 사주+토정 하이브리드 — 사주 명식 인용해 분야별 풀이 깊이 ↑. 옵셔널. */
+  saju?: SajuResult,
+  /** ★ 사용자 정황 — 직업·연애 상태 분산 인용 매트릭스. 옵셔널. */
+  userCtx?: {
+    jobState?: string | null;
+    customJobState?: string | null;
+    loveState?: string | null;
+    customLoveState?: string | null;
+  },
 ): Promise<TojeongAIResult> => {
   // archive 는 3초 timeout — supabase hang 으로 클라이언트 await 가 안 풀려 backend
-  // 150초 race 까지 끌고가는 사고 차단. timeout 되어도 archiveSaju 내부 supabase 요청은
-  // 백그라운드에서 계속 진행되므로 보관함 저장은 보장됨 (ShareBar 즉시 표시만 포기).
+  // 전체 deadline race 까지 끌고가는 사고 차단. timeout 되어도 archiveSaju 내부 supabase 요청은
+  // 백그라운드에서 계속 진행되므로 보관함 저장은 보장됨.
   const archive = async (content: string): Promise<string | null> => {
     return Promise.race([
       archiveSaju({ profileId, sourceBirth, category: 'tojeong', engineResult: tj as unknown as Record<string, unknown>, interpretation: content, isDetailed: true }).catch(() => null),
@@ -454,16 +464,16 @@ export const getTojeongReading = async (
     ]);
   };
 
-  // 전체 150초 제한 — 4단 폴백을 모두 시도할 수 있는 마진.
-  //   2-pass(35+25=60) + single(35) + compact(25) + minimal(20) = 140s
-  //   어떤 상황에서도 150초 안에 결과 반환(빈 문자열일 수 있음). 페이지가 graceful 처리.
+  // 전체 180초 제한 — 분량 ↑(4200~5500자) 에 맞춰 확장.
+  //   2-pass(50+40=90) + single(30) + compact(25) + minimal(20) = 165s
+  //   어떤 상황에서도 180초 안에 결과 반환(빈 문자열일 수 있음). 페이지가 graceful 처리.
   return Promise.race([
-    tojeongAllAttempts(tj, archive),
+    tojeongAllAttempts(tj, archive, saju, userCtx),
     new Promise<TojeongAIResult>(resolve =>
       setTimeout(() => {
-        console.warn('[tojeong] 150s overall deadline — returning empty');
+        console.warn('[tojeong] 180s overall deadline — returning empty');
         resolve({ success: true, content: '' });
-      }, 150_000),
+      }, 180_000),
     ),
   ]);
 };
@@ -471,11 +481,13 @@ export const getTojeongReading = async (
 async function tojeongAllAttempts(
   tj: TojeongResult,
   archive: (content: string) => Promise<string | null>,
+  saju?: SajuResult,
+  userCtx?: { jobState?: string | null; customJobState?: string | null; loveState?: string | null; customLoveState?: string | null },
 ): Promise<TojeongAIResult> {
-  // ── 시도 1: 2-pass (풍부한 결과, pass1 35s + pass2 25s) ──
+  // ── 시도 1: 2-pass (풍부한 결과, pass1 50s + pass2 40s) ──
   // pass2 가 실패해도 pass1 결과만으로 반환. pass1 자체가 실패하면 시도 2로.
   try {
-    const result = await tojeong2Pass(tj);
+    const result = await tojeong2Pass(tj, saju, userCtx);
     if (result.content) {
       const archivedRecordId = await archive(result.content);
       return { ...result, ...(archivedRecordId ? { archivedRecordId } : {}) };
@@ -484,15 +496,15 @@ async function tojeongAllAttempts(
     console.warn('[tojeong] try1 (2-pass) failed:', e.message);
   }
 
-  // ── 시도 2: 레거시 단일 호출 (35s 타임아웃, 4000 토큰) ──
+  // ── 시도 2: 레거시 단일 호출 (30s 타임아웃, 5000 토큰) ──
   try {
-    const content = await callGPT(generateTojeongPrompt(tj), 4000, undefined, { allowTruncated: true, timeoutMs: 35_000 });
+    const content = await callGPT(generateTojeongPrompt(tj, saju, userCtx), 5000, undefined, { allowTruncated: true, timeoutMs: 30_000 });
     if (content) {
       const archivedRecordId = await archive(content);
       return { success: true, content, ...(archivedRecordId ? { archivedRecordId } : {}) };
     }
   } catch (e: any) {
-    console.warn('[tojeong] try2 (single 4000) failed:', e.message);
+    console.warn('[tojeong] try2 (single 5000) failed:', e.message);
   }
 
   // ── 시도 3: 컴팩트 단일 호출 (25s 타임아웃, 2400 토큰) ──
@@ -522,17 +534,23 @@ async function tojeongAllAttempts(
   return { success: true, content: '' };
 }
 
-async function tojeong2Pass(tj: TojeongResult): Promise<TojeongAIResult> {
-  const pass1Prompt = generateTojeongPass1Prompt(tj);
-  const pass1Content = await callGPT(pass1Prompt, 6000, undefined, { allowTruncated: true, timeoutMs: 35_000 });
+async function tojeong2Pass(
+  tj: TojeongResult,
+  saju?: SajuResult,
+  userCtx?: { jobState?: string | null; customJobState?: string | null; loveState?: string | null; customLoveState?: string | null },
+): Promise<TojeongAIResult> {
+  // Pass1 — 분량 ↑ (총운 400~600자 + 월별 180~250자/월) 위해 8000 토큰 + 50s
+  const pass1Prompt = generateTojeongPass1Prompt(tj, saju, userCtx);
+  const pass1Content = await callGPT(pass1Prompt, 8000, undefined, { allowTruncated: true, timeoutMs: 50_000 });
   const pass1Sections = parseTojeongSections(pass1Content);
   const domainScores = parseTojeongScores(pass1Content) ?? undefined;
 
   let pass2Content = '';
   let pass2Sections: Partial<Record<TojeongSectionKey, string>> = {};
   try {
-    const pass2Prompt = generateTojeongPass2Prompt(tj, pass1Content);
-    pass2Content = await callGPT(pass2Prompt, 5500, undefined, { allowTruncated: true, timeoutMs: 25_000 });
+    // Pass2 — 7섹션 (재물·연애·학업대인·창업이전·건강소망·주의·조언) 위해 8500 토큰 + 40s
+    const pass2Prompt = generateTojeongPass2Prompt(tj, pass1Content, saju, userCtx);
+    pass2Content = await callGPT(pass2Prompt, 8500, undefined, { allowTruncated: true, timeoutMs: 40_000 });
     pass2Sections = parseTojeongSections(pass2Content);
   } catch {
     // pass2 실패해도 pass1 결과는 반환

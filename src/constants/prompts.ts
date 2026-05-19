@@ -3264,7 +3264,16 @@ function getZhiRelation(zhi1: string, zhi2: string): string {
 }
 
 /** @deprecated 레거시 단일호출 프롬프트 — 캐시 호환용으로 보존. 새 호출은 pass1/pass2 사용. */
-export const generateTojeongPrompt = (tj: TojeongResult): string => {
+export const generateTojeongPrompt = (
+  tj: TojeongResult,
+  saju?: SajuResult,
+  userCtx?: {
+    jobState?: string | null;
+    customJobState?: string | null;
+    loveState?: string | null;
+    customLoveState?: string | null;
+  },
+): string => {
   const { targetYear, age, upperGwae, middleGwae, lowerGwae, gwaeNumber, formula } = tj;
   const entry = getGwaeEntry(tj.upper, tj.middle, tj.lower);
   const monthlyList = entry.monthlyHints
@@ -3294,13 +3303,34 @@ export const generateTojeongPrompt = (tj: TojeongResult): string => {
   뜻: ${entry.hanjaSa.translation}`
     : '';
 
+  // 사주+토정 하이브리드 블록 (buildTojeongBaseBlock 과 동일 패턴)
+  const sajuBlock = saju ? `
+
+▣ 본인 사주 명식 (★ 사주+토정 하이브리드)
+  일간: ${saju.dayMaster}(${saju.dayMasterElement}) / 신강신약: ${saju.strengthStatus}
+  용신: ${saju.yongSinElement}(${saju.yongSin}) / 기신: ${saju.giSin}
+  오행: 목${saju.elementPercent.목}% 화${saju.elementPercent.화}% 토${saju.elementPercent.토}% 금${saju.elementPercent.금}% 수${saju.elementPercent.수}%
+` : '';
+
+  // 사용자 정황 블록
+  const jobLabel = userCtx?.customJobState?.trim() || userCtx?.jobState || '미입력';
+  const loveLabel = userCtx?.customLoveState?.trim() || userCtx?.loveState || '미입력';
+  const hasJob = jobLabel !== '미입력';
+  const hasLove = loveLabel !== '미입력' && loveLabel !== '공개 안 함';
+  const userCtxBlock = (hasJob || hasLove) ? `
+
+[★ 사용자 현재 상황 — 분야별 풀이에 분산 인용]
+- 직업: ${jobLabel}
+- 연애 상태: ${loveLabel}
+` : '';
+
   return `토정비결 풀이 요청
 대상 해: ${targetYear}년 (${tj.yearGanZhi.ganZhi}년)
 세는 나이: ${age}세
 음력 생년월일: ${tj.birthLunar.year}년 ${tj.birthLunar.month}월 ${tj.birthLunar.day}일${tj.birthLunar.isLeap ? ' (윤달)' : ''}
 생년 지지(띠): ${birthZhi}(${birthAnimal})
 올해 세운 오행: 천간 ${yearGan}(${seunGanElement}) · 지지 ${yearZhi}(${seunZhiElement})
-생년 띠 × 세운 지지 관계: ${zhiRelation}
+생년 띠 × 세운 지지 관계: ${zhiRelation}${sajuBlock}${userCtxBlock}
 
 계산된 괘: ${gwaeNumber} (상괘 ${tj.upper} · 중괘 ${tj.middle} · 하괘 ${tj.lower})
 
@@ -3345,84 +3375,121 @@ ${monthlyList}
 5) 원문 괘사(표제·한문 구절)의 상징과 뜻을 풀이 서두에 자연스럽게 녹여낼 것.
 6) 생년 띠(${birthZhi})와 올해 세운(${yearGanZhi}) 지지 관계(${zhiRelation})를 총운·분야별 운세에 반드시 1회 이상 언급할 것.
 7) 올해 세운 오행(천간 ${seunGanElement}·지지 ${seunZhiElement})이 개인 운세에 미치는 영향을 구체적으로 서술할 것.
+${saju ? `8) ★★ 사주+토정 하이브리드 — 본인 사주 명식 (일간 ${saju.dayMaster}·용신 ${saju.yongSinElement}·신강신약 ${saju.strengthStatus}) 을 분야별 풀이에 자연 인용. 예: "당신의 일간 ${saju.dayMaster}(${saju.dayMasterElement})에 올해 ${yearGan}(${seunGanElement}) 기운이 들어와…". 일반 토정 풀이가 못 하는 깊이를 만드는 차별점.` : ''}
+${(hasJob || hasLove) ? `9) ★★ 사용자 정황 (직업 "${jobLabel}"·연애 "${loveLabel}") 을 위 매트릭스대로 분산 인용해 "내 상황 맞춤" 풀이로. "직장인이라면…" 같은 일반 가설형 금지.` : ''}
+10) ★ 톤 균형: 본문 전체에서 희망·격려 톤 70% : 경계·주의 톤 30% 비율 유지. 흉운이라도 길운 단서 1줄 이상, 길운이라도 경계 포인트 1줄 이상.
+11) ★ 어조: "~할 운수가 들어 있습니다", "~할 운세입니다", "~하리라 봅니다" 같은 전통 토정 어법과 "~하세요", "~되겠습니다" 같은 현대 부드러움을 자연스럽게 섞을 것. 단조롭게 한쪽으로만 치우치지 말 것.
+12) ★ 디테일: 매 월·매 분야 본문에 다음 중 최소 2가지 포함 — 방향(동·서·남·북·동남·서남·동북·서북) / 시기(초순·중순·하순·연초·하반기·환절기) / 인물 유형(귀인·동료·연인·가족·이성·선배·후배). 추상 격언만 나열 금지.
+13) ★ 단락 분리: 본문 안에서 서로 다른 주제·시기를 서술할 때 빈 줄(줄바꿈 2회)로 문단을 나눌 것. 한 덩어리로 뭉치지 말 것.
 
 ${METAPHOR_SHORT_GUIDE}
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-위 정보를 바탕으로 ${targetYear}년 토정비결 풀이를 다음 구조로 작성하세요 (총 2900~3500자).
-(직원 피드백: 분야별 운세를 4개 별도 섹션으로 세분화하여 재물·애정·건강·직장학업 각각이 독립 섹션이 되도록 구성)
+위 정보를 바탕으로 ${targetYear}년 토정비결 풀이를 다음 구조로 작성하세요 (총 4200~5500자).
 
 반드시 전통 토정비결 어법(예: "용이 여의주를 얻은 격", "나무에 꽃이 피는 상")으로 시(詩)적인 개운 문구 1~2줄을 먼저 제시한 뒤, 현대인도 이해하기 쉽게 풀어 설명하세요.
 
-1. 올해의 총운 (220~280자)
-- 상중하괘 조합의 상징을 엮어 한 해의 큰 흐름 (등급: ${entry.grade})
-- 핵심 메시지와 경계할 점, 이 한 해의 결이 어떤 감각인지
+[chongun] 올해의 총운 (400~600자)
+- 3~4 단락으로 나누고 단락 사이 빈 줄.
+- 단락1: 한 해 흐름 + 마음가짐.
+- 단락2: 핵심 메시지·등급(${entry.grade}) 해석.
+- 단락3: 한 해 4개 분야(재물·연애·건강·직장) 한 줄씩 요약.
+- 단락4: 결론·당부.
 
-2. 괘의 의미 (180~240자)
-- 왜 이 괘가 나왔는지 상징 해석
-- 상괘(${upperGwae.name})·중괘(${middleGwae.position})·하괘(${lowerGwae.name})의 조화와 긴장
+[gwae] 괘의 의미 (250~320자)
+- 왜 이 괘가 나왔는지 상징 해석.
+- 상괘(${upperGwae.name})·중괘(${middleGwae.position})·하괘(${lowerGwae.name})의 조화와 긴장.
 
-3. 월별 흐름 (1월~12월, 각 월 3~4문장·약 90~130자)
-- 각 월의 키워드(위 월별 키워드 고정)를 근거로 1문장 풀이
-- 그 달에 해야 할 일 1가지 + 조심할 일 1가지를 반드시 포함
-- 포맷: "N월 — [월별 키워드]" 이어서 본문 (예: "1월 — 준비")
-- 정월부터 12월까지 빠짐없이 12개 소섹션으로 작성
+[monthly] 월별 흐름 (1월~12월, 각 월 180~250자)
+- 매 월: 자연 비유 시작 1문장 + 그 달의 흐름 + 권장 행동 1 + 조심할 일 1 + 방향 또는 인물.
+- 포맷: "N월 — [월별 키워드]" 이어서 본문.
+- 정월부터 12월까지 빠짐없이.
+- 각 월은 빈 줄로 분리.
 
-4. 재물운 (160~210자)
-- 들어오는 시기·새는 시기를 분기로 구분 (상반기/하반기 또는 봄·여름·가을·겨울)
-- 본업 수입 vs 부수입의 흐름
-- 재테크 방향 1개 (저축 강화·분산투자·신중 보류 등)
-- 큰 지출 시 주의해야 할 달 1개 명시
+[wealth] 재물 및 성공운 (280~360자)
+- 들어오는 시기·새는 시기 분기 + 본업/부수입 흐름 + 재테크 방향 + 큰 지출 주의 월.
+- 성공·관록 — 명예·인정·승진·표창 등 관련 흐름 1단락.
 
-5. 애정·가정운 (160~210자)
-- 미혼: 인연 들어오는 흐름과 이상형 단서
-- 기혼: 부부·자녀·부모 중 이달 테마와 주의 장면
-- 관계 회복·갈등 분기점 시기 1개
-- 가정 안에서 권할 행동 1가지
+[love] 가정 및 애정운 (280~360자)
+- 미혼: 인연 흐름·이상형 단서. 기혼: 부부·자녀·부모 테마.
+- 갈등 분기점 시기 1개 + 가정 권장 행동 1.
+- 가정 — 집안 의논·배우자 조력·가족 사건 시기 포함.
 
-6. 건강운 (140~190자)
-- 취약 장부 또는 신체 부위 (오장육부·오행 기준)
-- 유의할 계절·환절기와 그 이유
-- 권장 운동·식습관 1가지
-- 정신 건강·스트레스 관리 한마디
+[career] 학업 및 대인운 (280~360자)
+- 학업·시험: 합격운·집중력·자격증 (있다면).
+- 대인운: 귀인·조력자 유형 + 멀리할 인물 + 인간관계 함정 1개.
+- 직장 이슈는 본 섹션 또는 wealth 섹션에 분산.
 
-7. 직장·학업운 (160~210자)
-- 직장: 승진·이직·평가·인간관계 중 유리한 흐름 1개와 시기
-- 학업·시험: 합격운·집중력·자격증 운
-- 조심할 덫 1개 (구설·실수·과로 등)
-- 협력자 또는 조력자가 누구인지 (선배·후배·이성·동료 등)
+[business_move] 창업 및 이전운 (240~320자)
+- 창업·이직·확장 시기 (가능 시기 / 보류 시기).
+- 이사·이전·여행 흐름 — 길한 방향·달 + 흉한 방향·달.
+- 사업 파트너 만남 흐름 1줄.
 
-8. 개운 조언 (160~220자) — 불릿 5개
-- 올해의 길한 방향 1개
-- 길한 색 2개
-- 행운 숫자·요일 각 1개
-- 이달 안에 실천할 개운 행동 2개
+[health] 건강 및 소망운 (240~320자)
+- 취약 장부·신체 부위 + 유의 계절·환절기 + 권장 운동·식습관.
+- 소망운 — 올해 가장 이루어지기 쉬운 바람 1가지 + 노력해야 할 1가지.
 
-섹션 제목은 위 번호(1. 2. 3. 4. 5. 6. 7. 8.) 형식 그대로 유지하고, 월별 소섹션은 12개를 모두 작성하세요. Markdown # 헤더는 절대 사용하지 마세요.`;
+[warning] 주의해야 할 점 (260~340자)
+- 관재구설 (시비·소송·언쟁) — 어떤 시기·인물 유형이 위험한지.
+- 돌발 사고 (교통·낙상·물·불·금속 등) — 시기 명시.
+- 금전 위험 (사기·보증·도난·과지출) — 누구·언제.
+- 건강 위험 — 사고형 위주 (만성 질환은 health 섹션).
+- 각 항목 빈 줄로 분리.
+
+[advice] 개운 조언 (240~320자)
+※ 행운 방위·색상·숫자·시간대 등은 시각 카드로 자동 노출되므로 본문에서 같은 데이터 반복 금지.
+- 이번 달 실천할 개운 행동 2가지 (구체: 어디서·언제·어떻게).
+- 올해 피해야 할 행동·습관 1~2가지.
+- 대인관계에서 의식할 점 1가지.
+- ${targetYear}년 전체를 관통하는 마음가짐 한마디.
+
+섹션 마커는 위 [key] 형식 ([chongun], [gwae], [monthly], [wealth], [love], [career], [business_move], [health], [warning], [advice]) 그대로 사용. 월별 소섹션은 12개 모두 작성. Markdown # 헤더 금지.`;
 };
 
 // ─────────────────────────────────────────────
 // 토정비결 2-pass 프롬프트 (v2 — 섹션 깊이 확장 + 도메인 점수)
 // ─────────────────────────────────────────────
 
-export type TojeongSectionKey = 'chongun' | 'gwae' | 'monthly' | 'wealth' | 'love' | 'health' | 'career' | 'advice';
+export type TojeongSectionKey =
+  | 'chongun' | 'gwae' | 'monthly'
+  | 'wealth' | 'love' | 'health' | 'career'
+  | 'business_move'   // 신설 — 창업·이전운 (전통 표준, 포스텔러 비교 시 누락 항목)
+  | 'warning'         // 신설 — 주의해야 할 점 (관재구설·돌발 위험 모음)
+  | 'advice';
 
-export const TOJEONG_SECTION_KEYS: TojeongSectionKey[] = ['chongun', 'gwae', 'monthly', 'wealth', 'love', 'health', 'career', 'advice'];
+// 렌더 순서: 총운 → 괘의미 → 월별 → 재물 → 애정 → 학업·직장 → 창업·이전 → 건강 → 주의 → 조언
+export const TOJEONG_SECTION_KEYS: TojeongSectionKey[] = [
+  'chongun', 'gwae', 'monthly',
+  'wealth', 'love', 'career', 'business_move', 'health', 'warning', 'advice',
+];
 
 export const TOJEONG_SECTION_LABELS: Record<TojeongSectionKey, string> = {
   chongun: '올해의 총운',
   gwae: '괘의 의미',
   monthly: '월별 흐름',
-  wealth: '재물운',
-  love: '애정·가정운',
-  health: '건강운',
-  career: '직장·학업운',
+  wealth: '재물 및 성공운',
+  love: '가정 및 애정운',
+  health: '건강 및 소망운',
+  career: '학업 및 대인운',
+  business_move: '창업 및 이전운',
+  warning: '주의해야 할 점',
   advice: '개운 조언',
 };
 
-/** 토정비결 공통 데이터 블록 (괘 정보 + 확정된 길흉 + 작성 규칙 + 은유) */
-function buildTojeongBaseBlock(tj: TojeongResult): string {
+/** 토정비결 공통 데이터 블록 (괘 정보 + 확정된 길흉 + 작성 규칙 + 은유).
+ *  saju (옵션): 사주 명식. 있으면 일간·용신·격국·대운을 분야별 풀이에 자연 인용하도록 사주+토정 하이브리드.
+ *  userCtx (옵션): 대표 프로필의 직업·연애 정황. 신년운세 패턴 (ef3e1ac) 과 동일 매트릭스 주입. */
+function buildTojeongBaseBlock(
+  tj: TojeongResult,
+  saju?: SajuResult,
+  userCtx?: {
+    jobState?: string | null;
+    customJobState?: string | null;
+    loveState?: string | null;
+    customLoveState?: string | null;
+  },
+): string {
   const { targetYear, age, upperGwae, middleGwae, lowerGwae, gwaeNumber, formula } = tj;
   const entry = getGwaeEntry(tj.upper, tj.middle, tj.lower);
   const monthlyList = entry.monthlyHints
@@ -3450,13 +3517,51 @@ function buildTojeongBaseBlock(tj: TojeongResult): string {
   뜻: ${entry.hanjaSa.translation}`
     : '';
 
+  // ── 사주 명식 블록 (사주+토정 하이브리드 — 우리만의 차별화) ──
+  // 토정비결은 전통적으로 사주와 분리된 점법이지만, 사용자가 사주를 이미 가진 상황에서
+  // 토정의 추상적 결을 사주 명식 (일간·용신·격국·대운) 으로 구체화하면 다른 서비스가 못 하는 깊이.
+  const sajuBlock = saju ? `
+
+▣ 본인 사주 명식 (★ 사주+토정 하이브리드 — 분야별 풀이에 자연 인용)
+  일간: ${saju.dayMaster}(${saju.dayMasterElement}) / 신강신약: ${saju.strengthStatus}
+  용신: ${saju.yongSinElement}(${saju.yongSin}) / 기신: ${saju.giSin}
+  오행: 목${saju.elementPercent.목}% 화${saju.elementPercent.화}% 토${saju.elementPercent.토}% 금${saju.elementPercent.금}% 수${saju.elementPercent.수}%
+  ${saju.daeWoon && saju.daeWoon.length > 0
+    ? `현재 대운: ${(() => {
+        // solarDate "YYYY-MM-DD" 에서 출생 연도 추출 → 대운 시작·끝 나이를 절대 연도로 변환.
+        const birthYear = parseInt(saju.solarDate?.slice(0, 4) ?? '0', 10);
+        if (!birthYear) return '확정 안됨';
+        const cur = saju.daeWoon.find(d => d.gan && d.zhi && targetYear >= d.startAge + birthYear && targetYear <= d.endAge + birthYear);
+        return cur ? `${cur.gan}${cur.zhi}(${cur.tenGod})` : '확정 안됨';
+      })()}`
+    : ''}
+` : '';
+
+  // ── 사용자 정황 블록 (직업·연애 — 신년운세 매트릭스 패턴) ──
+  const jobLabel = userCtx?.customJobState?.trim() || userCtx?.jobState || '미입력';
+  const loveLabel = userCtx?.customLoveState?.trim() || userCtx?.loveState || '미입력';
+  const hasJob = jobLabel !== '미입력';
+  const hasLove = loveLabel !== '미입력' && loveLabel !== '공개 안 함';
+  const userCtxBlock = (hasJob || hasLove) ? `
+
+[★ 사용자 현재 상황 — 분야별 풀이에 분산 인용해 "내 얘기" 같은 커스텀 결과 만들기]
+- 직업: ${jobLabel}${userCtx?.customJobState?.trim() ? ' (직접 입력 — 직업 일과·도구·상호작용·압박 특수성 반영, 일반 사무직 가이드 베끼지 말 것)' : ''}
+- 연애 상태: ${loveLabel}${userCtx?.customLoveState?.trim() ? ' (직접 입력 — 관계 형태·현재 단계 과제·올해 톤 반영)' : ''}
+
+[★★ 사용자 입력 분산 인용 매트릭스]
+- 직업(${jobLabel}) → chongun·wealth·career·business_move·warning·advice 자연 인용. career 는 필수.
+- 연애(${loveLabel}) → love(필수, 상태별 분기)·wealth(가정 부양 영향)·monthly(결혼·만남 월 강조)
+- 같은 입력 반복 인용 시 동일 문장 패턴 금지. 시간·결정·환경·관계망 측면으로 변형.
+- "직장인이라면…" "연인이 있다면…" 같은 일반 가설형 금지. 사용자 입력값을 단정적 호명으로 자연 인용.
+` : '';
+
   return `토정비결 풀이 요청
 대상 해: ${targetYear}년 (${yearGanZhi}년)
 세는 나이: ${age}세
 음력 생년월일: ${tj.birthLunar.year}년 ${tj.birthLunar.month}월 ${tj.birthLunar.day}일${tj.birthLunar.isLeap ? ' (윤달)' : ''}
 생년 지지(띠): ${birthZhi}(${birthAnimal})
 올해 세운 오행: 천간 ${yearGan}(${seunGanElement}) · 지지 ${yearZhi}(${seunZhiElement})
-생년 띠 × 세운 지지 관계: ${zhiRelation}
+생년 띠 × 세운 지지 관계: ${zhiRelation}${sajuBlock}${userCtxBlock}
 
 계산된 괘: ${gwaeNumber} (상괘 ${tj.upper} · 중괘 ${tj.middle} · 하괘 ${tj.lower})
 
@@ -3501,6 +3606,12 @@ ${monthlyList}
 5) 원문 괘사(표제·한문 구절)의 상징과 뜻을 풀이 서두에 자연스럽게 녹여낼 것.
 6) 생년 띠(${birthZhi})와 올해 세운(${yearGanZhi}) 지지 관계(${zhiRelation})를 총운·분야별 운세에 반드시 1회 이상 언급할 것.
 7) 올해 세운 오행(천간 ${seunGanElement}·지지 ${seunZhiElement})이 개인 운세에 미치는 영향을 구체적으로 서술할 것.
+${saju ? `8) ★★ 사주+토정 하이브리드 — 본인 사주 명식 (일간 ${saju.dayMaster}·용신 ${saju.yongSinElement}·신강신약 ${saju.strengthStatus}) 을 분야별 풀이에 자연 인용. 예: "당신의 일간 ${saju.dayMaster}(${saju.dayMasterElement})에 올해 ${yearGan}(${seunGanElement}) 기운이 들어와…". 일반 토정 풀이가 못 하는 깊이를 만드는 차별점.` : ''}
+${(hasJob || hasLove) ? `9) ★★ 사용자 정황 (직업 "${jobLabel}"·연애 "${loveLabel}") 을 위 매트릭스대로 분산 인용해 "내 상황 맞춤" 풀이로. "직장인이라면…" 같은 일반 가설형 금지.` : ''}
+10) ★ 톤 균형: 본문 전체에서 희망·격려 톤 70% : 경계·주의 톤 30% 비율 유지. 흉운이라도 길운 단서 1줄 이상, 길운이라도 경계 포인트 1줄 이상.
+11) ★ 어조: "~할 운수가 들어 있습니다", "~할 운세입니다", "~하리라 봅니다" 같은 전통 토정 어법과 "~하세요", "~되겠습니다" 같은 현대 부드러움을 자연스럽게 섞을 것. 단조롭게 한쪽으로만 치우치지 말 것.
+12) ★ 디테일: 매 월·매 분야 본문에 다음 중 최소 2가지 포함 — 방향(동·서·남·북·동남·서남·동북·서북) / 시기(초순·중순·하순·연초·하반기·환절기) / 인물 유형(귀인·동료·연인·가족·이성·선배·후배). 추상 격언만 나열 금지.
+13) ★ 단락 분리: 본문 안에서 서로 다른 주제·시기를 서술할 때 빈 줄(줄바꿈 2회)로 문단을 나눌 것. 한 덩어리로 뭉치지 말 것.
 
 ${METAPHOR_SHORT_GUIDE}
 
@@ -3515,12 +3626,21 @@ Markdown # 헤더는 절대 사용하지 마세요.`;
 
 /**
  * 토정비결 Pass 1 프롬프트 — 점수 + 총운 + 괘의미 + 월별운세
- * maxTokens: 6000
+ * maxTokens: 8000 (분량 ↑ 에 맞춰 확장)
  */
-export function generateTojeongPass1Prompt(tj: TojeongResult): string {
+export function generateTojeongPass1Prompt(
+  tj: TojeongResult,
+  saju?: SajuResult,
+  userCtx?: {
+    jobState?: string | null;
+    customJobState?: string | null;
+    loveState?: string | null;
+    customLoveState?: string | null;
+  },
+): string {
   const entry = getGwaeEntry(tj.upper, tj.middle, tj.lower);
   const { upperGwae, middleGwae, lowerGwae, targetYear } = tj;
-  const base = buildTojeongBaseBlock(tj);
+  const base = buildTojeongBaseBlock(tj, saju, userCtx);
 
   return `${base}
 
@@ -3537,37 +3657,51 @@ export function generateTojeongPass1Prompt(tj: TojeongResult): string {
 그 다음 줄부터 아래 3개 섹션을 [key] 태그로 구분하여 작성:
 
 [chongun]
-올해의 총운 (300~400자)
-- 첫 줄: 은유적 소제목 한 문장 (예: "봄바람 속에 씨앗을 뿌리는 한 해")
-- 상중하괘 조합의 상징을 엮어 한 해의 큰 흐름 (등급: ${entry.grade})
-- 핵심 메시지와 경계할 점, 이 한 해의 결이 어떤 감각인지
-- 괘사의 상징을 서두에 자연스럽게 녹일 것
+올해의 총운 (400~600자)
+- 첫 줄: [은유] 비유 한 문장 (15자 이내, 종결어미 없음)
+- 둘째 줄: 빈 줄
+- 본문은 3~4 단락으로, 단락 사이 빈 줄(줄바꿈 2회) 필수
+- 단락1: 한 해 큰 흐름 + 마음가짐
+- 단락2: 핵심 메시지·등급(${entry.grade}) 해석 + 괘사 상징 자연 회수
+- 단락3: 4개 분야(재물·연애·건강·직장) 한 줄씩 요약
+- 단락4: 결론·당부
 
 [gwae]
 괘의 의미 (250~320자)
-- 첫 줄: 은유적 소제목 한 문장 (예: "세 기운이 빚어낸 올해의 그릇")
+- 첫 줄: [은유] 비유 한 문장 (15자 이내, 종결어미 없음)
+- 둘째 줄: 빈 줄
 - 왜 이 괘가 나왔는지 상징 해석
 - 상괘(${upperGwae.name})·중괘(${middleGwae.position})·하괘(${lowerGwae.name})의 조화와 긴장
 - 세 괘의 오행·상징이 어떻게 맞물려 올해 운세의 뼈대를 이루는지
 
 [monthly]
-월별 흐름 — ${targetYear}년 1월~12월 (각 월 4~5문장, 120~160자)
-- 각 월의 키워드(위 월별 키워드 고정)를 근거로 풀이
-- 그 달에 해야 할 일 1가지 + 조심할 일 1가지를 반드시 포함
-- 포맷: "N월 — [월별 키워드]" 이어서 본문 (예: "1월 — 준비")
-- 정월부터 12월까지 빠짐없이 12개 소섹션으로 작성
+월별 흐름 — ${targetYear}년 1월~12월 (각 월 180~250자)
+- 매 월: 자연 비유 시작 1문장 + 그 달의 흐름 + 권장 행동 1 + 조심할 일 1 + 방향(동·서·남·북 등) 또는 인물 유형
+- 포맷: "N월 — [월별 키워드]" 한 줄, 그 다음 줄에 본문 시작
+- 정월부터 12월까지 빠짐없이 12개
+- 각 월 사이 빈 줄 1개
 
-[chongun], [gwae], [monthly] 태그를 반드시 각 섹션 시작에 한 줄로 적어주세요. 이 3개 섹션만 작성하고, 재물·애정·건강·직장·개운은 다음 호출에서 작성합니다.`;
+[chongun], [gwae], [monthly] 태그를 반드시 각 섹션 시작에 한 줄로 적어주세요. 이 3개 섹션만 작성하고, 분야별·창업·주의·조언은 다음 호출에서 작성합니다.`;
 }
 
 /**
- * 토정비결 Pass 2 프롬프트 — 재물 + 애정 + 건강 + 직장 + 개운
- * maxTokens: 4500
+ * 토정비결 Pass 2 프롬프트 — 재물 + 애정 + 학업·대인 + 창업·이전 + 건강·소망 + 주의 + 조언
+ * maxTokens: 8500 (7개 섹션, 분량 ↑ 에 맞춰 확장)
  */
-export function generateTojeongPass2Prompt(tj: TojeongResult, pass1Content: string): string {
+export function generateTojeongPass2Prompt(
+  tj: TojeongResult,
+  pass1Content: string,
+  saju?: SajuResult,
+  userCtx?: {
+    jobState?: string | null;
+    customJobState?: string | null;
+    loveState?: string | null;
+    customLoveState?: string | null;
+  },
+): string {
   const entry = getGwaeEntry(tj.upper, tj.middle, tj.lower);
   const { targetYear } = tj;
-  const base = buildTojeongBaseBlock(tj);
+  const base = buildTojeongBaseBlock(tj, saju, userCtx);
 
   return `${base}
 
@@ -3583,57 +3717,70 @@ export function generateTojeongPass2Prompt(tj: TojeongResult, pass1Content: stri
 - 등급 색깔은 유지하되, 4영역 중 최소 1곳은 영역 무드 키워드가 시사하는 강점을 적극 부각, 최소 1곳은 무드의 약점을 명시적으로 짚어 영역 차등을 시각적으로 드러낼 것.
 
 [wealth]
-재물운 (250~320자)
+재물 및 성공운 (280~360자)
 - 첫 줄: [은유] 비유 한 문장 (15자 이내, 종결어미 없음. 예: "[은유] 씨앗을 심되 큰 나무는 내년에")
+- 둘째 줄: 빈 줄
 - ★ 영역 무드 근거: ${entry.domainMoods.wealth}
-- 들어오는 시기·새는 시기를 분기로 구분 (상반기/하반기 또는 봄·여름·가을·겨울)
-- 본업 수입 vs 부수입의 흐름
-- 재테크 방향 1개 (저축 강화·분산투자·신중 보류 등)
-- 큰 지출 시 주의해야 할 달 1개 명시
-- 괘 등급(${entry.grade}) 기준으로 재물의 전반적 흐름 판단
+- 들어오는 시기·새는 시기 분기 + 본업/부수입 흐름 + 재테크 방향 + 큰 지출 주의 월 1개
+- 성공·관록 영역 — 명예·인정·승진·표창·이름 알림 등 1단락 (단락 분리, 빈 줄)
+- 괘 등급(${entry.grade}) 기준 재물 전반 흐름
 
 [love]
-애정·가정운 (250~320자)
-- 첫 줄: [은유] 비유 한 문장 (15자 이내, 종결어미 없음. 예: "[은유] 잔잔한 호수에 돌 하나가 파문")
+가정 및 애정운 (280~360자)
+- 첫 줄: [은유] 비유 한 문장 (15자 이내, 종결어미 없음)
+- 둘째 줄: 빈 줄
 - ★ 영역 무드 근거: ${entry.domainMoods.love}
-- 미혼: 인연 들어오는 흐름과 이상형 단서
-- 기혼: 부부·자녀·부모 중 올해 테마와 주의 장면
-- 관계 회복·갈등 분기점 시기 1개
-- 가정 안에서 권할 행동 1가지
-- 올해 인연 전반의 기운과 소통 포인트
-
-[health]
-건강운 (220~280자)
-- 첫 줄: [은유] 비유 한 문장 (15자 이내, 종결어미 없음. 예: "[은유] 뿌리가 마르면 잎이 먼저 시드는 결")
-- ★ 영역 무드 근거: ${entry.domainMoods.health}
-- 취약 장부 또는 신체 부위 (오장육부·오행 기준 — 무드 키워드의 장부를 우선 인용)
-- 유의할 계절·환절기와 그 이유 (무드의 계절 인용)
-- 권장 운동·식습관 1가지
-- 정신 건강·스트레스 관리 한마디
-- 예방적 건강 관리 행동 1가지
+- 미혼: 인연 흐름·이상형 단서. 기혼: 부부·자녀·부모 테마 (단락 분리)
+- 갈등 분기점 시기 1개 + 관계 회복 행동 1
+- 가정 영역 — 집안 의논·배우자 조력·가족 사건 시기 1단락 (단락 분리)
 
 [career]
-직장·학업운 (250~320자)
-- 첫 줄: [은유] 비유 한 문장 (15자 이내, 종결어미 없음. 예: "[은유] 조용히 칼을 가는 자")
+학업 및 대인운 (280~360자)
+- 첫 줄: [은유] 비유 한 문장 (15자 이내, 종결어미 없음)
+- 둘째 줄: 빈 줄
 - ★ 영역 무드 근거: ${entry.domainMoods.career}
-- 직장: 승진·이직·평가·인간관계 중 유리한 흐름 1개와 시기
-- 학업·시험: 합격운·집중력·자격증 운
-- 조심할 덫 1개 (구설·실수·과로 등)
-- 협력자 또는 조력자가 누구인지 (선배·후배·이성·동료 등)
-- 올해 커리어 전략의 핵심 방향
+- 학업·시험: 합격운·집중력·자격증 운 (해당 시) 1단락
+- 대인운: 귀인·조력자 유형 + 멀리할 인물 + 인간관계 함정 1개 1단락 (단락 분리, 빈 줄)
+- 직장 핵심 흐름 1단락 (분야가 길어지면 wealth 와 분산)
+
+[business_move]
+창업 및 이전운 (240~320자)
+- 첫 줄: [은유] 비유 한 문장 (15자 이내, 종결어미 없음)
+- 둘째 줄: 빈 줄
+- 창업·이직·확장 시기 — 가능 시기 / 보류 시기 1단락
+- 이사·이전·여행 — 길한 방향(동·서·남·북 명시) + 흉한 방향 + 길한 달/흉한 달 1단락 (단락 분리)
+- 사업 파트너 만남 흐름 1줄
+
+[health]
+건강 및 소망운 (240~320자)
+- 첫 줄: [은유] 비유 한 문장 (15자 이내, 종결어미 없음)
+- 둘째 줄: 빈 줄
+- ★ 영역 무드 근거: ${entry.domainMoods.health}
+- 취약 장부·신체 부위 + 유의 계절·환절기 + 권장 운동·식습관 1단락
+- 소망운 — 올해 가장 이루어지기 쉬운 바람 1가지 + 노력해야 할 1가지 1단락 (단락 분리)
+
+[warning]
+주의해야 할 점 (260~340자)
+- 첫 줄: [은유] 비유 한 문장 (15자 이내, 종결어미 없음. 예: "[은유] 잔잔한 물 아래 가시")
+- 둘째 줄: 빈 줄
+- 관재구설 (시비·소송·언쟁) — 어떤 시기·인물 유형이 위험한지 1단락
+- 돌발 사고 (교통·낙상·물·불·금속·동물 등) — 시기 명시 1단락
+- 금전 위험 (사기·보증·도난·과지출) — 누구·언제 1단락
+- 각 단락 빈 줄로 분리
 
 [advice]
-개운 조언 (320~440자) — 아래 항목을 풍부하게 풀어쓰기
-- 첫 줄: [은유] 비유 한 문장 (15자 이내, 종결어미 없음. 예: "[은유] 작은 물줄기 따라가는 큰 강")
-※ 행운 방위/색상/숫자/시간대/보석·소품/추천 활동은 시각 카드로 자동 노출되므로
-   본문에서 같은 데이터를 다시 나열하지 마세요. 그 대신:
-- 당장 이번 달 실천할 개운 행동 2~3가지 (구체적으로: 어디서·언제·어떻게)
+개운 조언 (240~320자)
+- 첫 줄: [은유] 비유 한 문장 (15자 이내, 종결어미 없음)
+- 둘째 줄: 빈 줄
+※ 행운 방위·색상·숫자·시간대 등은 시각 카드로 자동 노출되므로 본문 반복 금지.
+- 이번 달 실천할 개운 행동 2가지 (구체: 어디서·언제·어떻게)
 - 올해 피해야 할 행동·습관 1~2가지
-- 대인관계에서 의식할 점 1가지 (조력자 유형 또는 갈등 회피법)
-- 하반기로 갈수록 유의할 흐름 전환 포인트 1가지
+- 대인관계에서 의식할 점 1가지
 - ${targetYear}년 전체를 관통하는 마음가짐·자세 한마디
 
-[wealth], [love], [health], [career], [advice] 태그를 반드시 각 섹션 시작에 한 줄로 적어주세요. 총운·괘의미·월별운세는 이미 완료 — 출력하지 마세요.
+[wealth], [love], [career], [business_move], [health], [warning], [advice] 7개 태그를 반드시 각 섹션 시작에 한 줄로 적어주세요. 총운·괘의미·월별운세는 이미 완료 — 출력하지 마세요.
+
+★ 4영역 차등 (재물·연애·건강·학업·대인) 차등 규칙은 유지하되, business_move·warning 두 신규 섹션도 동일 등급·정황 기반으로 풀이.
 
 [이미 작성된 1차 내용 — 참고만, 출력하지 말 것]
 ${pass1Content}`;
