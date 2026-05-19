@@ -295,18 +295,34 @@ function CalendarPicker({ value, onChange }: { value: string; onChange: (v: stri
 
   return (
     <div className="rounded-2xl p-4 bg-[rgba(20,12,38,0.55)] border border-[var(--border-subtle)]">
-      <div className="flex items-center justify-between mb-3">
-        <button
-          onClick={() => setViewDate(new Date(year, month - 1, 1))}
-          className="w-8 h-8 rounded-lg text-text-secondary hover:bg-white/5"
-        >‹</button>
+      <div className="flex items-center justify-between mb-3 gap-1">
+        <div className="flex items-center gap-0.5">
+          <button
+            onClick={() => setViewDate(new Date(year - 1, month, 1))}
+            aria-label="이전 해"
+            className="w-8 h-8 rounded-lg text-text-secondary hover:bg-white/5 text-[15px]"
+          >«</button>
+          <button
+            onClick={() => setViewDate(new Date(year, month - 1, 1))}
+            aria-label="이전 달"
+            className="w-8 h-8 rounded-lg text-text-secondary hover:bg-white/5 text-[16px]"
+          >‹</button>
+        </div>
         <span className="text-[16px] font-bold text-text-primary">
           {year}년 {month + 1}월
         </span>
-        <button
-          onClick={() => setViewDate(new Date(year, month + 1, 1))}
-          className="w-8 h-8 rounded-lg text-text-secondary hover:bg-white/5"
-        >›</button>
+        <div className="flex items-center gap-0.5">
+          <button
+            onClick={() => setViewDate(new Date(year, month + 1, 1))}
+            aria-label="다음 달"
+            className="w-8 h-8 rounded-lg text-text-secondary hover:bg-white/5 text-[16px]"
+          >›</button>
+          <button
+            onClick={() => setViewDate(new Date(year + 1, month, 1))}
+            aria-label="다음 해"
+            className="w-8 h-8 rounded-lg text-text-secondary hover:bg-white/5 text-[15px]"
+          >»</button>
+        </div>
       </div>
       <div className="grid grid-cols-7 gap-1 text-center text-[13px] text-text-tertiary mb-1">
         {['일', '월', '화', '수', '목', '금', '토'].map(d => <div key={d}>{d}</div>)}
