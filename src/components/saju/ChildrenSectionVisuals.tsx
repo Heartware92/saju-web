@@ -599,6 +599,14 @@ interface SimplifiedCompat {
   kind: 'good' | 'caution';
 }
 
+// 띠별 효과 머지용 그룹 — 같은 띠에 여러 작용(예: 합+형+파)이 걸린 경우 한 칩으로
+interface TtiGroup {
+  ttiKey: string;          // 정렬·dedup 키 (예: '원숭이')
+  ttis: string[];          // 단독·복합 (다중 지지 — 삼합·삼형 시 ['원숭이','돼지'])
+  goodEffects: Array<{ verb: string; sub: string }>;
+  cautionEffects: Array<{ verb: string; sub: string }>;
+}
+
 function simplifyInteraction(
   type: '합' | '충' | '형' | '파' | '해',
   desc: string,
@@ -640,54 +648,124 @@ function simplifyInteraction(
   return { ttis, verb, subtitle, kind };
 }
 
-function SimplifiedChip({
-  item,
-  color,
+// 머지 칩 — 한 띠에 걸린 모든 효과를 한 칩으로 (양면적·단방향 모두 지원)
+function MergedTtiChip({
+  group,
+  variant,
 }: {
-  item: SimplifiedCompat;
-  color: string;
+  group: TtiGroup;
+  variant: 'good' | 'caution' | 'bilateral';
 }) {
+  const borderColor =
+    variant === 'good' ? SIGNAL_COLOR.good
+    : variant === 'caution' ? SIGNAL_COLOR.warn
+    : SIGNAL_COLOR.info;
+  const bg =
+    variant === 'bilateral'
+      ? `linear-gradient(135deg, ${SIGNAL_COLOR.good}10 0%, ${SIGNAL_COLOR.warn}10 100%)`
+      : `${borderColor}15`;
+
   return (
-    <span
-      className="inline-flex flex-col items-start rounded-xl px-3.5 py-2 border"
-      style={{
-        background: `${color}15`,
-        borderColor: `${color}55`,
-        minWidth: 0,
-      }}
+    <div
+      className="rounded-xl px-3.5 py-2.5 border flex flex-col gap-1.5"
+      style={{ background: bg, borderColor: `${borderColor}55` }}
     >
-      <span className="text-[15px] font-bold leading-tight" style={{ color: 'var(--text-primary)' }}>
-        {item.ttis.join('·')}띠
-        <span className="text-text-tertiary mx-1.5 font-normal">—</span>
-        <span style={{ color }}>{item.verb}</span>
+      <span className="text-[16px] font-bold leading-tight" style={{ color: 'var(--text-primary)' }}>
+        {group.ttis.join('·')}띠
+        {variant === 'bilateral' && (
+          <span
+            className="ml-2 text-[11.5px] font-bold px-1.5 py-0.5 rounded"
+            style={{ background: `${SIGNAL_COLOR.info}22`, color: SIGNAL_COLOR.info, border: `1px solid ${SIGNAL_COLOR.info}55` }}
+          >
+            양면적
+          </span>
+        )}
       </span>
-      <span className="text-[11.5px] text-text-tertiary mt-0.5">{item.subtitle}</span>
-    </span>
+      <div className="flex flex-col gap-1">
+        {group.goodEffects.map((e, i) => (
+          <div key={`g-${i}`} className="text-[13.5px] leading-snug">
+            <span style={{ color: SIGNAL_COLOR.good, fontWeight: 700 }}>{e.verb}</span>
+            <span className="text-text-tertiary text-[11.5px] ml-1.5">{e.sub}</span>
+          </div>
+        ))}
+        {group.cautionEffects.map((e, i) => (
+          <div key={`c-${i}`} className="text-[13.5px] leading-snug">
+            <span style={{ color: SIGNAL_COLOR.warn, fontWeight: 700 }}>{e.verb}</span>
+            <span className="text-text-tertiary text-[11.5px] ml-1.5">{e.sub}</span>
+          </div>
+        ))}
+      </div>
+    </div>
   );
 }
 
 export function CompatibilityVisual({ saju }: { saju: SajuResult }) {
   const dayZhi = saju.pillars.day.zhi;
   const items = saju.interactions.filter((i) => i.description.includes(dayZhi));
-  const goods: SimplifiedCompat[] = [];
-  const cautions: SimplifiedCompat[] = [];
+
+  // 1) 모든 상호작용 일상어 변환
+  const simplified: SimplifiedCompat[] = [];
   for (const it of items) {
     const s = simplifyInteraction(it.type, it.description, dayZhi);
-    if (!s) continue;
-    if (s.kind === 'good') goods.push(s);
-    else cautions.push(s);
+    if (s) simplified.push(s);
+  }
+
+  // 2) 띠 키 기준으로 그룹핑 (다중 지지인 경우 join 된 키 사용)
+  const groupsMap = new Map<string, TtiGroup>();
+  for (const s of simplified) {
+    const ttiKey = s.ttis.join('·');
+    let g = groupsMap.get(ttiKey);
+    if (!g) {
+      g = { ttiKey, ttis: s.ttis, goodEffects: [], cautionEffects: [] };
+      groupsMap.set(ttiKey, g);
+    }
+    const entry = { verb: s.verb, sub: s.subtitle };
+    if (s.kind === 'good') g.goodEffects.push(entry);
+    else g.cautionEffects.push(entry);
+  }
+
+  // 3) 양면적 / 잘맞는 / 조심할 분기
+  const bilateral: TtiGroup[] = [];
+  const goodsOnly: TtiGroup[] = [];
+  const cautionsOnly: TtiGroup[] = [];
+  for (const g of groupsMap.values()) {
+    if (g.goodEffects.length > 0 && g.cautionEffects.length > 0) bilateral.push(g);
+    else if (g.goodEffects.length > 0) goodsOnly.push(g);
+    else cautionsOnly.push(g);
   }
 
   const dayTti = ZHI_TO_TTI[dayZhi] ?? dayZhi;
 
   return (
     <div className="space-y-2.5 mb-3">
+      {/* 양면적 띠 — 잘 통하지만 부딪치기도 하는 띠 */}
+      {bilateral.length > 0 && (
+        <div
+          className="rounded-2xl p-4 border flex flex-col gap-2.5"
+          style={{
+            background: `linear-gradient(135deg, rgba(20,12,38,0.55) 0%, ${SIGNAL_COLOR.info}10 100%)`,
+            borderColor: `${SIGNAL_COLOR.info}55`,
+          }}
+        >
+          <div className="flex items-center gap-2">
+            <span className="inline-block w-1 h-5 rounded-full" style={{ background: SIGNAL_COLOR.info }} />
+            <span className="text-[15px] font-bold tracking-[0.04em]" style={{ color: SIGNAL_COLOR.info }}>
+              양면적 자녀 띠
+              <span className="text-text-tertiary font-normal text-[13px] ml-1.5">정 깊고 부딪침도 잦음</span>
+            </span>
+          </div>
+          <div className="flex flex-col gap-2">
+            {bilateral.map((g) => (
+              <MergedTtiChip key={g.ttiKey} group={g} variant="bilateral" />
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* 잘 맞는 띠 (양면적 제외) */}
       <div
         className="rounded-2xl p-4 border flex flex-col gap-2.5"
-        style={{
-          background: 'rgba(20,12,38,0.55)',
-          borderColor: `${SIGNAL_COLOR.good}45`,
-        }}
+        style={{ background: 'rgba(20,12,38,0.55)', borderColor: `${SIGNAL_COLOR.good}45` }}
       >
         <div className="flex items-center gap-2">
           <span className="inline-block w-1 h-5 rounded-full" style={{ background: SIGNAL_COLOR.good }} />
@@ -696,45 +774,47 @@ export function CompatibilityVisual({ saju }: { saju: SajuResult }) {
             <span className="text-text-tertiary font-normal text-[13px] ml-1.5">(나는 {dayTti}띠 기준)</span>
           </span>
         </div>
-        {goods.length === 0 ? (
+        {goodsOnly.length === 0 ? (
           <span className="text-[14px] text-text-tertiary leading-snug">
-            특별히 잘 맞는 띠 신호 없음 — 본문 추천 띠 참고
+            {bilateral.length > 0 ? '양면적 띠 외에 추가로 잘 맞는 띠 없음' : '특별히 잘 맞는 띠 신호 없음 — 본문 추천 띠 참고'}
           </span>
         ) : (
-          <div className="flex flex-wrap gap-2">
-            {goods.map((g, i) => (
-              <SimplifiedChip key={i} item={g} color={SIGNAL_COLOR.good} />
+          <div className="flex flex-col gap-2">
+            {goodsOnly.map((g) => (
+              <MergedTtiChip key={g.ttiKey} group={g} variant="good" />
             ))}
           </div>
         )}
       </div>
+
+      {/* 조심할 띠 (양면적 제외) */}
       <div
         className="rounded-2xl p-4 border flex flex-col gap-2.5"
         style={{
           background: 'rgba(20,12,38,0.55)',
-          borderColor: cautions.length > 0 ? `${SIGNAL_COLOR.warn}55` : `${SIGNAL_COLOR.info}45`,
+          borderColor: cautionsOnly.length > 0 ? `${SIGNAL_COLOR.warn}55` : `${SIGNAL_COLOR.info}45`,
         }}
       >
         <div className="flex items-center gap-2">
           <span
             className="inline-block w-1 h-5 rounded-full"
-            style={{ background: cautions.length > 0 ? SIGNAL_COLOR.warn : SIGNAL_COLOR.info }}
+            style={{ background: cautionsOnly.length > 0 ? SIGNAL_COLOR.warn : SIGNAL_COLOR.info }}
           />
           <span
             className="text-[15px] font-bold tracking-[0.04em]"
-            style={{ color: cautions.length > 0 ? SIGNAL_COLOR.warn : SIGNAL_COLOR.info }}
+            style={{ color: cautionsOnly.length > 0 ? SIGNAL_COLOR.warn : SIGNAL_COLOR.info }}
           >
             조심할 자녀 띠
           </span>
         </div>
-        {cautions.length === 0 ? (
+        {cautionsOnly.length === 0 ? (
           <span className="text-[14px] text-text-tertiary leading-snug">
-            크게 부딪치는 띠 신호 없음 — 평이한 관계
+            {bilateral.length > 0 ? '양면적 띠 외에 단순 조심 띠 없음' : '크게 부딪치는 띠 신호 없음 — 평이한 관계'}
           </span>
         ) : (
-          <div className="flex flex-wrap gap-2">
-            {cautions.map((c, i) => (
-              <SimplifiedChip key={i} item={c} color={SIGNAL_COLOR.warn} />
+          <div className="flex flex-col gap-2">
+            {cautionsOnly.map((g) => (
+              <MergedTtiChip key={g.ttiKey} group={g} variant="caution" />
             ))}
           </div>
         )}
