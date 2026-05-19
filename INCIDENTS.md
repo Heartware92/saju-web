@@ -17,6 +17,54 @@
 
 ---
 
+## 2026-05-20 23:55 — ?jobId 모드에서 "기존 풀이 보겠습니까?" 모달 사고 `[ux]`
+
+### 증상
+- 사용자: "백그라운드에서 돌아가고 있을때 보관함에서 어떠한 클릭했는데 갑자기
+  기존 풀이 보겠습니까 처음에 선택하는 그 모달이 떠버리더라"
+- 진행 중 신년운세 잡 처리 중 → 보관함에서 잡 record 클릭 → ?jobId 진입 →
+  RestoreReportModal ("이전 풀이 다시 보시겠어요?") 가 노출됨
+
+### 영향 범위
+- PeriodFortunePage (scope='year' 신년·연도별 운세) 의 ?jobId 진입 시 매번 발생
+- 다른 운세 마이그레이션 시 같은 cacheGate 흐름 가진 페이지에서 동일 사고 가능
+  (SajuResultPage 는 옛 cacheGate 흐름 제거됐고 GunghapPage 는 step='landing' 가드
+  로 회피, PeriodFortunePage 만 가드 누락)
+
+### 진단 과정
+1. RestoreReportModal·findRecentArchive·setCacheGate trigger 위치 grep
+2. PeriodFortunePage line 635 cacheGate useEffect 의 가드 확인:
+   - `if (isArchiveMode) return;` (?recordId 만 가드)
+   - `if (effectiveJobId) return;` **누락** ← 사고 원인
+3. ?jobId 진입 시 isArchiveMode=false → cacheGate useEffect 통과 →
+   findRecentArchive 호출 → 같은 birth+year 의 옛 record 찾음 (또는 진행 중
+   record 자기 자신 매칭) → setCacheGate → RestoreReportModal 표시
+
+### 진짜 원인
+`?jobId` 진입 시 페이지의 cacheGate useEffect 가 `effectiveJobId` 가드 누락.
+saju_records 가 잡 모드의 단일 source of truth 인데 findRecentArchive 가
+중복으로 옛 archive 모달을 띄움.
+
+### 해결
+PeriodFortunePage cacheGate useEffect 시작 부분에 가드 추가:
+```ts
+if (isArchiveMode) return;
+if (effectiveJobId) return;  // ← 추가
+```
+useEffect deps 에도 effectiveJobId 추가 (createdJobId 변경 시 useEffect
+재실행되어 가드 작동).
+
+### 재발 방지
+- docs/ASYNC_FORTUNE_JOBS.md 4.10 사고 패턴 추가
+- 새 카테고리 마이그레이션 시 cacheGate / findRecentArchive 흐름 유무 확인 + ?jobId 가드 검증
+
+### 관련
+- 커밋: (이번 commit)
+- 파일: src/pages/PeriodFortunePage.tsx cacheGate useEffect (line 633~)
+- 가이드: docs/ASYNC_FORTUNE_JOBS.md 4.10
+
+---
+
 ## 2026-05-20 23:30 — 궁합 백그라운드 잡 마이그레이션 시 화면 깜빡임·jump down 시리즈 `[ux]`
 
 ### 증상

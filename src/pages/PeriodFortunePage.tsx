@@ -634,6 +634,10 @@ export default function PeriodFortunePage({ scope }: { scope: FortuneScope | 'da
   // 보관함 체크를 먼저 완료한 뒤, 기존 풀이가 없을 때만 AI 호출
   useEffect(() => {
     if (isArchiveMode) return;
+    // ★ ?jobId 진입(보관함의 진행 중·완료된 잡 클릭) 또는 새 잡 생성된 경우엔
+    //   findRecentArchive 모달 분기 자체 skip. saju_records 가 단일 source of truth.
+    //   가드 없으면 옛 archive 가 매칭되어 "기존 풀이 보겠습니까?" 모달이 떠버리는 사고.
+    if (effectiveJobId) return;
     if (!saju || !fortune) return;
     // ★ 지정일 운세 — 캘린더 선택 단계 (dateConfirmed=false) 에서는 useEffect 일찍 종료.
     //   apiCalledKeyRef.current 오염 방지 — 사용자가 "풀이 보기" 버튼 눌러 dateConfirmed=true
@@ -925,7 +929,7 @@ export default function PeriodFortunePage({ scope }: { scope: FortuneScope | 'da
     runWithArchiveCheck();
     return () => { cancelled = true; };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [saju, fortune, scope, pickedDate, targetYear, today, isArchiveMode, dateConfirmed, refetchNonce]);
+  }, [saju, fortune, scope, pickedDate, targetYear, today, isArchiveMode, dateConfirmed, refetchNonce, effectiveJobId]);
 
   if (needsProfileSelect) {
     const CURRENT_YEAR = new Date().getFullYear();
