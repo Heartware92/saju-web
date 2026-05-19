@@ -604,11 +604,13 @@ export default function TaekilResultPage() {
                             <div style={{ fontSize: 11, fontWeight: 800, color: 'var(--text-tertiary)', letterSpacing: '0.08em', marginBottom: 6, textTransform: 'uppercase' }}>
                               종합
                             </div>
+                            {/* 본문(17px) 보다 크게 — 1·2·3위 종합은 그 날의 핵심이라 시선 우선 */}
                             <p
-                              className="text-text-secondary leading-[1.85] tracking-[-0.005em]"
+                              className="text-text-primary leading-[1.7] tracking-[-0.01em]"
                               style={{
-                                fontSize: 17, margin: 0, whiteSpace: 'pre-line',
+                                fontSize: 19, margin: 0, whiteSpace: 'pre-line',
                                 fontFamily: 'var(--font-body)',
+                                fontWeight: 500,
                               }}
                             >
                               {adv.summary}
@@ -845,12 +847,37 @@ export default function TaekilResultPage() {
                         defaultOpen={false}
                         enterDelay={0.2}
                       >
-                        <p
-                          className="text-text-secondary leading-[1.85] tracking-[-0.005em] whitespace-pre-line"
-                          style={{ fontSize: 17, margin: 0, fontFamily: 'var(--font-body)' }}
-                        >
-                          {renderEmphasis(parsedAdvice.alternative)}
-                        </p>
+                        {/* "첫째로 …", "둘째로 …", "셋째로 …" 패턴으로 split 해서 문단 분리.
+                            split 안 되면 (LLM이 다른 형식으로 출력) 단일 paragraph fallback. */}
+                        {(() => {
+                          const parts = parsedAdvice.alternative
+                            .split(/(?=첫째로|둘째로|셋째로)/g)
+                            .map(p => p.trim())
+                            .filter(Boolean);
+                          if (parts.length < 2) {
+                            return (
+                              <p
+                                className="text-text-secondary leading-[1.85] tracking-[-0.005em] whitespace-pre-line"
+                                style={{ fontSize: 17, margin: 0, fontFamily: 'var(--font-body)' }}
+                              >
+                                {renderEmphasis(parsedAdvice.alternative)}
+                              </p>
+                            );
+                          }
+                          return (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                              {parts.map((para, i) => (
+                                <p
+                                  key={i}
+                                  className="text-text-secondary leading-[1.85] tracking-[-0.005em] whitespace-pre-line"
+                                  style={{ fontSize: 17, margin: 0, fontFamily: 'var(--font-body)' }}
+                                >
+                                  {renderEmphasis(para)}
+                                </p>
+                              ))}
+                            </div>
+                          );
+                        })()}
                       </SectionCollapsible>
                     </div>
                   )}
