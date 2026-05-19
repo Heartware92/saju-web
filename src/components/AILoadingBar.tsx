@@ -46,21 +46,26 @@ export function AILoadingBar({
   const [msgIdx, setMsgIdx] = useState(0);
 
   // startedAt prop 늦게 도착(useFortuneJob select 결과)했을 때 즉시 보정.
+  // ⚠️ 단조 증가 보장 — Math.max 로 기존 progress 보다 작은 값으로 덮어쓰지 않음.
+  // mount 시점 자연 증가로 18%까지 갔는데 startedAt 도착 elapsed=1초 → ~2% 재계산
+  // → setProgress(2%) jump down 사고 차단.
   useEffect(() => {
     if (!startedAt) return;
     const elapsedSec = (Date.now() - new Date(startedAt).getTime()) / 1000;
-    setProgress(progressFromElapsed(elapsedSec, estimatedSeconds));
+    const newProgress = progressFromElapsed(elapsedSec, estimatedSeconds);
+    setProgress(p => Math.max(p, newProgress));
   }, [startedAt, estimatedSeconds]);
 
   // 진행 timer.
-  //   startedAt 있음: 매 tick 실제 elapsed 기반 재계산 → 새로고침해도 정확한 %
+  //   startedAt 있음: 매 tick 실제 elapsed 기반 재계산 (단, 단조 증가 보장)
   //   startedAt 없음: mount 시점 기준 점근선 (기존 동작 — 새 잡 처음 생성 등)
   useEffect(() => {
     const k = 2 / estimatedSeconds;
     const timer = setInterval(() => {
       if (startedAt) {
         const elapsedSec = (Date.now() - new Date(startedAt).getTime()) / 1000;
-        setProgress(progressFromElapsed(elapsedSec, estimatedSeconds));
+        const newProgress = progressFromElapsed(elapsedSec, estimatedSeconds);
+        setProgress(p => Math.max(p, newProgress));
       } else {
         setProgress(p => Math.min(92, p + (92 - p) * k * 0.5));
       }

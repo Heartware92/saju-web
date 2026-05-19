@@ -17,6 +17,61 @@
 
 ---
 
+## 2026-05-20 23:30 — 궁합 백그라운드 잡 마이그레이션 시 화면 깜빡임·jump down 시리즈 `[ux]`
+
+### 증상
+사용자가 궁합 풀이보기 클릭 후 다음 패턴 연속:
+1. 로딩 화면 1~2초 진행
+2. 결과 화면 빈 UI 0.5~1초 번쩍
+3. 다시 로딩 화면, progress 0% 부터 새로 시작
+4. progress 18% 까지 자연 증가하다가 갑자기 ~2% 로 jump down
+
+정통사주에는 같은 잠재 사고들이 있지만 *2-pass + 1차 partial 30초 도착*으로
+사용자 체감 X. 궁합은 1-pass 라 60초 단일 로딩 화면이라 노출됨.
+
+### 영향 범위
+- 궁합(GunghapPage) 새 풀이 시도 시 매번 발생
+- 추후 1-pass 카테고리 (신년·자미·택일 등) 마이그레이션 시 동일 사고 가능
+
+### 진단 과정
+1. 캐시 문제 의심 → useReportCacheStore 분기 분석 → 무관
+2. useFortuneJob race condition 의심 → mergeRow 패턴 확인 → 정상
+3. handleAnalyze 흐름 트레이스 → **finally 의 setLoading(false) 가 무조건 실행** 발견 (사고 A)
+4. AILoadingBar 의 startedAt 도착 timing 분석 → mount 후 자연 증가한 progress
+   가 startedAt 기반 elapsed 재계산으로 덮어써짐 발견 (사고 B)
+
+### 진짜 원인
+**두 가지 별개 사고 동시 발생**:
+
+(A) `handleAnalyze` 의 `try-finally` 블록 finally 가 무조건 `setLoading(false)`:
+- createGunghapJob 호출 후 try 끝나면 finally 실행
+- AILoadingBar 사라짐 → step='result' 빈 UI 잠시 표시 (번쩍)
+- useFortuneJob.select() 결과 도착 → 동기화 useEffect → setLoading(true)
+- AILoadingBar 새 mount → progress 처음부터
+
+(B) AILoadingBar 의 progress 가 *단조 증가 보장 안 함*:
+- mount 시점 (startedAt=undefined) 부터 자연 증가 → 18% 까지
+- startedAt prop 늦게 도착 시 elapsed 기반 재계산 (elapsed=1초 → ~2%)
+- 재계산값이 기존보다 작아도 그대로 `setProgress(작은값)` → jump down
+
+### 해결
+- 커밋 `bb52c5c` — `handleAnalyze` 에 `jobCreated` 플래그 추가, 잡 생성 분기는
+  finally 의 setLoading(false) skip → 잡 동기화 useEffect 가 loading 책임 일원화
+- 후속 커밋 — `AILoadingBar` 의 startedAt 기반 재계산을
+  `setProgress(p => Math.max(p, newProgress))` 로 변경, 단조 증가만 허용
+
+### 재발 방지
+- `docs/ASYNC_FORTUNE_JOBS.md` 4.X 사고 패턴에 추가 (handleAnalyze try-finally
+  setLoading 충돌, AILoadingBar 단조 증가 패턴)
+- 새 카테고리 마이그레이션 체크리스트에 검증 항목 포함
+
+### 관련
+- 커밋: `bb52c5c` (finally fix), 후속 commit (Math.max fix)
+- 파일: `src/pages/GunghapPage.tsx`, `src/components/AILoadingBar.tsx`
+- 가이드: `docs/ASYNC_FORTUNE_JOBS.md`
+
+---
+
 ## 2026-05-19 17:30 — handleRead cache hit 시 setResultSections 누락 — 옛 결과 + raw 마커 본문 노출 `[code]`
 
 ### 증상
