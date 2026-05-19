@@ -11,6 +11,8 @@ interface AILoadingBarProps {
   estimatedSeconds: number;
   messages: string[];
   topContent?: React.ReactNode;
+  /** 하단(행성 아래)에 렌더할 컨텐츠 — 예: 취소·다른 날짜 선택 버튼. inline·full-screen 모드 모두 적용. */
+  bottomContent?: React.ReactNode;
   // inline 모드: 카드 안에 삽입 (full-screen이 아닌 경우)
   inline?: boolean;
   /**
@@ -35,6 +37,7 @@ export function AILoadingBar({
   estimatedSeconds,
   messages,
   topContent,
+  bottomContent,
   inline = false,
   startedAt,
 }: AILoadingBarProps) {
@@ -123,6 +126,11 @@ export function AILoadingBar({
             약 {minLabel}~{maxLabel}
           </span>
         </div>
+        {bottomContent && (
+          <div className="mt-3 w-full flex flex-col items-center">
+            {bottomContent}
+          </div>
+        )}
       </div>
     );
   }
@@ -217,6 +225,13 @@ export function AILoadingBar({
           <SpinningEarth size={380} />
         </div>
       </motion.div>
+
+      {/* 하단 컨텐츠 — 취소·재시도 같은 액션 버튼이 들어가는 영역 */}
+      {bottomContent && (
+        <div className="w-full flex flex-col items-center flex-shrink-0">
+          {bottomContent}
+        </div>
+      )}
     </div>
   );
 }

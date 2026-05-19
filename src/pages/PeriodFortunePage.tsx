@@ -515,6 +515,15 @@ export default function PeriodFortunePage({ scope }: { scope: FortuneScope | 'da
           const y = Number(recordYear);
           if (!Number.isNaN(y)) setArchiveYear(y);
         }
+        // ★ 지정일 record — engine_result.isoDate 로 pickedDate 동기화.
+        //   사고: URL 에 ?date= 없이 ?recordId= 만 들어오면 pickedDate 가 today 디폴트라
+        //   헤더에 "선택한 날짜 = 오늘" 로 표시되는데 본문은 실제 풀이 날짜 → 불일치.
+        if (scope === 'date') {
+          const recordIsoDate = (record.engine_result as { isoDate?: string } | null)?.isoDate;
+          if (recordIsoDate && /^\d{4}-\d{2}-\d{2}$/.test(recordIsoDate)) {
+            setPickedDate(recordIsoDate);
+          }
+        }
         if (scope === 'year') {
           const sections = parseNewyearReport(content);
           setNewyearReport(
@@ -923,6 +932,20 @@ export default function PeriodFortunePage({ scope }: { scope: FortuneScope | 'da
               {fortune.targetGanZhi.ganZhi} 일진
             </div>
           </motion.div>
+        }
+        bottomContent={
+          // 잘못 클릭한 날짜를 되돌릴 수 있도록 — 캘린더 화면으로 복귀.
+          // 풀이는 백그라운드 진행 중일 수 있지만 화면만 복귀, 사용자가 다른 날짜 재선택하면 새 풀이 시작.
+          <button
+            onClick={() => {
+              setDateConfirmed(false);
+              setPickedDateReport(null);
+              setPickedDateReportLoading(false);
+            }}
+            className="text-[14px] px-5 py-2.5 rounded-xl bg-white/5 border border-white/15 text-text-secondary hover:text-text-primary hover:border-white/25 active:scale-[0.97] transition-all"
+          >
+            취소하고 다른 날짜 선택
+          </button>
         }
       />
     );
