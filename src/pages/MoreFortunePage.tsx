@@ -307,7 +307,7 @@ export default function MoreFortunePage({ category }: Props) {
           // 옛 record (v1: 마커 없는 단일 본문 / v2: oriental+western 2섹션) 는 fallback 으로 일부만 채워짐.
           // 5섹션 중 하나라도 있으면 렌더 분기 통과.
           const out = parseDreamSections(content);
-          const hasAny = out.diagnosis || out.symbols || out.oriental || out.western || out.action;
+          const hasAny = out.diagnosis || out.symbols || out.oriental || out.western || out.advice || out.caution;
           setResultSections(hasAny ? out as Record<string, string> : null);
         } else {
           setResultSections(null);
@@ -448,8 +448,8 @@ export default function MoreFortunePage({ category }: Props) {
     if (category === 'dream') {
       const t = dreamText.trim();
       if (!t) return null;
-      // v3: 5섹션 (진단·상징·동양·서양·실천) 출력 prompt 로 확장. 옛 캐시(v2, 2섹션) 자동 무효화.
-      return `dream:v3:${t}`;
+      // v4: 6섹션 ([action] → [advice]+[caution] 분리) prompt. 옛 캐시(v3, 5섹션) 자동 무효화.
+      return `dream:v4:${t}`;
     }
     if (!saju) return null;
     const sk = sajuKey(saju);
@@ -514,7 +514,7 @@ export default function MoreFortunePage({ category }: Props) {
           setResultSections(Object.keys(out).length > 0 ? out : null);
         } else if (category === 'dream') {
           const out = parseDreamSections(cached.data);
-          const hasAny = out.diagnosis || out.symbols || out.oriental || out.western || out.action;
+          const hasAny = out.diagnosis || out.symbols || out.oriental || out.western || out.advice || out.caution;
           setResultSections(hasAny ? out as Record<string, string> : null);
         } else {
           setResultSections(null);
@@ -862,15 +862,16 @@ export default function MoreFortunePage({ category }: Props) {
               }}
             />
           )}
-          {/* 꿈해몽 — 진단 + 상징 + 동양식 + 서양식 + 실천 5섹션 */}
-          {result && category === 'dream' && resultSections && (resultSections.diagnosis || resultSections.symbols || resultSections.oriental || resultSections.western || resultSections.action) && (
+          {/* 꿈해몽 — 진단 + 상징 + 동양식 + 서양식 + 이렇게 하면 좋아요 + 주의할 점 6섹션 */}
+          {result && category === 'dream' && resultSections && (resultSections.diagnosis || resultSections.symbols || resultSections.oriental || resultSections.western || resultSections.advice || resultSections.caution) && (
             <MoreFortuneDreamCard
               title={`${cfg.title} 풀이`}
               diagnosis={resultSections.diagnosis ?? ''}
               symbols={resultSections.symbols ?? ''}
               oriental={resultSections.oriental ?? ''}
               western={resultSections.western ?? ''}
-              action={resultSections.action ?? ''}
+              advice={resultSections.advice ?? ''}
+              caution={resultSections.caution ?? ''}
               isArchiveMode={isArchiveMode}
               onReset={() => {
                 setResult(null);
@@ -1457,7 +1458,8 @@ function MoreFortuneDreamCard({
   symbols,
   oriental,
   western,
-  action,
+  advice,
+  caution,
   isArchiveMode,
   onReset,
 }: {
@@ -1466,7 +1468,8 @@ function MoreFortuneDreamCard({
   symbols: string;
   oriental: string;
   western: string;
-  action: string;
+  advice: string;
+  caution: string;
   isArchiveMode: boolean;
   onReset: () => void;
 }) {
@@ -1480,7 +1483,8 @@ function MoreFortuneDreamCard({
   symbols = stripMarkers(symbols);
   oriental = stripMarkers(oriental);
   western = stripMarkers(western);
-  action = stripMarkers(action);
+  advice = stripMarkers(advice);
+  caution = stripMarkers(caution);
 
   // 진단 본문에서 첫 줄(태그 라인)과 나머지(근거 본문) 분리
   const diagnosisLines = diagnosis.trim().split('\n').map(l => l.trim()).filter(Boolean);
@@ -1489,14 +1493,16 @@ function MoreFortuneDreamCard({
   const diagnosisTags = diagnosisTag.split(/\s*[·•·]\s*/).filter(Boolean);
 
   const symbolCards = parseDreamSymbols(symbols);
-  const { body: actionBody, items: actionItems } = parseDreamAction(action);
+  // advice 본문 안에 행운/액막이 키-값 항목이 들어와 있으므로 parseDreamAction 으로 분리 (마커 이름만 다를 뿐 동일 형식)
+  const { body: adviceBody, items: adviceItems } = parseDreamAction(advice);
 
   // SectionCollapsible 에 들어갈 섹션 — 빈 본문은 자동 제외 (옛 record 호환)
   const bodySections: { key: string; label: string; text: string }[] = [];
   if (symbols.trim() && symbolCards.length > 0) bodySections.push({ key: 'symbols', label: '꿈 속 상징', text: symbols });
   if (oriental.trim()) bodySections.push({ key: 'oriental', label: '동양식 해몽', text: oriental });
   if (western.trim()) bodySections.push({ key: 'western', label: '서양식 해몽', text: western });
-  if (action.trim() && (actionBody || actionItems.length > 0)) bodySections.push({ key: 'action', label: '실천 처방과 행운', text: action });
+  if (advice.trim() && (adviceBody || adviceItems.length > 0)) bodySections.push({ key: 'advice', label: '이렇게 하면 좋아요', text: advice });
+  if (caution.trim()) bodySections.push({ key: 'caution', label: '주의할 점', text: caution });
 
   // 길몽/흉몽 판정 — 진단 태그 첫 단어로 색상 결정
   const isGood = /길몽/.test(diagnosisTag);
@@ -1625,8 +1631,9 @@ function MoreFortuneDreamCard({
             );
           }
 
-          if (s.key === 'action') {
-            const actionParas = actionBody.split(/\n\n+/).map(p => p.trim()).filter(Boolean);
+          if (s.key === 'advice') {
+            // 택일운세의 "이렇게 하면 좋아요" 와 동일 스타일 — 녹색 강조 카드 + 행운 그리드.
+            const adviceParas = adviceBody.split(/\n\n+/).map(p => p.trim()).filter(Boolean);
             return (
               <SectionCollapsible
                 key={s.key}
@@ -1634,12 +1641,34 @@ function MoreFortuneDreamCard({
                 defaultOpen={idx === 0}
                 enterDelay={idx * 0.06}
               >
-                <div className="text-[17px] text-text-secondary leading-[1.9] tracking-[-0.005em] space-y-3">
-                  {actionParas.map((para, pi) => (
-                    <p key={pi} className="whitespace-pre-line">{renderEmphasis(para)}</p>
-                  ))}
+                <div style={{
+                  padding: '20px 20px',
+                  borderRadius: 14,
+                  background: 'rgba(52,211,153,0.08)',
+                  border: '1px solid rgba(52,211,153,0.28)',
+                }}>
+                  <div style={{
+                    fontSize: 24, fontWeight: 900,
+                    color: '#34D399',
+                    letterSpacing: '-0.02em',
+                    marginBottom: 14,
+                    fontFamily: 'var(--font-title)',
+                    lineHeight: 1.3,
+                  }}>
+                    이렇게 하면 좋아요
+                  </div>
+                  <div style={{
+                    fontSize: 22, lineHeight: 1.85,
+                    color: 'var(--text-primary)',
+                    fontFamily: 'var(--font-body)',
+                    fontWeight: 500,
+                  }} className="space-y-3">
+                    {adviceParas.map((para, pi) => (
+                      <p key={pi} className="whitespace-pre-line">{renderEmphasis(para)}</p>
+                    ))}
+                  </div>
                 </div>
-                {actionItems.length > 0 && (
+                {adviceItems.length > 0 && (
                   <div style={{
                     marginTop: 18, padding: 16,
                     background: 'rgba(124,92,252,0.06)',
@@ -1649,7 +1678,7 @@ function MoreFortuneDreamCard({
                     gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))',
                     gap: 12,
                   }}>
-                    {actionItems.map((it, ii) => (
+                    {adviceItems.map((it, ii) => (
                       <div key={ii} style={{
                         padding: '16px 18px',
                         background: 'rgba(20,12,38,0.5)',
@@ -1678,6 +1707,47 @@ function MoreFortuneDreamCard({
                     ))}
                   </div>
                 )}
+              </SectionCollapsible>
+            );
+          }
+
+          if (s.key === 'caution') {
+            // 택일운세의 "주의할 점" 과 동일 스타일 — 적색 강조 카드.
+            const cautionParas = s.text.split(/\n\n+/).map(p => p.trim()).filter(Boolean);
+            return (
+              <SectionCollapsible
+                key={s.key}
+                title={s.label}
+                defaultOpen={idx === 0}
+                enterDelay={idx * 0.06}
+              >
+                <div style={{
+                  padding: '20px 20px',
+                  borderRadius: 14,
+                  background: 'rgba(248,113,113,0.08)',
+                  border: '1px solid rgba(248,113,113,0.28)',
+                }}>
+                  <div style={{
+                    fontSize: 24, fontWeight: 900,
+                    color: '#F87171',
+                    letterSpacing: '-0.02em',
+                    marginBottom: 14,
+                    fontFamily: 'var(--font-title)',
+                    lineHeight: 1.3,
+                  }}>
+                    주의할 점
+                  </div>
+                  <div style={{
+                    fontSize: 22, lineHeight: 1.85,
+                    color: 'var(--text-primary)',
+                    fontFamily: 'var(--font-body)',
+                    fontWeight: 500,
+                  }} className="space-y-3">
+                    {cautionParas.map((para, pi) => (
+                      <p key={pi} className="whitespace-pre-line">{renderEmphasis(para)}</p>
+                    ))}
+                  </div>
+                </div>
               </SectionCollapsible>
             );
           }

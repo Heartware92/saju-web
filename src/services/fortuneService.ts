@@ -1886,11 +1886,12 @@ export const parseDreamSections = (raw: string): {
   symbols: string;
   oriental: string;
   western: string;
-  action: string;
+  advice: string;
+  caution: string;
 } => {
-  const empty = { diagnosis: '', symbols: '', oriental: '', western: '', action: '' };
+  const empty = { diagnosis: '', symbols: '', oriental: '', western: '', advice: '', caution: '' };
   if (!raw) return empty;
-  const keys = ['diagnosis', 'symbols', 'oriental_interpretation', 'western_interpretation', 'action'];
+  const keys = ['diagnosis', 'symbols', 'oriental_interpretation', 'western_interpretation', 'advice', 'caution', 'action'];
   const sec = (key: string): string => {
     const others = keys.filter(k => k !== key).join('|');
     const re = new RegExp(`\\[${key}\\]\\s*([\\s\\S]*?)(?=\\[(?:${others})\\]|$)`);
@@ -1901,12 +1902,16 @@ export const parseDreamSections = (raw: string): {
   const symbols = sec('symbols');
   const oriental = sec('oriental_interpretation');
   const western = sec('western_interpretation');
-  const action = sec('action');
-  if (!diagnosis && !symbols && !oriental && !western && !action) {
+  let advice = sec('advice');
+  const caution = sec('caution');
+  // 옛 record (v3) 의 [action] 마커는 advice 로 마이그레이션 — 시각·항목 그리드 호환 위해
+  const legacyAction = sec('action');
+  if (!advice && legacyAction) advice = legacyAction;
+  if (!diagnosis && !symbols && !oriental && !western && !advice && !caution && !legacyAction) {
     // 옛 record 또는 AI 마커 모두 누락. 전체를 동양식에 보존.
     return { ...empty, oriental: raw.trim() };
   }
-  return { diagnosis, symbols, oriental, western, action };
+  return { diagnosis, symbols, oriental, western, advice, caution };
 };
 
 /** symbols 본문 → { name, traditional, modern }[]. 각 줄 "이름=전통의미 / 현대의미" 형식. */
@@ -1974,7 +1979,8 @@ export const getDreamInterpretation = async (
         symbols: parsed.symbols,
         oriental: parsed.oriental,
         western: parsed.western,
-        action: parsed.action,
+        advice: parsed.advice,
+        caution: parsed.caution,
       },
     };
   } catch (e: any) { return { success: false, error: e.message }; }
