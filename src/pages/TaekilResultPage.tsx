@@ -641,15 +641,13 @@ export default function TaekilResultPage() {
                             }}>
                               이렇게 하면 좋아요
                             </div>
+                            {/* 본문은 위 "종합" 본문과 동일 사이즈·자간·줄간격으로 통일. */}
                             <p
-                              className="leading-[1.85] tracking-[-0.005em]"
+                              className="text-text-secondary leading-[1.85] tracking-[-0.005em]"
                               style={{
-                                fontSize: 22,
-                                lineHeight: 1.85,
+                                fontSize: 17,
                                 margin: 0, whiteSpace: 'pre-line',
                                 fontFamily: 'var(--font-body)',
-                                fontWeight: 500,
-                                color: 'var(--text-primary)',
                               }}
                             >
                               {adv.advice}
@@ -675,14 +673,11 @@ export default function TaekilResultPage() {
                               주의할 점
                             </div>
                             <p
-                              className="leading-[1.85] tracking-[-0.005em]"
+                              className="text-text-secondary leading-[1.85] tracking-[-0.005em]"
                               style={{
-                                fontSize: 22,
-                                lineHeight: 1.85,
+                                fontSize: 17,
                                 margin: 0, whiteSpace: 'pre-line',
                                 fontFamily: 'var(--font-body)',
-                                fontWeight: 500,
-                                color: 'var(--text-primary)',
                               }}
                             >
                               {adv.caution}

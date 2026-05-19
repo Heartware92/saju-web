@@ -527,11 +527,14 @@ function scoreOneDay(
   const hasSevereSinsal = sinsalHits.some(h => h.kind === 'severe');
 
   // 13) 비대칭 상향 — 좋은 점수만 끌어올림 (날짜 비교용이므로 흉일은 그대로 유지)
-  // 55점 초과분에 대해 1.3배 가속, 55점 이하는 변경 없음.
-  // 결과: 90→100→clamp95, 80→88, 70→75, 55→55, 40→40, 5→5
+  // [A안 — 2026-05-19 강화] 기준 55→50, 배율 1.3→1.6.
+  //   사용자 피드백: 1위가 70대로 나오면 "이게 최선?" 인상이라 추천 의미 약함.
+  //   풀이 실제 길흉 판정은 보존 (base 계산은 동일), 점수 표시만 보정.
+  //   변환 예: base 75→90, 70→82, 65→74, 60→66, 55→58, 50→50, 45→45, 30→30.
+  //   ★ 흉일(base ≤ 50) 은 변경 없음 — 좋은 날만 끌어올려 편차 ↑.
   let liftedBase = base;
-  if (base > 55) {
-    liftedBase = 55 + (base - 55) * 1.3;
+  if (base > 50) {
+    liftedBase = 50 + (base - 50) * 1.6;
   }
   let score = Math.max(5, Math.min(95, Math.round(liftedBase)));
   if (hasSevereSinsal && score > 55) {
