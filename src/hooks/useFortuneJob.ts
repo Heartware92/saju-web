@@ -30,6 +30,18 @@ export interface FortuneJobSnapshot {
   resultData: Record<string, unknown> | null;
   /** category — 미래 다른 운세 확장 시 분기용 */
   category: string;
+  /** 본인 birth 정보 (잡 모드에서 보관함처럼 두 사람·만세력 복원용) */
+  birthDate: string | null;
+  birthTime: string | null;
+  birthPlace: string | null;
+  gender: 'male' | 'female' | null;
+  calendarType: 'solar' | 'lunar' | null;
+  profileName: string | null;
+  /** 상대 정보 — gunghap·궁합류 카테고리에서 필수 */
+  partnerName: string | null;
+  partnerBirthDate: string | null;
+  /** engine_result — 카테고리별 메타 (gunghapCategory·역할·custom 라벨·pet 등) */
+  engineResult: Record<string, unknown> | null;
 }
 
 interface UseFortuneJobReturn {
@@ -80,7 +92,7 @@ export function useFortuneJob(jobId: string | null): UseFortuneJobReturn {
       const { data, error } = await supabase
         .from('saju_records')
         .select(
-          'id, status, interpretation_detailed, interpretation_basic, error_message, started_at, completed_at, result_data, category',
+          'id, status, interpretation_detailed, interpretation_basic, error_message, started_at, completed_at, result_data, category, birth_date, birth_time, birth_place, gender, calendar_type, profile_name, partner_name, partner_birth_date, engine_result',
         )
         .eq('id', jobId)
         .maybeSingle();
@@ -124,5 +136,17 @@ function mergeRow(
     completedAt: (row.completed_at as string | null) ?? prev?.completedAt ?? null,
     resultData: (row.result_data as Record<string, unknown> | null) ?? prev?.resultData ?? null,
     category: (row.category as string) ?? prev?.category ?? 'traditional',
+    birthDate: (row.birth_date as string | null) ?? prev?.birthDate ?? null,
+    birthTime: (row.birth_time as string | null) ?? prev?.birthTime ?? null,
+    birthPlace: (row.birth_place as string | null) ?? prev?.birthPlace ?? null,
+    gender: (row.gender as 'male' | 'female' | null) ?? prev?.gender ?? null,
+    calendarType:
+      (row.calendar_type as 'solar' | 'lunar' | null) ?? prev?.calendarType ?? null,
+    profileName: (row.profile_name as string | null) ?? prev?.profileName ?? null,
+    partnerName: (row.partner_name as string | null) ?? prev?.partnerName ?? null,
+    partnerBirthDate:
+      (row.partner_birth_date as string | null) ?? prev?.partnerBirthDate ?? null,
+    engineResult:
+      (row.engine_result as Record<string, unknown> | null) ?? prev?.engineResult ?? null,
   };
 }

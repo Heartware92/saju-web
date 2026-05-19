@@ -407,11 +407,63 @@ export default function GunghapPage() {
   }, [category, roleSwapped]);
 
   // ── 잡 결과 → state 동기화 ──
-  // useFortuneJob 으로 받은 saju_records row 의 status·interpretation 을
-  // 기존 result/gunghapTitle/Score/Domain state 에 매핑. archive 모드는 별도 useEffect.
+  // useFortuneJob 으로 받은 saju_records row 의 모든 정보를 GunghapPage state 에 매핑.
+  // archive 모드(?recordId) 는 별도 useEffect (sajuDB.getRecordById 직접 호출).
   useEffect(() => {
     if (isArchiveMode) return;
     if (!fortuneJob) return;
+
+    // ── 두 사람 정보·사주 복원 (status 무관, 진행 중에도 표시) ──
+    // 보관함에서 진행 중 잡(?jobId)으로 진입했을 때도 상대 이름·역할·사주가 즉시 보이게.
+    if (fortuneJob.partnerName || fortuneJob.profileName) {
+      const eng = fortuneJob.engineResult ?? {};
+      const cat = (eng.gunghapCategory as string) ?? '';
+      const customLbl = (eng.customLabel as string) ?? '';
+      setArchiveMeta({
+        categoryLabel: customLbl || CATEGORY_LABEL_MAP[cat] || cat || '궁합',
+        profileName: fortuneJob.profileName ?? '나',
+        partnerName:
+          fortuneJob.partnerName
+          || (fortuneJob.partnerBirthDate ? fortuneJob.partnerBirthDate.replace(/-/g, '.') : '상대'),
+        myRole: (eng.myRole as string) ?? '',
+        otherRole: (eng.otherRole as string) ?? '',
+      });
+
+      if (cat !== 'pet' && fortuneJob.birthDate && fortuneJob.gender && fortuneJob.calendarType) {
+        try {
+          const myBirth: BirthProfile = {
+            id: 'job_me', user_id: '', name: fortuneJob.profileName ?? '나',
+            birth_date: fortuneJob.birthDate,
+            birth_time: fortuneJob.birthTime ?? undefined,
+            birth_place: fortuneJob.birthPlace ?? 'seoul',
+            gender: fortuneJob.gender,
+            calendar_type: fortuneJob.calendarType,
+            is_primary: false, created_at: '', updated_at: '',
+          };
+          const myCalc = computeSajuFromProfile(myBirth);
+          if (myCalc) setMySajuResult(myCalc);
+
+          if (fortuneJob.partnerBirthDate) {
+            const partnerGender = (eng.partnerGender as string)
+              || (fortuneJob.gender === 'male' ? 'female' : 'male');
+            const otherBirth: BirthProfile = {
+              id: 'job_other', user_id: '',
+              name: fortuneJob.partnerName || fortuneJob.partnerBirthDate.replace(/-/g, '.'),
+              birth_date: fortuneJob.partnerBirthDate,
+              birth_time: (eng.partnerBirthTime as string) ?? undefined,
+              birth_place: 'seoul',
+              gender: partnerGender as 'male' | 'female',
+              calendar_type: (eng.partnerCalendarType as 'solar' | 'lunar') ?? 'solar',
+              is_primary: false, created_at: '', updated_at: '',
+            };
+            const otherCalc = computeSajuFromProfile(otherBirth);
+            if (otherCalc) setOtherSajuResult(otherCalc);
+          }
+        } catch { /* 사주 복원 실패 시 표 없이 본문만 표시 */ }
+      }
+    }
+
+    // ── status 별 분기 ──
     if (fortuneJob.status === 'done') {
       const content = fortuneJob.interpretationDetailed ?? '';
       const { title, score, domainScores, body } = parseGunghapHeader(content);
@@ -426,7 +478,12 @@ export default function GunghapPage() {
       setError(fortuneJob.errorMessage ?? '풀이 생성에 실패했어요. 크레딧은 자동 환불됐어요.');
       setLoading(false);
     } else {
-      // pending / processing — 진행 중. 결과 페이지 진입 + 로딩 화면 유지.
+      // pending/processing — 진행 중. 옛 state reset 으로 '0.1초 결과 번쩍' 차단.
+      // (이전 풀이 결과가 result state 에 남아있으면 setStep('result') 직후 잠깐 보임)
+      setResult('');
+      setGunghapTitle('');
+      setGunghapScore(null);
+      setGunghapDomainScores({});
       setStep('result');
       setLoading(true);
     }
@@ -435,6 +492,15 @@ export default function GunghapPage() {
     fortuneJob?.interpretationDetailed,
     fortuneJob?.errorMessage,
     fortuneJob?.jobId,
+    fortuneJob?.partnerName,
+    fortuneJob?.partnerBirthDate,
+    fortuneJob?.profileName,
+    fortuneJob?.birthDate,
+    fortuneJob?.birthTime,
+    fortuneJob?.birthPlace,
+    fortuneJob?.gender,
+    fortuneJob?.calendarType,
+    fortuneJob?.engineResult,
     isArchiveMode,
   ]);
 
@@ -596,9 +662,25 @@ export default function GunghapPage() {
     const newUrl = new URL(window.location.href);
     newUrl.searchParams.set('jobId', jobId);
     window.history.replaceState(null, '', newUrl.toString());
+
+    // React 18 automatic batching — 같은 동기 흐름의 setState 들이 한 렌더에 처리됨.
+    // 옛 state(이전 풀이 result/title 등) 잔재가 setStep('result') 직후 잠깐 보이는
+    // '0.1초 결과 번쩍' 현상 차단.
+    setResult('');
+    setError('');
+    setGunghapTitle('');
+    setGunghapScore(null);
+    setGunghapDomainScores({});
+    setMySajuResult(null);
+    setOtherSajuResult(null);
+    setSavedRecordId(null);
     setCreatedJobId(jobId);
     setStep('result');
-    // 이후 잡 결과 동기화 useEffect 가 알아서 status 별 분기 (processing → loading, done → setResult).
+    setLoading(true);
+    // 이후 잡 결과 동기화 useEffect 가 알아서 status 별 분기:
+    //   processing → 로딩 화면 + partner/saju 정보 채우기 (보관함 진입 케이스 포함)
+    //   done       → setResult + parseGunghapHeader + setGunghapTitle/Score/Domain
+    //   failed     → setError + 자동 환불 안내
   };
 
   const handleAnalyze = async () => {
