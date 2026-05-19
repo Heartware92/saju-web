@@ -101,17 +101,34 @@ function parseTaekilStructuredAdvice(raw: string): TaekilParsedAdvice {
     .replace(/\[?\s*alternative\s*\]?\s*[:：]?/gi, '\n[alternative]\n')
     .replace(/\[?\s*avoid\s*\]?\s*[:：]?/gi, '\n[avoid]\n')
     // 한글 마커 변형 → 표준 마커로 치환.
-    // 줄 시작에 마커 + (콜론·공백 후 같은 줄 본문) 또는 (줄 끝) 두 케이스 모두 잡음.
+    // 줄 시작에 (선택: 번호 접두사 "1.", "1)", "①" 등) + 마커 + (콜론·공백 후 같은 줄 본문) 매치.
     // 라벨 "종합:", "조언:" 과 충돌 방지 — "종합 분석" / "전체·전반 조언" 만 매치, 단독 "종합"·"조언" 은 라벨로 보존.
-    .replace(/^[ \t]*[<\[\(]?\s*1\s*(?:위|순위)\s*[>\]\)]?\s*[:：]?[ \t]*/gm, '[top1]\n')
-    .replace(/^[ \t]*[<\[\(]?\s*2\s*(?:위|순위)\s*[>\]\)]?\s*[:：]?[ \t]*/gm, '[top2]\n')
-    .replace(/^[ \t]*[<\[\(]?\s*3\s*(?:위|순위)\s*[>\]\)]?\s*[:：]?[ \t]*/gm, '[top3]\n')
-    .replace(/^[ \t]*[<\[\(]?\s*종합\s*분석\s*[>\]\)]?\s*[:：]?[ \t]*/gm, '[comprehensive_analysis]\n')
-    .replace(/^[ \t]*[<\[\(]?\s*(?:전체|전반)\s*조언\s*[>\]\)]?\s*[:：]?[ \t]*/gm, '[overall_advice]\n')
-    .replace(/^[ \t]*[<\[\(]?\s*(?:대체|대안)\s*(?:방법|방안)\s*[>\]\)]?\s*[:：]?[ \t]*/gm, '[alternative]\n')
-    .replace(/^[ \t]*[<\[\(]?\s*피해야\s*할?\s*날\s*[>\]\)]?\s*[:：]?[ \t]*/gm, '[avoid]\n')
-    // 같은 마커가 연속해서 들어간 케이스 정리 ([top1]\n[top1] → [top1])
-    .replace(/(\[(?:top\d|comprehensive_analysis|overall_advice|alternative|avoid)\])\s*\1/g, '$1');
+    .replace(/^[ \t]*(?:\d+[\.\)]\s*)?[<\[\(]?\s*1\s*(?:위|순위)\s*[>\]\)]?\s*[:：]?[ \t]*/gm, '[top1]\n')
+    .replace(/^[ \t]*(?:\d+[\.\)]\s*)?[<\[\(]?\s*2\s*(?:위|순위)\s*[>\]\)]?\s*[:：]?[ \t]*/gm, '[top2]\n')
+    .replace(/^[ \t]*(?:\d+[\.\)]\s*)?[<\[\(]?\s*3\s*(?:위|순위)\s*[>\]\)]?\s*[:：]?[ \t]*/gm, '[top3]\n')
+    .replace(/^[ \t]*(?:\d+[\.\)]\s*)?[<\[\(]?\s*종합\s*분석\s*[>\]\)]?\s*[:：]?[ \t]*/gm, '[comprehensive_analysis]\n')
+    .replace(/^[ \t]*(?:\d+[\.\)]\s*)?[<\[\(]?\s*(?:전체|전반)?\s*[^\n]*?에?\s*대한?\s*조언\s*[>\]\)]?\s*[:：]?[ \t]*$/gm, '[overall_advice]\n')
+    .replace(/^[ \t]*(?:\d+[\.\)]\s*)?[<\[\(]?\s*(?:추천\s*)?(?:대체|대안)\s*(?:방법|방안)\s*[>\]\)]?\s*[:：]?[ \t]*/gm, '[alternative]\n')
+    .replace(/^[ \t]*(?:\d+[\.\)]\s*)?[<\[\(]?\s*(?:흉일\s*피하기|피해야\s*할?\s*날)\s*[>\]\)]?\s*[:：]?[ \t]*/gm, '[avoid]\n');
+
+  // ── 번호+날짜 패턴 fallback ──
+  // LLM 이 "1. 종합 분석" / "2. 2026-05-23(...)" / "3. 2026-12-12(...)" 형식으로 출력하는 옛 케이스 대응.
+  // 위 한글 마커 정규식이 종합·avoid·overall_advice·alternative 는 잡지만,
+  // 날짜만 들어간 top1·2·3 는 못 잡으므로 — "N. YYYY-MM-DD(...)" 패턴을 순서대로 [topK] 로 치환.
+  {
+    let topCounter = 0;
+    normalized = normalized.replace(
+      /^[ \t]*\d+[\.\)]\s*(\d{4}-\d{2}-\d{2}[^\n]*)/gm,
+      (_full, dateLine) => {
+        topCounter += 1;
+        if (topCounter > 3) return _full;
+        return `[top${topCounter}]\n${dateLine}`;
+      },
+    );
+  }
+
+  // 같은 마커가 연속해서 들어간 케이스 정리 ([top1]\n[top1] → [top1])
+  normalized = normalized.replace(/(\[(?:top\d|comprehensive_analysis|overall_advice|alternative|avoid)\])\s*\1/g, '$1');
 
   // [comprehensive_analysis] 추출 — top1 또는 다른 마커 직전까지
   const compMatch = normalized.match(/\[comprehensive_analysis\]\s*([\s\S]*?)(?=\[(?:top\d|avoid|overall_advice|alternative)\]|$)/);
