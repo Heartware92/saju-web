@@ -21,6 +21,13 @@ import type { PeriodFortune } from '@/engine/periodFortune';
 // PASS2 는 monthly(2250~2900자) 포함이라 특히 넉넉히.
 const PASS1_MAX_TOKENS = 6800;
 const PASS2_MAX_TOKENS = 8200;
+
+// ★ 신년운세 전용 시스템 프롬프트.
+//   기본 시스템 프롬프트(aiClients.DEFAULT_SYSTEM_PROMPT)는 "핵심만 간결하게"를
+//   지시해 본문 프롬프트의 글자수 요구(섹션당 400~540자 등)를 눌러버린다.
+//   신년운세는 5달 크레딧 상품이므로 "간결" 대신 "분량 충족·풍부함"을 지시.
+const NEWYEAR_SYSTEM_PROMPT =
+  '당신은 35년 경력의 정통 사주명리 전문가입니다. 각 섹션은 프롬프트에 명시된 글자수 범위를 반드시 충족하도록 충분히 길고 풍부하게 작성하세요. 짧게 요약하거나 핵심만 압축하지 말고, 모든 단정 뒤에 명리적 근거와 구체적인 일상 장면·실천 조언을 충실히 풀어 쓰세요. 명시된 최소 글자수에 미달하는 답변은 실패로 간주합니다. 한국어로 작성하며 이모지는 사용하지 마세요.';
 const PASS1_KEYS: NewyearSectionKey[] = ['general', 'wealth', 'career', 'study', 'love'];
 const PASS2_KEYS: NewyearSectionKey[] = ['health', 'relation', 'monthly', 'lucky'];
 
@@ -121,7 +128,7 @@ export async function runNewyearJob(input: RunNewyearJobInput): Promise<void> {
     const pass1Prompt =
       basePrompt +
       `\n\n★ 이번 응답에서는 [${PASS1_KEYS.join('] [')}] ${PASS1_KEYS.length}개 섹션만 출력. 나머지 ${PASS2_KEYS.length}개는 다음 호출에서 작성.`;
-    const pass1Raw = await callAI(pass1Prompt, PASS1_MAX_TOKENS);
+    const pass1Raw = await callAI(pass1Prompt, PASS1_MAX_TOKENS, { systemPrompt: NEWYEAR_SYSTEM_PROMPT });
     const pass1Content = sanitizeAIOutput(pass1Raw.content);
 
     if (pass1Raw.truncated || pass1Content.length < 300) {
@@ -136,7 +143,7 @@ export async function runNewyearJob(input: RunNewyearJobInput): Promise<void> {
       basePrompt +
       `\n\n★ 이번 응답에서는 [${PASS2_KEYS.join('] [')}] ${PASS2_KEYS.length}개 섹션만 출력. [${PASS1_KEYS.join('] [')}]는 이미 완료.` +
       `\n\n[이미 작성된 1차 내용 — 참고만, 출력하지 말 것]\n${pass1Content}`;
-    const pass2Raw = await callAI(pass2Prompt, PASS2_MAX_TOKENS);
+    const pass2Raw = await callAI(pass2Prompt, PASS2_MAX_TOKENS, { systemPrompt: NEWYEAR_SYSTEM_PROMPT });
     const pass2Content = sanitizeAIOutput(pass2Raw.content);
 
     // 2차는 부분 누락 허용 (1차만이라도 보존). 다만 빈 응답은 에러.
