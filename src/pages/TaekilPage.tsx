@@ -361,6 +361,11 @@ export default function TaekilPage() {
 
   const catLabel = TAEKIL_CATEGORIES.find(c => c.id === category)?.label ?? '';
 
+  // 칩(또는 기타 직접입력) 선택 시 다른 카테고리 그룹을 접어 보기 좋게.
+  //  - subItem 선택 또는 category='custom' 이면 collapsed=true
+  //  - 칩을 다시 눌러 해제(subItem=null)하면 모든 카테고리 다시 표시
+  const collapsed = subItem !== null || category === 'custom';
+
   return (
     <div className={styles.container}>
       {/* Header */}
@@ -389,7 +394,17 @@ export default function TaekilPage() {
               <h2 style={{ margin: 0, fontSize: 16 }}>어떤 목적의 택일인가요?</h2>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-              {TAEKIL_CATEGORIES.filter(c => c.id !== 'custom').map(cat => {
+              {collapsed && (
+                <p style={{
+                  margin: '0 0 2px', fontSize: 13, color: 'var(--text-tertiary)',
+                  textAlign: 'center', letterSpacing: '-0.01em',
+                }}>
+                  선택한 칩을 다시 누르면 다른 목적도 볼 수 있어요
+                </p>
+              )}
+              {TAEKIL_CATEGORIES.filter(c => c.id !== 'custom')
+                .filter(c => !collapsed || category === c.id)
+                .map(cat => {
                 const isActive = category === cat.id;
                 return (
                   <div
@@ -447,7 +462,8 @@ export default function TaekilPage() {
                 );
               })}
 
-              {/* 기타 */}
+              {/* 기타 — collapsed 상태에서 custom 이 아니면 숨김 */}
+              {(!collapsed || category === 'custom') && (
               <div
                 style={{
                   padding: '14px 16px',
@@ -485,6 +501,7 @@ export default function TaekilPage() {
                   직접 입력
                 </button>
               </div>
+              )}
             </div>
 
             {/* 기타 선택 시 직접 입력 */}

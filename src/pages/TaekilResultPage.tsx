@@ -20,6 +20,7 @@ import { BackButton } from '../components/ui/BackButton';
 import { ShareBar } from '@/components/share/ShareBar';
 import { SectionCollapsible } from '../components/saju/SectionCollapsible';
 import { renderEmphasis } from '../utils/renderEmphasis';
+import { renderTaekilSectionVisual } from '../components/saju/TaekilSectionVisuals';
 import {
   TAEKIL_CATEGORIES,
   migrateLegacyCategory,
@@ -316,6 +317,14 @@ export default function TaekilResultPage() {
     return profiles.find(p => p.id === profileId) ?? null;
   }, [profiles, profileId]);
 
+  // "다른 날짜로 다시 풀이받기" 라우팅용 — record.profile_id 가 비어 있어도
+  // 대표(또는 첫) 프로필로 보강. profileId 없이 /saju/taekil 진입 시
+  // needsProfileSelect=true 가 되어 QuickFortuneGate 모달이 떠버리는 사고 차단.
+  const resolvedProfileId = useMemo(
+    () => profileId ?? profiles.find(p => p.is_primary)?.id ?? profiles[0]?.id ?? null,
+    [profileId, profiles],
+  );
+
   const saju = useMemo(() => {
     if (!targetProfile) return null;
     return computeSajuFromProfile(targetProfile);
@@ -366,7 +375,7 @@ export default function TaekilResultPage() {
           <p style={{ color: 'var(--text-secondary)', marginBottom: 20 }}>{error ?? '결과를 표시할 수 없어요.'}</p>
           <button
             onClick={() => {
-              const qs = profileId ? `?profileId=${profileId}&fresh=1` : '?fresh=1';
+              const qs = resolvedProfileId ? `?profileId=${resolvedProfileId}&fresh=1` : "?fresh=1";
               router.push(`/saju/taekil${qs}`);
             }}
             style={{
@@ -645,17 +654,24 @@ export default function TaekilResultPage() {
 
                         {/* 종합 / 조언 / 주의 — 새 3섹션 구조 (옛 record 는 summary 만 있을 수 있음) */}
                         {adv.summary && (
-                          <div style={{ marginBottom: adv.advice || adv.caution ? 12 : 14 }}>
-                            <div style={{ fontSize: 11, fontWeight: 800, color: 'var(--text-tertiary)', letterSpacing: '0.08em', marginBottom: 6, textTransform: 'uppercase' }}>
+                          <div style={{ marginBottom: adv.advice || adv.caution ? 14 : 16 }}>
+                            {/* 헤더 — "이렇게 하면 좋아요"·"주의할 점" 헤더와 동일 크기·웨이트 */}
+                            <div style={{
+                              fontSize: 17, fontWeight: 900,
+                              color: 'var(--text-primary)',
+                              letterSpacing: '-0.01em',
+                              marginBottom: 12,
+                              fontFamily: 'var(--font-title)',
+                              lineHeight: 1.4,
+                            }}>
                               종합
                             </div>
-                            {/* 일반 본문색(text-secondary) — 흰색 강조는 과해서 일반 본문 톤으로 되돌림 */}
+                            {/* 본문 — "이렇게 하면 좋아요" 본문과 동일 (SUIT 폰트·자간·크기·줄간격) */}
                             <p
-                              className="text-text-secondary leading-[1.7] tracking-[-0.01em]"
+                              className="text-text-secondary leading-[1.85] tracking-[-0.005em]"
                               style={{
-                                fontSize: 19, margin: 0, whiteSpace: 'pre-line',
+                                fontSize: 17, margin: 0, whiteSpace: 'pre-line',
                                 fontFamily: 'var(--font-body)',
-                                fontWeight: 500,
                               }}
                             >
                               {adv.summary}
@@ -808,6 +824,7 @@ export default function TaekilResultPage() {
                         defaultOpen={true}
                         enterDelay={0.05}
                       >
+                        {renderTaekilSectionVisual('comprehensive', result, pickedDays)}
                         <p
                           className="text-text-secondary leading-[1.9] tracking-[-0.005em] whitespace-pre-line"
                           style={{
@@ -853,6 +870,7 @@ export default function TaekilResultPage() {
                         barPulseColor="#FCA5A5"
                         borderColor="rgba(248,113,113,0.30)"
                       >
+                        {renderTaekilSectionVisual('avoid', result, pickedDays)}
                         <p
                           className="text-text-secondary leading-[1.85] tracking-[-0.005em] whitespace-pre-line"
                           style={{ fontSize: 17, margin: 0, fontFamily: 'var(--font-body)' }}
@@ -873,6 +891,7 @@ export default function TaekilResultPage() {
                           defaultOpen={false}
                           enterDelay={0.15}
                         >
+                          {renderTaekilSectionVisual('overall', result, pickedDays)}
                           <p
                             className="text-text-secondary leading-[1.85] tracking-[-0.005em] whitespace-pre-line"
                             style={{ fontSize: 17, margin: 0, fontFamily: 'var(--font-body)' }}
@@ -892,6 +911,7 @@ export default function TaekilResultPage() {
                         defaultOpen={false}
                         enterDelay={0.2}
                       >
+                        {renderTaekilSectionVisual('alternative', result, pickedDays)}
                         {/* "첫째로 …", "둘째로 …", "셋째로 …" 패턴으로 split 해서 문단 분리.
                             split 안 되면 (LLM이 다른 형식으로 출력) 단일 paragraph fallback. */}
                         {(() => {
@@ -954,7 +974,7 @@ export default function TaekilResultPage() {
                     </p>
                     <button
                       onClick={() => {
-                        const qs = profileId ? `?profileId=${profileId}&fresh=1` : '?fresh=1';
+                        const qs = resolvedProfileId ? `?profileId=${resolvedProfileId}&fresh=1` : "?fresh=1";
                         router.push(`/saju/taekil${qs}`);
                       }}
                       style={{
@@ -987,7 +1007,7 @@ export default function TaekilResultPage() {
 
             <button
               onClick={() => {
-                const qs = profileId ? `?profileId=${profileId}&fresh=1` : '?fresh=1';
+                const qs = resolvedProfileId ? `?profileId=${resolvedProfileId}&fresh=1` : "?fresh=1";
                 router.push(`/saju/taekil${qs}`);
               }}
               style={{
