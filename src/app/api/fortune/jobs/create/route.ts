@@ -62,6 +62,8 @@ interface GunghapJobBody extends BaseJobBody {
   category: 'gunghap';
   /** 클라가 14개 카테고리 분기 + role injection + title/score 래퍼까지 완성한 prompt. */
   prompt: string;
+  /** 본인 프로필명 (saju_records.profile_name) — 사주표 라벨에 "나" 대신 표시. */
+  profileName?: string;
   /** 상대방 이름 (보관함 partner_name 컬럼). pet 카테고리는 동물 이름. */
   partnerName: string;
   /** 상대방 생년월일 (옵션 — pet 등은 빈). */
@@ -348,6 +350,7 @@ export async function POST(request: NextRequest) {
       insertRow.engine_result = body.engineResult;
       insertRow.partner_name = body.partnerName;
       insertRow.partner_birth_date = body.partnerBirthDate ?? null;
+      if (body.profileName) insertRow.profile_name = body.profileName;
     } else if (body.category === 'newyear') {
       // engine_result — getNewyearReport 의 archiveSaju 분기와 동등.
       // year·isoDate·categoryLabel·source 가 보관함 라벨·정렬·필터에 사용됨.

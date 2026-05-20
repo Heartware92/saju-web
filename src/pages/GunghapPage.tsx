@@ -629,6 +629,8 @@ export default function GunghapPage() {
       gender: 'male' | 'female';
       calendarType: 'solar' | 'lunar';
     };
+    /** 본인 프로필명 — 사주표 라벨에 "나" 대신 표시 */
+    profileName: string;
     partnerName: string;
     partnerBirthDate: string | null;
     engineResult: Record<string, unknown>;
@@ -650,6 +652,7 @@ export default function GunghapPage() {
         prompt: input.prompt,
         sajuResult: input.sajuResult,
         profileId: input.profileId,
+        profileName: input.profileName,
         sourceBirth: input.sourceBirth,
         partnerName: input.partnerName,
         partnerBirthDate: input.partnerBirthDate,
@@ -745,6 +748,7 @@ export default function GunghapPage() {
           prompt: petPrompt,
           sajuResult: myResult,
           profileId: selectedProfile.id,
+          profileName: selectedProfile.name,
           sourceBirth: {
             birthDate: selectedProfile.birth_date,
             birthTime: selectedProfile.birth_time ?? null,
@@ -906,6 +910,7 @@ export default function GunghapPage() {
         prompt,
         sajuResult: myResult,
         profileId: selectedProfile.id,
+        profileName: selectedProfile.name,
         sourceBirth: {
           birthDate: selectedProfile.birth_date,
           birthTime: selectedProfile.birth_time ?? null,
@@ -1627,7 +1632,7 @@ export default function GunghapPage() {
                   };
                   return (
                     <div key={pi} className="rounded-2xl overflow-hidden bg-[rgba(20,12,38,0.55)] border border-[var(--border-subtle)]">
-                      <div className="text-[13px] font-bold text-cta py-2 px-3">{person.label}</div>
+                      <div className="text-[19px] font-bold text-cta py-3 px-3 text-center">{person.label}</div>
                       {/* 헤더 */}
                       <div className="grid text-center text-[13px] font-bold text-cta/80 py-2 px-1 bg-[rgba(124,92,252,0.08)] rounded-lg mx-2 mb-1"
                            style={{ gridTemplateColumns: '44px repeat(4, 1fr)' }}>
