@@ -316,18 +316,21 @@ function ElementVisual({ saju }: { saju: SajuResult }) {
                 />
               </div>
               <span className="text-[13px] text-text-tertiary w-10 text-right shrink-0">{v}%</span>
-              {(isStrong || isWeak) && (
-                <span
-                  className="text-[11px] font-bold px-1.5 py-0.5 rounded shrink-0"
-                  style={{
-                    background: isStrong ? `${SIGNAL.warn}22` : `${SIGNAL.info}22`,
-                    color: isStrong ? SIGNAL.warn : SIGNAL.info,
-                    border: `1px solid ${(isStrong ? SIGNAL.warn : SIGNAL.info)}55`,
-                  }}
-                >
-                  {isStrong ? '강' : '약'}
-                </span>
-              )}
+              {/* 강/약 뱃지 영역 — 고정폭으로 확보해 뱃지 유무와 무관하게 % 위치 정렬 통일 */}
+              <span className="w-8 shrink-0 flex justify-end">
+                {(isStrong || isWeak) && (
+                  <span
+                    className="text-[11px] font-bold px-1.5 py-0.5 rounded"
+                    style={{
+                      background: isStrong ? `${SIGNAL.warn}22` : `${SIGNAL.info}22`,
+                      color: isStrong ? SIGNAL.warn : SIGNAL.info,
+                      border: `1px solid ${(isStrong ? SIGNAL.warn : SIGNAL.info)}55`,
+                    }}
+                  >
+                    {isStrong ? '강' : '약'}
+                  </span>
+                )}
+              </span>
             </div>
           );
         })}
@@ -460,27 +463,26 @@ function WealthVisual({ saju }: { saju: SajuResult }) {
     total === 0 ? { label: '재성 무(無)', color: SIGNAL.info, desc: '식상생재·간접 재물 구조' }
     : total <= 2 ? { label: '재성 보통', color: SIGNAL.good, desc: '안정적 재물 흐름' }
     : { label: '재성 풍부', color: SIGNAL.warn, desc: '재물 기회 많음·관리 중요' };
+  // 카드 sub — 개수만 나열하지 않고 "이게 무슨 상태인지" 해석형으로 (인간관계 카드 패턴).
+  const jaeSeongSub =
+    total === 0 ? '식상으로 일구는 간접 재물형'
+    : jeongJae > pyeonJae ? `안정적 고정 재물 위주 (정재 ${jeongJae}·편재 ${pyeonJae})`
+    : pyeonJae > jeongJae ? `유동적 큰 재물 기회 위주 (정재 ${jeongJae}·편재 ${pyeonJae})`
+    : `안정·유동 재물이 고르게 섞인 균형형 (정재 ${jeongJae}·편재 ${pyeonJae})`;
   return (
-    <div className="grid grid-cols-1 gap-2 mb-3">
-      <p className="text-[12.5px] text-text-tertiary leading-snug px-1" style={{ wordBreak: 'keep-all' }}>
-        재성(財星)은 정재·편재로, 내가 다스리는 재물과 결실을 뜻해요. 재성이 많을수록 재물
-        기회가 크지만, 그 기회를 담아내려면 일간이 튼튼해야(신강) 합니다. 신약이면 재성이
-        많을수록 오히려 부담이 커, 그릇에 맞게 나누고 지키는 관리가 중요해요.
-      </p>
-      <div className="grid grid-cols-2 gap-2">
-        <StatCard
-          label="재성 (정재+편재)"
-          value={`${total}개`}
-          sub={`정재 ${jeongJae} · 편재 ${pyeonJae}`}
-          color={wealthBadge.color}
-        />
-        <StatCard
-          label="재물 그릇"
-          value={strong ? '감당형 (신강)' : '관리 주의 (신약)'}
-          sub={strong ? '큰 재물도 감당하는 힘' : '재성 과다 시 부담 — 분산 관리'}
-          color={strong ? SIGNAL.good : SIGNAL.warn}
-        />
-      </div>
+    <div className="grid grid-cols-2 gap-2 mb-3">
+      <StatCard
+        label="재성 (정재+편재)"
+        value={`${total}개`}
+        sub={jaeSeongSub}
+        color={wealthBadge.color}
+      />
+      <StatCard
+        label="재물 그릇"
+        value={strong ? '감당형 (신강)' : '관리 주의 (신약)'}
+        sub={strong ? '큰 재물도 너끈히 감당하는 힘' : '재성이 많을수록 분산 관리가 필요한 그릇'}
+        color={strong ? SIGNAL.good : SIGNAL.warn}
+      />
     </div>
   );
 }
@@ -508,11 +510,6 @@ function LoveVisual({ saju }: { saju: SajuResult }) {
       <p className="text-[12.5px] text-text-tertiary leading-snug px-1" style={{ wordBreak: 'keep-all' }}>
         배우자궁(配偶宮)은 일간(나) 바로 아래 글자인 일지(日支)예요. 배우자가 앉는
         자리라 여겨, 이 글자가 흔들리면 배우자 인연도 출렁인다고 봅니다.
-        {' '}
-        {isMale
-          ? '배우자성(配偶星)은 남성에게 재성(정재·편재) — 내가 끌어오는 인연의 별이에요.'
-          : '배우자성(配偶星)은 여성에게 관성(정관·편관) — 나를 이끄는 인연의 별이에요.'}
-        {' '}개수가 많으면 인연 기회가 잦고, 없거나 적으면 늦은 인연·노력으로 만드는 인연이 됩니다.
       </p>
       <div className="grid grid-cols-2 gap-2">
         <StatCard
@@ -525,9 +522,9 @@ function LoveVisual({ saju }: { saju: SajuResult }) {
           label={spouseStarLabel}
           value={`${spouseStarTotal}개`}
           sub={
-            spouseStarTotal === 0 ? '인연성 약함 — 늦은 인연·노력형'
-            : spouseStarTotal <= 2 ? '인연 흐름 보통'
-            : '인연 기회 많음'
+            spouseStarTotal === 0 ? '늦게 또는 노력으로 만들어가는 인연형'
+            : spouseStarTotal <= 2 ? '인연 흐름이 적당히 받쳐주는 균형형'
+            : '인연 기회가 자주 들어오는 활발형'
           }
           color={spouseStarTotal === 0 ? SIGNAL.info : spouseStarTotal <= 2 ? SIGNAL.good : SIGNAL.warn}
         />
@@ -633,7 +630,7 @@ function RelationVisual({ saju }: { saju: SajuResult }) {
           label="비겁 (또래·동료)"
           value={`${bigyeop}개`}
           sub={
-            bigyeop >= 3 ? '형제·친구·동료가 인생에 큰 비중 — 대인 에너지 강함'
+            bigyeop >= 3 ? '형제·친구·동료가 인생에 큰 비중을 차지하는 대인 에너지형'
             : bigyeop === 0 ? '혼자 결정하고 움직이는 독립형'
             : '또래 관계가 적당히 받쳐주는 균형형'
           }
