@@ -535,9 +535,6 @@ export default function ArchivePage() {
           >
             <div className="w-11 h-11 mx-auto mb-3 border-[3px] border-amber-300 border-t-transparent rounded-full animate-spin" />
             <h3 className="text-base font-bold text-text-primary mb-2">풀이를 준비하고 있어요</h3>
-            <p className="text-sm text-text-secondary mb-1">
-              백그라운드에서 풀이가 진행 중이에요.
-            </p>
             <p className="text-xs text-text-tertiary mb-5">
               완료되면 이 보관함에서 바로 확인할 수 있어요. 다른 화면을 보셔도 괜찮아요.
             </p>

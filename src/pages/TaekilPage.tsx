@@ -30,6 +30,7 @@ import { supabase } from '../services/supabase';
 import { generateTaekilAdvicePrompt } from '../constants/prompts';
 import { pickTaekilDetailHint, TAEKIL_DETAIL_MAX_LEN } from '../constants/taekilDetailHints';
 import { useLoadingGuard } from '../hooks/useLoadingGuard';
+import { AILoadingBar } from '../components/AILoadingBar';
 import { truncateTaekilLabel } from '../utils/truncateTaekilLabel';
 import styles from './SajuResultPage.module.css';
 
@@ -338,6 +339,25 @@ export default function TaekilPage() {
   }
 
   if (!saju && !isArchiveMode) return <div className={styles.loading}>로딩 중...</div>;
+
+  // 풀이 요청 후 — 다른 운세 페이지와 일관되게 전체화면 로딩.
+  // 잡 생성(POST) 동안 표시되고, jobId 받으면 결과 페이지로 router.push → 거기서 모래시계 이어짐.
+  if (aiLoading) {
+    return (
+      <AILoadingBar
+        label="택일 운세 분석중"
+        minLabel="20초"
+        maxLabel="1분"
+        estimatedSeconds={35}
+        messages={[
+          '선택한 날짜의 일진을 분석하는 중입니다',
+          '사주 원국과의 합충을 짚는 중입니다',
+          '흉신·길신을 검토하는 중입니다',
+          '최적의 날짜를 가려내는 중입니다',
+        ]}
+      />
+    );
+  }
 
   const catLabel = TAEKIL_CATEGORIES.find(c => c.id === category)?.label ?? '';
 
@@ -847,28 +867,6 @@ export default function TaekilPage() {
                         </button>
                       </div>
                     )}
-                  </div>
-                )}
-
-                {/* 로딩 */}
-                {aiLoading && (
-                  <div className={styles.section}>
-                    <div style={{
-                      display: 'flex', flexDirection: 'column',
-                      alignItems: 'center', padding: '32px 16px', gap: 12,
-                    }}>
-                      <div style={{ display: 'flex', gap: 6 }}>
-                        <span style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--cta-primary)' }} className="animate-pulse" />
-                        <span style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--cta-primary)', animationDelay: '0.2s' }} className="animate-pulse" />
-                        <span style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--cta-primary)', animationDelay: '0.4s' }} className="animate-pulse" />
-                      </div>
-                      <p style={{ fontSize: 14, color: 'var(--text-tertiary)', margin: 0, fontWeight: 600 }}>
-                        {pickedDates.length}개 날짜 분석 중...
-                      </p>
-                      <p style={{ fontSize: 12, color: 'var(--text-tertiary)', margin: 0, opacity: 0.6 }}>
-                        약 30초~1분 정도 소요돼요
-                      </p>
-                    </div>
                   </div>
                 )}
 

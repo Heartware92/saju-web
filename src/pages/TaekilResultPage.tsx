@@ -644,9 +644,9 @@ export default function TaekilResultPage() {
                             <div style={{ fontSize: 11, fontWeight: 800, color: 'var(--text-tertiary)', letterSpacing: '0.08em', marginBottom: 6, textTransform: 'uppercase' }}>
                               종합
                             </div>
-                            {/* 본문(17px) 보다 크게 — 1·2·3위 종합은 그 날의 핵심이라 시선 우선 */}
+                            {/* 일반 본문색(text-secondary) — 흰색 강조는 과해서 일반 본문 톤으로 되돌림 */}
                             <p
-                              className="text-text-primary leading-[1.7] tracking-[-0.01em]"
+                              className="text-text-secondary leading-[1.7] tracking-[-0.01em]"
                               style={{
                                 fontSize: 19, margin: 0, whiteSpace: 'pre-line',
                                 fontFamily: 'var(--font-body)',
