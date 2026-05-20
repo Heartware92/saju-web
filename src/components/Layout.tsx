@@ -192,6 +192,11 @@ export default function Layout({ children }: LayoutProps) {
                   <p>대구광역시 북구 동북로 117</p>
                   <p>고객센터 010-5960-0920</p>
                 </div>
+                {/* 책임·환불·민원 고지 — PG(KG이니시스) 심사 필수 문구 */}
+                <div className="flex flex-col items-center gap-0.5 text-[11px] leading-snug text-text-tertiary text-center px-2 pt-2 border-t border-[var(--border-subtle)]">
+                  <p>모든 거래에 대한 책임과 환불·민원은 (주)하트웨어에서 진행합니다.</p>
+                  <p>민원담당자 : 허진우 · 010-5960-0920</p>
+                </div>
                 <p className="text-center text-[11px] text-text-tertiary/70">&copy; 2026 이천점</p>
               </div>
             </div>
