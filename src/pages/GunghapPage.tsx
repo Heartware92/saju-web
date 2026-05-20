@@ -317,6 +317,9 @@ export default function GunghapPage() {
   const [roleSwapped, setRoleSwapped] = useState(false);
   const [myProfileId, setMyProfileId] = useState<string>('');
   const [other, setOther] = useState<OtherInput>(defaultOther);
+  // 상대방 직접입력 — 출생시간 모름 여부. birth_time 빈 값과 분리된 독립 state.
+  // (사고: checked={!other.birth_time} 이면 시간 숫자를 다 지웠을 때 모름이 자동 체크됨)
+  const [otherHourUnknown, setOtherHourUnknown] = useState(true);
   const [pet, setPet] = useState<PetInput>(defaultPet);
   const [otherMode, setOtherMode] = useState<'profile' | 'manual'>('profile');
   const [otherProfileId, setOtherProfileId] = useState<string>('');
@@ -1420,9 +1423,12 @@ export default function GunghapPage() {
                       <label className="text-[13px] flex items-center gap-1 text-text-secondary cursor-pointer">
                         <input
                           type="checkbox"
-                          checked={!other.birth_time}
+                          checked={otherHourUnknown}
                           onChange={(e) => {
-                            setOther(o => ({ ...o, birth_time: e.target.checked ? '' : '12:00' }));
+                            const unknown = e.target.checked;
+                            setOtherHourUnknown(unknown);
+                            // 모름 체크 시 시간 클리어. 해제 시 빈 칸으로 둬 사용자가 직접 입력.
+                            if (unknown) setOther(o => ({ ...o, birth_time: '' }));
                           }}
                           className="accent-cta"
                         />
@@ -1440,12 +1446,13 @@ export default function GunghapPage() {
                         const formatted = digits.length >= 3
                           ? `${digits.slice(0, 2)}:${digits.slice(2)}`
                           : digits;
+                        // 숫자를 다 지워도 모름은 자동 체크 안 됨 — otherHourUnknown 은 별도 state.
                         setOther(o => ({ ...o, birth_time: formatted }));
                       }}
-                      disabled={!other.birth_time && other.birth_time === ''}
+                      disabled={otherHourUnknown}
                       className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-text-primary text-[16px] placeholder-text-tertiary focus:border-cta/50 focus:outline-none transition disabled:opacity-40"
                     />
-                    {!other.birth_time && (
+                    {otherHourUnknown && (
                       <p className="text-[12px] text-text-tertiary mt-1">
                         시간을 모르면 시주(時柱)가 없는 삼주추명으로 분석됩니다.
                       </p>
