@@ -49,10 +49,11 @@ import type { SajuResult } from '../utils/sajuCalculator';
 import { STEM_TO_HANJA, ZHI_TO_HANJA, STEM_TO_ELEMENT, ELEMENT_CELL_COLORS, type Element } from '../lib/character';
 import { ShareBar } from '@/components/share/ShareBar';
 import { RadarChart, type RadarDomain } from '../components/charts/RadarChart';
+import { RelationTimelineChart } from '../components/charts/RelationTimelineChart';
 import {
   GRADE_COLOR, GUNGHAP_DOMAINS as SHARED_GUNGHAP_DOMAINS,
   scoreToGrade, parseGunghapHeader,
-  type GunghapDomainKey, type GunghapDomainScores,
+  type GunghapDomainKey, type GunghapDomainScores, type GunghapTimelinePoint,
 } from '@/lib/gunghap';
 import { ScoreRing, DomainBar } from '@/components/gunghap/GunghapResultBlock';
 import { useScrollToTopOnLoad } from '../hooks/useScrollToTopOnLoad';
@@ -222,28 +223,48 @@ const AUTO_ROLES: Record<string, [string, string]> = {
 // 궁합 영역별 점수 5개 도메인 — 공유 모듈 alias
 const GUNGHAP_DOMAINS = SHARED_GUNGHAP_DOMAINS;
 
-// 프롬프트에 은유 제목+점수+영역별 점수 요청 래퍼 추가
-function wrapWithTitleScore(prompt: string): string {
+// 관계 추이 그래프를 노출할 카테고리 — 연애 관계 4종.
+// (전 연인·가족·친구·동료·반려동물 등은 "관계 연차" 흐름이 부적절해 제외)
+const TIMELINE_CATEGORIES: GunghapCategory[] = ['secret_crush', 'som', 'lover', 'spouse'];
+
+// 프롬프트에 은유 제목+점수+영역별 점수(+관계 추이) 요청 래퍼 추가
+function wrapWithTitleScore(prompt: string, includeTimeline = false): string {
+  const timelineBlock = includeTimeline
+    ? `
+
+셋째 줄 (관계 추이 — 시간이 흐름에 따른 궁합 점수):
+[gunghap_timeline] 만남:점수 | 6개월:점수 | 1년차:점수 | 2년차:점수 | 3년차:점수 | 5년차:점수 [/gunghap_timeline]
+
+추이 규칙:
+- 라벨 6개(만남·6개월·1년차·2년차·3년차·5년차)를 그대로 사용하고 각 시점의 점수만 산출
+- 두 사주의 대운·세운 흐름과 합충 변화를 근거로 시점별 점수를 다르게 산출 (전부 비슷하면 안 됨, 기복이 드러나야 함)
+- 점수는 45~98 사이 정수`
+    : '';
+  const timelineExample = includeTimeline
+    ? `\n[gunghap_timeline] 만남:72 | 6개월:80 | 1년차:86 | 2년차:74 | 3년차:88 | 5년차:91 [/gunghap_timeline]`
+    : '';
+  const lineLabel = includeTimeline ? '응답의 가장 첫 줄·둘째 줄·셋째 줄' : '응답의 가장 첫 줄과 둘째 줄';
+  const bodyStart = includeTimeline ? '- 이 세 줄 다음부터 본문 시작' : '- 이 두 줄 다음부터 본문 시작';
   return prompt + `
 
 ★★★ 응답 시작 형식 — 반드시 준수 ★★★
-응답의 가장 첫 줄과 둘째 줄에 아래 형식을 정확히 지켜 출력하세요:
+${lineLabel}에 아래 형식을 정확히 지켜 출력하세요:
 
 첫째 줄:
 [gunghap_header] 은유적 한 줄 제목 | 점수(0~100 정수) [/gunghap_header]
 
 둘째 줄 (영역별 세부 점수):
-[gunghap_scores] 정서교감:점수 | 소통이해:점수 | 가치관:점수 | 성장발전:점수 | 갈등해소:점수 [/gunghap_scores]
+[gunghap_scores] 정서교감:점수 | 소통이해:점수 | 가치관:점수 | 성장발전:점수 | 갈등해소:점수 [/gunghap_scores]${timelineBlock}
 
 예시:
 [gunghap_header] 서로의 영혼을 비추는 거울 같은 만남 | 88 [/gunghap_header]
-[gunghap_scores] 정서교감:92 | 소통이해:85 | 가치관:78 | 성장발전:90 | 갈등해소:72 [/gunghap_scores]
+[gunghap_scores] 정서교감:92 | 소통이해:85 | 가치관:78 | 성장발전:90 | 갈등해소:72 [/gunghap_scores]${timelineExample}
 
 규칙:
 - 제목은 두 사주의 일간 오행 관계를 은유로 표현 (20~50자)
 - 종합 점수는 두 사주의 합충·오행 조화·십성 궁합을 종합한 0~100 정수
 - 영역별 점수 5개도 각각 0~100 정수로 산출 (두 사주 관계를 명리적으로 평가)
-- 이 두 줄 다음부터 본문 시작
+${bodyStart}
 `;
 }
 
@@ -334,6 +355,7 @@ export default function GunghapPage() {
   const [gunghapTitle, setGunghapTitle] = useState('');
   const [gunghapScore, setGunghapScore] = useState<number | null>(null);
   const [gunghapDomainScores, setGunghapDomainScores] = useState<GunghapDomainScores>({});
+  const [gunghapTimeline, setGunghapTimeline] = useState<GunghapTimelinePoint[]>([]);
   const [savedRecordId, setSavedRecordId] = useState<string | null>(null);
 
   // 보관함 재생 시 record에서 가져온 메타 정보
@@ -470,11 +492,12 @@ export default function GunghapPage() {
     // ── status 별 분기 ──
     if (fortuneJob.status === 'done') {
       const content = fortuneJob.interpretationDetailed ?? '';
-      const { title, score, domainScores, body } = parseGunghapHeader(content);
+      const { title, score, domainScores, timeline, body } = parseGunghapHeader(content);
       setResult(body);
       setGunghapTitle(title);
       setGunghapScore(score);
       setGunghapDomainScores(domainScores);
+      setGunghapTimeline(timeline);
       setSavedRecordId(fortuneJob.jobId);
       setStep('result');
       setLoading(false);
@@ -488,6 +511,7 @@ export default function GunghapPage() {
       setGunghapTitle('');
       setGunghapScore(null);
       setGunghapDomainScores({});
+      setGunghapTimeline([]);
       setStep('result');
       setLoading(true);
     }
@@ -518,11 +542,12 @@ export default function GunghapPage() {
         if (cancelled || !record) return;
         const content = record.interpretation_detailed ?? record.interpretation_basic ?? '';
         if (content) {
-          const { title, score, domainScores, body } = parseGunghapHeader(content);
+          const { title, score, domainScores, timeline, body } = parseGunghapHeader(content);
           setResult(body);
           setGunghapTitle(title);
           setGunghapScore(score);
           setGunghapDomainScores(domainScores);
+          setGunghapTimeline(timeline);
           setStep('result');
 
           const eng = record.engine_result as Record<string, unknown> | undefined;
@@ -678,6 +703,7 @@ export default function GunghapPage() {
     setGunghapTitle('');
     setGunghapScore(null);
     setGunghapDomainScores({});
+    setGunghapTimeline([]);
     setMySajuResult(null);
     setOtherSajuResult(null);
     setSavedRecordId(null);
@@ -807,10 +833,11 @@ export default function GunghapPage() {
           return;
         }
         if (cached?.data) {
-          const { title, score, domainScores: ds, body } = parseGunghapHeader(cached.data);
+          const { title, score, domainScores: ds, timeline, body } = parseGunghapHeader(cached.data);
           setGunghapTitle(title);
           setGunghapScore(score);
           setGunghapDomainScores(ds);
+          setGunghapTimeline(timeline);
           setResult(body);
           setStep('result');
           setLoading(false);
@@ -899,7 +926,7 @@ export default function GunghapPage() {
 
       // 역할 컨텍스트 주입 + 제목/점수 요청 래핑
       prompt = injectRoleContext(prompt, myName, myRole, otherName, otherRole);
-      prompt = wrapWithTitleScore(prompt);
+      prompt = wrapWithTitleScore(prompt, TIMELINE_CATEGORIES.includes(category));
 
       // 백그라운드 잡 생성 — 차감·INSERT·archive 모두 서버. 결과는 useFortuneJob → 동기화 useEffect 가
       // parseGunghapHeader → setResult + setGunghapTitle/Score/Domain 으로 매핑.
@@ -1572,6 +1599,13 @@ export default function GunghapPage() {
                     </div>
                   </>
                 )}
+
+                {/* 관계 추이 그래프 — 시간 흐름에 따른 궁합 점수 (연애 관계 4종) */}
+                {gunghapTimeline.length >= 2 && (
+                  <div className="mt-5 pt-4 border-t border-[rgba(124,92,252,0.18)]">
+                    <RelationTimelineChart data={gunghapTimeline} />
+                  </div>
+                )}
               </div>
             )}
 
@@ -1694,7 +1728,7 @@ export default function GunghapPage() {
 
             {/* 결과 본문 — 섹션별 카드 분리 렌더링 */}
             {(() => {
-              const cleanedText = result.replace(/\[\/?\s*gunghap[_\s]?(?:header|scores)\s*\][^\n]*/gi, '').trim();
+              const cleanedText = result.replace(/\[\/?\s*gunghap[_\s]?(?:header|scores|timeline)\s*\][^\n]*/gi, '').trim();
 
               // Known section titles from gunghap prompts (프롬프트와 정확히 일치)
               const SECTION_TITLES = [
