@@ -77,7 +77,7 @@ export interface PeriodFortune {
   luckyGem?: string;
   luckyActivity?: string;
   cautions: string[];
-  monthlyFlow?: { month: number; grade: FortuneGrade; keyword: string }[]; // year scope only
+  monthlyFlow?: MonthlyFlowItem[]; // year scope only
 }
 
 // ============================================
@@ -619,6 +619,8 @@ export interface MonthlyFlowItem {
   month: number;
   grade: FortuneGrade;
   keyword: string;
+  /** 0~100 운세 점수 (그래프 인터랙션·툴팁용) */
+  score: number;
   gan: string;
   zhi: string;
   ganElement: string;
@@ -648,7 +650,8 @@ export function buildMonthlyFlow(saju: SajuResult, year: number): MonthlyFlowIte
     const inter = checkBranchPair(saju.pillars.day.zhi, mZhi);
     if (inter?.nature === 'bad') score -= 3;
     else if (inter?.nature === 'good') score += 6;
-    const grade = gradeFromScore(Math.max(60, Math.min(95, score)));
+    const clampedScore = Math.max(60, Math.min(95, score));
+    const grade = gradeFromScore(clampedScore);
     const keyword =
       grade === '대길' ? '전진·도약'
       : grade === '길' ? '확장·기회'
@@ -660,6 +663,7 @@ export function buildMonthlyFlow(saju: SajuResult, year: number): MonthlyFlowIte
       month: m,
       grade,
       keyword,
+      score: clampedScore,
       gan: mGan,
       zhi: mZhi,
       ganElement,
