@@ -28,6 +28,7 @@ import { extractMetaphor } from '../utils/parseMetaphor';
 import { renderEmphasizedBody } from '../utils/renderEmphasizedBody';
 import { LifetimeFortuneChart } from '../components/saju/LifetimeFortuneChart';
 import { SectionCollapsible } from '../components/saju/SectionCollapsible';
+import { renderJungtongsajuSectionVisual } from '../components/saju/JungtongsajuSectionVisuals';
 import SajuReport from '../components/saju/SajuReport';
 import { AILoadingBar } from '../components/AILoadingBar';
 import { BackButton } from '../components/ui/BackButton';
@@ -629,11 +630,15 @@ export default function SajuResultPage() {
                     meta={report.adviceMeta}
                   />
                 ) : (
-                  <div className="text-[17px] text-text-secondary leading-[1.85] tracking-[-0.005em] space-y-3">
-                    {bodyText.split(/\n\n+/).map((para, pi) => (
-                      <p key={pi} className="whitespace-pre-line">{renderEmphasizedBody(para.trim())}</p>
-                    ))}
-                  </div>
+                  <>
+                    {/* 섹션별 시각 데이터 카드 — 본문 줄글 위 한눈 요약 */}
+                    {renderJungtongsajuSectionVisual(key, result)}
+                    <div className="text-[17px] text-text-secondary leading-[1.85] tracking-[-0.005em] space-y-3">
+                      {bodyText.split(/\n\n+/).map((para, pi) => (
+                        <p key={pi} className="whitespace-pre-line">{renderEmphasizedBody(para.trim())}</p>
+                      ))}
+                    </div>
+                  </>
                 )}
               </SectionCollapsible>
             );
