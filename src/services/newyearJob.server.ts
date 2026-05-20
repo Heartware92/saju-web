@@ -31,6 +31,29 @@ const NEWYEAR_SYSTEM_PROMPT =
 const PASS1_KEYS: NewyearSectionKey[] = ['general', 'wealth', 'career', 'study', 'love'];
 const PASS2_KEYS: NewyearSectionKey[] = ['health', 'relation', 'monthly', 'lucky'];
 
+// 섹션별 최소 글자수 — pass 지시에 명시해 다중 섹션 생성 시 분량 희석 방지.
+// (한 번에 여러 섹션을 쓰면 AI 가 각 섹션을 짧게 압축하는 경향이 있어, pass
+//  경계에서 최소치를 재차 못박는다. 본문 프롬프트 [섹션별 지침]과 동일 수치.)
+const SECTION_MIN_CHARS: Record<NewyearSectionKey, number> = {
+  general: 400, wealth: 350, career: 350, study: 320, love: 350,
+  health: 280, relation: 280, monthly: 2250, lucky: 350,
+};
+const SECTION_KO: Record<NewyearSectionKey, string> = {
+  general: '총운', wealth: '재물운', career: '직장·사업운', study: '학업·시험운',
+  love: '연애·결혼운', health: '건강운', relation: '인간관계운', monthly: '월별 흐름',
+  lucky: '행운 처방',
+};
+function buildLengthDirective(keys: NewyearSectionKey[]): string {
+  const lines = keys.map(
+    (k) => `   · [${k}] ${SECTION_KO[k]} — 최소 ${SECTION_MIN_CHARS[k]}자 이상`,
+  );
+  return (
+    `\n★★ 분량 필수 — 아래 섹션 모두 각각 최소 글자수를 반드시 채울 것. 어느 하나도 짧게 끝내지 말 것:\n` +
+    lines.join('\n') +
+    `\n   각 섹션은 명리 근거 + 구체적 일상 장면 + 실천 조언을 충실히 풀어 위 최소치를 넘기세요.`
+  );
+}
+
 // parseNewyearReport — fortuneService.ts 와 동일 로직 (server-safe 복제. archiveService 'use client'
 // 회피용. 향후 lib/newyear.ts 로 분리해 DRY 가능).
 function parseNewyearReport(raw: string): Partial<Record<NewyearSectionKey, string>> {
@@ -127,7 +150,8 @@ export async function runNewyearJob(input: RunNewyearJobInput): Promise<void> {
     // ── 1차 호출 (5섹션) ──
     const pass1Prompt =
       basePrompt +
-      `\n\n★ 이번 응답에서는 [${PASS1_KEYS.join('] [')}] ${PASS1_KEYS.length}개 섹션만 출력. 나머지 ${PASS2_KEYS.length}개는 다음 호출에서 작성.`;
+      `\n\n★ 이번 응답에서는 [${PASS1_KEYS.join('] [')}] ${PASS1_KEYS.length}개 섹션만 출력. 나머지 ${PASS2_KEYS.length}개는 다음 호출에서 작성.` +
+      buildLengthDirective(PASS1_KEYS);
     const pass1Raw = await callAI(pass1Prompt, PASS1_MAX_TOKENS, { systemPrompt: NEWYEAR_SYSTEM_PROMPT });
     const pass1Content = sanitizeAIOutput(pass1Raw.content);
 
@@ -142,6 +166,7 @@ export async function runNewyearJob(input: RunNewyearJobInput): Promise<void> {
     const pass2Prompt =
       basePrompt +
       `\n\n★ 이번 응답에서는 [${PASS2_KEYS.join('] [')}] ${PASS2_KEYS.length}개 섹션만 출력. [${PASS1_KEYS.join('] [')}]는 이미 완료.` +
+      buildLengthDirective(PASS2_KEYS) +
       `\n\n[이미 작성된 1차 내용 — 참고만, 출력하지 말 것]\n${pass1Content}`;
     const pass2Raw = await callAI(pass2Prompt, PASS2_MAX_TOKENS, { systemPrompt: NEWYEAR_SYSTEM_PROMPT });
     const pass2Content = sanitizeAIOutput(pass2Raw.content);
