@@ -90,11 +90,14 @@ function StatCard({
   value,
   sub,
   color,
+  valueSize = 20,
 }: {
   label: string;
   value: string;
   sub?: string;
   color: string;
+  /** 좁은 3열 그리드에서는 17 정도로 낮춰 줄바꿈 깨짐 방지 */
+  valueSize?: number;
 }) {
   return (
     <div
@@ -109,12 +112,21 @@ function StatCard({
         {label}
       </span>
       <span
-        className="text-[20px] font-bold leading-tight"
-        style={{ color: 'var(--text-primary)', fontFamily: 'var(--font-title)' }}
+        className="font-bold leading-tight"
+        style={{
+          color: 'var(--text-primary)',
+          fontFamily: 'var(--font-title)',
+          fontSize: valueSize,
+          wordBreak: 'keep-all', // 한국어 단어 중간 끊김 방지 — 공백에서만 줄바꿈
+        }}
       >
         {value}
       </span>
-      {sub && <span className="text-[12.5px] text-text-tertiary leading-snug">{sub}</span>}
+      {sub && (
+        <span className="text-[13px] text-text-tertiary leading-snug" style={{ wordBreak: 'keep-all' }}>
+          {sub}
+        </span>
+      )}
     </div>
   );
 }
@@ -201,18 +213,20 @@ function GeneralVisual({ saju }: { saju: SajuResult }) {
     : SIGNAL.good;
   return (
     <div className="grid grid-cols-3 gap-2 mb-3">
-      <StatCard label="격국" value={gyeokguk.name} sub={gyeokguk.type} color={SIGNAL.cta} />
+      <StatCard label="격국" value={gyeokguk.name} sub={gyeokguk.type} color={SIGNAL.cta} valueSize={17} />
       <StatCard
         label="신강신약"
         value={saju.strengthStatus}
         sub={`점수 ${saju.strengthScore}`}
         color={strengthColor}
+        valueSize={17}
       />
       <StatCard
         label="용신"
         value={saju.yongSin}
         sub={`${saju.yongSinElement} 기운`}
         color={ELEMENT_COLOR[saju.yongSinElement] ?? SIGNAL.info}
+        valueSize={17}
       />
     </div>
   );
@@ -235,15 +249,15 @@ function DayMasterVisual({ saju }: { saju: SajuResult }) {
           boxShadow: `0 0 20px ${accent}12`,
         }}
       >
-        <div className="flex flex-col items-center shrink-0" style={{ minWidth: 78 }}>
+        <div className="flex flex-col items-center shrink-0" style={{ minWidth: 82 }}>
           <span
-            className="text-[34px] font-bold leading-none"
+            className="text-[36px] font-bold leading-none"
             style={{ fontFamily: 'var(--font-serif)', color: accent, textShadow: `0 0 18px ${accent}55` }}
           >
             {day.gan}{day.zhi}
           </span>
           {traits && (
-            <span className="text-[12.5px] text-text-tertiary mt-1.5">{traits.name}</span>
+            <span className="text-[14px] text-text-tertiary mt-1.5">{traits.name}</span>
           )}
         </div>
         <div className="flex-1 min-w-0">
@@ -257,7 +271,7 @@ function DayMasterVisual({ saju }: { saju: SajuResult }) {
               {traits.keywords.slice(0, 4).map((k, i) => (
                 <span
                   key={i}
-                  className="text-[12.5px] px-2 py-0.5 rounded-md font-medium"
+                  className="text-[14px] px-2.5 py-1 rounded-md font-medium"
                   style={{ background: `${accent}1a`, color: 'var(--text-secondary)', border: `1px solid ${accent}33` }}
                 >
                   {k}
@@ -320,31 +334,75 @@ function ElementVisual({ saju }: { saju: SajuResult }) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// 4) 합·충·형·파·해 — 칩 그룹
+// 4) 합·충·형·파·해 — 지지 관계 + 일상어 의미
 // ─────────────────────────────────────────────────────────────────────────────
+// 합충형파해 = 사주 8글자(특히 지지)끼리 서로 영향을 주고받는 5가지 관계.
+const INTERACTION_PLAIN: Record<string, { tag: string; desc: string }> = {
+  '합': { tag: '결속', desc: '두 글자가 손잡아 협력·안정·끌림이 생기는 관계' },
+  '충': { tag: '충돌', desc: '두 글자가 정면으로 부딪쳐 변동·이동·갈등이 생기는 관계' },
+  '형': { tag: '마찰', desc: '두 글자가 서로 긁혀 구설·시비·다툼이 생기는 관계' },
+  '파': { tag: '깨짐', desc: '두 글자가 어긋나 균열·중단·약속 어긋남이 생기는 관계' },
+  '해': { tag: '방해', desc: '두 글자가 은근히 해쳐 시기·질투·삐걱댐이 생기는 관계' },
+};
+
+function InteractionItem({ tech, type, accent }: { tech: string; type: string; accent: string }) {
+  const plain = INTERACTION_PLAIN[type];
+  return (
+    <div
+      className="rounded-xl px-3.5 py-2.5 border flex flex-col gap-1"
+      style={{ background: `${accent}14`, borderColor: `${accent}55` }}
+    >
+      <span className="flex items-center gap-2">
+        <span className="text-[15.5px] font-bold" style={{ color: 'var(--text-primary)' }}>
+          {tech}
+        </span>
+        {plain && (
+          <span
+            className="text-[11.5px] font-bold px-1.5 py-0.5 rounded"
+            style={{ background: `${accent}22`, color: accent, border: `1px solid ${accent}55` }}
+          >
+            {plain.tag}
+          </span>
+        )}
+      </span>
+      {plain && (
+        <span className="text-[13px] text-text-secondary leading-snug" style={{ wordBreak: 'keep-all' }}>
+          {plain.desc}
+        </span>
+      )}
+    </div>
+  );
+}
+
 function InteractionVisual({ saju }: { saju: SajuResult }) {
   const harmony = saju.interactions.filter((i) => i.type === '합');
   const tension = saju.interactions.filter((i) => ['충', '형', '파', '해'].includes(i.type));
   return (
     <div className="grid grid-cols-1 gap-2 mb-3">
       <SectionCardWrap accent={SIGNAL.good} title="합 (결속·조화)">
+        <p className="text-[12.5px] text-text-tertiary leading-snug mb-2.5" style={{ wordBreak: 'keep-all' }}>
+          사주 글자끼리 손을 잡는 관계 — 잘 풀리면 안정과 협력의 힘이 됩니다.
+        </p>
         {harmony.length === 0 ? (
           <span className="text-[14px] text-text-tertiary leading-snug">원국에 합 없음</span>
         ) : (
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-col gap-2">
             {harmony.map((h, i) => (
-              <Chip key={i} label={h.description.split(' - ')[0]} color={SIGNAL.good} subtle />
+              <InteractionItem key={i} tech={h.description.split(' - ')[0]} type={h.type} accent={SIGNAL.good} />
             ))}
           </div>
         )}
       </SectionCardWrap>
       <SectionCardWrap accent={tension.length > 0 ? SIGNAL.warn : SIGNAL.info} title="충·형·파·해 (변동·긴장)">
+        <p className="text-[12.5px] text-text-tertiary leading-snug mb-2.5" style={{ wordBreak: 'keep-all' }}>
+          사주 글자끼리 부딪치는 관계 — 변화의 자극이자, 잘 다스리면 추진력이 됩니다.
+        </p>
         {tension.length === 0 ? (
           <span className="text-[14px] text-text-tertiary leading-snug">원국에 충·형·파·해 없음 — 안정 구조</span>
         ) : (
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-col gap-2">
             {tension.map((t, i) => (
-              <Chip key={i} label={`${t.type} ${t.description.split(' - ')[0]}`} color={SIGNAL.warn} subtle />
+              <InteractionItem key={i} tech={t.description.split(' - ')[0]} type={t.type} accent={SIGNAL.warn} />
             ))}
           </div>
         )}
@@ -436,23 +494,29 @@ function LoveVisual({ saju }: { saju: SajuResult }) {
     : dayHap.length > 0 ? { label: '안정 (합 있음)', color: SIGNAL.good }
     : { label: '평이', color: SIGNAL.info };
   return (
-    <div className="grid grid-cols-2 gap-2 mb-3">
-      <StatCard
-        label="배우자궁 (일지)"
-        value={`${day.zhi} (${day.zhiElement})`}
-        sub={gungStatus.label}
-        color={gungStatus.color}
-      />
-      <StatCard
-        label={spouseStarLabel}
-        value={`${spouseStarTotal}개`}
-        sub={
-          spouseStarTotal === 0 ? '인연성 약함 — 늦은 인연·노력형'
-          : spouseStarTotal <= 2 ? '인연 흐름 보통'
-          : '인연 기회 많음'
-        }
-        color={spouseStarTotal === 0 ? SIGNAL.info : spouseStarTotal <= 2 ? SIGNAL.good : SIGNAL.warn}
-      />
+    <div className="grid grid-cols-1 gap-2 mb-3">
+      <p className="text-[12.5px] text-text-tertiary leading-snug px-1" style={{ wordBreak: 'keep-all' }}>
+        배우자궁(配偶宮)은 일간(나) 바로 아래 글자인 일지(日支)예요. 배우자가 앉는
+        자리라 여겨, 이 글자가 흔들리면 배우자 인연도 출렁인다고 봅니다.
+      </p>
+      <div className="grid grid-cols-2 gap-2">
+        <StatCard
+          label="배우자궁 (일지)"
+          value={`${day.zhi} (${day.zhiElement})`}
+          sub={gungStatus.label}
+          color={gungStatus.color}
+        />
+        <StatCard
+          label={spouseStarLabel}
+          value={`${spouseStarTotal}개`}
+          sub={
+            spouseStarTotal === 0 ? '인연성 약함 — 늦은 인연·노력형'
+            : spouseStarTotal <= 2 ? '인연 흐름 보통'
+            : '인연 기회 많음'
+          }
+          color={spouseStarTotal === 0 ? SIGNAL.info : spouseStarTotal <= 2 ? SIGNAL.good : SIGNAL.warn}
+        />
+      </div>
     </div>
   );
 }
@@ -467,6 +531,19 @@ const ELEMENT_ORGAN: Record<string, string> = {
   '금': '폐·대장·호흡기',
   '수': '신장·방광·생식기',
 };
+// 건강 관련 신살별 일상어 의미
+const HEALTH_SINSAL_MEANING: Record<string, string> = {
+  '백호': '사고·수술·출혈을 조심 — 안전 운전·정기 검진 권장',
+  '양인': '수술·날카로운 것·과로 주의 — 무리한 추진 자제',
+  '괴강': '컨디션 기복이 큼 — 극단적 생활 리듬 피하기',
+  '귀문': '신경이 예민하고 불면·정신 피로가 오기 쉬움',
+  '현침': '예민한 신경과 잔병치레 — 작은 상처도 방치 금지',
+  '탕화': '화상·끓는 것·약물 사고 주의',
+};
+function healthSinsalDesc(name: string): string {
+  const key = Object.keys(HEALTH_SINSAL_MEANING).find((k) => name.includes(k));
+  return key ? HEALTH_SINSAL_MEANING[key] : '건강에 영향을 주는 기운 — 본문 설명 참고';
+}
 function HealthVisual({ saju }: { saju: SajuResult }) {
   const order = ['목', '화', '토', '금', '수'] as const;
   const zeroEls = order.filter((e) => (saju.elementPercent[e] ?? 0) === 0);
@@ -477,6 +554,10 @@ function HealthVisual({ saju }: { saju: SajuResult }) {
   return (
     <div className="grid grid-cols-1 gap-2 mb-3">
       <SectionCardWrap accent={SIGNAL.info} title="취약 오행 → 주의 장부">
+        <p className="text-[12.5px] text-text-tertiary leading-snug mb-2.5" style={{ wordBreak: 'keep-all' }}>
+          오행은 각각 우리 몸의 장부와 연결돼요. 부족하거나 없는 오행이 있으면 그 장부의
+          기운이 약해 피로·잔병이 그쪽으로 나타나기 쉽습니다.
+        </p>
         <div className="flex flex-wrap gap-2">
           <Chip label={`약한 오행 ${weakEl} → ${ELEMENT_ORGAN[weakEl] ?? '-'}`} color={ELEMENT_COLOR[weakEl] ?? SIGNAL.info} subtle />
           {zeroEls.filter((e) => e !== weakEl).map((e) => (
@@ -488,12 +569,27 @@ function HealthVisual({ saju }: { saju: SajuResult }) {
         accent={healthSinsals.length > 0 ? SIGNAL.warn : SIGNAL.good}
         title="건강 주의 신살"
       >
+        <p className="text-[12.5px] text-text-tertiary leading-snug mb-2.5" style={{ wordBreak: 'keep-all' }}>
+          신살은 사주에 깃든 특정 기운이에요. 아래 신살은 건강·안전 면에서 한 번씩
+          살펴두면 좋은 신호입니다 (있다고 꼭 문제가 생기는 건 아니에요).
+        </p>
         {healthSinsals.length === 0 ? (
-          <span className="text-[14px] text-text-tertiary leading-snug">건강 관련 주의 신살 없음</span>
+          <span className="text-[14px] text-text-tertiary leading-snug">건강 관련 주의 신살 없음 — 무난한 구조</span>
         ) : (
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-col gap-2">
             {healthSinsals.map((s, i) => (
-              <Chip key={i} label={s.name} color={SIGNAL.warn} subtle />
+              <div
+                key={i}
+                className="rounded-xl px-3.5 py-2.5 border flex flex-col gap-1"
+                style={{ background: `${SIGNAL.warn}14`, borderColor: `${SIGNAL.warn}55` }}
+              >
+                <span className="text-[15px] font-bold" style={{ color: 'var(--text-primary)' }}>
+                  {s.name}
+                </span>
+                <span className="text-[13px] text-text-secondary leading-snug" style={{ wordBreak: 'keep-all' }}>
+                  {healthSinsalDesc(s.name)}
+                </span>
+              </div>
             ))}
           </div>
         )}
@@ -512,27 +608,56 @@ function RelationVisual({ saju }: { saju: SajuResult }) {
   const guiSinsals = saju.sinSals.filter((s) => s.type === 'gilseong');
   return (
     <div className="grid grid-cols-1 gap-2 mb-3">
+      <p className="text-[12.5px] text-text-tertiary leading-snug px-1" style={{ wordBreak: 'keep-all' }}>
+        사주 십성 중 비겁과 인성이 인간관계를 좌우해요. 비겁은 나와 같은 위치의 사람,
+        인성은 나를 보살피는 윗사람을 뜻합니다.
+      </p>
       <div className="grid grid-cols-2 gap-2">
         <StatCard
-          label="비겁 (동료·경쟁)"
+          label="비겁 (또래·동료)"
           value={`${bigyeop}개`}
-          sub={bigyeop >= 3 ? '대인 에너지 강함' : bigyeop === 0 ? '독립형' : '균형형'}
+          sub={
+            bigyeop >= 3 ? '형제·친구·동료가 인생에 큰 비중 — 대인 에너지 강함'
+            : bigyeop === 0 ? '혼자 결정하고 움직이는 독립형'
+            : '또래 관계가 적당히 받쳐주는 균형형'
+          }
           color={SIGNAL.info}
         />
         <StatCard
           label="인성 (윗사람·멘토)"
           value={`${inseong}개`}
-          sub={inseong >= 3 ? '귀인·멘토복 강함' : inseong === 0 ? '자수성가형' : '균형형'}
+          sub={
+            inseong >= 3 ? '부모·스승·후원자의 도움이 두터운 귀인·멘토복'
+            : inseong === 0 ? '도움보다 스스로 일구는 자수성가형'
+            : '윗사람 도움이 적당히 따르는 균형형'
+          }
           color={SIGNAL.cta}
         />
       </div>
       <SectionCardWrap accent={guiSinsals.length > 0 ? SIGNAL.good : SIGNAL.info} title="귀인 길성">
+        <p className="text-[12.5px] text-text-tertiary leading-snug mb-2.5" style={{ wordBreak: 'keep-all' }}>
+          길성은 위기 때 도와줄 사람·행운이 따르는 좋은 별이에요. 아래 별들이 어려운 순간
+          귀인을 불러옵니다.
+        </p>
         {guiSinsals.length === 0 ? (
-          <span className="text-[14px] text-text-tertiary leading-snug">귀인 길성 없음 — 스스로 일군 인연 위주</span>
+          <span className="text-[14px] text-text-tertiary leading-snug">
+            귀인 길성 없음 — 인연을 스스로 일구는 자생형
+          </span>
         ) : (
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-col gap-2">
             {guiSinsals.map((s, i) => (
-              <Chip key={i} label={s.name} color={SIGNAL.good} subtle />
+              <div
+                key={i}
+                className="rounded-xl px-3.5 py-2.5 border flex flex-col gap-1"
+                style={{ background: `${SIGNAL.good}14`, borderColor: `${SIGNAL.good}55` }}
+              >
+                <span className="text-[15px] font-bold" style={{ color: 'var(--text-primary)' }}>
+                  {s.name}
+                </span>
+                <span className="text-[13px] text-text-secondary leading-snug" style={{ wordBreak: 'keep-all' }}>
+                  {s.description}
+                </span>
+              </div>
             ))}
           </div>
         )}
