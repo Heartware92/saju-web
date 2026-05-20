@@ -93,6 +93,16 @@ function getSajuRoute(record: SajuRecord): string {
   if (cat === 'period' && isPendingJob) {
     return `/saju/date?jobId=${record.id}`;
   }
+  if (cat === 'today' && isPendingJob) {
+    return `/saju/today?jobId=${record.id}`;
+  }
+  // 더많은 운세 5종 — /saju/more/[category] 동적 라우트
+  if (
+    (cat === 'study' || cat === 'children' || cat === 'personality' || cat === 'name' || cat === 'dream')
+    && isPendingJob
+  ) {
+    return `/saju/more/${cat}?jobId=${record.id}`;
+  }
 
   const moreCategories = [
     'love', 'wealth', 'career', 'health', 'study', 'people',

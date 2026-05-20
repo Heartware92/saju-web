@@ -30,13 +30,7 @@ import {
   type MoreFortuneId,
 } from '../constants/moreFortunes';
 import {
-  // [B안] love/wealth/career/health/people 비활성 — 메인 8 중복. 복원 시 import 같이 풀기.
-  // getLoveShort, getWealthShort, getCareerShort, getHealthShort, getPeopleShort,
-  getStudyShort,
-  getChildrenShort,
-  getPersonalityShort,
-  getNameFortune,
-  getDreamInterpretation,
+  buildNameFortunePrompt,
   parseStudySections,
   parseChildrenSections,
   parsePersonalitySections,
@@ -45,7 +39,14 @@ import {
   parseDreamSymbols,
   parseDreamAction,
 } from '../services/fortuneService';
-import { sajuDB } from '../services/supabase';
+import {
+  generateStudyShortPrompt,
+  generateChildrenShortPrompt,
+  generatePersonalityShortPrompt,
+  generateDreamInterpretationPrompt,
+} from '../constants/prompts';
+import { sajuDB, supabase } from '../services/supabase';
+import { useFortuneJob } from '../hooks/useFortuneJob';
 import { findRecentArchive, type ArchiveCategory } from '../services/archiveService';
 import { RestoreReportModal } from '../components/RestoreReportModal';
 import { QuickFortuneGate } from '../components/QuickFortuneGate';
@@ -105,7 +106,13 @@ export default function MoreFortunePage({ category }: Props) {
   const searchParams = useSearchParams();
   const profileId = searchParams?.get('profileId') ?? null;
   const recordId = searchParams?.get('recordId') ?? null;
+  const urlJobId = searchParams?.get('jobId') ?? null;
   const isArchiveMode = !!recordId;
+
+  // 백그라운드 잡 시스템
+  const [createdJobId, setCreatedJobId] = useState<string | null>(null);
+  const effectiveJobId = urlJobId ?? createdJobId;
+  const { job: fortuneJob } = useFortuneJob(effectiveJobId);
 
   const { user } = useUserStore();
   const { profiles, fetchProfiles } = useProfileStore();
@@ -115,7 +122,7 @@ export default function MoreFortunePage({ category }: Props) {
   const cfg = isValidCategory ? MORE_FORTUNE_CONFIGS[category as MoreFortuneId] : null;
   const isLegacy = !!category && isLegacyMoreCategory(category);
 
-  const needsProfileSelect = !profileId && !isArchiveMode && !cfg?.needsNameInput && !cfg?.needsDreamInput;
+  const needsProfileSelect = !profileId && !isArchiveMode && !urlJobId && !cfg?.needsNameInput && !cfg?.needsDreamInput;
 
   const targetProfile = useMemo(() => {
     if (profileId) return profiles.find(p => p.id === profileId) ?? null;
@@ -353,6 +360,7 @@ export default function MoreFortunePage({ category }: Props) {
   //   reload 후에도 사용자는 자기가 마지막에 본 결과를 그대로 봄.
   useEffect(() => {
     if (isArchiveMode || !targetProfile || !category) return;
+    if (effectiveJobId) return;  // 가이드 4.10 — ?jobId 진입 시 cacheGate skip
     if (isLegacy) return;
     if (searchParams?.get('fresh') === '1') return;
 
@@ -488,6 +496,7 @@ export default function MoreFortunePage({ category }: Props) {
 
   useEffect(() => {
     if (isArchiveMode) return;
+    if (effectiveJobId) return;  // 가이드 4.10 — ?jobId 모드는 잡 동기화 useEffect 가 result 책임
     if (cacheGate) return;
     if (freshParam) {
       // fresh=1 진입 — 캐시 무시하고 result/sections 비워둠 → auto-start useEffect 가 새 AI 호출 트리거
@@ -527,7 +536,7 @@ export default function MoreFortunePage({ category }: Props) {
     setResult(null);
     setResultSections(null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [category, saju, koreanName, charMeanings, selectedHanjas, dreamText, isArchiveMode, freshParam]);
+  }, [category, saju, koreanName, charMeanings, selectedHanjas, dreamText, isArchiveMode, freshParam, effectiveJobId]);
 
   // auto-start: 모달에서 "새로 풀이 받기" 클릭 후 소개 페이지 건너뛰고 바로 풀이
   // ★ shouldAutoStart 는 freshParam=true 일 때만 true → 무조건 force=true 로 호출.
@@ -585,95 +594,137 @@ export default function MoreFortunePage({ category }: Props) {
     setResultSections(null);
     setLoading(true);
 
-    // ★ 로딩 화면 최소 표시 시간 — AI 응답이 너무 빨라(<5s) 로딩 화면이
-    //   안 보이고 결과로 바로 넘어가는 사고 방지. 사용자에게 "새 풀이 진행 중"
-    //   임을 시각적으로 명확히 전달.
-    const loadingStart = Date.now();
-    const MIN_LOADING_MS = 2000;
-
+    // 백그라운드 잡 — 카테고리별 prompt 완성 후 POST. setLoading(false) 책임은
+    // 잡 결과 동기화 useEffect (가이드 4.8 finally 충돌 차단).
+    void cacheKey;  // 캐시 정책 변경 — 잡 시스템은 saju_records 가 단일 source
+    void kindKey;
     try {
-      type FortuneResp = { success: boolean; content?: string; error?: string; sections?: Record<string, string> };
-      let resp: FortuneResp = { success: false, error: '알 수 없는 카테고리' };
+      const { data: sessionData } = await supabase.auth.getSession();
+      const accessToken = sessionData.session?.access_token;
+      if (!accessToken) {
+        setError('로그인이 만료됐어요. 다시 로그인해주세요.');
+        setLoading(false);
+        return;
+      }
+
+      let prompt = '';
+      let maxTokens: number | undefined;
+      let engineResult: Record<string, unknown> = {};
 
       if (category === 'dream') {
-        resp = await getDreamInterpretation(dreamText.trim(), targetProfile?.id);
+        prompt = generateDreamInterpretationPrompt(dreamText.trim());
+        engineResult = { dreamText: dreamText.trim() };
       } else {
-        // 여기서 saju는 이미 위 가드로 보장됨
         const s = saju!;
-        // [B안] love/wealth/career/health/people 비활성. 복원 시 case 같이 풀기.
-        // case 'love':   resp = await getLoveShort(s); break;
-        // case 'wealth': resp = await getWealthShort(s); break;
-        // case 'career': resp = await getCareerShort(s); break;
-        // case 'health': resp = await getHealthShort(s); break;
-        // case 'people': resp = await getPeopleShort(s); break;
-        switch (category) {
-          case 'study':       resp = await getStudyShort(s, targetProfile?.id); break;
-          case 'children':    resp = await getChildrenShort(s, targetProfile?.id); break;
-          case 'personality': resp = await getPersonalityShort(s, targetProfile?.id); break;
-          case 'name': {
-            const kor = analyzeKoreanName(koreanName);
-            // 글자별 뜻+음 — kor.chars 와 charMeanings 를 1:1 매칭. 4글자까지.
-            const sounds = kor.chars.slice(0, 4);
-            const meanings = sounds.map((_, i) => (charMeanings[i] || '').trim());
-            const charPairs = sounds.map((sound, i) => ({ sound, meaning: meanings[i] }));
-            // 모달에서 선택한 한자가 모두 채워졌으면 hanjaName 으로 prompt 에 직접 주입
-            // → AI 한자 추정 단계 생략, 자원오행 정확도 ↑
-            const hanjaName = selectedHanjas.slice(0, sounds.length).filter(Boolean).join('');
-            resp = await getNameFortune(s, {
-              koreanName: koreanName.trim(),
-              koreanInitialsElements: kor.elements,
-              charMeanings: charPairs,
-              ...(hanjaName.length === sounds.length ? { hanjaName } : {}),
-            }, targetProfile?.id);
-            break;
-          }
+        if (category === 'study') {
+          prompt = generateStudyShortPrompt(s);
+        } else if (category === 'children') {
+          prompt = generateChildrenShortPrompt(s);
+        } else if (category === 'personality') {
+          prompt = generatePersonalityShortPrompt(s);
+        } else if (category === 'name') {
+          const kor = analyzeKoreanName(koreanName);
+          const sounds = kor.chars.slice(0, 4);
+          const meanings = sounds.map((_, i) => (charMeanings[i] || '').trim());
+          const charPairs = sounds.map((sound, i) => ({ sound, meaning: meanings[i] }));
+          const hanjaName = selectedHanjas.slice(0, sounds.length).filter(Boolean).join('');
+          const built = await buildNameFortunePrompt(s, {
+            koreanName: koreanName.trim(),
+            koreanInitialsElements: kor.elements,
+            charMeanings: charPairs,
+            ...(hanjaName.length === sounds.length ? { hanjaName } : {}),
+          });
+          prompt = built.prompt;
+          maxTokens = built.maxTokens;
+          engineResult = built.engineResult;
         }
       }
 
-      if (!resp || !resp.success || !resp.content) {
-        throw new Error(resp?.error || '풀이 생성에 실패했어요.');
-      }
+      if (!prompt) throw new Error('알 수 없는 카테고리예요.');
 
-      // 로딩 화면 최소 표시 시간 보장
-      const elapsed = Date.now() - loadingStart;
-      if (elapsed < MIN_LOADING_MS) {
-        await new Promise(r => setTimeout(r, MIN_LOADING_MS - elapsed));
+      const minuteBucket = Math.floor(Date.now() / 60000);
+      const idemSuffix = cacheKey ?? `${category}:${Date.now()}`;
+      const res = await fetch('/api/fortune/jobs/create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${accessToken}` },
+        body: JSON.stringify({
+          category,
+          // dream 은 saju 없음 — result_data 보존용으로 빈 객체. 그 외엔 saju.
+          sajuResult: category === 'dream' ? {} : saju,
+          prompt,
+          maxTokens,
+          profileId: targetProfile?.id,
+          sourceBirth: targetProfile
+            ? {
+                birthDate: targetProfile.birth_date,
+                birthTime: targetProfile.birth_time ?? null,
+                birthPlace: targetProfile.birth_place ?? null,
+                gender: targetProfile.gender,
+                calendarType: targetProfile.calendar_type ?? 'solar',
+              }
+            : null,
+          engineResult,
+          idempotencyKey: `${category}:${idemSuffix}:${minuteBucket}`,
+        }),
+      });
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.error || '풀이 요청에 실패했어요.');
       }
-
-      setResult(resp!.content);
-      // 섹션 마커 기반 파싱 결과 (학업·자녀·성격에서 카드별 렌더링에 사용)
-      if (resp!.sections && Object.keys(resp!.sections).length > 0) {
-        setResultSections(resp!.sections);
-      } else {
-        setResultSections(null);
-      }
-
-      if (cacheKey) {
-        const cache = useReportCacheStore.getState();
-        // 정상 응답 캐시 저장 — 재진입 시 silent restore
-        cache.setReport(kindKey, cacheKey, resp!.content);
-        if (!cache.isCharged(kindKey, cacheKey)) {
-          cache.markCharged(kindKey, cacheKey);
-          const consumed = await chargeForContent('moon', MOON_COST_PER_FORTUNE, `더많은운세:${cfg.title}`, `more:${kindKey}:${cacheKey}`);
-          if (!consumed) {
-            console.error('크레딧 차감 실패 (응답은 이미 생성됨)');
-          }
-        }
-      }
-    } catch (e: any) {
-      const msg = e?.message || '오류가 발생했어요.';
+      const { jobId } = (await res.json()) as { jobId: string };
+      const newUrl = new URL(window.location.href);
+      newUrl.searchParams.set('jobId', jobId);
+      window.history.replaceState(null, '', newUrl.toString());
+      setCreatedJobId(jobId);
+      // 이후 잡 결과 동기화 useEffect 가 setResult·setResultSections·setLoading(false) 처리
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : '오류가 발생했어요.';
       setError(msg);
-      // negative cache: 같은 입력 즉시 재시도 차단
-      if (cacheKey) {
-        useReportCacheStore.getState().setError(kindKey, cacheKey, msg);
-      }
-    } finally {
       setLoading(false);
     }
   };
 
   // handleRead 최신 참조 동기화 — handleRefetch 같은 외부 콜백에서 stale closure 회피
   handleReadRef.current = handleRead;
+
+  // ── 잡 결과 → state 동기화 (백그라운드 잡 시스템) ──
+  useEffect(() => {
+    if (isArchiveMode) return;
+    if (!fortuneJob) return;
+    if (fortuneJob.status === 'done') {
+      const content = fortuneJob.interpretationDetailed ?? '';
+      setResult(content);
+      let sections: Record<string, string> | null = null;
+      if (category === 'study') sections = parseStudySections(content) as Record<string, string>;
+      else if (category === 'children') sections = parseChildrenSections(content) as Record<string, string>;
+      else if (category === 'personality') sections = parsePersonalitySections(content) as Record<string, string>;
+      else if (category === 'name') sections = parseNameSections(content) as Record<string, string>;
+      else if (category === 'dream') {
+        const p = parseDreamSections(content);
+        const dreamSections: Record<string, string> = {};
+        if (p.diagnosis) dreamSections.diagnosis = p.diagnosis;
+        if (p.symbols) dreamSections.symbols = p.symbols;
+        if (p.oriental) dreamSections.oriental = p.oriental;
+        if (p.western) dreamSections.western = p.western;
+        if (p.advice) dreamSections.advice = p.advice;
+        if (p.caution) dreamSections.caution = p.caution;
+        sections = dreamSections;
+      }
+      setResultSections(sections && Object.keys(sections).length > 0 ? sections : null);
+      setSavedRecordId(fortuneJob.jobId);
+      setLoading(false);
+    } else if (fortuneJob.status === 'failed') {
+      setError(fortuneJob.errorMessage ?? '풀이 생성에 실패했어요. 크레딧은 자동 환불됐어요.');
+      setLoading(false);
+    } else {
+      setLoading(true);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    isArchiveMode, category,
+    fortuneJob?.status, fortuneJob?.interpretationDetailed,
+    fortuneJob?.errorMessage, fortuneJob?.jobId,
+  ]);
 
   // 비로그인 가드
   if (!user) {
@@ -720,6 +771,7 @@ export default function MoreFortunePage({ category }: Props) {
         minLabel="10초"
         maxLabel="40초"
         estimatedSeconds={25}
+        startedAt={fortuneJob?.startedAt}
         messages={LOADING_MESSAGES[category as MoreFortuneId]}
         topContent={
           <motion.div

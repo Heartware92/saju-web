@@ -27,14 +27,15 @@ import { computeSajuFromProfile } from '../utils/profileSaju';
 import { MOON_COST_MORE, CHARGE_REASONS } from '../constants/creditCosts';
 import { calculateSaju, type SajuResult } from '../utils/sajuCalculator';
 import {
-  getTodayFortuneV3Report,
+  buildTodayV3Prompt,
   parseTodayV3Sections,
   parseTodayV3DomainScores,
   parseTodayV3FlowScores,
   stripStrayMarkers,
   type TodayFortuneV3AIResult,
 } from '../services/fortuneService';
-import { sajuDB } from '../services/supabase';
+import { sajuDB, supabase } from '../services/supabase';
+import { useFortuneJob } from '../hooks/useFortuneJob';
 import { findRecentArchive } from '../services/archiveService';
 import {
   TODAY_V3_SECTION_KEYS,
@@ -498,8 +499,14 @@ export default function TodayFortunePage() {
   const searchParams = useSearchParams();
   const profileId = searchParams?.get('profileId') ?? null;
   const recordId = searchParams?.get('recordId') ?? null;
+  const urlJobId = searchParams?.get('jobId') ?? null;
   const isArchiveMode = !!recordId;
-  const needsProfileSelect = !profileId && !isArchiveMode && !(searchParams?.get('year') && searchParams?.get('month') && searchParams?.get('day'));
+  const needsProfileSelect = !profileId && !isArchiveMode && !urlJobId && !(searchParams?.get('year') && searchParams?.get('month') && searchParams?.get('day'));
+
+  // 백그라운드 잡 시스템
+  const [createdJobId, setCreatedJobId] = useState<string | null>(null);
+  const effectiveJobId = urlJobId ?? createdJobId;
+  const { job: fortuneJob } = useFortuneJob(effectiveJobId);
 
   const { profiles, fetchProfiles, hydrated, loading: profilesLoading, lastFetchedAt } = useProfileStore();
   const targetProfile = useMemo(() => {
@@ -606,9 +613,41 @@ export default function TodayFortunePage() {
     setUserCtx(ctx);
   };
 
+  // ── 잡 결과 → state 동기화 ──
+  useEffect(() => {
+    if (isArchiveMode) return;
+    if (!fortuneJob) return;
+    if (fortuneJob.status === 'done') {
+      const content = fortuneJob.interpretationDetailed ?? '';
+      const sections = parseTodayV3Sections(content);
+      const domainScores = parseTodayV3DomainScores(content);
+      const flowScores = parseTodayV3FlowScores(content);
+      const eng = (fortuneJob.engineResult ?? {}) as Record<string, unknown>;
+      setReport(
+        Object.keys(sections).length > 0
+          ? { success: true, sections, domainScores, flowScores,
+              todayGz: eng.todayGz as never, isoDate: todayIso, userContext: eng.userContext as never }
+          : { success: true, rawText: content, domainScores, flowScores,
+              todayGz: eng.todayGz as never, isoDate: todayIso, userContext: eng.userContext as never },
+      );
+      setSavedRecordId(fortuneJob.jobId);
+      setReportLoading(false);
+    } else if (fortuneJob.status === 'failed') {
+      setReport({ success: false, error: fortuneJob.errorMessage ?? '풀이 생성에 실패했어요. 크레딧은 자동 환불됐어요.' });
+      setReportLoading(false);
+    } else {
+      setReportLoading(true);
+    }
+  }, [
+    isArchiveMode, todayIso,
+    fortuneJob?.status, fortuneJob?.interpretationDetailed,
+    fortuneJob?.errorMessage, fortuneJob?.jobId, fortuneJob?.engineResult,
+  ]);
+
   // userCtx 가 채워지면 보관함 + 캐시 확인 후 호출
   useEffect(() => {
     if (isArchiveMode) return;
+    if (effectiveJobId) return;  // 가이드 4.10 — ?jobId 진입 시 cacheGate skip
     if (!result || !userCtx) return;
 
     const ctxHash = hashUserCtx(userCtx);
@@ -666,37 +705,66 @@ export default function TodayFortunePage() {
       apiCalledKeyRef.current = effectKey;
       setReport(null);
       setReportLoading(true);
-      getTodayFortuneV3Report(result, userCtx, todayIso, targetProfile?.id)
-        .then(r => {
-          if (cancelled) return;
-          setReport(r);
-          // archive 저장이 완료된 경우 ShareBar 즉시 노출
-          if (r.success && r.archivedRecordId) {
-            setSavedRecordId(r.archivedRecordId);
+      // 백그라운드 잡 — buildTodayV3Prompt 로 분류기·prompt 완성 후 POST.
+      // setReportLoading(false) 책임은 잡 결과 동기화 useEffect (가이드 4.8).
+      try {
+        const { data: sessionData } = await supabase.auth.getSession();
+        const accessToken = sessionData.session?.access_token;
+        if (!accessToken) {
+          if (!cancelled) {
+            setReport({ success: false, error: '로그인이 만료됐어요. 다시 로그인해주세요.' });
+            setReportLoading(false);
           }
-          const cache = useReportCacheStore.getState();
-          if (r.success) {
-            cache.setReport('today', cacheKey, r);
-            if (!cache.isCharged('today', cacheKey)) {
-              cache.markCharged('today', cacheKey);
-              chargeRef.current('moon', MOON_COST_MORE, CHARGE_REASONS.today, `today:${cacheKey}`)
-                .catch(e => console.error('[charge:today] failed', e));
-            }
-          } else if (r.error) {
-            cache.setError('today', cacheKey, r.error);
+          return;
+        }
+        const { prompt, todayGz } = await buildTodayV3Prompt(result, userCtx, todayIso);
+        if (cancelled) return;
+        const minuteBucket = Math.floor(Date.now() / 60000);
+        const res = await fetch('/api/fortune/jobs/create', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${accessToken}` },
+          body: JSON.stringify({
+            category: 'today',
+            sajuResult: result,
+            prompt,
+            profileId: targetProfile?.id,
+            sourceBirth: {
+              birthDate: targetProfile?.birth_date ?? '',
+              birthTime: targetProfile?.birth_time ?? null,
+              birthPlace: targetProfile?.birth_place ?? null,
+              gender: (targetProfile?.gender ?? 'male') as 'male' | 'female',
+              calendarType: (targetProfile?.calendar_type ?? 'solar') as 'solar' | 'lunar',
+            },
+            engineResult: { todayGz, isoDate: todayIso, userContext: userCtx, version: 'v3' },
+            idempotencyKey: `today:${cacheKey}:${minuteBucket}`,
+          }),
+        });
+        if (!res.ok) {
+          const errData = await res.json().catch(() => ({}));
+          if (!cancelled) {
+            setReport({ success: false, error: errData.error || '풀이 요청에 실패했어요.' });
+            setReportLoading(false);
           }
-        })
-        .catch((err: any) => {
-          if (cancelled) return;
-          useReportCacheStore.getState().setError('today', cacheKey, err?.message || '오류가 발생했어요.');
-        })
-        .finally(() => { if (!cancelled) setReportLoading(false); });
+          return;
+        }
+        const { jobId } = (await res.json()) as { jobId: string };
+        if (cancelled) return;
+        const newUrl = new URL(window.location.href);
+        newUrl.searchParams.set('jobId', jobId);
+        window.history.replaceState(null, '', newUrl.toString());
+        setCreatedJobId(jobId);
+      } catch (e) {
+        if (!cancelled) {
+          setReport({ success: false, error: e instanceof Error ? e.message : '풀이 요청 중 오류' });
+          setReportLoading(false);
+        }
+      }
     };
 
     run();
     return () => { cancelled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [result, userCtx, isArchiveMode]);
+  }, [result, userCtx, isArchiveMode, effectiveJobId]);
 
   // ── 프로필 선택 가드 ─────────────────────────────────────────
   if (needsProfileSelect) {
@@ -739,6 +807,7 @@ export default function TodayFortunePage() {
         minLabel="15초"
         maxLabel="60초"
         estimatedSeconds={30}
+        startedAt={fortuneJob?.startedAt}
         messages={TODAY_MESSAGES}
         topContent={
           <motion.div

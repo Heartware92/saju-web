@@ -1333,6 +1333,36 @@ export const getTodayFortuneV3Report = async (
   }
 };
 
+/**
+ * 실시간 운세 V3 prompt 빌드 — 백그라운드 잡 시스템용.
+ * getTodayFortuneV3Report 의 prompt 생성 로직(분류기 포함)을 추출.
+ * 클라이언트가 호출해 완성된 prompt 를 /api/fortune/jobs/create 로 전달.
+ */
+export async function buildTodayV3Prompt(
+  result: SajuResult,
+  ctx: TodayUserContext,
+  isoDate: string,
+): Promise<{ prompt: string; todayGz: TodayGanZhi }> {
+  const todayGz = calcTodayGanZhi(result, isoDate);
+
+  const q1IsCustom = isCustomTimeSlotAnswer(ctx.q1Text, ctx.q1Answer, ctx.timeSlot);
+  const q2IsCustom = isCustomTimeSlotAnswer(ctx.q2Text, ctx.q2Answer, ctx.timeSlot);
+  const classifierInputs = {
+    customHobby: ctx.customHobby?.trim() || undefined,
+    customJobState: ctx.customJobState?.trim() || undefined,
+    customLoveState: ctx.customLoveState?.trim() || undefined,
+    q1Answer: q1IsCustom ? ctx.q1Answer?.trim() : undefined,
+    q2Answer: q2IsCustom ? ctx.q2Answer?.trim() : undefined,
+  };
+  const hasAnyCustom = Object.values(classifierInputs).some((v) => v && v.length > 0);
+  const classifications: UserInputClassifications | null = hasAnyCustom
+    ? await classifyUserInputs(classifierInputs, ctx.q1Text, ctx.q2Text)
+    : null;
+
+  const prompt = generateTodayFortuneV3Prompt(result, todayGz, isoDate, ctx, classifications);
+  return { prompt, todayGz };
+}
+
 // ── 택일 AI 추천 ─────────────────────────────────────────────
 
 export interface TaekilAdviceResult {
@@ -1810,6 +1840,56 @@ export const getPersonalityShort = async (result: SajuResult, profileId?: string
     return { success: true, content, sections };
   } catch (e: any) { return { success: false, error: e.message }; }
 };
+
+/**
+ * 이름 풀이 prompt 빌드 — 백그라운드 잡 시스템용.
+ * getNameFortune 의 hanjaResolved·numerology4Gyeok 처리 + prompt 생성을 추출.
+ * 클라이언트가 호출해 완성된 prompt·maxTokens·engineResult 를 jobs/create 로 전달.
+ */
+export async function buildNameFortunePrompt(
+  result: SajuResult,
+  nameInput: NameAnalysisInput,
+): Promise<{ prompt: string; maxTokens: number; engineResult: Record<string, unknown> }> {
+  const hasMeaning = !!(nameInput.charMeanings ?? []).find((c) => c.meaning && c.meaning.trim().length > 0);
+  const isHanjaMode = hasMeaning || !!nameInput.hanjaName;
+
+  let nameInputWithResolved = nameInput;
+  if (nameInput.hanjaName && nameInput.charMeanings && nameInput.charMeanings.length > 0) {
+    const { lookupHanjaBySound } = await import('@/lib/data/hanjaByKoreanSound');
+    const { calc4Gyeok } = await import('@/utils/numerology');
+    const chars = [...nameInput.hanjaName];
+    const resolved = chars.map((char, i) => {
+      const sound = nameInput.charMeanings?.[i]?.sound ?? '';
+      const candidates = lookupHanjaBySound(sound);
+      const hit = candidates.find((c) => c.char === char);
+      return hit
+        ? { char, meaning: hit.meanings[0] ?? (nameInput.charMeanings?.[i]?.meaning ?? ''), radical: hit.radical, strokes: hit.strokes, jawon: hit.jawon }
+        : { char, meaning: nameInput.charMeanings?.[i]?.meaning ?? '', radical: '', strokes: 0, jawon: '' };
+    });
+    const sounds = (nameInput.charMeanings ?? []).map((c) => c.sound ?? '');
+    const fourGyeok = calc4Gyeok(chars, sounds);
+    const numerology4Gyeok = fourGyeok
+      ? {
+          strokes: fourGyeok.strokes,
+          won: { sum: fourGyeok.won.sum, grade: fourGyeok.won.entry.grade, name: fourGyeok.won.entry.name, meaning: fourGyeok.won.entry.meaning },
+          hyeong: { sum: fourGyeok.hyeong.sum, grade: fourGyeok.hyeong.entry.grade, name: fourGyeok.hyeong.entry.name, meaning: fourGyeok.hyeong.entry.meaning },
+          i: { sum: fourGyeok.i.sum, grade: fourGyeok.i.entry.grade, name: fourGyeok.i.entry.name, meaning: fourGyeok.i.entry.meaning },
+          jeong: { sum: fourGyeok.jeong.sum, grade: fourGyeok.jeong.entry.grade, name: fourGyeok.jeong.entry.name, meaning: fourGyeok.jeong.entry.meaning },
+        }
+      : undefined;
+    nameInputWithResolved = { ...nameInput, hanjaResolved: resolved, numerology4Gyeok };
+  }
+
+  const baseTokens = MORE_FORTUNE_CONFIGS.name.maxTokens;
+  const maxTokens = isHanjaMode ? Math.round(baseTokens * 1.5) : Math.round(baseTokens * 1.25);
+  const prompt = generateNameFortunePrompt(result, nameInputWithResolved);
+  const engineResult: Record<string, unknown> = {
+    koreanName: nameInput.koreanName,
+    charMeanings: nameInput.charMeanings,
+    hanjaName: nameInput.hanjaName,
+  };
+  return { prompt, maxTokens, engineResult };
+}
 
 export const getNameFortune = async (
   result: SajuResult,
