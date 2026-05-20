@@ -182,8 +182,8 @@ function GeneralVisual({
           </span>
         </div>
         <p className="text-[12.5px] text-text-tertiary leading-snug mb-2.5" style={{ wordBreak: 'keep-all' }}>
-          {periodWord} 간지가 내 사주(일간) 기준 어떤 십성으로 작용하는지 — 그리고 내 원국과
-          어떻게 맞물리는지를 보여줍니다.
+          {periodWord} 간지가 내 사주(일간)에 어떤 십성으로 작용하는지, 또 내 원국과
+          어떻게 맞물리는지 보여줍니다.
         </p>
         <div className="flex flex-wrap gap-1.5">
           <Chip label={`천간 ${tgz.tenGodGan}`} color={SIGNAL.info} />

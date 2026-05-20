@@ -226,7 +226,8 @@ function GeneralVisual({ saju }: { saju: SajuResult }) {
         value={saju.yongSin}
         sub={`${saju.yongSinElement} 기운`}
         color={ELEMENT_COLOR[saju.yongSinElement] ?? SIGNAL.info}
-        valueSize={17}
+        /* 용신은 "편인/정인" 처럼 5자 이상이 흔해 1/3 폭에서 슬래시 줄바꿈 — 길이 기준 축소 */
+        valueSize={saju.yongSin.length > 3 ? 14 : 17}
       />
     </div>
   );
@@ -458,19 +459,26 @@ function WealthVisual({ saju }: { saju: SajuResult }) {
     : total <= 2 ? { label: '재성 보통', color: SIGNAL.good, desc: '안정적 재물 흐름' }
     : { label: '재성 풍부', color: SIGNAL.warn, desc: '재물 기회 많음·관리 중요' };
   return (
-    <div className="grid grid-cols-2 gap-2 mb-3">
-      <StatCard
-        label="재성 (정재+편재)"
-        value={`${total}개`}
-        sub={`정재 ${jeongJae} · 편재 ${pyeonJae}`}
-        color={wealthBadge.color}
-      />
-      <StatCard
-        label="재물 그릇"
-        value={strong ? '감당형 (신강)' : '관리 주의 (신약)'}
-        sub={strong ? '큰 재물도 감당하는 힘' : '재성 과다 시 부담 — 분산 관리'}
-        color={strong ? SIGNAL.good : SIGNAL.warn}
-      />
+    <div className="grid grid-cols-1 gap-2 mb-3">
+      <p className="text-[12.5px] text-text-tertiary leading-snug px-1" style={{ wordBreak: 'keep-all' }}>
+        재성(財星)은 정재·편재로, 내가 다스리는 재물과 결실을 뜻해요. 재성이 많을수록 재물
+        기회가 크지만, 그 기회를 담아내려면 일간이 튼튼해야(신강) 합니다. 신약이면 재성이
+        많을수록 오히려 부담이 커, 그릇에 맞게 나누고 지키는 관리가 중요해요.
+      </p>
+      <div className="grid grid-cols-2 gap-2">
+        <StatCard
+          label="재성 (정재+편재)"
+          value={`${total}개`}
+          sub={`정재 ${jeongJae} · 편재 ${pyeonJae}`}
+          color={wealthBadge.color}
+        />
+        <StatCard
+          label="재물 그릇"
+          value={strong ? '감당형 (신강)' : '관리 주의 (신약)'}
+          sub={strong ? '큰 재물도 감당하는 힘' : '재성 과다 시 부담 — 분산 관리'}
+          color={strong ? SIGNAL.good : SIGNAL.warn}
+        />
+      </div>
     </div>
   );
 }
@@ -498,6 +506,11 @@ function LoveVisual({ saju }: { saju: SajuResult }) {
       <p className="text-[12.5px] text-text-tertiary leading-snug px-1" style={{ wordBreak: 'keep-all' }}>
         배우자궁(配偶宮)은 일간(나) 바로 아래 글자인 일지(日支)예요. 배우자가 앉는
         자리라 여겨, 이 글자가 흔들리면 배우자 인연도 출렁인다고 봅니다.
+        {' '}
+        {isMale
+          ? '배우자성(配偶星)은 남성에게 재성(정재·편재) — 내가 끌어오는 인연의 별이에요.'
+          : '배우자성(配偶星)은 여성에게 관성(정관·편관) — 나를 이끄는 인연의 별이에요.'}
+        {' '}개수가 많으면 인연 기회가 잦고, 없거나 적으면 늦은 인연·노력으로 만드는 인연이 됩니다.
       </p>
       <div className="grid grid-cols-2 gap-2">
         <StatCard
