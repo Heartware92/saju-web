@@ -386,11 +386,11 @@ function InteractionVisual({ saju }: { saju: SajuResult }) {
   return (
     <div className="grid grid-cols-1 gap-2 mb-3">
       <SectionCardWrap accent={SIGNAL.good} title="합 (결속·조화)">
-        <p className="text-[12.5px] text-text-tertiary leading-snug mb-2.5" style={{ wordBreak: 'keep-all' }}>
+        <p className="text-[17px] text-text-secondary leading-relaxed mb-2.5" style={{ wordBreak: 'keep-all' }}>
           사주 글자끼리 손을 잡는 관계 — 잘 풀리면 안정과 협력의 힘이 됩니다.
         </p>
         {harmony.length === 0 ? (
-          <span className="text-[14px] text-text-tertiary leading-snug">원국에 합 없음</span>
+          <span className="text-[17px] text-text-secondary leading-relaxed">원국에 합 없음</span>
         ) : (
           <div className="flex flex-col gap-2">
             {harmony.map((h, i) => (
@@ -400,11 +400,11 @@ function InteractionVisual({ saju }: { saju: SajuResult }) {
         )}
       </SectionCardWrap>
       <SectionCardWrap accent={tension.length > 0 ? SIGNAL.warn : SIGNAL.info} title="충·형·파·해 (변동·긴장)">
-        <p className="text-[12.5px] text-text-tertiary leading-snug mb-2.5" style={{ wordBreak: 'keep-all' }}>
+        <p className="text-[17px] text-text-secondary leading-relaxed mb-2.5" style={{ wordBreak: 'keep-all' }}>
           사주 글자끼리 부딪치는 관계 — 변화의 자극이자, 잘 다스리면 추진력이 됩니다.
         </p>
         {tension.length === 0 ? (
-          <span className="text-[14px] text-text-tertiary leading-snug">원국에 충·형·파·해 없음 — 안정 구조</span>
+          <span className="text-[17px] text-text-secondary leading-relaxed">원국에 충·형·파·해 없음 — 안정 구조</span>
         ) : (
           <div className="flex flex-col gap-2">
             {tension.map((t, i) => (
@@ -438,7 +438,7 @@ function CareerVisual({ saju }: { saju: SajuResult }) {
   return (
     <SectionCardWrap accent={SIGNAL.cta} title="격국 기반 적성" titleSub={gyeokguk.name}>
       {gyeokguk.careers.length === 0 ? (
-        <span className="text-[14px] text-text-tertiary leading-snug">본문의 직군 추천 참고</span>
+        <span className="text-[17px] text-text-secondary leading-relaxed">본문의 직군 추천 참고</span>
       ) : (
         <div className="flex flex-wrap gap-2">
           {gyeokguk.careers.slice(0, 6).map((c, i) => (
@@ -507,7 +507,7 @@ function LoveVisual({ saju }: { saju: SajuResult }) {
     : { label: '평이', color: SIGNAL.info };
   return (
     <div className="grid grid-cols-1 gap-2 mb-3">
-      <p className="text-[12.5px] text-text-tertiary leading-snug px-1" style={{ wordBreak: 'keep-all' }}>
+      <p className="text-[17px] text-text-secondary leading-relaxed px-1" style={{ wordBreak: 'keep-all' }}>
         배우자궁(配偶宮)은 일간(나) 바로 아래 글자인 일지(日支)예요. 배우자가 앉는
         자리라 여겨, 이 글자가 흔들리면 배우자 인연도 출렁인다고 봅니다.
       </p>
@@ -621,7 +621,7 @@ function RelationVisual({ saju }: { saju: SajuResult }) {
   const guiSinsals = saju.sinSals.filter((s) => s.type === 'gilseong');
   return (
     <div className="grid grid-cols-1 gap-2 mb-3">
-      <p className="text-[12.5px] text-text-tertiary leading-snug px-1" style={{ wordBreak: 'keep-all' }}>
+      <p className="text-[17px] text-text-secondary leading-relaxed px-1" style={{ wordBreak: 'keep-all' }}>
         사주 십성 중 비겁과 인성이 인간관계를 좌우해요. 비겁은 나와 같은 위치의 사람,
         인성은 나를 보살피는 윗사람을 뜻합니다.
       </p>
@@ -648,12 +648,12 @@ function RelationVisual({ saju }: { saju: SajuResult }) {
         />
       </div>
       <SectionCardWrap accent={guiSinsals.length > 0 ? SIGNAL.good : SIGNAL.info} title="귀인 길성">
-        <p className="text-[12.5px] text-text-tertiary leading-snug mb-2.5" style={{ wordBreak: 'keep-all' }}>
+        <p className="text-[17px] text-text-secondary leading-relaxed mb-2.5" style={{ wordBreak: 'keep-all' }}>
           길성은 위기 때 도와줄 사람·행운이 따르는 좋은 별이에요. 아래 별들이 어려운 순간
           귀인을 불러옵니다.
         </p>
         {guiSinsals.length === 0 ? (
-          <span className="text-[14px] text-text-tertiary leading-snug">
+          <span className="text-[17px] text-text-secondary leading-relaxed">
             귀인 길성 없음 — 인연을 스스로 일구는 자생형
           </span>
         ) : (
@@ -661,13 +661,13 @@ function RelationVisual({ saju }: { saju: SajuResult }) {
             {guiSinsals.map((s, i) => (
               <div
                 key={i}
-                className="rounded-xl px-3.5 py-2.5 border flex flex-col gap-1"
+                className="rounded-xl px-4 py-3 border flex flex-col gap-1.5"
                 style={{ background: `${SIGNAL.good}14`, borderColor: `${SIGNAL.good}55` }}
               >
-                <span className="text-[15px] font-bold" style={{ color: 'var(--text-primary)' }}>
+                <span className="text-[20px] font-bold" style={{ color: 'var(--text-primary)' }}>
                   {s.name}
                 </span>
-                <span className="text-[13px] text-text-secondary leading-snug" style={{ wordBreak: 'keep-all' }}>
+                <span className="text-[17px] text-text-secondary leading-relaxed" style={{ wordBreak: 'keep-all' }}>
                   {s.description}
                 </span>
               </div>
@@ -725,7 +725,7 @@ function LuckVisual({ saju }: { saju: SajuResult }) {
             <DaeChip key={i} d={d} birthYear={birthYear} />
           ))}
           {!current && upcoming.length === 0 && (
-            <span className="text-[14px] text-text-tertiary leading-snug">대운 데이터 없음</span>
+            <span className="text-[17px] text-text-secondary leading-relaxed">대운 데이터 없음</span>
           )}
         </div>
       </SectionCardWrap>
