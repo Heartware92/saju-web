@@ -533,15 +533,22 @@ export default function ArchivePage() {
             onClick={(e) => e.stopPropagation()}
             className="w-full max-w-sm rounded-2xl bg-space-surface border border-[var(--border-subtle)] p-5 text-center"
           >
-            <div className="w-11 h-11 mx-auto mb-3 border-[3px] border-amber-300 border-t-transparent rounded-full animate-spin" />
-            <h3 className="text-base font-bold text-text-primary mb-2">풀이를 준비하고 있어요</h3>
-            <p className="text-xs text-text-tertiary mb-5">
-              완료되면 이 보관함에서 바로 확인할 수 있어요. 다른 화면을 보셔도 괜찮아요.
+            <div className="w-12 h-12 mx-auto mb-4 border-[3px] border-amber-300 border-t-transparent rounded-full animate-spin" />
+            <h3 className="text-[19px] font-bold text-text-primary mb-2.5">풀이를 준비하고 있어요</h3>
+            {/* word-break: keep-all — 한국어 단어 중간에서 줄바꿈되는 어색함 방지.
+                두 문장은 <br/> 로 명시 분리해 줄바꿈을 깔끔하게. */}
+            <p
+              className="text-[15px] text-text-secondary leading-[1.65] mb-6"
+              style={{ wordBreak: 'keep-all' }}
+            >
+              완료되면 이 보관함에서 바로 확인할 수 있어요.
+              <br />
+              다른 화면을 보셔도 괜찮아요.
             </p>
             <button
               type="button"
               onClick={() => setPendingJobModal(false)}
-              className="w-full py-2.5 rounded-xl bg-cta text-white text-sm font-semibold"
+              className="w-full py-3.5 rounded-xl bg-cta text-white text-[16px] font-semibold"
             >
               확인
             </button>
