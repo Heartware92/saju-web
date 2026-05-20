@@ -133,13 +133,20 @@ function DomainVisual({ domain }: { domain: FortuneDomain }) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// 1) 총운 — 올해 간지 큰 카드 + 종합 점수 + 십성 + 원국 합충
+// 1) 총운 — 간지 큰 카드 + 종합 점수 + 십성 + 원국 합충
+//    periodWord: '올해'(신년·연도별) / '이 날'(지정일) — 문구만 분기
 // ─────────────────────────────────────────────────────────────────────────────
-function GeneralVisual({ fortune }: { fortune: PeriodFortune }) {
+function GeneralVisual({
+  fortune,
+  periodWord = '올해',
+}: {
+  fortune: PeriodFortune;
+  periodWord?: string;
+}) {
   const tgz = fortune.targetGanZhi;
   const color = GRADE_COLOR[fortune.overallGrade];
   const ganColor = ELEMENT_COLOR[tgz.ganElement] ?? SIGNAL.info;
-  // 올해 간지 ↔ 원국 관계 (좋음/나쁨 분류)
+  // 간지 ↔ 원국 관계 (좋음/나쁨 분류)
   const goodInter = fortune.interactions.filter((i) => i.nature === 'good');
   const badInter = fortune.interactions.filter((i) => i.nature === 'bad');
 
@@ -171,11 +178,11 @@ function GeneralVisual({ fortune }: { fortune: PeriodFortune }) {
         <div className="flex items-center gap-2 mb-2.5">
           <span className="inline-block w-1 h-5 rounded-full" style={{ background: SIGNAL.info }} />
           <span className="text-[15px] font-bold tracking-[0.04em]" style={{ color: SIGNAL.info }}>
-            올해가 나에게 주는 기운
+            {periodWord}가 나에게 주는 기운
           </span>
         </div>
         <p className="text-[12.5px] text-text-tertiary leading-snug mb-2.5" style={{ wordBreak: 'keep-all' }}>
-          올해 간지가 내 사주(일간) 기준 어떤 십성으로 작용하는지 — 그리고 내 원국과
+          {periodWord} 간지가 내 사주(일간) 기준 어떤 십성으로 작용하는지 — 그리고 내 원국과
           어떻게 맞물리는지를 보여줍니다.
         </p>
         <div className="flex flex-wrap gap-1.5">
@@ -308,4 +315,30 @@ export function renderNewyearSectionVisual(
     default:
       return null;
   }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 지정일 운세 라우터 — date_ prefix 키를 동일 시각 컴포넌트에 매핑
+//   date scope 의 fortune 도 PeriodFortune (그 날의 간지·도메인 점수 포함)
+// ─────────────────────────────────────────────────────────────────────────────
+const PICKED_DATE_DOMAIN_MAP: Record<string, FortuneDomain['key']> = {
+  date_wealth: 'wealth',
+  date_career: 'career',
+  date_love: 'love',
+  date_health: 'health',
+  date_relation: 'relation',
+  date_study: 'study',
+};
+
+export function renderPickedDateSectionVisual(key: string, fortune: PeriodFortune | null) {
+  if (!fortune) return null;
+  if (key === 'date_essence') {
+    return <GeneralVisual fortune={fortune} periodWord="이 날" />;
+  }
+  const domainKey = PICKED_DATE_DOMAIN_MAP[key];
+  if (domainKey) {
+    const domain = fortune.domains.find((d) => d.key === domainKey);
+    return domain ? <DomainVisual domain={domain} /> : null;
+  }
+  return null;
 }

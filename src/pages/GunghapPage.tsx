@@ -14,6 +14,7 @@ import { SUN_COST_BIG, CHARGE_REASONS } from '../constants/creditCosts';
 import { extractMetaphor } from '../utils/parseMetaphor';
 import { renderEmphasis } from '../utils/renderEmphasis';
 import { SectionCollapsible } from '../components/saju/SectionCollapsible';
+import { renderGunghapSectionVisual } from '../components/saju/GunghapSectionVisuals';
 import { computeSajuFromProfile } from '../utils/profileSaju';
 import type { BirthProfile } from '../types/credit';
 import {
@@ -1820,6 +1821,8 @@ export default function GunghapPage() {
                         defaultOpen={idx === 0}
                         enterDelay={0.06 * idx}
                       >
+                        {/* 섹션별 시각 데이터 카드 — 제목 키워드로 분류한 영역 점수 */}
+                        {renderGunghapSectionVisual(sec.title, gunghapDomainScores)}
                         <div className="text-[17px] text-text-secondary leading-[1.85] tracking-[-0.005em] space-y-3">
                           {bodyText.split(/\n\n+/).map((para, pi) => (
                             <p key={pi} className="whitespace-pre-line">{renderEmphasis(para.trim())}</p>

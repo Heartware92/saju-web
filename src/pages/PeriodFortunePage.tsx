@@ -41,7 +41,7 @@ import { useLoadingGuard } from '../hooks/useLoadingGuard';
 import { ShareBar } from '@/components/share/ShareBar';
 import { RadarChart } from '../components/charts/RadarChart';
 import { MonthlyTrendChart } from '../components/charts/MonthlyTrendChart';
-import { renderNewyearSectionVisual } from '../components/saju/NewyearSectionVisuals';
+import { renderNewyearSectionVisual, renderPickedDateSectionVisual } from '../components/saju/NewyearSectionVisuals';
 import { useScrollToTopOnLoad } from '../hooks/useScrollToTopOnLoad';
 
 const NEWYEAR_MESSAGES = [
@@ -1570,12 +1570,16 @@ export default function PeriodFortunePage({ scope }: { scope: FortuneScope | 'da
                     ) : isYes || isNo ? (
                       <ActionCardList bodyText={bodyText} variant={isYes ? 'yes' : 'no'} />
                     ) : (
-                      // 시그널은 SectionCollapsible 의 좌측 색띠(barColor) 로 전달.
-                      <div className="text-[17px] text-text-secondary leading-[1.85] tracking-[-0.005em] space-y-3">
-                        {bodyText.split(/\n\n+/).map((para, pi) => (
-                          <p key={pi} className="whitespace-pre-line">{para.trim()}</p>
-                        ))}
-                      </div>
+                      <>
+                        {/* 섹션별 시각 데이터 카드 — 본문 줄글 위 한눈 요약 */}
+                        {renderPickedDateSectionVisual(key, fortune)}
+                        {/* 시그널은 SectionCollapsible 의 좌측 색띠(barColor) 로 전달. */}
+                        <div className="text-[17px] text-text-secondary leading-[1.85] tracking-[-0.005em] space-y-3">
+                          {bodyText.split(/\n\n+/).map((para, pi) => (
+                            <p key={pi} className="whitespace-pre-line">{para.trim()}</p>
+                          ))}
+                        </div>
+                      </>
                     )}
                   </SectionCollapsible>
                 );
