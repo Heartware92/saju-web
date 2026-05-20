@@ -74,7 +74,7 @@ function Chip({ label, color, subtle, big }: { label: string; color: string; sub
   return (
     <span
       className={`inline-flex items-center gap-1 rounded-full font-bold border ${
-        big ? 'px-4 py-2.5 text-[18px]' : 'px-3 py-1.5 text-[14px]'
+        big ? 'px-3.5 py-2 text-[16px]' : 'px-3 py-1.5 text-[14px]'
       }`}
       style={{
         background: subtle ? `${color}15` : `${color}25`,
@@ -596,7 +596,7 @@ function HealthVisual({ saju }: { saju: SajuResult }) {
                 className="rounded-xl px-4 py-3 border flex flex-col gap-1.5"
                 style={{ background: `${SIGNAL.warn}14`, borderColor: `${SIGNAL.warn}55` }}
               >
-                <span className="text-[20px] font-bold" style={{ color: 'var(--text-primary)' }}>
+                <span className="text-[18px] font-bold" style={{ color: 'var(--text-primary)' }}>
                   {s.name}
                 </span>
                 <span className="text-[17px] text-text-secondary leading-relaxed" style={{ wordBreak: 'keep-all' }}>
@@ -664,7 +664,7 @@ function RelationVisual({ saju }: { saju: SajuResult }) {
                 className="rounded-xl px-4 py-3 border flex flex-col gap-1.5"
                 style={{ background: `${SIGNAL.good}14`, borderColor: `${SIGNAL.good}55` }}
               >
-                <span className="text-[20px] font-bold" style={{ color: 'var(--text-primary)' }}>
+                <span className="text-[18px] font-bold" style={{ color: 'var(--text-primary)' }}>
                   {s.name}
                 </span>
                 <span className="text-[17px] text-text-secondary leading-relaxed" style={{ wordBreak: 'keep-all' }}>
