@@ -12,7 +12,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
 import Link from 'next/link';
 import { Card } from '../components/ui/Card';
-import { sajuDB, tarotDB } from '../services/supabase';
+import { sajuDB, tarotDB, supabase } from '../services/supabase';
 import { useUserStore } from '../store/useUserStore';
 import { SAJU_CATEGORY_LABEL, TAROT_SPREAD_LABEL } from '../constants/adminLabels';
 import type { SajuRecord, TarotRecord } from '../types/credit';
@@ -161,6 +161,9 @@ export default function ArchivePage() {
     | null
   >(null);
   const [deleting, setDeleting] = useState(false);
+  // 진행 중 잡 클릭 시 안내 모달 — 백그라운드 처리 중이므로 로딩 페이지로 보내지 않고
+  // "완료되면 확인하세요" 안내 후 보관함에 머무름.
+  const [pendingJobModal, setPendingJobModal] = useState(false);
 
   const confirmDelete = async () => {
     if (!pendingDelete) return;
@@ -196,6 +199,63 @@ export default function ArchivePage() {
         setError('기록을 불러오지 못했어요. 잠시 후 다시 시도해주세요.');
       })
       .finally(() => setLoading(false));
+  }, [user]);
+
+  // ── Realtime 구독 — 진행 중 잡이 완료/실패되면 보관함 카드 status 자동 갱신 ──
+  // "완료되면 확인하세요" 모달 후 사용자가 보관함에 머물 때, 모래시계가 자동으로
+  // ✓(또는 실패)로 전환되도록. saju_records·tarot_records 양쪽 구독.
+  useEffect(() => {
+    if (!user) return;
+    const userId = user.id;
+
+    const sajuCh = supabase
+      .channel(`archive-saju:${userId}`)
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'saju_records', filter: `user_id=eq.${userId}` },
+        (payload) => {
+          const row = payload.new as Record<string, unknown>;
+          setSajuRecords((prev) =>
+            prev.map((r) =>
+              r.id === row.id
+                ? {
+                    ...r,
+                    status: (row.status as SajuRecord['status']) ?? r.status,
+                    error_message: (row.error_message as string | null) ?? r.error_message,
+                  }
+                : r,
+            ),
+          );
+        },
+      )
+      .subscribe();
+
+    const tarotCh = supabase
+      .channel(`archive-tarot:${userId}`)
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'tarot_records', filter: `user_id=eq.${userId}` },
+        (payload) => {
+          const row = payload.new as Record<string, unknown>;
+          setTarotRecords((prev) =>
+            prev.map((r) =>
+              r.id === row.id
+                ? {
+                    ...r,
+                    status: (row.status as TarotRecord['status']) ?? r.status,
+                    error_message: (row.error_message as string | null) ?? r.error_message,
+                  }
+                : r,
+            ),
+          );
+        },
+      )
+      .subscribe();
+
+    return () => {
+      void supabase.removeChannel(sajuCh);
+      void supabase.removeChannel(tarotCh);
+    };
   }, [user]);
 
   const sajuSorted = useMemo(() => sajuRecords, [sajuRecords]);
@@ -270,7 +330,17 @@ export default function ArchivePage() {
                   const profileLabel = getProfileLabel(record);
                   return (
                     <div key={record.id} className="relative">
-                      <Link href={getSajuRoute(record)} className="block">
+                      <Link
+                        href={getSajuRoute(record)}
+                        className="block"
+                        onClick={(e) => {
+                          // 진행 중 잡 — 로딩 페이지로 보내지 않고 안내 모달만 (사용자 결정)
+                          if (record.status === 'pending' || record.status === 'processing') {
+                            e.preventDefault();
+                            setPendingJobModal(true);
+                          }
+                        }}
+                      >
                         <Card padding="md" hover>
                           <div className="flex items-start gap-3">
                             {/* 좌측 카테고리 색 바 */}
@@ -351,7 +421,16 @@ export default function ArchivePage() {
                   const spreadLabel = TAROT_SPREAD_LABEL[record.spread_type] ?? record.spread_type;
                   return (
                     <div key={record.id} className="relative">
-                      <Link href={getTarotRoute(record)} className="block">
+                      <Link
+                        href={getTarotRoute(record)}
+                        className="block"
+                        onClick={(e) => {
+                          if (record.status === 'pending' || record.status === 'processing') {
+                            e.preventDefault();
+                            setPendingJobModal(true);
+                          }
+                        }}
+                      >
                         <Card padding="md" hover>
                           <div className="flex items-start gap-3">
                             <div
@@ -438,6 +517,37 @@ export default function ArchivePage() {
                 {deleting ? '삭제 중…' : '삭제'}
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* 진행 중 잡 안내 모달 — 백그라운드 처리 중이므로 로딩 페이지로 보내지 않음.
+          보관함에 머물면 Realtime 구독으로 완료 시 모래시계가 자동으로 ✓ 전환됨. */}
+      {pendingJobModal && (
+        <div
+          className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-sm px-4"
+          style={{ paddingBottom: 'calc(64px + env(safe-area-inset-bottom))' }}
+          onClick={() => setPendingJobModal(false)}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="w-full max-w-sm rounded-2xl bg-space-surface border border-[var(--border-subtle)] p-5 text-center"
+          >
+            <div className="w-11 h-11 mx-auto mb-3 border-[3px] border-amber-300 border-t-transparent rounded-full animate-spin" />
+            <h3 className="text-base font-bold text-text-primary mb-2">풀이를 준비하고 있어요</h3>
+            <p className="text-sm text-text-secondary mb-1">
+              백그라운드에서 풀이가 진행 중이에요.
+            </p>
+            <p className="text-xs text-text-tertiary mb-5">
+              완료되면 이 보관함에서 바로 확인할 수 있어요. 다른 화면을 보셔도 괜찮아요.
+            </p>
+            <button
+              type="button"
+              onClick={() => setPendingJobModal(false)}
+              className="w-full py-2.5 rounded-xl bg-cta text-white text-sm font-semibold"
+            >
+              확인
+            </button>
           </div>
         </div>
       )}
