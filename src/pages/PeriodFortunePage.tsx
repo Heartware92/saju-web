@@ -41,6 +41,7 @@ import { useLoadingGuard } from '../hooks/useLoadingGuard';
 import { ShareBar } from '@/components/share/ShareBar';
 import { RadarChart } from '../components/charts/RadarChart';
 import { MonthlyTrendChart } from '../components/charts/MonthlyTrendChart';
+import { renderNewyearSectionVisual } from '../components/saju/NewyearSectionVisuals';
 import { useScrollToTopOnLoad } from '../hooks/useScrollToTopOnLoad';
 
 const NEWYEAR_MESSAGES = [
@@ -1469,6 +1470,8 @@ export default function PeriodFortunePage({ scope }: { scope: FortuneScope | 'da
                     defaultOpen={idx === 0}
                     enterDelay={0.06 * idx}
                   >
+                    {/* 섹션별 시각 데이터 카드 — 본문 줄글 위 한눈 요약 */}
+                    {renderNewyearSectionVisual(key, fortune, saju)}
                     {key === 'monthly' ? (
                       <MonthlySectionView bodyText={bodyText} monthlyFlow={fortune?.monthlyFlow ?? []} />
                     ) : (
