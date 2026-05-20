@@ -66,7 +66,7 @@ export async function runTodayJob(input: RunTodayJobInput): Promise<void> {
 }
 
 async function markDone(recordId: string, fullContent: string): Promise<void> {
-  await supabaseAdmin
+  const { error } = await supabaseAdmin
     .from('saju_records')
     .update({
       status: 'done',
@@ -76,6 +76,7 @@ async function markDone(recordId: string, fullContent: string): Promise<void> {
       error_message: null,
     })
     .eq('id', recordId);
+  if (error) console.error('[todayJob] done 마킹 실패:', error);
 }
 
 async function failJob(
@@ -85,7 +86,7 @@ async function failJob(
   creditAmount: number,
   errorMessage: string,
 ): Promise<void> {
-  await supabaseAdmin
+  const { error: updateError } = await supabaseAdmin
     .from('saju_records')
     .update({
       status: 'failed',
@@ -93,6 +94,7 @@ async function failJob(
       completed_at: new Date().toISOString(),
     })
     .eq('id', recordId);
+  if (updateError) console.error('[todayJob] failed 마킹 에러:', updateError);
   try {
     await supabaseAdmin.rpc('refund_credit_atomic', {
       p_user_id: userId,

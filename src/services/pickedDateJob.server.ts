@@ -64,10 +64,11 @@ export async function runPickedDateJob(input: RunPickedDateJobInput): Promise<vo
 }
 
 async function markPartial(recordId: string, coreContent: string): Promise<void> {
-  await supabaseAdmin
+  const { error } = await supabaseAdmin
     .from('saju_records')
     .update({ interpretation_basic: coreContent })
     .eq('id', recordId);
+  if (error) console.warn('[pickedDateJob] 1차 partial UPDATE 실패:', error);
 }
 
 async function markDone(
@@ -75,7 +76,7 @@ async function markDone(
   fullContent: string,
   basicContent: string,
 ): Promise<void> {
-  await supabaseAdmin
+  const { error } = await supabaseAdmin
     .from('saju_records')
     .update({
       status: 'done',
@@ -85,6 +86,7 @@ async function markDone(
       error_message: null,
     })
     .eq('id', recordId);
+  if (error) console.error('[pickedDateJob] done 마킹 실패:', error);
 }
 
 async function failJob(
@@ -94,7 +96,7 @@ async function failJob(
   creditAmount: number,
   errorMessage: string,
 ): Promise<void> {
-  await supabaseAdmin
+  const { error: updateError } = await supabaseAdmin
     .from('saju_records')
     .update({
       status: 'failed',
@@ -102,6 +104,7 @@ async function failJob(
       completed_at: new Date().toISOString(),
     })
     .eq('id', recordId);
+  if (updateError) console.error('[pickedDateJob] failed 마킹 에러:', updateError);
   try {
     await supabaseAdmin.rpc('refund_credit_atomic', {
       p_user_id: userId,

@@ -30,6 +30,9 @@ export async function runTaekilJob(input: RunTaekilJobInput): Promise<void> {
 
   try {
     const raw = await callAI(prompt, MAX_TOKENS);
+    if (raw.truncated) {
+      throw new Error('응답이 길어서 일부 잘렸어요. 잠시 후 다시 시도해주세요.');
+    }
     const sanitized = sanitizeAIOutput(raw.content);
     const match = sanitized.match(/\[taekil_advice\]\s*([\s\S]+)/);
     const advice = match ? match[1].trim() : sanitized.trim();
@@ -45,7 +48,7 @@ export async function runTaekilJob(input: RunTaekilJobInput): Promise<void> {
 }
 
 async function markDone(recordId: string, fullContent: string): Promise<void> {
-  await supabaseAdmin
+  const { error } = await supabaseAdmin
     .from('saju_records')
     .update({
       status: 'done',
@@ -55,6 +58,7 @@ async function markDone(recordId: string, fullContent: string): Promise<void> {
       error_message: null,
     })
     .eq('id', recordId);
+  if (error) console.error('[taekilJob] done 마킹 실패:', error);
 }
 
 async function failJob(
@@ -64,7 +68,7 @@ async function failJob(
   creditAmount: number,
   errorMessage: string,
 ): Promise<void> {
-  await supabaseAdmin
+  const { error: updateError } = await supabaseAdmin
     .from('saju_records')
     .update({
       status: 'failed',
@@ -72,6 +76,7 @@ async function failJob(
       completed_at: new Date().toISOString(),
     })
     .eq('id', recordId);
+  if (updateError) console.error('[taekilJob] failed 마킹 에러:', updateError);
   try {
     await supabaseAdmin.rpc('refund_credit_atomic', {
       p_user_id: userId,

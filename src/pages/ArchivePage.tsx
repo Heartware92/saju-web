@@ -90,7 +90,8 @@ function getSajuRoute(record: SajuRecord): string {
   if (cat === 'taekil' && isPendingJob) {
     return `/saju/taekil/result?jobId=${record.id}`;
   }
-  if (cat === 'period' && isPendingJob) {
+  // 지정일 운세 — 신규 잡은 category='period', 레거시 record 는 'date' 일 수 있어 둘 다 처리
+  if ((cat === 'period' || cat === 'date') && isPendingJob) {
     return `/saju/date?jobId=${record.id}`;
   }
   if (cat === 'today' && isPendingJob) {
