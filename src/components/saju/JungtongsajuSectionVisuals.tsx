@@ -70,10 +70,12 @@ function groupSipSeong(c: TenGodCounts) {
 // ─────────────────────────────────────────────────────────────────────────────
 // 공통 작은 부품
 // ─────────────────────────────────────────────────────────────────────────────
-function Chip({ label, color, subtle }: { label: string; color: string; subtle?: boolean }) {
+function Chip({ label, color, subtle, big }: { label: string; color: string; subtle?: boolean; big?: boolean }) {
   return (
     <span
-      className="inline-flex items-center gap-1 rounded-full px-3 py-1.5 text-[14px] font-bold border"
+      className={`inline-flex items-center gap-1 rounded-full font-bold border ${
+        big ? 'px-4 py-2.5 text-[18px]' : 'px-3 py-1.5 text-[14px]'
+      }`}
       style={{
         background: subtle ? `${color}15` : `${color}25`,
         color,
@@ -567,14 +569,15 @@ function HealthVisual({ saju }: { saju: SajuResult }) {
   return (
     <div className="grid grid-cols-1 gap-2 mb-3">
       <SectionCardWrap accent={SIGNAL.info} title="취약 오행 → 주의 장부">
-        <p className="text-[12.5px] text-text-tertiary leading-snug mb-2.5" style={{ wordBreak: 'keep-all' }}>
+        {/* 사용자 요청 — 건강운 박스 안 폰트가 작아 잘 안 보임. 본문·칩·신살 모두 확대. */}
+        <p className="text-[17px] text-text-secondary leading-relaxed mb-3" style={{ wordBreak: 'keep-all' }}>
           오행은 각각 우리 몸의 장부와 연결돼요. 부족하거나 없는 오행이 있으면 그 장부의
           기운이 약해 피로·잔병이 그쪽으로 나타나기 쉽습니다.
         </p>
         <div className="flex flex-wrap gap-2">
-          <Chip label={`약한 오행 ${weakEl} → ${ELEMENT_ORGAN[weakEl] ?? '-'}`} color={ELEMENT_COLOR[weakEl] ?? SIGNAL.info} subtle />
+          <Chip label={`약한 오행 ${weakEl} → ${ELEMENT_ORGAN[weakEl] ?? '-'}`} color={ELEMENT_COLOR[weakEl] ?? SIGNAL.info} subtle big />
           {zeroEls.filter((e) => e !== weakEl).map((e) => (
-            <Chip key={e} label={`${e} 부재 → ${ELEMENT_ORGAN[e] ?? '-'}`} color={ELEMENT_COLOR[e] ?? SIGNAL.info} subtle />
+            <Chip key={e} label={`${e} 부재 → ${ELEMENT_ORGAN[e] ?? '-'}`} color={ELEMENT_COLOR[e] ?? SIGNAL.info} subtle big />
           ))}
         </div>
       </SectionCardWrap>
@@ -582,24 +585,24 @@ function HealthVisual({ saju }: { saju: SajuResult }) {
         accent={healthSinsals.length > 0 ? SIGNAL.warn : SIGNAL.good}
         title="건강 주의 신살"
       >
-        <p className="text-[12.5px] text-text-tertiary leading-snug mb-2.5" style={{ wordBreak: 'keep-all' }}>
+        <p className="text-[17px] text-text-secondary leading-relaxed mb-3" style={{ wordBreak: 'keep-all' }}>
           신살은 사주에 깃든 특정 기운이에요. 아래 신살은 건강·안전 면에서 한 번씩
           살펴두면 좋은 신호입니다 (있다고 꼭 문제가 생기는 건 아니에요).
         </p>
         {healthSinsals.length === 0 ? (
-          <span className="text-[14px] text-text-tertiary leading-snug">건강 관련 주의 신살 없음 — 무난한 구조</span>
+          <span className="text-[17px] text-text-secondary leading-relaxed">건강 관련 주의 신살 없음 — 무난한 구조</span>
         ) : (
           <div className="flex flex-col gap-2">
             {healthSinsals.map((s, i) => (
               <div
                 key={i}
-                className="rounded-xl px-3.5 py-2.5 border flex flex-col gap-1"
+                className="rounded-xl px-4 py-3 border flex flex-col gap-1.5"
                 style={{ background: `${SIGNAL.warn}14`, borderColor: `${SIGNAL.warn}55` }}
               >
-                <span className="text-[15px] font-bold" style={{ color: 'var(--text-primary)' }}>
+                <span className="text-[20px] font-bold" style={{ color: 'var(--text-primary)' }}>
                   {s.name}
                 </span>
-                <span className="text-[13px] text-text-secondary leading-snug" style={{ wordBreak: 'keep-all' }}>
+                <span className="text-[17px] text-text-secondary leading-relaxed" style={{ wordBreak: 'keep-all' }}>
                   {healthSinsalDesc(s.name)}
                 </span>
               </div>
