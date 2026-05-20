@@ -263,11 +263,11 @@ export function HarmonyVisual({
   // 자원
   if (jawonElements.length > 0) {
     if (jawonElements.includes(yongSinEl)) pros.push(`한자 자원에 용신 ${yongSinEl} 포함 — 부수가 사주 보강`);
-    if (giSinEl && jawonElements.includes(giSinEl)) cons.push(`한자 자원에 기신 ${giSinEl} 포함 — 한자 영향에 주의`);
+    if (giSinEl && jawonElements.includes(giSinEl)) cons.push(`한자 자원에 기신 ${giSinEl} 이 포함돼 한자 영향에 주의`);
   }
 
-  if (pros.length === 0) pros.push('직접적 용신 매칭은 없음 — 다른 영역에서 보강');
-  if (cons.length === 0) cons.push('치명적 기신 매칭은 없음 — 큰 부담 없음');
+  if (pros.length === 0) pros.push('직접적 용신 매칭은 없으나 다른 영역에서 보강');
+  if (cons.length === 0) cons.push('치명적 기신 매칭은 없어 큰 부담 없음');
 
   return (
     <div className="grid grid-cols-2 gap-2 mb-3">

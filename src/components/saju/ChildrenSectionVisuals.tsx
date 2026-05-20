@@ -115,7 +115,7 @@ function antiChildStarSignal(saju: SajuResult, counts: TenGodCounts): {
     return {
       active,
       label: '상관견관',
-      desc: active ? `상관 ${sangGwan}개 — 자녀와의 갈등·양육 마찰 주의` : '상관견관 흐름 없음',
+      desc: active ? `상관 ${sangGwan}개로 자녀와의 갈등·양육 마찰 주의` : '상관견관 흐름 없음',
     };
   }
   const pyeonIn = counts.편인;
@@ -123,7 +123,7 @@ function antiChildStarSignal(saju: SajuResult, counts: TenGodCounts): {
   return {
     active,
     label: '도식(倒食)',
-    desc: active ? `편인 ${pyeonIn}개 — 임신 어려움·유산 주의 신호` : '도식 흐름 없음',
+    desc: active ? `편인 ${pyeonIn}개로 임신 어려움·유산 주의 신호` : '도식 흐름 없음',
   };
 }
 
@@ -137,7 +137,7 @@ function pregnancyTypeLabel(saju: SajuResult, counts: TenGodCounts): {
   const total = counts[star.sub[0] as keyof TenGodCounts] + counts[star.sub[1] as keyof TenGodCounts];
   const anti = antiChildStarSignal(saju, counts);
   if (anti.active && total === 0) {
-    return { type: '의료 도움 권장', color: SIGNAL_COLOR.bad, reason: `${anti.label} + 자녀성 0개 — 의학적 보조 적극 고려` };
+    return { type: '의료 도움 권장', color: SIGNAL_COLOR.bad, reason: `${anti.label}에 자녀성 0개라 의학적 보조 적극 고려` };
   }
   if (anti.active || total === 0) {
     return { type: '시기 선택 중요', color: SIGNAL_COLOR.warn, reason: '대운·세운 자녀성 활성 시기에 집중적으로 준비' };
@@ -156,11 +156,11 @@ function parentingStyleLabel(counts: TenGodCounts): {
   const entries = Object.entries(g).sort((a, b) => b[1] - a[1]);
   const [dominant] = entries;
   const map: Record<string, { style: string; color: string; desc: string }> = {
-    인성: { style: '인성형 — 보호·교육', color: '#3b82f6', desc: '책 읽어주기·학습 보조에 자연스럽게 강함' },
-    식상: { style: '식상형 — 자유·표현', color: '#22c55e', desc: '아이의 표현·취향을 살리는 결' },
-    관성: { style: '관성형 — 규율·책임', color: '#94a3b8', desc: '예절·생활 습관 잡는 결' },
-    재성: { style: '재성형 — 현실 감각', color: '#eab308', desc: '실생활·경제 감각을 함께 키우는 결' },
-    비겁: { style: '비겁형 — 친구처럼', color: '#e8a490', desc: '같이 놀고 같이 자라는 친구 결' },
+    인성: { style: '인성형 (보호·교육)', color: '#3b82f6', desc: '책 읽어주기·학습 보조에 자연스럽게 강함' },
+    식상: { style: '식상형 (자유·표현)', color: '#22c55e', desc: '아이의 표현·취향을 살리는 결' },
+    관성: { style: '관성형 (규율·책임)', color: '#94a3b8', desc: '예절·생활 습관 잡는 결' },
+    재성: { style: '재성형 (현실 감각)', color: '#eab308', desc: '실생활·경제 감각을 함께 키우는 결' },
+    비겁: { style: '비겁형 (친구처럼)', color: '#e8a490', desc: '같이 놀고 같이 자라는 친구 결' },
   };
   const conf = map[dominant[0]] ?? map.인성;
   return { ...conf, dominant: dominant[0] };
@@ -173,7 +173,7 @@ function temperamentLabel(saju: SajuResult): {
   reason: string;
 } {
   if (saju.hourUnknown) {
-    return { type: '시간 미상 — 일주 기준 추정', color: SIGNAL_COLOR.info, reason: '연·월·일주 분위기로 유추' };
+    return { type: '시간 미상 (일주 기준 추정)', color: SIGNAL_COLOR.info, reason: '연·월·일주 분위기로 유추' };
   }
   const stage = saju.pillars.hour.twelveStage;
   // 활동적 / 차분 / 예술적 / 학구적
@@ -182,16 +182,16 @@ function temperamentLabel(saju: SajuResult): {
   const artStages = ['목욕', '태'];
   const studyStages = ['관대', '건록']; // 일부 중첩 — fallback
   if (activeStages.includes(stage)) {
-    return { type: '활동적 기질', color: SIGNAL_COLOR.warn, reason: `12운성 ${stage} — 에너지·도전형` };
+    return { type: '활동적 기질', color: SIGNAL_COLOR.warn, reason: `12운성 ${stage}의 에너지·도전형` };
   }
   if (artStages.includes(stage)) {
-    return { type: '예술적 기질', color: SIGNAL_COLOR.info, reason: `12운성 ${stage} — 감수성·표현형` };
+    return { type: '예술적 기질', color: SIGNAL_COLOR.info, reason: `12운성 ${stage}의 감수성·표현형` };
   }
   if (studyStages.includes(stage)) {
-    return { type: '학구적 기질', color: '#3b82f6', reason: `12운성 ${stage} — 집중·탐구형` };
+    return { type: '학구적 기질', color: '#3b82f6', reason: `12운성 ${stage}의 집중·탐구형` };
   }
   if (calmStages.includes(stage)) {
-    return { type: '차분한 기질', color: SIGNAL_COLOR.good, reason: `12운성 ${stage} — 관찰·내면형` };
+    return { type: '차분한 기질', color: SIGNAL_COLOR.good, reason: `12운성 ${stage}의 관찰·내면형` };
   }
   return { type: '균형 기질', color: SIGNAL_COLOR.info, reason: `12운성 ${stage}` };
 }
@@ -212,21 +212,21 @@ function careerHintLabel(saju: SajuResult, counts: TenGodCounts): {
   }
   // 십성 → 카테고리
   const map: Record<string, { type: string; color: string; fields: string[] }> = {
-    식신: { type: '식상형 — 예술·창작', color: '#22c55e', fields: ['예술', '창작', '요리', '디자인'] },
-    상관: { type: '식상형 — 표현·연출', color: '#22c55e', fields: ['공연', '영상', '글쓰기', '강연'] },
-    정인: { type: '인성형 — 학문·교육', color: '#3b82f6', fields: ['연구', '교사', '의학', '인문'] },
-    편인: { type: '인성형 — 전문·기술', color: '#3b82f6', fields: ['전문직', '심리', '종교', 'IT'] },
-    정관: { type: '관성형 — 공직·리더십', color: '#94a3b8', fields: ['공직', '대기업', '관리', '법'] },
-    편관: { type: '관성형 — 리더·도전', color: '#94a3b8', fields: ['군경', '스포츠', '벤처', '경영'] },
-    정재: { type: '재성형 — 실리·경영', color: '#eab308', fields: ['금융', '회계', '경영', '유통'] },
-    편재: { type: '재성형 — 사업·기획', color: '#eab308', fields: ['사업', '무역', '부동산', '마케팅'] },
-    비견: { type: '비겁형 — 독립·전문', color: '#e8a490', fields: ['프리랜서', '운동', '창업', '기술직'] },
-    겁재: { type: '비겁형 — 도전·경쟁', color: '#e8a490', fields: ['스포츠', '영업', '벤처', '대인업'] },
-    인성: { type: '인성형 — 학문·교육', color: '#3b82f6', fields: ['연구', '교사', '의학'] },
-    식상: { type: '식상형 — 예술·표현', color: '#22c55e', fields: ['예술', '창작', '강연'] },
-    관성: { type: '관성형 — 공직·리더십', color: '#94a3b8', fields: ['공직', '대기업', '관리'] },
-    재성: { type: '재성형 — 실리·경영', color: '#eab308', fields: ['금융', '경영', '사업'] },
-    비겁: { type: '비겁형 — 독립·도전', color: '#e8a490', fields: ['창업', '스포츠', '프리랜서'] },
+    식신: { type: '식상형 (예술·창작)', color: '#22c55e', fields: ['예술', '창작', '요리', '디자인'] },
+    상관: { type: '식상형 (표현·연출)', color: '#22c55e', fields: ['공연', '영상', '글쓰기', '강연'] },
+    정인: { type: '인성형 (학문·교육)', color: '#3b82f6', fields: ['연구', '교사', '의학', '인문'] },
+    편인: { type: '인성형 (전문·기술)', color: '#3b82f6', fields: ['전문직', '심리', '종교', 'IT'] },
+    정관: { type: '관성형 (공직·리더십)', color: '#94a3b8', fields: ['공직', '대기업', '관리', '법'] },
+    편관: { type: '관성형 (리더·도전)', color: '#94a3b8', fields: ['군경', '스포츠', '벤처', '경영'] },
+    정재: { type: '재성형 (실리·경영)', color: '#eab308', fields: ['금융', '회계', '경영', '유통'] },
+    편재: { type: '재성형 (사업·기획)', color: '#eab308', fields: ['사업', '무역', '부동산', '마케팅'] },
+    비견: { type: '비겁형 (독립·전문)', color: '#e8a490', fields: ['프리랜서', '운동', '창업', '기술직'] },
+    겁재: { type: '비겁형 (도전·경쟁)', color: '#e8a490', fields: ['스포츠', '영업', '벤처', '대인업'] },
+    인성: { type: '인성형 (학문·교육)', color: '#3b82f6', fields: ['연구', '교사', '의학'] },
+    식상: { type: '식상형 (예술·표현)', color: '#22c55e', fields: ['예술', '창작', '강연'] },
+    관성: { type: '관성형 (공직·리더십)', color: '#94a3b8', fields: ['공직', '대기업', '관리'] },
+    재성: { type: '재성형 (실리·경영)', color: '#eab308', fields: ['금융', '경영', '사업'] },
+    비겁: { type: '비겁형 (독립·도전)', color: '#e8a490', fields: ['창업', '스포츠', '프리랜서'] },
   };
   return map[basis] ?? map.인성;
 }
