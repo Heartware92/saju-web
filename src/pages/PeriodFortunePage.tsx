@@ -1293,32 +1293,36 @@ export default function PeriodFortunePage({ scope }: { scope: FortuneScope | 'da
         })}
       </motion.section>
 
-      {/* 행운 메타 — 비주얼 카드 */}
-      <motion.section
-        initial={{ opacity: 0, y: 8 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.2 }}
-        className="rounded-2xl p-4 mb-3 bg-[rgba(20,12,38,0.55)] border border-[var(--border-subtle)]"
-      >
-        <div className="text-[15px] font-semibold text-text-secondary mb-3 px-1 uppercase tracking-wider">
-          {scope === 'year' ? '연간 행운 처방' : scope === 'date' ? '이 날의 행운' : '오늘의 행운'}
-        </div>
-        {(() => {
-          const luckyEl = saju.yongSinElement ?? '목';
-          const el = ELEMENT_LUCKY[luckyEl] ?? ELEMENT_LUCKY['목'];
-          return (
-            <LuckyVisualCard
-              colors={fortune.luckyColors.length >= 2 ? fortune.luckyColors : el.colors}
-              colorCss={fortune.luckyColors.length >= 2 ? undefined : el.colorCss}
-              numbers={fortune.luckyNumbers.length > 0 ? fortune.luckyNumbers : el.numbers}
-              direction={fortune.luckyDirection || el.direction}
-              timeSlot={fortune.luckyTime || el.timeSlot}
-              gem={fortune.luckyGem || el.gem}
-              activity={fortune.luckyActivity || el.activity}
-            />
-          );
-        })()}
-      </motion.section>
+      {/* 행운 메타 — 비주얼 카드.
+          scope='year'(신년·연도별)는 [lucky] 섹션 카드 안에서 LuckyVisualCard 를
+          렌더하므로 여기서는 중복 방지를 위해 생략. date·day 만 상단 단독 노출. */}
+      {scope !== 'year' && (
+        <motion.section
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2 }}
+          className="rounded-2xl p-4 mb-3 bg-[rgba(20,12,38,0.55)] border border-[var(--border-subtle)]"
+        >
+          <div className="text-[15px] font-semibold text-text-secondary mb-3 px-1 uppercase tracking-wider">
+            {scope === 'date' ? '이 날의 행운' : '오늘의 행운'}
+          </div>
+          {(() => {
+            const luckyEl = saju.yongSinElement ?? '목';
+            const el = ELEMENT_LUCKY[luckyEl] ?? ELEMENT_LUCKY['목'];
+            return (
+              <LuckyVisualCard
+                colors={fortune.luckyColors.length >= 2 ? fortune.luckyColors : el.colors}
+                colorCss={fortune.luckyColors.length >= 2 ? undefined : el.colorCss}
+                numbers={fortune.luckyNumbers.length > 0 ? fortune.luckyNumbers : el.numbers}
+                direction={fortune.luckyDirection || el.direction}
+                timeSlot={fortune.luckyTime || el.timeSlot}
+                gem={fortune.luckyGem || el.gem}
+                activity={fortune.luckyActivity || el.activity}
+              />
+            );
+          })()}
+        </motion.section>
+      )}
 
       {/* 상호작용 */}
       {fortune.interactions.length > 0 && (

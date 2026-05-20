@@ -11,6 +11,7 @@
 
 import type { SajuResult } from '../../utils/sajuCalculator';
 import type { PeriodFortune, FortuneGrade, FortuneDomain } from '../../engine/periodFortune';
+import { LuckyVisualCard, ELEMENT_LUCKY } from './LuckyVisualCard';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 색 매핑 — PeriodFortunePage 의 GRADE_COLOR 와 동일
@@ -242,48 +243,24 @@ function MonthlyVisual({ fortune }: { fortune: PeriodFortune }) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// 9) 행운 처방 — 색·숫자·방향·시간 4요소 그리드
+// 9) 행운 처방 — 정통사주 "용신 처방"과 동일한 리치 카드 (나침반 + 색상 + 음식)
+//    LuckyVisualCard 를 그대로 사용 — 결정론적 lucky 데이터 + 용신 오행 fallback.
 // ─────────────────────────────────────────────────────────────────────────────
 function LuckyVisual({ fortune, saju }: { fortune: PeriodFortune; saju: SajuResult }) {
-  const accent = ELEMENT_COLOR[saju.yongSinElement] ?? SIGNAL.cta;
-  const items: Array<{ label: string; value: string }> = [
-    { label: '행운 색', value: fortune.luckyColors.join(' · ') || '-' },
-    { label: '행운 숫자', value: fortune.luckyNumbers.join(' · ') || '-' },
-    { label: '행운 방향', value: fortune.luckyDirection || '-' },
-    { label: '행운 시간', value: fortune.luckyTime || '-' },
-  ];
-  if (fortune.luckyGem) items.push({ label: '행운 보석', value: fortune.luckyGem });
-  if (fortune.luckyActivity) items.push({ label: '행운 활동', value: fortune.luckyActivity });
-
+  const luckyEl = saju.yongSinElement ?? '목';
+  const el = ELEMENT_LUCKY[luckyEl] ?? ELEMENT_LUCKY['목'];
   return (
-    <CardWrap accent={accent}>
-      <div className="flex items-center gap-2 mb-3">
-        <span className="inline-block w-1 h-5 rounded-full" style={{ background: accent }} />
-        <span className="text-[15px] font-bold tracking-[0.04em]" style={{ color: accent }}>
-          행운 요소 한눈 요약
-          <span className="text-text-tertiary font-normal text-[13px] ml-1.5">용신 {saju.yongSinElement} 기준</span>
-        </span>
-      </div>
-      <div className="grid grid-cols-2 gap-2">
-        {items.map((it) => (
-          <div
-            key={it.label}
-            className="rounded-xl px-3 py-2.5 border flex flex-col gap-0.5"
-            style={{ background: 'rgba(255,255,255,0.03)', borderColor: `${accent}33` }}
-          >
-            <span className="text-[12.5px] font-bold" style={{ color: accent }}>
-              {it.label}
-            </span>
-            <span
-              className="text-[15px] font-bold leading-tight"
-              style={{ color: 'var(--text-primary)', wordBreak: 'keep-all' }}
-            >
-              {it.value}
-            </span>
-          </div>
-        ))}
-      </div>
-    </CardWrap>
+    <div className="mb-3">
+      <LuckyVisualCard
+        colors={fortune.luckyColors.length >= 2 ? fortune.luckyColors : el.colors}
+        colorCss={fortune.luckyColors.length >= 2 ? undefined : el.colorCss}
+        numbers={fortune.luckyNumbers.length > 0 ? fortune.luckyNumbers : el.numbers}
+        direction={fortune.luckyDirection || el.direction}
+        timeSlot={fortune.luckyTime || el.timeSlot}
+        gem={fortune.luckyGem || el.gem}
+        activity={fortune.luckyActivity || el.activity}
+      />
+    </div>
   );
 }
 
