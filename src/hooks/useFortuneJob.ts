@@ -51,7 +51,21 @@ interface UseFortuneJobReturn {
   notFound: boolean;
 }
 
-export function useFortuneJob(jobId: string | null): UseFortuneJobReturn {
+/** 잡이 저장되는 테이블. 타로는 별도 tarot_records 사용. 기본 saju_records. */
+export type FortuneJobTable = 'saju_records' | 'tarot_records';
+
+// 테이블별 SELECT 컬럼 — tarot_records 는 interpretation 단일 컬럼 (saju 의 detailed/basic 대응)
+const SELECT_COLUMNS: Record<FortuneJobTable, string> = {
+  saju_records:
+    'id, status, interpretation_detailed, interpretation_basic, error_message, started_at, completed_at, result_data, category, birth_date, birth_time, birth_place, gender, calendar_type, profile_name, partner_name, partner_birth_date, engine_result',
+  tarot_records:
+    'id, status, interpretation, error_message, started_at, completed_at, spread_type, question, cards',
+};
+
+export function useFortuneJob(
+  jobId: string | null,
+  table: FortuneJobTable = 'saju_records',
+): UseFortuneJobReturn {
   const [job, setJob] = useState<FortuneJobSnapshot | null>(null);
   const [loading, setLoading] = useState<boolean>(!!jobId);
   const [notFound, setNotFound] = useState<boolean>(false);
@@ -70,19 +84,19 @@ export function useFortuneJob(jobId: string | null): UseFortuneJobReturn {
 
     // 1) 먼저 channel subscribe — 마운트 직후 변경 이벤트 놓치지 않게
     const channel = supabase
-      .channel(`fortune-job:${jobId}`)
+      .channel(`fortune-job:${table}:${jobId}`)
       .on(
         'postgres_changes',
         {
           event: 'UPDATE',
           schema: 'public',
-          table: 'saju_records',
+          table,
           filter: `id=eq.${jobId}`,
         },
         (payload) => {
           if (cancelled) return;
           const row = payload.new as Record<string, unknown>;
-          setJob((prev) => mergeRow(prev, jobId, row));
+          setJob((prev) => mergeRow(prev, jobId, row, table));
         },
       )
       .subscribe();
@@ -90,10 +104,8 @@ export function useFortuneJob(jobId: string | null): UseFortuneJobReturn {
     // 2) 직후 현재 상태 1회 fetch (subscribe race 방지)
     void (async () => {
       const { data, error } = await supabase
-        .from('saju_records')
-        .select(
-          'id, status, interpretation_detailed, interpretation_basic, error_message, started_at, completed_at, result_data, category, birth_date, birth_time, birth_place, gender, calendar_type, profile_name, partner_name, partner_birth_date, engine_result',
-        )
+        .from(table)
+        .select(SELECT_COLUMNS[table])
         .eq('id', jobId)
         .maybeSingle();
 
@@ -106,7 +118,7 @@ export function useFortuneJob(jobId: string | null): UseFortuneJobReturn {
         return;
       }
 
-      setJob(mergeRow(null, jobId, data as Record<string, unknown>));
+      setJob(mergeRow(null, jobId, data as unknown as Record<string, unknown>, table));
       setLoading(false);
     })();
 
@@ -114,7 +126,7 @@ export function useFortuneJob(jobId: string | null): UseFortuneJobReturn {
       cancelled = true;
       void supabase.removeChannel(channel);
     };
-  }, [jobId]);
+  }, [jobId, table]);
 
   return { job, loading, notFound };
 }
@@ -123,14 +135,22 @@ function mergeRow(
   prev: FortuneJobSnapshot | null,
   jobId: string,
   row: Record<string, unknown>,
+  table: FortuneJobTable = 'saju_records',
 ): FortuneJobSnapshot {
+  // tarot_records 는 interpretation 단일 컬럼 — saju 의 detailed/basic 양쪽에 매핑.
+  const interpDetailed =
+    table === 'tarot_records'
+      ? (row.interpretation as string | null)
+      : (row.interpretation_detailed as string | null);
+  const interpBasic =
+    table === 'tarot_records'
+      ? (row.interpretation as string | null)
+      : (row.interpretation_basic as string | null);
   return {
     jobId,
     status: (row.status as FortuneJobStatus) ?? prev?.status ?? 'pending',
-    interpretationDetailed:
-      (row.interpretation_detailed as string | null) ?? prev?.interpretationDetailed ?? null,
-    interpretationBasic:
-      (row.interpretation_basic as string | null) ?? prev?.interpretationBasic ?? null,
+    interpretationDetailed: interpDetailed ?? prev?.interpretationDetailed ?? null,
+    interpretationBasic: interpBasic ?? prev?.interpretationBasic ?? null,
     errorMessage: (row.error_message as string | null) ?? prev?.errorMessage ?? null,
     startedAt: (row.started_at as string | null) ?? prev?.startedAt ?? null,
     completedAt: (row.completed_at as string | null) ?? prev?.completedAt ?? null,

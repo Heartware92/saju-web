@@ -14,7 +14,10 @@ import { useCreditStore } from '../store/useCreditStore';
 import { useReportCacheStore, sajuKey } from '../store/useReportCacheStore';
 import { MOON_COST_TAROT, CHARGE_REASONS } from '../constants/creditCosts';
 import { computeSajuFromProfile } from '../utils/profileSaju';
-import { getHybridReading, parseNumberedSections } from '../services/fortuneService';
+import { parseNumberedSections } from '../services/fortuneService';
+import { generateHybridPrompt } from '../constants/prompts';
+import { supabase } from '../services/supabase';
+import { useFortuneJob } from '../hooks/useFortuneJob';
 import { SectionCollapsible } from '../components/saju/SectionCollapsible';
 import type { TarotCardInfo } from '../services/api';
 import type { SajuResult } from '../utils/sajuCalculator';
@@ -323,7 +326,7 @@ function AIReadingView({ content, color }: { content: string; color: string }) {
   );
 }
 
-function LoadingSpinner() {
+function LoadingSpinner({ startedAt }: { startedAt?: string | null }) {
   return (
     <AILoadingBar
       inline
@@ -331,6 +334,7 @@ function LoadingSpinner() {
       minLabel="8초"
       maxLabel="25초"
       estimatedSeconds={15}
+      startedAt={startedAt}
       messages={['카드의 상징을 읽는 중입니다', '사주와 카드의 흐름을 짚는 중입니다', '풀이를 정리하는 중입니다']}
     />
   );
@@ -367,8 +371,14 @@ export default function TarotPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const recordId = searchParams?.get('recordId') ?? null;
+  const urlJobId = searchParams?.get('jobId') ?? null;
   const isArchiveMode = !!recordId;
   const { user } = useUserStore();
+
+  // 백그라운드 잡 시스템 — 타로는 tarot_records 테이블 (useFortuneJob 의 table 분기)
+  const [createdJobId, setCreatedJobId] = useState<string | null>(null);
+  const effectiveJobId = urlJobId ?? createdJobId;
+  const { job: fortuneJob } = useFortuneJob(effectiveJobId, 'tarot_records');
   const { profiles, fetchProfiles } = useProfileStore();
 
   const [mode, setMode] = useState<TarotMode>('today');
@@ -400,6 +410,27 @@ export default function TarotPage() {
       if (!aiContent) setAiError('응답이 너무 오래 걸려요. 새로고침 후 다시 시도해주세요.');
     }
   }, [aiTimedOut, aiContent]);
+
+  // ── 잡 결과 → state 동기화 (백그라운드 잡 시스템) ──
+  useEffect(() => {
+    if (isArchiveMode) return;
+    if (!fortuneJob) return;
+    if (fortuneJob.status === 'done') {
+      setAiContent(fortuneJob.interpretationDetailed ?? '');
+      setAiError(null);
+      setAiLoading(false);
+    } else if (fortuneJob.status === 'failed') {
+      setAiError(fortuneJob.errorMessage ?? '풀이 생성에 실패했어요. 크레딧은 자동 환불됐어요.');
+      setAiLoading(false);
+    } else {
+      setAiLoading(true);
+    }
+  }, [
+    isArchiveMode,
+    fortuneJob?.status,
+    fortuneJob?.interpretationDetailed,
+    fortuneJob?.errorMessage,
+  ]);
 
   useEffect(() => { if (user) fetchProfiles(); }, [user, fetchProfiles]);
 
@@ -469,35 +500,57 @@ export default function TarotPage() {
     setAiError(null);
     setAiContent(null);
     try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const accessToken = sessionData.session?.access_token;
+      if (!accessToken) {
+        setAiError('로그인이 만료됐어요. 다시 로그인해주세요.');
+        setAiLoading(false);
+        return;
+      }
       const cardInfo = drawnToCardInfo(drawn[0]);
-      // 보관함 재생용 — 전체 뽑힌 카드 배열 (이달의 타로 3장 등)
       const allCardsInfo = drawn.map(drawnToCardInfo);
       const questionMap: Record<TarotMode, string | undefined> = {
         today: undefined,
         monthly: '이달의 전체적인 흐름',
         question: userQuestion || undefined,
       };
-      const res = await getHybridReading(sajuResult, cardInfo, questionMap[currentMode], currentMode, allCardsInfo);
-      const cache = useReportCacheStore.getState();
-      if (res.success && res.content) {
-        setAiContent(res.content);
-        cache.setReport('tarot', cacheKey, res.content);
-        if (!cache.isCharged('tarot', cacheKey)) {
-          cache.markCharged('tarot', cacheKey);
-          useCreditStore.getState()
-            .chargeForContent('moon', MOON_COST_TAROT, `${CHARGE_REASONS.tarotHybrid}:${currentMode}`, `tarot:${cacheKey}`)
-            .catch(e => console.error('[charge:tarot] failed', e));
-        }
-      } else {
-        const msg = res.error || '해석을 불러오지 못했습니다.';
-        setAiError(msg);
-        cache.setError('tarot', cacheKey, msg);
+      const prompt = generateHybridPrompt(sajuResult, cardInfo, questionMap[currentMode], currentMode, allCardsInfo);
+      const spreadType = currentMode === 'today' ? 'today'
+        : currentMode === 'monthly' ? 'monthly'
+        : currentMode === 'question' ? 'question'
+        : 'hybrid-saju';
+      const cardsPayload: Record<string, unknown> = {
+        mode: spreadType,
+        cards: allCardsInfo,
+        card: cardInfo,
+      };
+      const minuteBucket = Math.floor(Date.now() / 60000);
+      const res = await fetch('/api/fortune/jobs/create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${accessToken}` },
+        body: JSON.stringify({
+          category: 'tarot',
+          prompt,
+          spreadType,
+          cards: cardsPayload,
+          question: questionMap[currentMode],
+          idempotencyKey: `${cacheKey}:${minuteBucket}`,
+        }),
+      });
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        setAiError(errData.error || '해석을 불러오지 못했습니다.');
+        setAiLoading(false);
+        return;
       }
-    } catch (e: any) {
-      const msg = e.message || '네트워크 오류가 발생했습니다.';
-      setAiError(msg);
-      useReportCacheStore.getState().setError('tarot', cacheKey, msg);
-    } finally {
+      const { jobId } = (await res.json()) as { jobId: string };
+      const newUrl = new URL(window.location.href);
+      newUrl.searchParams.set('jobId', jobId);
+      window.history.replaceState(null, '', newUrl.toString());
+      setCreatedJobId(jobId);
+      // 이후 잡 동기화 useEffect 가 setAiContent·setAiLoading(false) 처리
+    } catch (e: unknown) {
+      setAiError(e instanceof Error ? e.message : '네트워크 오류가 발생했습니다.');
       setAiLoading(false);
     }
   };
@@ -719,7 +772,7 @@ export default function TarotPage() {
                     />
                   ))}
                 </div>
-                {aiLoading && <LoadingSpinner />}
+                {aiLoading && <LoadingSpinner startedAt={fortuneJob?.startedAt} />}
                 {aiError && (
                   <div className="rounded-2xl p-4 text-center bg-[rgba(248,113,113,0.1)] border border-[rgba(248,113,113,0.3)]">
                     <p className="text-[15px] text-[#F87171] mb-3">{aiError}</p>
@@ -807,7 +860,7 @@ export default function TarotPage() {
                 <div className="flex justify-center mb-6">
                   <FlipCard drawn={qDrawn} width={160} shouldFlip={true} flipDelay={0.15} />
                 </div>
-                {aiLoading && <LoadingSpinner />}
+                {aiLoading && <LoadingSpinner startedAt={fortuneJob?.startedAt} />}
                 {aiError && (
                   <div className="rounded-2xl p-4 text-center bg-[rgba(248,113,113,0.1)] border border-[rgba(248,113,113,0.3)]">
                     <p className="text-[15px] text-[#F87171] mb-3">{aiError}</p>

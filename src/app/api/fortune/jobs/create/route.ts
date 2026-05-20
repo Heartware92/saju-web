@@ -26,6 +26,7 @@ import { runTaekilJob } from '@/services/taekilJob.server';
 import { runTodayJob } from '@/services/todayJob.server';
 import { runPickedDateJob } from '@/services/pickedDateJob.server';
 import { runMoreFortuneJob, type MoreFortuneCategory } from '@/services/moreFortuneJob.server';
+import { runTarotJob } from '@/services/tarotJob.server';
 import type { SajuResult } from '@/utils/sajuCalculator';
 import type { PeriodFortune } from '@/engine/periodFortune';
 import type { TojeongResult } from '@/engine/tojeong';
@@ -142,6 +143,22 @@ interface MoreFortuneJobBody extends BaseJobBody {
   engineResult?: Record<string, unknown>;
 }
 
+/**
+ * 타로 잡 — saju_records 가 아닌 tarot_records 테이블 사용.
+ * BaseJobBody(sajuResult·sourceBirth) 를 extends 하지 않음 (타로는 사주 입력 불필요).
+ */
+interface TarotJobBody {
+  category: 'tarot';
+  /** 클라가 완성한 prompt (generateHybridPrompt) */
+  prompt: string;
+  /** 보관함 spread_type — today·monthly·question·hybrid-saju */
+  spreadType: string;
+  /** cards 페이로드 (재생용 — mode·cards 배열·단일카드·질문) */
+  cards: Record<string, unknown>;
+  question?: string;
+  idempotencyKey: string;
+}
+
 type CreateJobBody =
   | TraditionalJobBody
   | GunghapJobBody
@@ -151,7 +168,8 @@ type CreateJobBody =
   | TaekilJobBody
   | TodayJobBody
   | PickedDateJobBody
-  | MoreFortuneJobBody;
+  | MoreFortuneJobBody
+  | TarotJobBody;
 
 // 카테고리별 차감 정책 — 다른 운세 추가 시 여기 항목만 추가하면 됨.
 // reason 값은 클라이언트의 CHARGE_REASONS.{category} 와 반드시 동일해야 함
@@ -174,6 +192,7 @@ const CATEGORY_POLICY: Record<
   personality: { creditCost: 5, reason: '성격 분석' },
   name: { creditCost: 5, reason: '이름 풀이' },
   dream: { creditCost: 5, reason: '꿈해몽' },
+  tarot: { creditCost: 1, reason: '타로' },  // MOON_COST_TAROT, CHARGE_REASONS.tarot
 };
 
 const CREDIT_TYPE = 'moon';
@@ -198,6 +217,11 @@ export async function POST(request: NextRequest) {
       body = await request.json();
     } catch {
       return NextResponse.json({ error: '잘못된 요청 형식이에요.' }, { status: 400 });
+    }
+
+    // ── 타로 전용 흐름 — tarot_records 테이블 사용 (saju_records 와 별개) ──
+    if (body.category === 'tarot') {
+      return await handleTarotJob(body, userId);
     }
 
     if (!body.sajuResult || !body.sourceBirth || !body.idempotencyKey) {
@@ -465,4 +489,101 @@ export async function POST(request: NextRequest) {
     console.error('[jobs/create] 알 수 없는 오류:', msg);
     return NextResponse.json({ error: msg }, { status: 500 });
   }
+}
+
+/**
+ * 타로 잡 생성 — tarot_records 테이블 사용.
+ * saju_records 흐름과 분리 (다른 컬럼·보관함 별도 탭).
+ */
+async function handleTarotJob(body: TarotJobBody, userId: string): Promise<NextResponse> {
+  if (!body.prompt || body.prompt.length < 50) {
+    return NextResponse.json({ error: '타로 prompt 가 비어있어요.' }, { status: 400 });
+  }
+  if (!body.idempotencyKey) {
+    return NextResponse.json({ error: '필수 정보가 부족해요.' }, { status: 400 });
+  }
+  const policy = CATEGORY_POLICY.tarot;
+  const consumeKey = `tarot:${body.idempotencyKey}`;
+
+  // 차감
+  const { data: consumeResult, error: consumeError } = await supabaseAdmin.rpc(
+    'consume_credit_atomic',
+    {
+      p_user_id: userId,
+      p_credit_type: CREDIT_TYPE,
+      p_amount: policy.creditCost,
+      p_reason: policy.reason,
+      p_idempotency_key: consumeKey,
+    },
+  );
+  if (consumeError) {
+    console.error('[jobs/create:tarot] consume RPC 에러:', consumeError);
+    return NextResponse.json({ error: '결제 처리 중 오류가 발생했어요.' }, { status: 500 });
+  }
+  if (consumeResult === 'insufficient') {
+    return NextResponse.json(
+      { error: '달 크레딧이 부족해요. 충전 후 다시 시도해주세요.' },
+      { status: 402 },
+    );
+  }
+  if (consumeResult !== 'ok' && consumeResult !== 'duplicate') {
+    return NextResponse.json({ error: '결제 처리에 실패했어요.' }, { status: 500 });
+  }
+  if (consumeResult === 'duplicate') {
+    const { data: existing } = await supabaseAdmin
+      .from('tarot_records')
+      .select('id')
+      .eq('user_id', userId)
+      .eq('spread_type', body.spreadType)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (existing) {
+      return NextResponse.json({ jobId: existing.id, deduplicated: true });
+    }
+  }
+
+  // tarot_records INSERT (status='pending')
+  const { data: inserted, error: insertError } = await supabaseAdmin
+    .from('tarot_records')
+    .insert({
+      user_id: userId,
+      spread_type: body.spreadType,
+      cards: body.cards,
+      question: body.question ?? null,
+      credit_type: CREDIT_TYPE,
+      credit_used: policy.creditCost,
+      status: 'pending',
+    })
+    .select('id')
+    .single();
+
+  if (insertError || !inserted) {
+    console.error('[jobs/create:tarot] tarot_records INSERT 에러:', insertError);
+    await supabaseAdmin.rpc('refund_credit_atomic', {
+      p_user_id: userId,
+      p_credit_type: CREDIT_TYPE,
+      p_amount: policy.creditCost,
+      p_reason: '타로 잡 생성 실패 자동 환불',
+      p_idempotency_key: `refund:${consumeKey}`,
+    });
+    return NextResponse.json({ error: '잡 생성에 실패했어요.' }, { status: 500 });
+  }
+
+  const jobId = inserted.id;
+  after(async () => {
+    try {
+      await runTarotJob({
+        recordId: jobId,
+        userId,
+        prompt: body.prompt,
+        consumeIdempotencyKey: consumeKey,
+        creditAmount: policy.creditCost,
+      });
+    } catch (e) {
+      console.error('[jobs/create:tarot] runTarotJob 치명적 누락 에러:', e);
+    }
+  });
+
+  return NextResponse.json({ jobId });
 }

@@ -92,6 +92,11 @@ export interface TarotRecord {
   created_at: string;
   /** 공유 링크용 토큰 */
   share_token?: string | null;
+  /** 백그라운드 잡 상태 — 039 마이그레이션. 옛 row 는 'done' default. */
+  status?: 'pending' | 'processing' | 'done' | 'failed';
+  error_message?: string | null;
+  started_at?: string | null;
+  completed_at?: string | null;
 }
 
 /**

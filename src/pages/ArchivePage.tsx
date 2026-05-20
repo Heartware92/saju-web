@@ -134,8 +134,14 @@ function getSajuRoute(record: SajuRecord): string {
   return `${base}?recordId=${record.id}`;
 }
 
-/** 타로 레코드 → 결과 페이지 URL. 보관함 진입은 readonly 결과 페이지로. */
+/** 타로 레코드 → 결과 페이지 URL. 보관함 진입은 readonly 결과 페이지로.
+ *  진행 중·실패 잡은 ?jobId 로 TarotPage 진입 (Realtime 구독). */
 function getTarotRoute(record: TarotRecord): string {
+  const isPendingJob =
+    record.status === 'pending' || record.status === 'processing' || record.status === 'failed';
+  if (isPendingJob) {
+    return `/tarot?jobId=${record.id}`;
+  }
   // /tarot 는 라이브 드로잉 전용. /tarot/result 는 보관함 재생 전용.
   return `/tarot/result?recordId=${record.id}`;
 }

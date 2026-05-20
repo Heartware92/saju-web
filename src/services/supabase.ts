@@ -431,7 +431,7 @@ export const tarotDB = {
   getRecords: async (userId: string, limit = 50): Promise<TarotRecord[]> => {
     const { data, error } = await supabase
       .from('tarot_records')
-      .select('id, user_id, spread_type, question, credit_type, credit_used, created_at')
+      .select('id, user_id, spread_type, question, credit_type, credit_used, created_at, status, error_message')
       .eq('user_id', userId)
       .order('created_at', { ascending: false })
       .limit(limit);
