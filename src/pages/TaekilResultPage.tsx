@@ -11,6 +11,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { sajuDB } from '../services/supabase';
 import { useFortuneJob } from '../hooks/useFortuneJob';
+import { AILoadingBar } from '../components/AILoadingBar';
 import { useProfileStore } from '../store/useProfileStore';
 import { useUserStore } from '../store/useUserStore';
 import { computeSajuFromProfile } from '../utils/profileSaju';
@@ -332,19 +333,23 @@ export default function TaekilResultPage() {
   }, [result]);
 
   // ── 로딩/에러 ──
+  // ?jobId 진행 중 잡 + ?recordId 보관함 조회 모두 AILoadingBar 로 통일.
+  // TaekilPage 의 풀이 로딩과 같은 컴포넌트라 router.push 후에도 끊김 없이 이어짐.
   if (loading) {
     return (
-      <div className={styles.container}>
-        <div className="flex items-center relative mb-5 pt-3 px-1">
-          <BackButton className="absolute left-0" />
-          <div className="flex-1 text-center">
-            <h1 className="text-2xl font-bold text-text-primary" style={{ fontFamily: 'var(--font-serif)' }}>택일 운세</h1>
-          </div>
-        </div>
-        <div className={styles.section} style={{ textAlign: 'center', padding: '48px 24px' }}>
-          <p style={{ color: 'var(--text-secondary)' }}>결과를 불러오는 중이에요…</p>
-        </div>
-      </div>
+      <AILoadingBar
+        label="택일 운세 분석중"
+        minLabel="20초"
+        maxLabel="1분"
+        estimatedSeconds={35}
+        startedAt={fortuneJob?.startedAt}
+        messages={[
+          '선택한 날짜의 일진을 분석하는 중입니다',
+          '사주 원국과의 합충을 짚는 중입니다',
+          '흉신·길신을 검토하는 중입니다',
+          '최적의 날짜를 가려내는 중입니다',
+        ]}
+      />
     );
   }
 

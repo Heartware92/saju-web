@@ -46,15 +46,23 @@ export function parseGunghapHeader(text: string): {
   const domainScores: GunghapDomainScores = {};
   let body = text;
 
-  const headerMatch = text.match(/\[gunghap[_\s]?header\]\s*(.+?)\s*\|\s*(\d{1,3})\s*\[\/gunghap[_\s]?header\]/);
+  // 닫는 태그 [/gunghap_header] 는 sanitizeAIOutput 이 제거할 수 있어 optional 처리.
+  // 여는 태그 + "제목 | 점수" 한 줄 → 닫는 태그 OR 줄끝 OR 개행까지 매칭.
+  const headerMatch = text.match(
+    /\[gunghap[_\s]?header\]\s*(.+?)\s*\|\s*(\d{1,3})\s*(?:\[\/gunghap[_\s]?header\]|\n|$)/,
+  );
   if (headerMatch) {
     title = headerMatch[1].trim();
     // 종합 점수 floor 60 / ceiling 97 — 다른 카테고리와 일관 (사용자 경험 보호)
     score = Math.min(97, Math.max(60, parseInt(headerMatch[2], 10)));
-    body = body.replace(/\[gunghap[_\s]?header\].*?\[\/gunghap[_\s]?header\]\s*\n?/, '').trim();
+    body = body
+      .replace(/\[gunghap[_\s]?header\][\s\S]*?(?:\[\/gunghap[_\s]?header\]|\n|$)/, '')
+      .trim();
   }
 
-  const scoresMatch = body.match(/\[gunghap[_\s]?scores\]\s*(.+?)\s*\[\/gunghap[_\s]?scores\]/);
+  const scoresMatch = body.match(
+    /\[gunghap[_\s]?scores\]\s*(.+?)\s*(?:\[\/gunghap[_\s]?scores\]|\n|$)/,
+  );
   if (scoresMatch) {
     const pairs = scoresMatch[1].split('|').map(s => s.trim());
     const keyMap: Record<string, GunghapDomainKey> = {
@@ -72,7 +80,9 @@ export function parseGunghapHeader(text: string): {
         domainScores[domainKey] = Math.min(97, Math.max(55, parseInt(v, 10)));
       }
     }
-    body = body.replace(/\[gunghap[_\s]?scores\].*?\[\/gunghap[_\s]?scores\]\s*\n?/, '').trim();
+    body = body
+      .replace(/\[gunghap[_\s]?scores\][\s\S]*?(?:\[\/gunghap[_\s]?scores\]|\n|$)/, '')
+      .trim();
   }
 
   return { title, score, domainScores, body };
