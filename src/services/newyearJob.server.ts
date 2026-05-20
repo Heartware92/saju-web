@@ -17,8 +17,10 @@ import { calculateSeWoonRange } from '@/utils/sajuCalculator';
 import type { SajuResult } from '@/utils/sajuCalculator';
 import type { PeriodFortune } from '@/engine/periodFortune';
 
-const PASS1_MAX_TOKENS = 5500;
-const PASS2_MAX_TOKENS = 6000;
+// 섹션 분량 25% 증량(2026-05-20) 반영 — 출력 잘림 방지로 budget 상향.
+// PASS2 는 monthly(2250~2900자) 포함이라 특히 넉넉히.
+const PASS1_MAX_TOKENS = 6800;
+const PASS2_MAX_TOKENS = 8200;
 const PASS1_KEYS: NewyearSectionKey[] = ['general', 'wealth', 'career', 'study', 'love'];
 const PASS2_KEYS: NewyearSectionKey[] = ['health', 'relation', 'monthly', 'lucky'];
 
