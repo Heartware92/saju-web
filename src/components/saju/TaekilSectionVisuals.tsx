@@ -43,7 +43,6 @@ function CardWrap({
       }}
     >
       <div className="flex items-center gap-2 mb-3">
-        <span className="inline-block w-1 h-5 rounded-full" style={{ background: accent }} />
         <span className="text-[15px] font-bold tracking-[0.04em]" style={{ color: accent }}>
           {title}
           {titleSub && <span className="text-text-tertiary font-normal text-[13px] ml-1.5">{titleSub}</span>}

@@ -129,7 +129,6 @@ function OhaengRelationVisual({
       }}
     >
       <div className="flex items-center gap-2 mb-3">
-        <span className="inline-block w-1 h-5 rounded-full" style={{ background: relColor }} />
         <span className="text-[15px] font-bold tracking-[0.04em]" style={{ color: relColor }}>
           오행 상보 관계
         </span>
@@ -204,7 +203,6 @@ function GunghapLuckyVisual({
       }}
     >
       <div className="flex items-center gap-2 mb-1">
-        <span className="inline-block w-1 h-5 rounded-full" style={{ background: color }} />
         <span className="text-[15px] font-bold tracking-[0.04em]" style={{ color }}>
           관계 개운 가이드
         </span>
@@ -338,7 +336,6 @@ export function renderGunghapSectionVisual(
       }}
     >
       <div className="flex items-center gap-2 mb-1">
-        <span className="inline-block w-1 h-5 rounded-full" style={{ background: color }} />
         <span className="text-[15px] font-bold tracking-[0.04em]" style={{ color }}>
           {DOMAIN_LABEL[domainKey]}
         </span>

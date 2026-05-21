@@ -748,7 +748,6 @@ export function CompatibilityVisual({ saju }: { saju: SajuResult }) {
           }}
         >
           <div className="flex items-center gap-2">
-            <span className="inline-block w-1 h-5 rounded-full" style={{ background: SIGNAL_COLOR.info }} />
             <span className="text-[15px] font-bold tracking-[0.04em]" style={{ color: SIGNAL_COLOR.info }}>
               양면적 자녀 띠
               <span className="text-text-tertiary font-normal text-[13px] ml-1.5">정 깊고 부딪침도 잦음</span>
@@ -768,7 +767,6 @@ export function CompatibilityVisual({ saju }: { saju: SajuResult }) {
         style={{ background: 'rgba(20,12,38,0.55)', borderColor: `${SIGNAL_COLOR.good}45` }}
       >
         <div className="flex items-center gap-2">
-          <span className="inline-block w-1 h-5 rounded-full" style={{ background: SIGNAL_COLOR.good }} />
           <span className="text-[15px] font-bold tracking-[0.04em]" style={{ color: SIGNAL_COLOR.good }}>
             잘 맞는 자녀 띠
             <span className="text-text-tertiary font-normal text-[13px] ml-1.5">(나는 {dayTti}띠 기준)</span>
@@ -796,10 +794,6 @@ export function CompatibilityVisual({ saju }: { saju: SajuResult }) {
         }}
       >
         <div className="flex items-center gap-2">
-          <span
-            className="inline-block w-1 h-5 rounded-full"
-            style={{ background: cautionsOnly.length > 0 ? SIGNAL_COLOR.warn : SIGNAL_COLOR.info }}
-          />
           <span
             className="text-[15px] font-bold tracking-[0.04em]"
             style={{ color: cautionsOnly.length > 0 ? SIGNAL_COLOR.warn : SIGNAL_COLOR.info }}
@@ -880,7 +874,6 @@ export function TimingVisual({ saju }: { saju: SajuResult }) {
         style={{ background: 'rgba(20,12,38,0.55)', borderColor: `${SIGNAL_COLOR.cta}45` }}
       >
         <div className="flex items-center gap-2 mb-3">
-          <span className="inline-block w-1 h-5 rounded-full" style={{ background: SIGNAL_COLOR.cta }} />
           <span className="text-[15px] font-bold tracking-[0.04em]" style={{ color: SIGNAL_COLOR.cta }}>
             자녀성({targetGroup}) 활성 대운 <span className="text-text-tertiary font-normal text-[13px]">(가임기 한정)</span>
           </span>
@@ -920,7 +913,6 @@ export function TimingVisual({ saju }: { saju: SajuResult }) {
         style={{ background: 'rgba(20,12,38,0.55)', borderColor: `${SIGNAL_COLOR.good}45` }}
       >
         <div className="flex items-center gap-2 mb-3">
-          <span className="inline-block w-1 h-5 rounded-full" style={{ background: SIGNAL_COLOR.good }} />
           <span className="text-[15px] font-bold tracking-[0.04em]" style={{ color: SIGNAL_COLOR.good }}>
             자녀성 활성 월 <span className="text-text-tertiary font-normal text-[13px]">(향후 3년)</span>
           </span>

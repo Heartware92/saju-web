@@ -116,7 +116,6 @@ function DomainVisual({ domain }: { domain: FortuneDomain }) {
   return (
     <CardWrap accent={color}>
       <div className="flex items-center gap-2 mb-3">
-        <span className="inline-block w-1 h-5 rounded-full" style={{ background: color }} />
         <span className="text-[15px] font-bold tracking-[0.04em]" style={{ color }}>
           {domain.label} 한눈 요약
         </span>
@@ -177,7 +176,6 @@ function GeneralVisual({
         style={{ background: 'rgba(20,12,38,0.55)', borderColor: `${SIGNAL.info}45` }}
       >
         <div className="flex items-center gap-2 mb-2.5">
-          <span className="inline-block w-1 h-5 rounded-full" style={{ background: SIGNAL.info }} />
           <span className="text-[15px] font-bold tracking-[0.04em]" style={{ color: SIGNAL.info }}>
             {periodWord}가 나에게 주는 기운
           </span>
@@ -214,7 +212,6 @@ function MonthlyVisual({ fortune }: { fortune: PeriodFortune }) {
   return (
     <CardWrap accent={SIGNAL.cta}>
       <div className="flex items-center gap-2 mb-3">
-        <span className="inline-block w-1 h-5 rounded-full" style={{ background: SIGNAL.cta }} />
         <span className="text-[15px] font-bold tracking-[0.04em]" style={{ color: SIGNAL.cta }}>
           12개월 흐름 한눈에
         </span>

@@ -276,7 +276,6 @@ export function HarmonyVisual({
         style={{ background: 'rgba(52,211,153,0.06)', borderColor: 'rgba(52,211,153,0.30)' }}
       >
         <div className="flex items-center gap-2 mb-3">
-          <span className="inline-block w-1 h-5 rounded-full" style={{ background: '#34D399' }} />
           <span className="text-[15px] font-bold" style={{ color: '#34D399' }}>이름의 강점</span>
         </div>
         <ul className="space-y-2">
@@ -296,7 +295,6 @@ export function HarmonyVisual({
         style={{ background: 'rgba(248,113,113,0.06)', borderColor: 'rgba(248,113,113,0.30)' }}
       >
         <div className="flex items-center gap-2 mb-3">
-          <span className="inline-block w-1 h-5 rounded-full" style={{ background: '#F87171' }} />
           <span className="text-[15px] font-bold" style={{ color: '#F87171' }}>보완 필요</span>
         </div>
         <ul className="space-y-2">
