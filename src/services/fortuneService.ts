@@ -766,6 +766,14 @@ export const parseJungtongsaju = (raw: string): Partial<Record<JungtongsajuSecti
   const out: Partial<Record<JungtongsajuSectionKey, string>> = {};
   const keysPattern = JUNGTONGSAJU_SECTION_KEYS.join('|');
 
+  // ── [luck] 마커 누락 보정 ──
+  // luck 섹션이 대운별 [대운 N세] 소섹션 구조로 바뀌면서, AI 가 [luck] 섹션 마커를
+  // 빼먹고 [relation] 다음 바로 [대운 28세] 부터 출력하는 사고가 있음.
+  // [luck] 마커가 없는데 [대운 N세] 가 있으면 → 첫 [대운 N세] 앞에 [luck] 마커를 삽입.
+  if (!raw.includes('[luck]') && /\[대운\s*\d+\s*세\]/.test(raw)) {
+    raw = raw.replace(/(\n\s*\[대운\s*\d+\s*세\])/, '\n[luck]$1');
+  }
+
   // AI 가 섹션 마커 주변에 markdown bold(**), prefix 기호(▶ ■ # · • -), 잔여 공백을
   // 끼우는 케이스를 흡수 — 줄 통째가 마커이면 양옆 장식을 깎아 [key] 단독 줄로 정규화.
   // 이전 split 정규식은 마커가 줄에 단독으로 있을 때만 매칭해 `**[character]**` 같은
