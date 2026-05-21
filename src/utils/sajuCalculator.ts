@@ -852,6 +852,35 @@ const calculateSinSals = (
     }
   });
 
+  // 고신살 (孤神殺)·과숙살 (寡宿殺) — 년지 기준, 배우자 인연·고독 신살
+  // 년지가 속한 방합 그룹의 다음 글자=고신, 앞 글자=과숙
+  const gosinMap: Record<string, string> = {
+    '해': '인', '자': '인', '축': '인',
+    '인': '사', '묘': '사', '진': '사',
+    '사': '신', '오': '신', '미': '신',
+    '신': '해', '유': '해', '술': '해',
+  };
+  const gwasukMap: Record<string, string> = {
+    '해': '술', '자': '술', '축': '술',
+    '인': '축', '묘': '축', '진': '축',
+    '사': '진', '오': '진', '미': '진',
+    '신': '미', '유': '미', '술': '미',
+  };
+  const gosinCols = findCols(gosinMap[yearBranch] || '');
+  if (gosinCols.length > 0) {
+    sinSals.push({ name: '고신살', type: 'sinsal', description: '배우자 인연이 박하고 고독해지기 쉬운 별, 부부의 정이 멀어지거나 혼자만의 시간이 길어지는 기운', pillars: gosinCols });
+  }
+  const gwasukCols = findCols(gwasukMap[yearBranch] || '');
+  if (gwasukCols.length > 0) {
+    sinSals.push({ name: '과숙살', type: 'sinsal', description: '배우자와 정이 멀어지고 외로움이 따르는 별, 홀로 지내는 시간이 많아지고 부부 사이 거리감이 생기는 기운', pillars: gwasukCols });
+  }
+
+  // 음양착살 (陰陽差錯殺) — 일주 기준 12일주, 배우자·처가 인연이 어긋나는 신살
+  const eumYangChak = ['병자', '정축', '무인', '신묘', '임진', '계사', '병오', '정미', '무신', '신유', '임술', '계해'];
+  if (eumYangChak.includes(dayGan + dayBranch)) {
+    sinSals.push({ name: '음양착살', type: 'sinsal', description: '배우자·처가(외가)와의 인연이 어긋나기 쉬운 별, 부부 사이 오해와 거리감, 혼인의 굴곡을 조심해야 하는 기운', pillars: [1] });
+  }
+
   // 백호대살 (白虎大殺) — 일간 기준 특정 지지
   const baekho: Record<string, string> = {
     '갑': '진', '을': '사', '병': '오', '정': '미',
