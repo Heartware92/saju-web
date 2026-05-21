@@ -2040,8 +2040,8 @@ function MoreFortuneSectionedCard({
         })}
       </div>
 
-      {/* 다시 풀이 버튼 */}
-      {!isArchiveMode && (
+      {/* 다시 풀이 버튼 — study(학업·시험운)는 사용자 요청으로 제거 */}
+      {!isArchiveMode && category !== 'study' && (
         <div style={{ marginTop: 22, padding: '0 4px' }}>
           <button
             type="button"
