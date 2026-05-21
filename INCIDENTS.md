@@ -17,6 +17,53 @@
 
 ---
 
+## 2026-05-21 20:10 — 택일 풀이 로딩바 20% → 0% 반짝 사고 `[ux]`
+
+### 증상
+- 사용자: "처음 풀이 눌리고 로딩창에서 20% 차다가 다시 반짝 하면서 0% 부터
+  시작되는 이런 현상이 있어"
+
+### 영향 범위
+- 택일 운세(TaekilPage → TaekilResultPage) 새 풀이 시도 시 매번 발생
+- 2026-05-20 23:30 궁합 사고 entry 가 "택일 등 1-pass 카테고리 마이그레이션 시
+  동일 사고 가능" 이라 예고했던 그 사고가 실제 발생
+
+### 진단 과정
+1. INCIDENTS.md 의 궁합(2026-05-20 23:30) 사고 entry 확인 → 동일 패턴 예고됨
+2. 택일은 2페이지 구조 확인 — TaekilPage(로딩바 A) → router.push →
+   TaekilResultPage(로딩바 B). 궁합은 1페이지라 원인이 다름
+3. AILoadingBar startedAt 흐름 분석 → 결과 페이지 로딩바가 fortuneJob 미로딩
+   상태로 마운트됨을 확인
+
+### 진짜 원인
+**2페이지 전환 시 로딩바 시간 원점 단절**:
+- TaekilPage 로딩바 A 는 mount(클릭) 시점부터 자연 증가 → POST ~2~4초 동안 ~20%
+- router.push 로 TaekilResultPage 진입 → 새 AILoadingBar B 마운트
+- 이때 `fortuneJob` 은 아직 null → `startedAt` undefined →
+  AILoadingBar useState 초기값 `0` → **0% 부터 시작**
+- fortuneJob 도착 후 startedAt 기반 보정되지만 이미 0% 반짝이 노출됨
+
+### 해결
+- 커밋 `(이번 commit)` — 로딩바 시간 원점을 두 페이지가 공유:
+  - TaekilPage: 클릭 시각 `loadStartedAt = Date.now()` 캡처 →
+    `router.push(.../result?jobId=xxx&t=${loadStartedAt})`
+  - TaekilResultPage: `?t=` 파라미터를 fallback startedAt 으로 사용 →
+    `startedAt={fortuneJob?.startedAt ?? fallbackStartedAt}`
+  - 결과 페이지 로딩바가 첫 렌더부터 클릭 시각 기준 경과율로 시작 →
+    0% 반짝 제거. fortuneJob 도착 시 Math.max 로 단조 증가 유지
+
+### 재발 방지
+- 2페이지(입력→결과) 구조 카테고리는 결과 페이지 AILoadingBar 에 반드시
+  시간 원점(startedAt 또는 ?t=) 을 넘길 것
+- 신규 카테고리 마이그레이션 체크리스트에 "페이지 전환 시 로딩바 연속성" 추가
+
+### 관련
+- 커밋: (이번 commit)
+- 파일: `src/pages/TaekilPage.tsx`, `src/pages/TaekilResultPage.tsx`
+- 선행 사고: 2026-05-20 23:30 (궁합 jump down) — 동일 계열
+
+---
+
 ## 2026-05-20 23:55 — ?jobId 모드에서 "기존 풀이 보겠습니까?" 모달 사고 `[ux]`
 
 ### 증상

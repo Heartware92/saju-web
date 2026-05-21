@@ -240,6 +240,9 @@ export default function TaekilPage() {
 
     setAiError(null);
     setAiLoading(true);
+    // 로딩 시작 시각 — 결과 페이지 AILoadingBar 가 fortuneJob 도착 전에도
+    // 이 시각 기준 경과율로 시작하도록 URL 로 전달 (20%→0% 반짝 사고 차단).
+    const loadStartedAt = Date.now();
     try {
       const { data: sessionData } = await supabase.auth.getSession();
       const accessToken = sessionData.session?.access_token;
@@ -272,8 +275,9 @@ export default function TaekilPage() {
         throw new Error(errData.error || '풀이 요청에 실패했어요.');
       }
       const { jobId } = (await res.json()) as { jobId: string };
-      // 결과 페이지로 navigate — TaekilResultPage 가 ?jobId 로 Realtime 구독
-      router.push(`/saju/taekil/result?jobId=${jobId}`);
+      // 결과 페이지로 navigate — TaekilResultPage 가 ?jobId 로 Realtime 구독.
+      // ?t= 로 로딩 시작 시각 전달 → 결과 페이지 로딩바가 0% 부터 새로 시작하지 않음.
+      router.push(`/saju/taekil/result?jobId=${jobId}&t=${loadStartedAt}`);
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : '오류가 발생했어요.';
       setAiError(msg);

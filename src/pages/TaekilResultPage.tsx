@@ -221,6 +221,12 @@ export default function TaekilResultPage() {
   const searchParams = useSearchParams();
   const recordId = searchParams?.get('recordId') ?? null;
   const urlJobId = searchParams?.get('jobId') ?? null;
+  // TaekilPage 가 넘긴 로딩 시작 시각(ms) — fortuneJob 도착 전 AILoadingBar 가
+  // 0% 부터 새로 시작하지 않도록 fallback startedAt 으로 사용.
+  const loadStartedParam = searchParams?.get('t') ?? null;
+  const fallbackStartedAt = loadStartedParam
+    ? new Date(Number(loadStartedParam)).toISOString()
+    : null;
   const { user } = useUserStore();
   const { profiles, fetchProfiles } = useProfileStore();
 
@@ -351,7 +357,7 @@ export default function TaekilResultPage() {
         minLabel="20초"
         maxLabel="1분"
         estimatedSeconds={35}
-        startedAt={fortuneJob?.startedAt}
+        startedAt={fortuneJob?.startedAt ?? fallbackStartedAt}
         messages={[
           '선택한 날짜의 일진을 분석하는 중입니다',
           '사주 원국과의 합충을 짚는 중입니다',
