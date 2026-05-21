@@ -859,7 +859,7 @@ export default function TaekilResultPage() {
                           color: 'var(--text-secondary)',
                           fontFamily: 'var(--font-body)',
                         }}>
-                          이 풀이는 종합 분석 기능 추가 전에 받으셨어요. 같은 사주·날짜로 다시 풀이 받으시면 본인 사주와 행사를 엮은 맞춤 종합 분석이 추가돼요.
+                          이 풀이는 종합 분석 기능 추가 전에 받으셨어요. 같은 사주·날짜로 다시 풀이 받으시면 본인 사주와 택일 내용을 엮은 맞춤 종합 분석이 추가돼요.
                         </p>
                       </div>
                     </div>
@@ -893,7 +893,7 @@ export default function TaekilResultPage() {
                     return (
                       <div className="mt-3">
                         <SectionCollapsible
-                          title={eventLabel ? `${eventLabel}에 대한 조언` : '이 행사에 대한 조언'}
+                          title={eventLabel ? `${eventLabel}에 대한 조언` : '이 일에 대한 조언'}
                           defaultOpen={false}
                           enterDelay={0.15}
                         >

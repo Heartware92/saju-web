@@ -46,7 +46,20 @@ export function AILoadingBar({
     const elapsedSec = (Date.now() - new Date(startedAt).getTime()) / 1000;
     return progressFromElapsed(elapsedSec, estimatedSeconds);
   });
-  const [msgIdx, setMsgIdx] = useState(0);
+  // 메시지 인덱스 — 이어받은 로딩(startedAt 경과 있음)이면 경과 기준 인덱스로 시작.
+  const [msgIdx, setMsgIdx] = useState<number>(() => {
+    if (!startedAt) return 0;
+    const elapsedSec = (Date.now() - new Date(startedAt).getTime()) / 1000;
+    return Math.floor(Math.max(0, elapsedSec) / 2.8) % messages.length;
+  });
+
+  // 페이지 전환 등으로 "이어받은" 로딩인지 — startedAt 기준 0.8초 이상 경과했으면
+  // 새 시작이 아니라 이어짐. 이 경우 행성·상단 등장 애니메이션을 건너뛰어
+  // (initial=false) 화면이 refresh 되는 느낌을 차단.
+  const [isContinuation] = useState<boolean>(() => {
+    if (!startedAt) return false;
+    return Date.now() - new Date(startedAt).getTime() > 800;
+  });
 
   // startedAt prop 늦게 도착(useFortuneJob select 결과)했을 때 즉시 보정.
   // ⚠️ 단조 증가 보장 — Math.max 로 기존 progress 보다 작은 값으로 덮어쓰지 않음.
@@ -151,7 +164,7 @@ export function AILoadingBar({
         {/* 상단 컨텐츠 (연도·일주 등) */}
         {topContent && (
           <motion.div
-            initial={{ opacity: 0, y: -8 }}
+            initial={isContinuation ? false : { opacity: 0, y: -8 }}
             animate={{ opacity: 1, y: 0 }}
             className="text-center"
           >
@@ -208,7 +221,7 @@ export function AILoadingBar({
 
       {/* 코스믹 행성 — 남은 공간 가운데. Layout 유지하면서 가용 영역 안에 fit */}
       <motion.div
-        initial={{ opacity: 0, scale: 0.85 }}
+        initial={isContinuation ? false : { opacity: 0, scale: 0.85 }}
         animate={{ opacity: 1, scale: 1 }}
         transition={{ duration: 1, delay: 0.2, ease: [0.16, 1, 0.3, 1] }}
         className="flex-1 min-h-0 w-full flex items-center justify-center"

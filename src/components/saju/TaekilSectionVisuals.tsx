@@ -80,7 +80,9 @@ function DayChip({ day, rank }: { day: TaekilDay; rank?: number }) {
 // 1) 종합 분석 — 행사 + 후보 날짜 등급 분포
 // ─────────────────────────────────────────────────────────────────────────────
 function ComprehensiveVisual({ result, days }: { result: TaekilResult; days: TaekilDay[] }) {
-  const eventLabel = result.subItem || result.customLabel || result.categoryLabel || '행사';
+  const eventLabel = result.subItem || result.customLabel || result.categoryLabel || '일';
+  // 수술·시술·치유·출산은 행사가 아니므로 '일' 로 지칭
+  const eventNoun = (result.category === 'heal' || result.category === 'birth') ? '일' : '행사';
   const counts: Record<TaekilGrade, number> = { 대길: 0, 길: 0, 평: 0, 흉: 0 };
   days.forEach((d) => { counts[d.grade] += 1; });
   const best = days[0]; // 점수순 정렬 가정 (pickedDays)
@@ -93,7 +95,7 @@ function ComprehensiveVisual({ result, days }: { result: TaekilResult; days: Tae
           className="inline-flex items-center rounded-full px-3 py-1.5 text-[13.5px] font-bold border"
           style={{ background: 'rgba(252,232,178,0.15)', color: '#FCE8B2', borderColor: 'rgba(252,232,178,0.45)' }}
         >
-          행사 · {eventLabel}
+          {eventNoun} · {eventLabel}
         </span>
         <span
           className="inline-flex items-center rounded-full px-3 py-1.5 text-[13.5px] font-bold border"
