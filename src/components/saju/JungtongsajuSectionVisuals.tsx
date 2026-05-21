@@ -10,6 +10,7 @@
  * (2열 그리드 · 색칩 · 미니 막대 · 라디얼 그라데이션).
  */
 
+import { useState } from 'react';
 import type { SajuResult, DaeWoon } from '../../utils/sajuCalculator';
 import { determineGyeokguk } from '../../engine/gyeokguk';
 import { getDayPillarTraits } from '../../constants/gapjaTraits';
@@ -157,6 +158,59 @@ function SectionCardWrap({
         </span>
       </div>
       {children}
+    </div>
+  );
+}
+
+/**
+ * 신살·길성 칩 리스트 — 칩만 한 줄로 나열, 탭하면 그 아래 설명 인라인 펼침.
+ * 쭉 펼쳐 스크롤 잡아먹던 신살 카드 (건강운·인간관계 귀인) 를 컴팩트하게.
+ * 택일운세 키워드 칩과 같은 인터랙션 패턴.
+ */
+function SinsalChipList({
+  items,
+  accent,
+}: {
+  items: { name: string; desc: string }[];
+  accent: string;
+}) {
+  const [openIdx, setOpenIdx] = useState<number | null>(null);
+  return (
+    <div className="flex flex-col gap-2.5">
+      <div className="flex flex-wrap gap-2">
+        {items.map((it, i) => {
+          const open = openIdx === i;
+          return (
+            <button
+              key={i}
+              type="button"
+              onClick={() => setOpenIdx(open ? null : i)}
+              className="inline-flex items-center gap-1.5 rounded-full px-3.5 py-2 text-[16px] font-bold border transition-all active:scale-[0.97]"
+              style={{
+                background: open ? `${accent}30` : `${accent}14`,
+                color: accent,
+                borderColor: `${accent}${open ? 'aa' : '55'}`,
+              }}
+            >
+              {it.name}
+              <span className="text-[11px] opacity-60">{open ? '▲' : '▼'}</span>
+            </button>
+          );
+        })}
+      </div>
+      {openIdx !== null && items[openIdx] && (
+        <div
+          className="rounded-xl px-4 py-3 border"
+          style={{ background: `${accent}14`, borderColor: `${accent}55` }}
+        >
+          <span className="text-[18px] font-bold block mb-1.5" style={{ color: 'var(--text-primary)' }}>
+            {items[openIdx].name}
+          </span>
+          <span className="text-[17px] text-text-secondary leading-relaxed" style={{ wordBreak: 'keep-all' }}>
+            {items[openIdx].desc}
+          </span>
+        </div>
+      )}
     </div>
   );
 }
@@ -589,22 +643,10 @@ function HealthVisual({ saju }: { saju: SajuResult }) {
         {healthSinsals.length === 0 ? (
           <span className="text-[17px] text-text-secondary leading-relaxed">건강 관련 주의 신살 없음 — 무난한 구조</span>
         ) : (
-          <div className="flex flex-col gap-2">
-            {healthSinsals.map((s, i) => (
-              <div
-                key={i}
-                className="rounded-xl px-4 py-3 border flex flex-col gap-1.5"
-                style={{ background: `${SIGNAL.warn}14`, borderColor: `${SIGNAL.warn}55` }}
-              >
-                <span className="text-[18px] font-bold" style={{ color: 'var(--text-primary)' }}>
-                  {s.name}
-                </span>
-                <span className="text-[17px] text-text-secondary leading-relaxed" style={{ wordBreak: 'keep-all' }}>
-                  {healthSinsalDesc(s.name)}
-                </span>
-              </div>
-            ))}
-          </div>
+          <SinsalChipList
+            accent={SIGNAL.warn}
+            items={healthSinsals.map((s) => ({ name: s.name, desc: healthSinsalDesc(s.name) }))}
+          />
         )}
       </SectionCardWrap>
     </div>
@@ -657,22 +699,10 @@ function RelationVisual({ saju }: { saju: SajuResult }) {
             귀인 길성 없음 — 인연을 스스로 일구는 자생형
           </span>
         ) : (
-          <div className="flex flex-col gap-2">
-            {guiSinsals.map((s, i) => (
-              <div
-                key={i}
-                className="rounded-xl px-4 py-3 border flex flex-col gap-1.5"
-                style={{ background: `${SIGNAL.good}14`, borderColor: `${SIGNAL.good}55` }}
-              >
-                <span className="text-[18px] font-bold" style={{ color: 'var(--text-primary)' }}>
-                  {s.name}
-                </span>
-                <span className="text-[17px] text-text-secondary leading-relaxed" style={{ wordBreak: 'keep-all' }}>
-                  {s.description}
-                </span>
-              </div>
-            ))}
-          </div>
+          <SinsalChipList
+            accent={SIGNAL.good}
+            items={guiSinsals.map((s) => ({ name: s.name, desc: s.description }))}
+          />
         )}
       </SectionCardWrap>
     </div>
