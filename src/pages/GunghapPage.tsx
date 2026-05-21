@@ -173,7 +173,7 @@ const defaultPet: PetInput = {
   adoptionDate: '',
 };
 
-type Step = 'landing' | 'category' | 'input' | 'result';
+type Step = 'category' | 'input' | 'result';
 
 const STEP_LABELS: Record<string, string> = {
   category: '관계 선택',
@@ -331,7 +331,7 @@ export default function GunghapPage() {
   const effectiveJobId = urlJobId ?? createdJobId;
   const { job: fortuneJob } = useFortuneJob(effectiveJobId);
 
-  const [step, setStep] = useState<Step>(urlRecordId || urlJobId ? 'result' : 'landing');
+  const [step, setStep] = useState<Step>(urlRecordId || urlJobId ? 'result' : 'category');
   const [category, setCategory] = useState<GunghapCategory>('lover');
   const [customLabel, setCustomLabel] = useState('');
   const [myRole, setMyRole] = useState('');
@@ -371,6 +371,8 @@ export default function GunghapPage() {
   // 기존 궁합 결과 목록
   const [archiveList, setArchiveList] = useState<GunghapArchiveItem[]>([]);
   const [archiveLoading, setArchiveLoading] = useState(true);
+  // 이전 궁합 결과 리스트 모달 — 택일·지정일과 동일 UX. 진입 시 기록 있으면 표시.
+  const [showArchiveList, setShowArchiveList] = useState(false);
   const [forceNewReading, setForceNewReading] = useState(false);
 
   // ── 로딩 안전장치: 70초 초과 시 강제 해제 ──
@@ -607,28 +609,27 @@ export default function GunghapPage() {
   }, [activeRecordId]);
 
   // ── 궁합 기존 결과 목록 로딩 — landing 진입 시마다 재조회 ──
-  // 분석 완료 후 "처음으로"로 돌아왔을 때 방금 저장된 풀이가 즉시 목록에 반영되도록
-  // step === 'landing' 으로 전환될 때마다 fresh fetch.
+  // 진입 시 이전 궁합 결과를 1회 fetch — 기록이 있으면 리스트 모달을 띄운다.
+  // (택일·지정일과 동일 UX — landing 화면 대신 모달)
   useEffect(() => {
     if (isArchiveMode) { setArchiveLoading(false); return; }
-    if (step !== 'landing') return;
     let cancelled = false;
     setArchiveLoading(true);
     findGunghapArchives(20).then(list => {
       if (cancelled) return;
       setArchiveList(list);
-      if (list.length === 0) setStep('category');
+      if (list.length > 0) setShowArchiveList(true);
     }).catch(() => {}).finally(() => {
       if (!cancelled) setArchiveLoading(false);
     });
     return () => { cancelled = true; };
-  }, [isArchiveMode, step]);
+  }, [isArchiveMode]);
 
   // 궁합 메인(landing)에 머무는 동안 백그라운드 잡이 완료되면 이전 결과 목록을 자동 갱신.
   // findGunghapArchives 는 status=done 만 반환하므로, 잡이 done 으로 UPDATE 되는 순간 재fetch 하면
   // 그때 목록에 새 결과가 등장한다.
   useEffect(() => {
-    if (isArchiveMode || step !== 'landing' || !user) return;
+    if (isArchiveMode || step !== 'category' || !user) return;
     const ch = supabase
       .channel(`gunghap-archive:${user.id}`)
       .on(
@@ -1014,7 +1015,7 @@ export default function GunghapPage() {
   };
 
   const reset = () => {
-    setStep('landing');
+    setStep('category');
     setResult('');
     setError('');
     setOther(defaultOther);
@@ -1081,26 +1082,25 @@ export default function GunghapPage() {
       router.back();
       return;
     } else if (step === 'result' && isArchiveMode) {
-      // 내부 랜딩에서 기존 결과 클릭 → 랜딩으로
+      // 모달에서 기존 결과 클릭 후 진입 → 궁합 메인(카테고리)으로
       setActiveRecordId(null);
       setArchiveMeta(null);
       setResult('');
-      setStep('landing');
+      setStep('category');
       return;
     } else if (step === 'result') {
       setStep('input');
     } else if (step === 'input') {
       setStep('category');
-    } else if (step === 'category') {
-      setStep('landing');
     } else if (typeof window !== 'undefined') {
+      // 카테고리(첫 화면)에서 뒤로 → 홈
       window.history.length > 1 ? window.history.back() : window.location.assign('/');
     }
   };
 
   const flowSteps: Step[] = ['category', 'input', 'result'];
   const flowIdx = flowSteps.indexOf(step);
-  const showStepper = step !== 'landing' && !isArchiveMode;
+  const showStepper = !isArchiveMode;
 
   return (
     <div className="min-h-screen pb-24">
@@ -1147,83 +1147,19 @@ export default function GunghapPage() {
 
       <AnimatePresence mode="wait">
 
-        {/* ── LANDING: 기존 결과 + 새로 풀이 ── */}
-        {step === 'landing' && (
-          <motion.div key="landing" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -12 }} className="px-5 space-y-5">
-
-            {/* 새로 궁합 보기 버튼 — 최상단 */}
-            <button
-              onClick={() => { setForceNewReading(true); setStep('category'); }}
-              className="w-full py-4 rounded-2xl bg-gradient-to-r from-cta to-cta-active text-white font-bold text-[17px] active:scale-[0.98] transition-all"
-            >
-              새로 궁합 보기
-            </button>
-
-            {/* 기존 궁합 결과 */}
-            {archiveLoading ? (
-              <div className="flex items-center justify-center py-8">
-                <div className="w-8 h-8 border-3 border-cta border-t-transparent rounded-full animate-spin" />
-              </div>
-            ) : archiveList.length > 0 ? (
-              <div>
-                <p className="text-[13px] font-bold text-text-secondary uppercase tracking-wider mb-3">이전 궁합 결과</p>
-                <div className="space-y-2">
-                  {archiveList.map((item, idx) => {
-                    const hasPartner = !!item.partner_name;
-                    const rawCatLabel = item.custom_label || CATEGORY_LABEL_MAP[item.gunghap_category] || item.gunghap_category;
-                    // 옛 풀이는 partner_name·gunghap_category 모두 비어있을 수 있음. 카테고리 비면 "이전 궁합" placeholder
-                    const catLabel = rawCatLabel || '이전 궁합';
-                    const dateStr = new Date(item.created_at).toLocaleDateString('ko-KR', { month: 'short', day: 'numeric' });
-                    return (
-                      <motion.button
-                        key={item.id}
-                        initial={{ opacity: 0, y: 8 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: idx * 0.03 }}
-                        onClick={() => {
-                          setActiveRecordId(item.id);
-                        }}
-                        className="w-full text-left rounded-2xl bg-space-surface/60 border border-[var(--border-subtle)] p-4 hover:border-cta/50 transition-all active:scale-[0.98]"
-                      >
-                        <div className="flex items-center gap-3">
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2">
-                              <span className="text-[15px] font-bold text-text-primary">{item.profile_name}</span>
-                              {hasPartner && (
-                                <>
-                                  <span className="text-text-tertiary text-[13px]">↔</span>
-                                  <span className="text-[15px] font-bold text-text-primary">{item.partner_name}</span>
-                                </>
-                              )}
-                            </div>
-                            <div className="flex items-center gap-2 mt-1">
-                              <span className="text-[12px] px-2 py-0.5 rounded-full bg-cta/15 text-cta font-medium">
-                                {catLabel}
-                              </span>
-                              <span className="text-[12px] text-text-tertiary">{dateStr}</span>
-                            </div>
-                          </div>
-                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--text-tertiary)" strokeWidth="2" strokeLinecap="round">
-                            <path d="M9 18l6-6-6-6" />
-                          </svg>
-                        </div>
-                      </motion.button>
-                    );
-                  })}
-                </div>
-              </div>
-            ) : (
-              <div className="text-center py-6">
-                <p className="text-text-tertiary text-[15px]">아직 궁합 결과가 없어요</p>
-              </div>
-            )}
-
-          </motion.div>
-        )}
-
         {/* ── STEP 1: 관계 유형 선택 ── */}
         {step === 'category' && (
           <motion.div key="category" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="px-5 space-y-5">
+            {/* 이전 궁합 결과 보기 — 기록 있을 때만, 리스트 모달 재호출 */}
+            {!isArchiveMode && archiveList.length > 0 && (
+              <button
+                type="button"
+                onClick={() => setShowArchiveList(true)}
+                className="w-full py-3 rounded-2xl border border-cta/40 text-cta font-semibold text-[14px] hover:bg-cta/10 transition-all"
+              >
+                이전 궁합 결과 보기 ({archiveList.length})
+              </button>
+            )}
             {CATEGORY_GROUPS.map(group => (
               <div key={group.groupLabel}>
                 <p className={`text-[13px] font-bold mb-2.5 uppercase tracking-wider ${group.groupColor}`}>
@@ -1920,6 +1856,88 @@ export default function GunghapPage() {
           </motion.div>
         )}
 
+      </AnimatePresence>
+
+      {/* 이전 궁합 결과 리스트 모달 — 택일·지정일과 동일 UX */}
+      <AnimatePresence>
+        {showArchiveList && !isArchiveMode && archiveList.length > 0 && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.15 }}
+              className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm"
+              onClick={() => setShowArchiveList(false)}
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.96 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.96 }}
+              transition={{ duration: 0.18, ease: [0.25, 0.46, 0.45, 0.94] }}
+              className="fixed inset-0 z-50 flex items-center justify-center px-5 pointer-events-none"
+            >
+              <div className="relative w-full max-w-[400px] rounded-2xl bg-[rgba(20,12,38,0.97)] border border-[var(--border-subtle)] p-6 text-center shadow-2xl pointer-events-auto">
+                <button
+                  type="button"
+                  onClick={() => setShowArchiveList(false)}
+                  className="absolute top-3 right-3 w-8 h-8 flex items-center justify-center rounded-full text-text-tertiary hover:text-text-primary hover:bg-white/10 transition-colors"
+                  aria-label="닫기"
+                >
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+                    <path d="M18 6L6 18M6 6l12 12" />
+                  </svg>
+                </button>
+                <h3 className="text-[17px] font-bold text-text-primary mb-2">이전 궁합 기록이 있어요</h3>
+                <p className="text-[14px] text-text-secondary leading-relaxed mb-3">
+                  다시 보고 싶은 결과를 선택하세요.
+                </p>
+                <div className="max-h-[240px] overflow-y-auto space-y-1.5 mb-4 px-1">
+                  {archiveList.map(item => {
+                    const rawCatLabel = item.custom_label || CATEGORY_LABEL_MAP[item.gunghap_category] || item.gunghap_category;
+                    const catLabel = rawCatLabel || '이전 궁합';
+                    const dateStr = new Date(item.created_at).toLocaleDateString('ko-KR');
+                    const names = item.partner_name
+                      ? `${item.profile_name} ↔ ${item.partner_name}`
+                      : item.profile_name;
+                    return (
+                      <button
+                        key={item.id}
+                        type="button"
+                        onClick={() => { setShowArchiveList(false); setActiveRecordId(item.id); }}
+                        className="w-full min-h-10 py-2 px-3 rounded-lg border border-[var(--border-subtle)] text-[14px] text-text-primary font-medium hover:bg-cta/10 hover:border-cta/40 transition-all flex items-center justify-between gap-2"
+                      >
+                        <span className="flex items-center gap-2 min-w-0">
+                          <span className="text-[12px] font-bold text-cta bg-cta/10 px-2 py-0.5 rounded-md whitespace-nowrap flex-shrink-0">
+                            {catLabel}
+                          </span>
+                          <span className="truncate">{names}</span>
+                        </span>
+                        <span className="text-[12px] text-text-tertiary flex-shrink-0 whitespace-nowrap">{dateStr}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+                <div className="space-y-2.5">
+                  <button
+                    type="button"
+                    onClick={() => { setShowArchiveList(false); setForceNewReading(true); }}
+                    className="block w-full h-12 rounded-lg bg-gradient-to-r from-cta to-cta-active text-white font-bold text-[15px] hover:opacity-90 transition-all"
+                  >
+                    새로 궁합 보기
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShowArchiveList(false)}
+                    className="block w-full h-12 rounded-lg border border-[var(--border-subtle)] text-text-secondary font-medium text-[15px] hover:bg-white/5 transition-all"
+                  >
+                    취소
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </>
+        )}
       </AnimatePresence>
     </div>
   );
