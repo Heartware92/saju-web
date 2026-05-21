@@ -299,48 +299,73 @@ const TIME_BY_ELEMENT: Record<string, { label: string; start: number; end: numbe
   '금': { label: '오후 3~7시', start: 15, end: 19 },
   '수': { label: '밤 9시~새벽 1시', start: 21, end: 25 },
 };
+// X 오행을 생(生)하는 오행 — 용신을 북돋우는 기운. 2순위 시간대 산출에 사용.
+const GENERATES_ELEMENT: Record<string, string> = {
+  '화': '목', '토': '화', '금': '토', '수': '금', '목': '수',
+};
 function EnvironmentVisual({ saju }: { saju: SajuResult }) {
-  const el = saju.yongSinElement;
-  const slot = TIME_BY_ELEMENT[el] ?? TIME_BY_ELEMENT['목'];
-  const color = ELEMENT_COLOR[el] ?? SIGNAL.info;
-  // 24칸 — 각 시간(0~23) 이 최적 구간이면 색칠
-  const isPeak = (h: number): boolean => {
+  const el1 = saju.yongSinElement;
+  const el2 = GENERATES_ELEMENT[el1] ?? '목';
+  const slot1 = TIME_BY_ELEMENT[el1] ?? TIME_BY_ELEMENT['목'];
+  const slot2 = TIME_BY_ELEMENT[el2] ?? TIME_BY_ELEMENT['수'];
+  const c1 = ELEMENT_COLOR[el1] ?? SIGNAL.info;
+  const c2 = ELEMENT_COLOR[el2] ?? SIGNAL.info;
+
+  const inSlot = (slot: { start: number; end: number }, h: number): boolean => {
     if (slot.end <= 24) return h >= slot.start && h < slot.end;
-    // 익일로 넘어가는 경우 (수)
-    return h >= slot.start || h < slot.end - 24;
+    return h >= slot.start || h < slot.end - 24; // 익일로 넘어감
   };
+  // 심야(밤 11시~새벽 5시)와 겹치는지 — 수면 시간 안내용
+  const overlapsSleep = (slot: { start: number; end: number }): boolean =>
+    slot.end > 23 || slot.start >= 23 || slot.start < 5;
+  const anyLateNight = overlapsSleep(slot1) || overlapsSleep(slot2);
+
   return (
-    <SectionCardWrap accent={color} title="최적 공부 시간대" titleSub={`용신 ${el}`}>
-      {/* 24시간 띠 */}
+    <SectionCardWrap accent={c1} title="최적 공부 시간대" titleSub="TOP 2">
+      {/* 24시간 띠 — 1순위 진한색 / 2순위 옅은색 */}
       <div className="flex gap-[2px] mb-2">
         {Array.from({ length: 24 }, (_, h) => {
-          const peak = isPeak(h);
+          const p1 = inSlot(slot1, h);
+          const p2 = inSlot(slot2, h);
+          const bg = p1 ? c1 : p2 ? `${c2}88` : 'rgba(255,255,255,0.06)';
           return (
             <div
               key={h}
               className="flex-1 rounded-[2px]"
-              style={{
-                height: 22,
-                background: peak ? color : 'rgba(255,255,255,0.06)',
-                boxShadow: peak ? `0 0 6px ${color}88` : 'none',
-              }}
+              style={{ height: 22, background: bg, boxShadow: p1 ? `0 0 6px ${c1}88` : 'none' }}
               title={`${h}시`}
             />
           );
         })}
       </div>
-      {/* 시각 눈금 — 0·6·12·18·24 */}
       <div className="flex justify-between text-[11px] text-text-tertiary mb-3">
         <span>0시</span><span>6시</span><span>12시</span><span>18시</span><span>24시</span>
       </div>
-      <div className="rounded-xl px-3.5 py-2.5 border" style={{ background: `${color}14`, borderColor: `${color}55` }}>
-        <span className="text-[15px] font-bold" style={{ color }}>
-          집중 황금 시간 — {slot.label}
+
+      {/* 1순위 */}
+      <div className="rounded-xl px-3.5 py-2.5 border mb-2" style={{ background: `${c1}14`, borderColor: `${c1}55` }}>
+        <span className="text-[15px] font-bold" style={{ color: c1 }}>
+          1순위 · {slot1.label}
         </span>
         <p className="text-[13px] text-text-tertiary mt-1 leading-snug">
-          용신 {el}의 기운이 오르는 시간대예요. 어려운 과목·암기는 이 구간에 배치하면 흡수율이 높아집니다.
+          용신 {el1}의 기운이 가장 오르는 시간 — 어려운 과목·암기를 이 구간에 배치하면 흡수율이 높아져요.
         </p>
       </div>
+      {/* 2순위 */}
+      <div className="rounded-xl px-3.5 py-2.5 border" style={{ background: `${c2}14`, borderColor: `${c2}55` }}>
+        <span className="text-[15px] font-bold" style={{ color: c2 }}>
+          2순위 · {slot2.label}
+        </span>
+        <p className="text-[13px] text-text-tertiary mt-1 leading-snug">
+          용신을 북돋우는 {el2} 기운의 시간 — 1순위가 어려운 날의 대안 공부 시간으로 좋아요.
+        </p>
+      </div>
+
+      {anyLateNight && (
+        <p className="text-[12px] text-text-tertiary mt-2.5 leading-snug" style={{ wordBreak: 'keep-all' }}>
+          ※ 두 시간대 중 심야가 수면과 겹친다면, 그 기운이 차오르기 직전(저녁 무렵)을 활용하거나 나머지 한 시간대를 우선하세요.
+        </p>
+      )}
     </SectionCardWrap>
   );
 }
@@ -359,8 +384,11 @@ function SubjectsVisual({ saju }: { saju: SajuResult }) {
   const order = ['목', '화', '토', '금', '수'] as const;
   const pct = saju.elementPercent;
   const max = Math.max(1, ...order.map((e) => pct[e] ?? 0));
-  const strongEl = saju.yongSinElement;
-  const weakEl = saju.weakElement;
+  // ★ 강/약은 막대(오행 분포) 기준 — 가장 많은 오행이 강, 가장 적은 오행이 약.
+  //   (이전엔 용신/약한오행 기준이라 0% 오행에 "강" 이 붙어 막대와 모순됐음)
+  const ranked = [...order].sort((a, b) => (pct[b] ?? 0) - (pct[a] ?? 0));
+  const strongEl = ranked[0];
+  const weakEl = ranked[ranked.length - 1];
   return (
     <SectionCardWrap accent={SIGNAL.info} title="과목 강·약 지도">
       <div className="space-y-2 mb-3">
@@ -431,8 +459,8 @@ function TimingVisual({ saju }: { saju: SajuResult }) {
   const toAge = (yr: number) => (birthYear > 0 ? yr - birthYear : yr);
   const valid = saju.daeWoon.filter((d) => d.gan && d.zhi);
   const curIdx = valid.findIndex((d) => now >= d.startAge && now <= d.endAge);
-  // 현재 + 향후 3개
-  const shown = curIdx >= 0 ? valid.slice(curIdx, curIdx + 4) : valid.slice(0, 4);
+  // 배움은 끝이 없다 — 현재 대운부터 데이터 끝(약 90대)까지 전부 표시
+  const shown = curIdx >= 0 ? valid.slice(curIdx) : valid;
   const thisYear = saju.currentSeWoon;
 
   // 대운 십성이 학업에 유리한지 — 인성·식상이면 ★
