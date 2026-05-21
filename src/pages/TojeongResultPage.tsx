@@ -34,6 +34,7 @@ import { ShareBar } from '@/components/share/ShareBar';
 import { ResultFooterActions } from '@/components/ui/ResultFooterActions';
 import { RadarChart } from '../components/charts/RadarChart';
 import { LuckyVisualCard, ELEMENT_LUCKY } from '../components/saju/LuckyVisualCard';
+import { renderTojeongSectionVisual } from '../components/saju/TojeongSectionVisuals';
 import { TOJEONG_SECTION_KEYS, TOJEONG_SECTION_LABELS, type TojeongSectionKey } from '../constants/prompts';
 import type { FortuneGrade } from '../engine/periodFortune';
 
@@ -1081,6 +1082,8 @@ export default function TojeongResultPage() {
                   borderColor: 'rgba(248,113,113,0.30)',
                 } : {})}
               >
+                {/* 섹션별 시각 데이터 카드 — 본문 줄글 위 한눈 요약 */}
+                {renderTojeongSectionVisual(key, tojeong, reading, aiDomainScores)}
                 <div className="text-[17px] text-text-secondary leading-[1.85] tracking-[-0.005em] space-y-3">
                   {bodyText.split(/\n\n+/).map((para, pi) => (
                     <p key={pi} className="whitespace-pre-line">{renderEmphasis(para.trim())}</p>

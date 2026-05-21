@@ -232,18 +232,18 @@ export function buildTojeongReading(result: TojeongResult): TojeongReading {
   const warnings: string[] = [];
   if (entry.grade === '대길' || entry.grade === '길') {
     advice.push('중요한 결단·시도·투자는 상반기에 몰아서 진행');
-    advice.push('믿을 만한 인연에게 협력 제안 — 결실 가능성 큼');
+    advice.push('믿을 만한 인연에게 협력을 제안하면 결실 가능성이 커요');
     advice.push('건강한 습관을 정착시키기에도 좋은 해');
-    warnings.push('자만·독주 주의 — 주변 의견 경청');
+    warnings.push('자만하거나 독주하지 말고 주변 의견을 경청하기');
   } else if (entry.grade === '중길' || entry.grade === '평') {
     advice.push('작은 목표를 설정하고 꾸준히 달성');
     advice.push('가족·지인과의 관계 정돈에 시간 투자');
     advice.push('재정 상태 점검과 절약 습관 형성');
-    warnings.push('큰 투자·이직은 신중히 — 근거 없는 결단 금물');
+    warnings.push('큰 투자나 이직은 신중하게, 근거 없는 결단은 금물');
   } else {
     advice.push('몸을 낮추고 공부·정비에 힘쓰기');
     advice.push('지출 축소 및 비상 자금 확보');
-    advice.push('건강 검진 — 작은 증상도 조기 대응');
+    advice.push('건강 검진으로 작은 증상도 조기에 대응하기');
     warnings.push('말·문서 관련 문제 주의');
     warnings.push('낯선 사람과의 금전 거래 금물');
   }
