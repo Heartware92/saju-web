@@ -348,7 +348,9 @@ function EnvironmentVisual({ saju }: { saju: SajuResult }) {
           1순위 · {slot1.label}
         </span>
         <p className="text-[13px] text-text-tertiary mt-1 leading-snug">
-          용신 {el1}의 기운이 가장 오르는 시간 — 어려운 과목·암기를 이 구간에 배치하면 흡수율이 높아져요.
+          용신 {el1}의 기운이 가장 오르는 시간이에요.
+          <br />
+          어려운 과목·암기를 이 구간에 배치하면 흡수율이 높아져요.
         </p>
       </div>
       {/* 2순위 */}
@@ -357,12 +359,14 @@ function EnvironmentVisual({ saju }: { saju: SajuResult }) {
           2순위 · {slot2.label}
         </span>
         <p className="text-[13px] text-text-tertiary mt-1 leading-snug">
-          용신을 북돋우는 {el2} 기운의 시간 — 1순위가 어려운 날의 대안 공부 시간으로 좋아요.
+          용신을 북돋우는 {el2} 기운의 시간이에요.
+          <br />
+          1순위가 어려운 날의 대안 공부 시간으로 좋아요.
         </p>
       </div>
 
       {anyLateNight && (
-        <p className="text-[12px] text-text-tertiary mt-2.5 leading-snug" style={{ wordBreak: 'keep-all' }}>
+        <p className="text-[15px] text-text-secondary mt-3 leading-relaxed" style={{ wordBreak: 'keep-all' }}>
           ※ 두 시간대 중 심야가 수면과 겹친다면, 그 기운이 차오르기 직전(저녁 무렵)을 활용하거나 나머지 한 시간대를 우선하세요.
         </p>
       )}
