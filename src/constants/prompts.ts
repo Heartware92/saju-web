@@ -5821,7 +5821,7 @@ export const generateExRelationGunghapPrompt = (
   const crossInteractions = buildCrossJiziInteractions(me, other, myName, otherName);
   const ohaengCompare = buildOhaengCompare(me, other, myName, otherName);
 
-  return `당신은 사주명리 전문가입니다. 두 사람의 ${label} 관계 궁합을 아래 10개 섹션으로 풀이하세요.
+  return `당신은 사주명리 전문가입니다. 두 사람의 ${label} 관계 궁합을 아래 11개 섹션으로 풀이하세요.
 
 - 모든 분석은 반드시 제공된 사주 데이터를 근거로 서술. 추상적·일반론 금지. 구체적 글자(천간·지지)와 오행 관계를 인용할 것.
 [절대 규칙]
@@ -5861,10 +5861,13 @@ ${METAPHOR_KB}
 ${METAPHOR_TITLE_RULE}
 ${GUNGHAP_SECTION_FORMAT}
 
-[작성 지침 — 아래 10개 섹션을 순서대로 작성하세요]
+[작성 지침 — 아래 11개 섹션을 순서대로 작성하세요]
 
 ▶ 핵심 요약 (280~360자)
 이별 에너지 분석(${conflictCore})과 재결합 인력(${reconnectCheck})으로 이 이별의 전체 구조를 한마디로 선언. "이 두 사람의 이별은 ~한 이별이다"로 시작. 사주 구조상 이별이 필연이었는지, 타이밍 문제였는지 판정. 핵심 키워드 3개.
+
+▶ 오행 상보 관계 (260~340자)
+오행 분포 비교(${ohaengCompare})를 근거로, 관계 중 두 사람의 오행이 어떻게 서로를 끌어당기고 또 어떻게 부딪혔는지 서술하세요. 한쪽이 채워주던 오행과 결국 충돌했던 오행을 각각 짚어 "그때 왜 통했고 왜 어긋났는지"를 오행 차원에서 설명. 이 오행 관계가 이별에 어떤 영향을 미쳤는지도 한 줄로 마무리하세요.
 
 ▶ 왜 헤어졌는가 (280~360자)
 이별 에너지 분석(${conflictCore})과 기신 충돌 구조를 근거로 두 사람이 결국 헤어진 명리적 이유를 서술하세요. "단순한 감정 문제가 아닌 사주 구조가 만들어낸 필연적 패턴"으로 설명. 관계 중 반복됐을 갈등 패턴 2가지를 구체 장면으로 묘사하세요.
