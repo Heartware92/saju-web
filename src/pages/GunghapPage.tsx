@@ -1102,8 +1102,22 @@ export default function GunghapPage() {
   const flowIdx = flowSteps.indexOf(step);
   const showStepper = !isArchiveMode;
 
+  // 진입 직후 이전 결과 조회 중이거나 결과 리스트 모달이 떠 있는 동안엔
+  // 페이지 본체(헤더·스텝·카테고리)를 아예 렌더하지 않는다.
+  // → 모달 뒤로 궁합 페이지가 비쳐 "이미 넘어간 것처럼" 보이는 문제 차단.
+  const modalGateActive =
+    !isArchiveMode && (archiveLoading || (showArchiveList && archiveList.length > 0));
+
   return (
     <div className="min-h-screen pb-24">
+      {modalGateActive ? (
+        archiveLoading ? (
+          <div className="flex items-center justify-center min-h-screen">
+            <div className="w-8 h-8 border-3 border-cta border-t-transparent rounded-full animate-spin" />
+          </div>
+        ) : null
+      ) : (
+      <>
       {/* 헤더 */}
       <div className="px-5 pt-4 pb-4">
         <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} className="flex items-center relative">
@@ -1150,14 +1164,6 @@ export default function GunghapPage() {
         {/* ── STEP 1: 관계 유형 선택 ── */}
         {step === 'category' && (
           <motion.div key="category" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="px-5 space-y-5">
-            {/* 진입 직후 — 이전 결과 fetch 중엔 로딩만, 모달이 떠 있는 동안엔 빈 화면(모달이 가림).
-                카테고리 카드가 모달보다 먼저·함께 노출되지 않도록 차단. */}
-            {archiveLoading && !isArchiveMode ? (
-              <div className="flex items-center justify-center py-20">
-                <div className="w-8 h-8 border-3 border-cta border-t-transparent rounded-full animate-spin" />
-              </div>
-            ) : showArchiveList ? null : (
-            <>
             {/* 이전 궁합 결과 보기 — 기록 있을 때만, 리스트 모달 재호출 */}
             {!isArchiveMode && archiveList.length > 0 && (
               <button
@@ -1220,8 +1226,6 @@ export default function GunghapPage() {
             >
               다음 — 상대 정보
             </button>
-            </>
-            )}
           </motion.div>
         )}
 
@@ -1867,6 +1871,8 @@ export default function GunghapPage() {
         )}
 
       </AnimatePresence>
+      </>
+      )}
 
       {/* 이전 궁합 결과 리스트 모달 — 택일·지정일과 동일 UX */}
       <AnimatePresence>
