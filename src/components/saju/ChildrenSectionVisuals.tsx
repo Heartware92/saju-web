@@ -773,8 +773,8 @@ export function CompatibilityVisual({ saju }: { saju: SajuResult }) {
           </span>
         </div>
         {goodsOnly.length === 0 ? (
-          <span className="text-[14px] text-text-tertiary leading-snug">
-            {bilateral.length > 0 ? '양면적 띠 외에 추가로 잘 맞는 띠 없음' : '특별히 잘 맞는 띠 신호 없음 — 본문 추천 띠 참고'}
+          <span className="text-[14px] text-text-tertiary leading-snug whitespace-pre-line">
+            {bilateral.length > 0 ? '양면적 띠 외에 추가로 잘 맞는 띠 없음' : '특별히 잘 맞는 띠 신호 없음\n본문 추천 띠 참고'}
           </span>
         ) : (
           <div className="flex flex-col gap-2">
@@ -802,8 +802,8 @@ export function CompatibilityVisual({ saju }: { saju: SajuResult }) {
           </span>
         </div>
         {cautionsOnly.length === 0 ? (
-          <span className="text-[14px] text-text-tertiary leading-snug">
-            {bilateral.length > 0 ? '양면적 띠 외에 단순 조심 띠 없음' : '크게 부딪치는 띠 신호 없음 — 평이한 관계'}
+          <span className="text-[14px] text-text-tertiary leading-snug whitespace-pre-line">
+            {bilateral.length > 0 ? '양면적 띠 외에 단순 조심 띠 없음' : '크게 부딪치는 띠 신호 없음\n평이한 관계'}
           </span>
         ) : (
           <div className="flex flex-col gap-2">
@@ -879,8 +879,8 @@ export function TimingVisual({ saju }: { saju: SajuResult }) {
           </span>
         </div>
         {dae.length === 0 ? (
-          <span className="text-[14px] text-text-tertiary leading-snug">
-            가임기 내 자녀성 활성 대운 없음 — 본문의 월 단위 신호 위주
+          <span className="text-[14px] text-text-tertiary leading-snug whitespace-pre-line">
+            {'가임기 내 자녀성 활성 대운 없음\n본문의 월 단위 신호 위주'}
           </span>
         ) : (
           <div className="flex flex-wrap gap-2">

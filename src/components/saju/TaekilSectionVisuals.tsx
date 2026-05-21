@@ -136,8 +136,8 @@ function AvoidVisual({ days }: { days: TaekilDay[] }) {
   return (
     <CardWrap accent="#F87171" title="후보 중 조심할 날">
       {bad.length === 0 ? (
-        <span className="text-[14px] text-text-tertiary leading-snug">
-          선택한 후보 날짜 중 흉·평 등급은 없어요 — 비교적 안전한 후보들입니다.
+        <span className="text-[14px] text-text-tertiary leading-snug whitespace-pre-line">
+          {'선택한 후보 날짜 중 흉·평 등급은 없어요\n비교적 안전한 후보들입니다.'}
         </span>
       ) : (
         <div className="flex flex-wrap gap-2">
@@ -178,8 +178,8 @@ function AlternativeVisual({ days }: { days: TaekilDay[] }) {
   return (
     <CardWrap accent="#C9A6FF" title="차선 후보일" titleSub="베스트 3일 외">
       {rest.length === 0 ? (
-        <span className="text-[14px] text-text-tertiary leading-snug">
-          선택한 후보가 3일 이하예요 — 더 많은 날을 비교하려면 다시 풀이받아 날짜를 추가해 보세요.
+        <span className="text-[14px] text-text-tertiary leading-snug whitespace-pre-line">
+          {'선택한 후보가 3일 이하예요\n더 많은 날을 비교하려면 다시 풀이받아 날짜를 추가해 보세요.'}
         </span>
       ) : (
         <div className="flex flex-wrap gap-2">

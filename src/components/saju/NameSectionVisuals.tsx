@@ -257,12 +257,12 @@ export function HarmonyVisual({
   const cons: string[] = [];
 
   // 음령
-  if (eumElements.includes(yongSinEl)) pros.push(`음령에 용신 ${yongSinEl} 포함 — 발음이 사주 보강`);
-  if (giSinEl && eumElements.includes(giSinEl)) cons.push(`음령에 기신 ${giSinEl} 포함 — 발음에서 조심`);
+  if (eumElements.includes(yongSinEl)) pros.push(`음령에 용신 ${yongSinEl} 포함\n발음이 사주 보강`);
+  if (giSinEl && eumElements.includes(giSinEl)) cons.push(`음령에 기신 ${giSinEl} 포함\n발음에서 조심`);
 
   // 자원
   if (jawonElements.length > 0) {
-    if (jawonElements.includes(yongSinEl)) pros.push(`한자 자원에 용신 ${yongSinEl} 포함 — 부수가 사주 보강`);
+    if (jawonElements.includes(yongSinEl)) pros.push(`한자 자원에 용신 ${yongSinEl} 포함\n부수가 사주 보강`);
     if (giSinEl && jawonElements.includes(giSinEl)) cons.push(`한자 자원에 기신 ${giSinEl} 이 포함돼 한자 영향에 주의`);
   }
 
@@ -282,7 +282,7 @@ export function HarmonyVisual({
           {pros.map((p, i) => (
             <li
               key={i}
-              className="text-[15px] text-text-secondary leading-[1.7] tracking-[-0.005em]"
+              className="text-[15px] text-text-secondary leading-[1.7] tracking-[-0.005em] whitespace-pre-line"
               style={{ fontFamily: 'var(--font-body)' }}
             >
               {p}
@@ -301,7 +301,7 @@ export function HarmonyVisual({
           {cons.map((c, i) => (
             <li
               key={i}
-              className="text-[15px] text-text-secondary leading-[1.7] tracking-[-0.005em]"
+              className="text-[15px] text-text-secondary leading-[1.7] tracking-[-0.005em] whitespace-pre-line"
               style={{ fontFamily: 'var(--font-body)' }}
             >
               {c}

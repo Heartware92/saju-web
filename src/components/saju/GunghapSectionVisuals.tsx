@@ -171,8 +171,8 @@ function OhaengRelationVisual({
         </div>
         <div className="min-w-0">
           <div className="text-[12px] text-text-tertiary">관계를 살리는 기운</div>
-          <div className="text-[14px] font-bold" style={{ color: luckyColor }}>
-            {lucky} 기운 — 두 사람을 이어주는 다리
+          <div className="text-[14px] font-bold whitespace-pre-line" style={{ color: luckyColor }}>
+            {`${lucky} 기운\n두 사람을 이어주는 다리`}
           </div>
         </div>
       </div>
@@ -349,7 +349,7 @@ export function renderGunghapSectionVisual(
         )}
       </div>
       <p className="text-[12.5px] text-text-tertiary leading-snug mb-2.5" style={{ wordBreak: 'keep-all' }}>
-        이 섹션과 가장 관련 깊은 지표예요 — {DOMAIN_HINT[domainKey]}.
+        {DOMAIN_HINT[domainKey]}
       </p>
       <ScoreGauge score={score} />
     </div>

@@ -205,7 +205,7 @@ function SinsalChipList({
           <span className="text-[18px] font-bold block mb-1.5" style={{ color: 'var(--text-primary)' }}>
             {items[openIdx].name}
           </span>
-          <span className="text-[17px] text-text-secondary leading-relaxed" style={{ wordBreak: 'keep-all' }}>
+          <span className="text-[17px] text-text-secondary leading-relaxed whitespace-pre-line" style={{ wordBreak: 'keep-all' }}>
             {items[openIdx].desc}
           </span>
         </div>
@@ -439,8 +439,8 @@ function InteractionVisual({ saju }: { saju: SajuResult }) {
   return (
     <div className="grid grid-cols-1 gap-2 mb-3">
       <SectionCardWrap accent={SIGNAL.good} title="합 (결속·조화)">
-        <p className="text-[17px] text-text-secondary leading-relaxed mb-2.5" style={{ wordBreak: 'keep-all' }}>
-          사주 글자끼리 손을 잡는 관계 — 잘 풀리면 안정과 협력의 힘이 됩니다.
+        <p className="text-[17px] text-text-secondary leading-relaxed mb-2.5 whitespace-pre-line" style={{ wordBreak: 'keep-all' }}>
+          {'사주 글자끼리 손을 잡는 관계\n잘 풀리면 안정과 협력의 힘이 됩니다.'}
         </p>
         {harmony.length === 0 ? (
           <span className="text-[17px] text-text-secondary leading-relaxed">원국에 합 없음</span>
@@ -453,11 +453,11 @@ function InteractionVisual({ saju }: { saju: SajuResult }) {
         )}
       </SectionCardWrap>
       <SectionCardWrap accent={tension.length > 0 ? SIGNAL.warn : SIGNAL.info} title="충·형·파·해 (변동·긴장)">
-        <p className="text-[17px] text-text-secondary leading-relaxed mb-2.5" style={{ wordBreak: 'keep-all' }}>
-          사주 글자끼리 부딪치는 관계 — 변화의 자극이자, 잘 다스리면 추진력이 됩니다.
+        <p className="text-[17px] text-text-secondary leading-relaxed mb-2.5 whitespace-pre-line" style={{ wordBreak: 'keep-all' }}>
+          {'사주 글자끼리 부딪치는 관계\n변화의 자극이자, 잘 다스리면 추진력이 됩니다.'}
         </p>
         {tension.length === 0 ? (
-          <span className="text-[17px] text-text-secondary leading-relaxed">원국에 충·형·파·해 없음 — 안정 구조</span>
+          <span className="text-[17px] text-text-secondary leading-relaxed whitespace-pre-line">{'원국에 충·형·파·해 없음\n안정 구조'}</span>
         ) : (
           <div className="flex flex-col gap-2">
             {tension.map((t, i) => (
@@ -598,16 +598,16 @@ const ELEMENT_ORGAN: Record<string, string> = {
 };
 // 건강 관련 신살별 일상어 의미
 const HEALTH_SINSAL_MEANING: Record<string, string> = {
-  '백호': '사고·수술·출혈을 조심 — 안전 운전·정기 검진 권장',
-  '양인': '수술·날카로운 것·과로 주의 — 무리한 추진 자제',
-  '괴강': '컨디션 기복이 큼 — 극단적 생활 리듬 피하기',
+  '백호': '사고·수술·출혈을 조심\n안전 운전·정기 검진 권장',
+  '양인': '수술·날카로운 것·과로 주의\n무리한 추진 자제',
+  '괴강': '컨디션 기복이 큼\n극단적 생활 리듬 피하기',
   '귀문': '신경이 예민하고 불면·정신 피로가 오기 쉬움',
-  '현침': '예민한 신경과 잔병치레 — 작은 상처도 방치 금지',
+  '현침': '예민한 신경과 잔병치레\n작은 상처도 방치 금지',
   '탕화': '화상·끓는 것·약물 사고 주의',
 };
 function healthSinsalDesc(name: string): string {
   const key = Object.keys(HEALTH_SINSAL_MEANING).find((k) => name.includes(k));
-  return key ? HEALTH_SINSAL_MEANING[key] : '건강에 영향을 주는 기운 — 본문 설명 참고';
+  return key ? HEALTH_SINSAL_MEANING[key] : '건강에 영향을 주는 기운\n본문 설명 참고';
 }
 function HealthVisual({ saju }: { saju: SajuResult }) {
   const order = ['목', '화', '토', '금', '수'] as const;
@@ -640,7 +640,7 @@ function HealthVisual({ saju }: { saju: SajuResult }) {
           살펴두면 좋은 신호입니다 (있다고 꼭 문제가 생기는 건 아니에요).
         </p>
         {healthSinsals.length === 0 ? (
-          <span className="text-[17px] text-text-secondary leading-relaxed">건강 관련 주의 신살 없음 — 무난한 구조</span>
+          <span className="text-[17px] text-text-secondary leading-relaxed whitespace-pre-line">{'건강 관련 주의 신살 없음\n무난한 구조'}</span>
         ) : (
           <SinsalChipList
             accent={SIGNAL.warn}
@@ -694,8 +694,8 @@ function RelationVisual({ saju }: { saju: SajuResult }) {
           귀인을 불러옵니다.
         </p>
         {guiSinsals.length === 0 ? (
-          <span className="text-[17px] text-text-secondary leading-relaxed">
-            귀인 길성 없음 — 인연을 스스로 일구는 자생형
+          <span className="text-[17px] text-text-secondary leading-relaxed whitespace-pre-line">
+            {'귀인 길성 없음\n인연을 스스로 일구는 자생형'}
           </span>
         ) : (
           <SinsalChipList
