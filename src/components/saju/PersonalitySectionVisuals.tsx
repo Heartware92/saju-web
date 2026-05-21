@@ -360,17 +360,36 @@ function DesireVisual({ saju }: { saju: SajuResult }) {
   const sorted = Object.entries(groups).sort((a, b) => b[1] - a[1]);
   const topGroup = sorted[0][0];
   const lowGroup = sorted[sorted.length - 1][0];
+  const sides = [
+    { head: '되고 싶은 나', phrase: DESIRE_BY_GROUP[topGroup], group: topGroup, color: SIGNAL.good },
+    { head: '피하고 싶은 나', phrase: FEAR_BY_GROUP[lowGroup], group: lowGroup, color: SIGNAL.warn },
+  ];
   return (
     <SectionCardWrap accent={SIGNAL.good} title="욕구 vs 두려움">
-      <div className="grid grid-cols-2 gap-2">
-        <div className="flex flex-col gap-2">
-          <span className="text-[13px] font-bold text-center" style={{ color: SIGNAL.good }}>되고 싶은 나</span>
-          <PChip label={`${DESIRE_BY_GROUP[topGroup]} (${topGroup})`} color={SIGNAL.good} full />
-        </div>
-        <div className="flex flex-col gap-2">
-          <span className="text-[13px] font-bold text-center" style={{ color: SIGNAL.warn }}>피하고 싶은 나</span>
-          <PChip label={`${FEAR_BY_GROUP[lowGroup]} (${lowGroup})`} color={SIGNAL.warn} subtle full />
-        </div>
+      <div className="grid grid-cols-2 gap-2.5">
+        {sides.map((s) => (
+          <div
+            key={s.head}
+            className="rounded-2xl border px-3 py-3.5 flex flex-col items-center gap-2"
+            style={{ background: `${s.color}12`, borderColor: `${s.color}55` }}
+          >
+            <span className="text-[12px] font-bold tracking-[0.03em]" style={{ color: s.color }}>
+              {s.head}
+            </span>
+            <span
+              className="text-[16px] font-bold leading-tight text-center"
+              style={{ color: 'var(--text-primary)', fontFamily: 'var(--font-title)', wordBreak: 'keep-all' }}
+            >
+              {s.phrase}
+            </span>
+            <span
+              className="text-[12px] font-semibold px-2.5 py-1 rounded-full mt-auto"
+              style={{ color: s.color, background: `${s.color}22` }}
+            >
+              {s.group}
+            </span>
+          </div>
+        ))}
       </div>
       <p className="text-[14px] text-text-secondary mt-3 leading-relaxed">
         가장 강한 기운은 욕구로, 가장 약한 기운은 감추고 싶은 두려움으로 작동해요.
