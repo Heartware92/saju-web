@@ -169,13 +169,27 @@ function HelperStarGroup({ label, stars, color, bg }: { label: string; stars: Za
   if (stars.length === 0) return null;
   return (
     <div style={{ padding: ZV.pad, borderRadius: ZV.radius, background: bg, border: `1px solid ${color}55`, marginBottom: ZV.gap }}>
-      <div style={{ fontSize: 13, color, fontWeight: 700, marginBottom: 10, letterSpacing: '0.04em' }}>{label}</div>
+      {/* 라벨 + 개수 배지 — 길성·흉성이 몇 개인지 한눈에 */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 11 }}>
+        <span style={{ fontSize: 13.5, color, fontWeight: 700, letterSpacing: '0.04em' }}>{label}</span>
+        <span style={{
+          fontSize: 11.5, fontWeight: 700, color, lineHeight: 1,
+          background: `${color}22`, border: `1px solid ${color}55`,
+          borderRadius: 999, padding: '3px 8px',
+        }}>{stars.length}</span>
+      </div>
       <div style={{ display: 'flex', gap: 7, flexWrap: 'wrap' }}>
         {stars.map(s => {
           const meta = MINOR_STARS_META[s.name];
           return (
-            <span key={s.name} style={{ fontSize: 14, padding: '6px 12px', borderRadius: 8, background: `${color}15`, color: 'var(--text-primary)', fontWeight: 600 }}>
-              {meta?.name ?? s.name} <span style={{ fontFamily: 'var(--font-serif)', opacity: 0.7, fontSize: 12.5 }}>{meta?.hanja ?? ''}</span>
+            <span key={s.name} style={{
+              display: 'inline-flex', alignItems: 'baseline', gap: 5,
+              fontSize: 14.5, padding: '7px 12px', borderRadius: 9,
+              background: `${color}1f`, border: `1px solid ${color}3a`,
+              color: 'var(--text-primary)', fontWeight: 600,
+            }}>
+              {meta?.name ?? s.name}
+              {meta?.hanja && <span style={{ fontFamily: 'var(--font-serif)', opacity: 0.6, fontSize: 12 }}>{meta.hanja}</span>}
             </span>
           );
         })}
@@ -327,23 +341,79 @@ function DaehanTable({ chart, currentAge }: { chart: ZamidusuResult; currentAge?
   );
 }
 
+// 단독 궁 카드 — 신궁·소한 공용. 라벨 / 궁 이름(크게)+간지 / 주성(라벨 붙임) / 의미.
+function SoloPalaceCard({
+  label, labelColor, accentBorder, palace, note,
+}: {
+  label: string;
+  labelColor: string;
+  accentBorder: string;
+  palace: ZamidusuPalace;
+  note?: string;
+}) {
+  const role = PALACE_ROLE_META[palace.name];
+  const stars = palace.majorStars.map(s => s.name).join(' · ') || '공궁';
+  return (
+    <div style={{
+      padding: '18px 18px', borderRadius: ZV.radius, marginBottom: ZV.sectionGap,
+      background: CARD_BG, border: `1px solid ${accentBorder}`,
+      display: 'flex', flexDirection: 'column', gap: 12,
+    }}>
+      <div style={{ fontSize: 13, color: labelColor, fontWeight: 700, letterSpacing: '0.04em' }}>{label}</div>
+      <div style={{ display: 'flex', alignItems: 'baseline', gap: 9 }}>
+        <span style={{ fontSize: 23, fontWeight: 700, color: 'var(--text-primary)', fontFamily: 'var(--font-serif)' }}>
+          {palace.name}
+        </span>
+        <span style={{ fontSize: 14, color: 'var(--text-tertiary)', letterSpacing: '0.04em' }}>
+          {palace.heavenlyStem}{palace.earthlyBranch}
+        </span>
+      </div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+        <span style={{ fontSize: 12.5, color: 'var(--text-tertiary)', fontWeight: 600 }}>이 궁의 주성</span>
+        <span style={{ fontSize: 16.5, fontWeight: 600, color: 'var(--text-secondary)' }}>{stars}</span>
+      </div>
+      {role && <div style={ZV.sub}>{role.domain}</div>}
+      {note && (
+        <div style={{
+          fontSize: 13, color: labelColor, fontWeight: 600,
+          paddingTop: 10, borderTop: `1px solid ${accentBorder}`,
+        }}>
+          {note}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function BodyPalaceCard({ chart }: { chart: ZamidusuResult }) {
+  const body = chart.palaces.find(p => p.isBodyPalace);
+  if (!body) return null;
+  const accent = '#F472B6';
+  const sameAsMyeong = body.name === '명궁';
+  return (
+    <SoloPalaceCard
+      label="신궁(身宮)이 자리한 궁"
+      labelColor={accent}
+      accentBorder="rgba(244,114,182,0.45)"
+      palace={body}
+      note={sameAsMyeong
+        ? '신궁이 명궁과 같은 자리 — 타고난 본질과 페르소나가 일치'
+        : '신궁이 명궁과 다른 자리 — 본질과 또 다른 페르소나가 나뉨'}
+    />
+  );
+}
+
 function SohanCard({ chart, currentAge }: { chart: ZamidusuResult; currentAge?: number }) {
   if (currentAge === undefined) return null;
   const cur = chart.palaces.find(p => p.ages.includes(currentAge));
   if (!cur) return null;
-  const stars = cur.majorStars.map(s => s.name).join('·') || '공궁';
   return (
-    <div style={{
-      padding: ZV.pad, borderRadius: ZV.radius, marginBottom: ZV.sectionGap,
-      background: 'rgba(252,213,180,0.10)', border: `1px solid rgba(252,213,180,0.35)`,
-      display: 'flex', flexDirection: 'column', gap: 6,
-    }}>
-      <div style={{ fontSize: 13, color: CARD_ACCENT, fontWeight: 700, letterSpacing: '0.04em' }}>
-        ★ 올해 ({currentAge}세) 소한 — {cur.name}
-      </div>
-      <div style={{ fontSize: 18, color: 'var(--text-primary)', fontWeight: 700 }}>{stars}</div>
-      <div style={ZV.sub}>{PALACE_ROLE_META[cur.name]?.domain}</div>
-    </div>
+    <SoloPalaceCard
+      label={`★ 올해 소한 — 만 ${currentAge}세`}
+      labelColor={CARD_ACCENT}
+      accentBorder="rgba(252,213,180,0.40)"
+      palace={cur}
+    />
   );
 }
 
@@ -364,14 +434,8 @@ function renderSectionDataCards(
       return myeong ? <MainStarCards palace={myeong} /> : null;
     case 'helper_stars':
       return myeong ? <HelperStarsChips palace={myeong} /> : null;
-    case 'body_palace': {
-      const body = chart.palaces.find(p => p.isBodyPalace);
-      return body ? (
-        <div style={{ marginBottom: 18 }}>
-          <PalaceMiniCard palace={body} accent="rgba(244,114,182,0.4)" />
-        </div>
-      ) : null;
-    }
+    case 'body_palace':
+      return <BodyPalaceCard chart={chart} />;
     case 'relations':
       return <PalaceGroup chart={chart} names={['부처궁', '자녀궁', '형제궁', '노복궁', '부모궁']} />;
     case 'wealth':
