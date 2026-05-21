@@ -202,8 +202,29 @@ function RemedyCardGrid({ bodyText }: { bodyText: string }) {
  * 프롬프트가 각 항목을 빈 줄로 분리하도록 강제 (date_yes 3장 / date_no 2장).
  * yes = 초록 #34D399 / no = 빨강 #F87171. 좌측 색띠 SectionCollapsible.barColor 와 동일 톤.
  */
+/**
+ * 빈 줄(\n\n)로 쪼갠 조각 중 "문장이 안 끝난" 조각을 다음 조각과 병합.
+ * AI 가 한 문장 중간에 빈 줄을 넣어("…전환하기에\n\n유리합니다") 카드가
+ * 문장 한복판에서 쪼개지는 사고를 차단. 한국어 종결(다·요·죠·네·까 + 마침표류)
+ * 로 끝나지 않으면 미완결로 보고 뒤 조각을 공백으로 이어 붙인다.
+ */
+const SENTENCE_END_RE = /(?:[.!?…]|[다요죠네까래])[”"’'」』)）\]]*\s*$/;
+function mergeSentenceFragments(parts: string[]): string[] {
+  const out: string[] = [];
+  for (const p of parts) {
+    if (out.length > 0 && !SENTENCE_END_RE.test(out[out.length - 1])) {
+      out[out.length - 1] = `${out[out.length - 1]} ${p}`.replace(/\s+/g, ' ').trim();
+    } else {
+      out.push(p);
+    }
+  }
+  return out;
+}
+
 function ActionCardList({ bodyText, variant }: { bodyText: string; variant: 'yes' | 'no' }) {
-  const paragraphs = bodyText.split(/\n\n+/).map(p => p.trim()).filter(Boolean);
+  const paragraphs = mergeSentenceFragments(
+    bodyText.split(/\n\n+/).map(p => p.trim()).filter(Boolean),
+  );
 
   if (paragraphs.length < 2) {
     return (
