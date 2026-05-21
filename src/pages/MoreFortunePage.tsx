@@ -79,6 +79,7 @@ import {
   extractBullets,
 } from '@/components/saju/NameSectionVisuals';
 import { renderChildrenSectionVisual } from '@/components/saju/ChildrenSectionVisuals';
+import { renderStudySectionVisual } from '@/components/saju/StudySectionVisuals';
 import type { SajuResult } from '@/utils/sajuCalculator';
 
 interface Props {
@@ -907,7 +908,7 @@ export default function MoreFortunePage({ category }: Props) {
           {result && resultSections && (category === 'study' || category === 'children' || category === 'personality' || category === 'name') && (
             <MoreFortuneSectionedCard
               nameVisualContext={category === 'name' ? nameVisualContext : null}
-              childrenSaju={category === 'children' ? saju : null}
+              childrenSaju={(category === 'children' || category === 'study') ? saju : null}
               title={`${cfg.title} 풀이`}
               sections={resultSections}
               category={category}
@@ -1970,9 +1971,14 @@ function MoreFortuneSectionedCard({
             renderBody = ex.rest;
           }
 
-          // children 카테고리: 섹션별 시각 데이터 카드 (자녀성·시주·12운성·합충·대운 타임라인 등)
-          const childrenVisualNode = category === 'children' && childrenSaju
-            ? renderChildrenSectionVisual(key, childrenSaju)
+          // children·study 카테고리: 섹션별 시각 데이터 카드
+          // (childrenSaju prop 은 children·study 공용 SajuResult — MoreFortuneSectionedCard 호출부에서 둘 다 채움)
+          const childrenVisualNode = childrenSaju
+            ? category === 'children'
+              ? renderChildrenSectionVisual(key, childrenSaju)
+              : category === 'study'
+                ? renderStudySectionVisual(key, childrenSaju)
+                : null
             : null;
 
           return (
