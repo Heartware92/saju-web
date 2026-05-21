@@ -146,15 +146,16 @@ function StatCard({ label, value, sub, color }: { label: string; value: string; 
   );
 }
 
-/** 색칩 */
-function PChip({ label, color, subtle }: { label: string; color: string; subtle?: boolean }) {
+/** 색칩 — full 이면 컨테이너 폭을 꽉 채워 정렬·크기 통일 */
+function PChip({ label, color, subtle, full }: { label: string; color: string; subtle?: boolean; full?: boolean }) {
   return (
     <span
-      className="inline-flex items-center rounded-full px-3 py-1.5 text-[14px] font-bold border"
+      className={`inline-flex items-center justify-center rounded-full px-3 py-2 text-[14px] font-bold border ${full ? 'w-full' : ''}`}
       style={{
         background: subtle ? `${color}15` : `${color}25`,
         color,
         borderColor: `${color}55`,
+        wordBreak: 'keep-all',
       }}
     >
       {label}
@@ -242,9 +243,10 @@ function DayMasterVisual({ saju }: { saju: SajuResult }) {
           </span>
           <span className="text-[13px] font-semibold mt-1" style={{ color }}>{traits?.name ?? `${p.gan}${p.zhi}`}</span>
         </div>
-        <div className="flex flex-wrap gap-1.5">
+        {/* 키워드 칩 — 2열 grid 로 크기 통일 (글자 수 달라도 같은 폭) */}
+        <div className="grid grid-cols-2 gap-2 flex-1">
           {(traits?.keywords ?? []).map((k) => (
-            <PChip key={k} label={k} color={color} subtle />
+            <PChip key={k} label={k} color={color} subtle full />
           ))}
         </div>
       </div>
@@ -284,8 +286,10 @@ function StrengthsVisual({ saju }: { saju: SajuResult }) {
   return (
     <SectionCardWrap accent={SIGNAL.info} title="성격 에너지 5축">
       <BarRows rows={rows} highlight={dominant.label} color={SIGNAL.info} />
-      <p className="text-[13px] text-text-tertiary mt-3 pt-3 border-t border-white/10 leading-snug">
-        가장 강한 축은 <span style={{ color: SIGNAL.info, fontWeight: 700 }}>{dominant.label}</span> — 직장·연애·친구 어디서든 이 결이 먼저 드러나요.
+      <p className="text-[14px] text-text-secondary mt-3 pt-3 border-t border-white/10 leading-relaxed">
+        가장 강한 축은 <span style={{ color: SIGNAL.info, fontWeight: 700 }}>{dominant.label}</span> 기운이에요.
+        <br />
+        직장·연애·친구 어디서든 이 결이 먼저 드러나요.
       </p>
     </SectionCardWrap>
   );
@@ -310,19 +314,24 @@ function OutsideViewVisual({ saju }: { saju: SajuResult }) {
           return (
             <div
               key={pl.label}
-              className="rounded-xl px-3 py-2.5 border flex flex-col gap-0.5"
+              className="rounded-xl px-3 py-3 border flex flex-col items-center gap-1"
               style={{ background: `${e.color}14`, borderColor: `${e.color}55` }}
             >
               <span className="text-[12px] text-text-tertiary">{pl.label} · {pl.sub}</span>
-              <span className="text-[16px] font-bold" style={{ color: 'var(--text-primary)' }}>
+              <span className="text-[24px] font-bold leading-none" style={{ color: 'var(--text-primary)', fontFamily: 'var(--font-serif)' }}>
                 {pl.stage}
               </span>
-              <span className="text-[12px] font-bold" style={{ color: e.color }}>에너지 {e.label}</span>
+              <span
+                className="text-[12px] font-bold px-2 py-0.5 rounded-full mt-0.5"
+                style={{ color: e.color, background: `${e.color}1f` }}
+              >
+                에너지 {e.label}
+              </span>
             </div>
           );
         })}
       </div>
-      <p className="text-[13px] text-text-tertiary mt-3 leading-snug">
+      <p className="text-[14px] text-text-secondary mt-3 leading-relaxed">
         상승기 기둥은 활동적·야심차게, 하강기 기둥은 신중·내향적으로 비쳐요.
       </p>
     </SectionCardWrap>
@@ -353,17 +362,17 @@ function DesireVisual({ saju }: { saju: SajuResult }) {
   const lowGroup = sorted[sorted.length - 1][0];
   return (
     <SectionCardWrap accent={SIGNAL.good} title="욕구 vs 두려움">
-      <div className="flex flex-col gap-3">
-        <div>
-          <span className="text-[13px] font-bold mb-2 block" style={{ color: SIGNAL.good }}>되고 싶은 나</span>
-          <PChip label={`${DESIRE_BY_GROUP[topGroup]} (${topGroup})`} color={SIGNAL.good} />
+      <div className="grid grid-cols-2 gap-2">
+        <div className="flex flex-col gap-2">
+          <span className="text-[13px] font-bold text-center" style={{ color: SIGNAL.good }}>되고 싶은 나</span>
+          <PChip label={`${DESIRE_BY_GROUP[topGroup]} (${topGroup})`} color={SIGNAL.good} full />
         </div>
-        <div>
-          <span className="text-[13px] font-bold mb-2 block" style={{ color: SIGNAL.warn }}>피하고 싶은 나</span>
-          <PChip label={`${FEAR_BY_GROUP[lowGroup]} (${lowGroup})`} color={SIGNAL.warn} subtle />
+        <div className="flex flex-col gap-2">
+          <span className="text-[13px] font-bold text-center" style={{ color: SIGNAL.warn }}>피하고 싶은 나</span>
+          <PChip label={`${FEAR_BY_GROUP[lowGroup]} (${lowGroup})`} color={SIGNAL.warn} subtle full />
         </div>
       </div>
-      <p className="text-[13px] text-text-tertiary mt-3 leading-snug">
+      <p className="text-[14px] text-text-secondary mt-3 leading-relaxed">
         가장 강한 기운은 욕구로, 가장 약한 기운은 감추고 싶은 두려움으로 작동해요.
       </p>
     </SectionCardWrap>
@@ -377,14 +386,14 @@ function ShadowVisual({ saju }: { saju: SajuResult }) {
   const chung = saju.interactions.filter((i) => i.type === '충');
   const hyeong = saju.interactions.filter((i) => i.type === '형');
   const items: { name: string; desc: string }[] = [
-    ...chung.map((i) => ({ name: `충 — ${i.description.split(' ')[0] ?? '충'}`, desc: `내면 갈등·급변의 자극점. ${i.description}` })),
-    ...hyeong.map((i) => ({ name: `형 — ${i.description.split(' ')[0] ?? '형'}`, desc: `스스로 발등 찍기 쉬운 자충수 패턴. ${i.description}` })),
+    ...chung.map((i) => ({ name: `충 ${i.description.split(' ')[0] ?? ''}`.trim(), desc: `내면 갈등·급변의 자극점이에요. ${i.description}` })),
+    ...hyeong.map((i) => ({ name: `형 ${i.description.split(' ')[0] ?? ''}`.trim(), desc: `스스로 발등 찍기 쉬운 자충수 패턴이에요. ${i.description}` })),
   ];
   if (items.length === 0) {
     return (
       <SectionCardWrap accent={SIGNAL.info} title="내면 갈등 구조">
         <span className="text-[17px] text-text-secondary leading-relaxed">
-          원국에 충·형 없음 — 큰 내면 충돌 없이 안정적인 결. 그림자는 과다·결핍 십성에서 드러나요.
+          원국에 충·형이 없어 큰 내면 충돌 없이 안정적인 결이에요. 그림자는 과다·결핍 십성에서 드러나요.
         </span>
       </SectionCardWrap>
     );
@@ -409,7 +418,7 @@ function SinsalVisual({ saju }: { saju: SajuResult }) {
     return (
       <SectionCardWrap accent={SIGNAL.info} title="성격 신살">
         <span className="text-[17px] text-text-secondary leading-relaxed">
-          특별한 성격 신살 없음 — 신살에 의존하지 않는 균형 잡힌 결
+          특별한 성격 신살이 없어, 신살에 의존하지 않는 균형 잡힌 결이에요
         </span>
       </SectionCardWrap>
     );
@@ -427,15 +436,15 @@ function SinsalVisual({ saju }: { saju: SajuResult }) {
 function StressVisual({ saju }: { saju: SajuResult }) {
   const trigger = saju.interactions.filter((i) => ['충', '형', '파', '해'].includes(i.type)).length;
   const triggerLabel =
-    trigger === 0 ? '낮음 — 외부 자극에 둔감'
-    : trigger <= 2 ? '보통 — 적당한 긴장'
-    : '높음 — 자극에 예민';
+    trigger === 0 ? '외부 자극에 둔감한 편'
+    : trigger <= 2 ? '적당한 긴장 속에서 균형'
+    : '자극에 예민하게 반응';
   const dayStage = saju.pillars.day.twelveStage;
   const e = stageEnergy(dayStage);
   const recoverLabel =
-    e.label === '상승' ? '빠른 회복 — 활동으로 충전'
-    : e.label === '하강' ? '느린 회복 — 충분한 휴식 필요'
-    : '유동적 회복 — 환경 전환이 효과';
+    e.label === '상승' ? '활동하며 빠르게 충전'
+    : e.label === '하강' ? '충분한 휴식이 있어야 회복'
+    : '환경을 바꾸면 회복이 빨라요';
   return (
     <div className="grid grid-cols-2 gap-2 mb-3">
       <StatCard
