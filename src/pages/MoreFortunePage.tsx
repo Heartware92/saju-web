@@ -59,6 +59,7 @@ import { useLoadingGuard } from '../hooks/useLoadingGuard';
 import { useScrollToTopOnLoad } from '../hooks/useScrollToTopOnLoad';
 import styles from './SajuResultPage.module.css';
 import { ShareBar } from '@/components/share/ShareBar';
+import { ResultFooterActions } from '@/components/ui/ResultFooterActions';
 import {
   STUDY_SECTION_KEYS, STUDY_SECTION_LABELS,
   CHILDREN_SECTION_KEYS, CHILDREN_SECTION_LABELS,
@@ -259,6 +260,27 @@ export default function MoreFortunePage({ category }: Props) {
       params.delete('recordId');
       window.location.href = `${window.location.pathname}?${params.toString()}`;
     }
+  };
+
+  // 이름·꿈 "다시 풀이 받기" — 입력 화면(manualMode)으로 복귀 + 입력값 초기화.
+  // (학업·자녀·성격은 선택 화면이 없어 하단에 다시 풀이 버튼을 두지 않음)
+  const handleRedo = () => {
+    setResult(null);
+    setResultSections(null);
+    setError(null);
+    setManualMode(true);
+    if (category) useReportCacheStore.getState().invalidate(`more:${category}` as const);
+    if (category === 'name') {
+      setKoreanName('');
+      setCharMeanings([]);
+      setSelectedHanjas([]);
+    }
+    if (category === 'dream') {
+      setDreamText('');
+      setDreamValid(false);
+      setDreamInputResetKey((k) => k + 1);
+    }
+    window.scrollTo({ top: 0 });
   };
 
   // 보관함 재생 메타 (원본 기록 시각 표시용)
@@ -914,9 +936,6 @@ export default function MoreFortunePage({ category }: Props) {
               sections={resultSections}
               category={category}
               isArchiveMode={isArchiveMode}
-              onReset={() => {
-                handleRefetch();
-              }}
             />
           )}
           {/* 꿈해몽 — 진단 + 상징 + 동양식 + 서양식 + 이렇게 하면 좋아요 + 주의할 점 6섹션 */}
@@ -930,16 +949,6 @@ export default function MoreFortunePage({ category }: Props) {
               advice={resultSections.advice ?? ''}
               caution={resultSections.caution ?? ''}
               isArchiveMode={isArchiveMode}
-              onReset={() => {
-                setResult(null);
-                setResultSections(null);
-                setError(null);
-                setManualMode(true);
-                useReportCacheStore.getState().invalidate(`more:dream` as const);
-                setDreamText('');
-                setDreamValid(false);
-                setDreamInputResetKey(k => k + 1);
-              }}
             />
           )}
           {result && (!resultSections || !(category === 'study' || category === 'children' || category === 'personality' || category === 'name' || category === 'dream')) && (
@@ -983,6 +992,21 @@ export default function MoreFortunePage({ category }: Props) {
         {(recordId || savedRecordId) && result && (
           <div style={{ marginTop: 16, padding: '0 16px' }}>
             <ShareBar recordId={(recordId || savedRecordId)!} type="saju" category={category || 'traditional'} />
+          </div>
+        )}
+
+        {result && (
+          <div style={{ padding: '0 16px' }}>
+            <ResultFooterActions
+              redo={
+                !isArchiveMode && (category === 'name' || category === 'dream')
+                  ? {
+                      label: category === 'name' ? '다른 이름 풀이받기' : '다른 꿈 풀이받기',
+                      onClick: handleRedo,
+                    }
+                  : undefined
+              }
+            />
           </div>
         )}
       </motion.div>
@@ -1518,7 +1542,6 @@ function MoreFortuneDreamCard({
   advice,
   caution,
   isArchiveMode,
-  onReset,
 }: {
   title: string;
   diagnosis: string;
@@ -1528,7 +1551,6 @@ function MoreFortuneDreamCard({
   advice: string;
   caution: string;
   isArchiveMode: boolean;
-  onReset: () => void;
 }) {
   // ★ 안전망 — 옛 record / AI 마커 잔존으로 본문에 [marker] 가 그대로 들어가는 사고 차단.
   //   parseDreamSections 의 fallback (전체를 oriental 에 보존) 경로에서 발생 가능.
@@ -1856,28 +1878,6 @@ function MoreFortuneDreamCard({
           );
         })}
       </div>
-
-      {/* 하단 액션 */}
-      {!isArchiveMode && (
-        <div style={{ marginTop: 18, display: 'flex', gap: 8 }}>
-          <button
-            onClick={onReset}
-            style={{
-              flex: 1,
-              padding: '12px',
-              background: 'transparent',
-              border: '1px solid var(--border-subtle)',
-              borderRadius: 10,
-              color: 'var(--text-secondary)',
-              fontSize: 13,
-              cursor: 'pointer',
-              fontFamily: 'inherit',
-            }}
-          >
-            다른 꿈 풀이받기
-          </button>
-        </div>
-      )}
     </motion.div>
   );
 }
@@ -1892,7 +1892,6 @@ function MoreFortuneSectionedCard({
   sections,
   category,
   isArchiveMode,
-  onReset,
   nameVisualContext,
   childrenSaju,
 }: {
@@ -1900,7 +1899,6 @@ function MoreFortuneSectionedCard({
   sections: Record<string, string>;
   category: 'study' | 'children' | 'personality' | 'name';
   isArchiveMode: boolean;
-  onReset: () => void;
   nameVisualContext?: {
     chars: string[];
     elements: string[];
@@ -2042,29 +2040,6 @@ function MoreFortuneSectionedCard({
           );
         })}
       </div>
-
-      {/* 다시 풀이 버튼 — study(학업·시험운)는 사용자 요청으로 제거 */}
-      {!isArchiveMode && category !== 'study' && (
-        <div style={{ marginTop: 22, padding: '0 4px' }}>
-          <button
-            type="button"
-            onClick={onReset}
-            style={{
-              width: '100%',
-              padding: '14px',
-              background: 'var(--cta-primary)',
-              border: 'none',
-              borderRadius: 12,
-              color: 'white',
-              fontSize: 14,
-              fontWeight: 700,
-              cursor: 'pointer',
-            }}
-          >
-            다시 풀이 받기
-          </button>
-        </div>
-      )}
     </motion.div>
   );
 }

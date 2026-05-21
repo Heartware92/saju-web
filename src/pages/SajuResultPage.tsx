@@ -35,6 +35,7 @@ import { BackButton } from '../components/ui/BackButton';
 import { useLoadingGuard } from '../hooks/useLoadingGuard';
 import { useScrollToTopOnLoad } from '../hooks/useScrollToTopOnLoad';
 import { ShareBar } from '@/components/share/ShareBar';
+import { ResultFooterActions } from '@/components/ui/ResultFooterActions';
 
 // 정통사주 = AI 풀이 가치, 만세력 = 무료 데이터.
 // 사용자가 풀이 맥락을 알 수 있도록 핵심 요약만 카드로 노출하고
@@ -676,6 +677,8 @@ export default function SajuResultPage() {
           <ShareBar recordId={(recordId || savedRecordId)!} type="saju" category="traditional" />
         </div>
       )}
+
+      <ResultFooterActions />
 
       <RestoreReportModal
         open={!!cacheGate}

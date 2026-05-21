@@ -31,6 +31,7 @@ import { BackButton } from '../components/ui/BackButton';
 import { useLoadingGuard } from '../hooks/useLoadingGuard';
 import { useScrollToTopOnLoad } from '../hooks/useScrollToTopOnLoad';
 import { ShareBar } from '@/components/share/ShareBar';
+import { ResultFooterActions } from '@/components/ui/ResultFooterActions';
 import { RadarChart } from '../components/charts/RadarChart';
 import { LuckyVisualCard, ELEMENT_LUCKY } from '../components/saju/LuckyVisualCard';
 import { TOJEONG_SECTION_KEYS, TOJEONG_SECTION_LABELS, type TojeongSectionKey } from '../constants/prompts';
@@ -1114,6 +1115,8 @@ export default function TojeongResultPage() {
           <ShareBar recordId={(recordId || savedRecordId)!} type="saju" category="tojeong" />
         </div>
       )}
+
+      <ResultFooterActions />
 
       <RestoreReportModal
         open={!!cacheGate}

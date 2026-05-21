@@ -18,6 +18,7 @@ import { computeSajuFromProfile } from '../utils/profileSaju';
 import { extractMetaphor } from '../utils/parseMetaphor';
 import { BackButton } from '../components/ui/BackButton';
 import { ShareBar } from '@/components/share/ShareBar';
+import { ResultFooterActions } from '@/components/ui/ResultFooterActions';
 import { SectionCollapsible } from '../components/saju/SectionCollapsible';
 import { renderEmphasis } from '../utils/renderEmphasis';
 import { renderTaekilSectionVisual } from '../components/saju/TaekilSectionVisuals';
@@ -1035,34 +1036,28 @@ export default function TaekilResultPage() {
                 </div>
               )}
             </div>
-
-            <button
-              onClick={() => {
-                const qs = resolvedProfileId ? `?profileId=${resolvedProfileId}&fresh=1` : "?fresh=1";
-                router.push(`/saju/taekil${qs}`);
-              }}
-              style={{
-                width: '100%', marginTop: 16,
-                padding: '14px', borderRadius: 12,
-                background: 'transparent',
-                border: '1px solid var(--border-subtle)',
-                color: 'var(--text-secondary)',
-                fontWeight: 600, fontSize: 14,
-                cursor: 'pointer',
-              }}
-            >
-              다른 날짜로 다시 풀이받기
-            </button>
           </div>
         </motion.div>
       </div>
 
       {/* 공유 — 카카오톡 + URL 복사 */}
       {recordId && (
-        <div style={{ marginTop: 24, marginBottom: 32, padding: '0 4px' }}>
+        <div style={{ marginTop: 24, padding: '0 4px' }}>
           <ShareBar recordId={recordId} type="saju" category="taekil" />
         </div>
       )}
+
+      <div style={{ marginBottom: 32, padding: '0 4px' }}>
+        <ResultFooterActions
+          redo={{
+            label: '다른 날짜로 다시 풀이받기',
+            onClick: () => {
+              const qs = resolvedProfileId ? `?profileId=${resolvedProfileId}&fresh=1` : '?fresh=1';
+              router.push(`/saju/taekil${qs}`);
+            },
+          }}
+        />
+      </div>
       {/* saju ref 살림 — TS unused 방지: 향후 confirm 모달/디버그용 */}
       {!saju && null}
 

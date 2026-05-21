@@ -54,6 +54,7 @@ import {
 import { useLoadingGuard } from '../hooks/useLoadingGuard';
 import { useScrollToTopOnLoad } from '../hooks/useScrollToTopOnLoad';
 import { ShareBar } from '@/components/share/ShareBar';
+import { ResultFooterActions } from '@/components/ui/ResultFooterActions';
 
 const LOADING_MESSAGES = [
   '명반 12궁의 별자리를 배치하는 중입니다',
@@ -1424,6 +1425,10 @@ export default function ZamidusuResultPage() {
           <ShareBar recordId={(recordId || savedRecordId)!} type="saju" category="zamidusu" />
         </div>
       )}
+
+      <div style={{ padding: '0 16px' }}>
+        <ResultFooterActions />
+      </div>
 
       <RestoreReportModal
         open={!!cacheGate}

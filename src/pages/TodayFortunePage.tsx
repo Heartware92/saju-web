@@ -60,6 +60,7 @@ import { useLoadingGuard } from '../hooks/useLoadingGuard';
 import { useScrollToTopOnLoad } from '../hooks/useScrollToTopOnLoad';
 import { TODAY_PERSONA_EXTRA_LABEL } from '../constants/sajuKnowledgeBase';
 import { ShareBar } from '@/components/share/ShareBar';
+import { ResultFooterActions } from '@/components/ui/ResultFooterActions';
 
 const TODAY_MESSAGES = [
   '일진과 원국의 오행을 대조하는 중입니다',
@@ -1126,6 +1127,21 @@ export default function TodayFortunePage() {
           <ShareBar recordId={(recordId || savedRecordId)!} type="saju" category="today" />
         </div>
       )}
+
+      <ResultFooterActions
+        redo={
+          !isArchiveMode
+            ? {
+                label: '다시 풀이 받기',
+                onClick: () => {
+                  setReport(null);
+                  setUserCtx(null);
+                  window.scrollTo({ top: 0 });
+                },
+              }
+            : undefined
+        }
+      />
 
       <RestoreReportModal
         open={!!cacheGate}

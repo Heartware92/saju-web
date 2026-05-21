@@ -39,6 +39,7 @@ import { LuckyVisualCard, ELEMENT_LUCKY } from '../components/saju/LuckyVisualCa
 import { TermChip } from '../components/ui/TermChip';
 import { useLoadingGuard } from '../hooks/useLoadingGuard';
 import { ShareBar } from '@/components/share/ShareBar';
+import { ResultFooterActions } from '@/components/ui/ResultFooterActions';
 import { RadarChart } from '../components/charts/RadarChart';
 import { MonthlyTrendChart } from '../components/charts/MonthlyTrendChart';
 import { renderNewyearSectionVisual, renderPickedDateSectionVisual } from '../components/saju/NewyearSectionVisuals';
@@ -1620,6 +1621,24 @@ export default function PeriodFortunePage({ scope }: { scope: FortuneScope | 'da
         <div className="mt-6">
           <ShareBar recordId={(recordId || savedRecordId)!} type="saju" category={scope === 'year' ? 'newyear' : scope === 'date' ? 'period' : 'today'} />
         </div>
+      )}
+
+      {/* 결과 화면에서만 노출 — 지정일 캘린더 선택 단계에서는 숨김 */}
+      {!(scope === 'date' && !dateConfirmed) && (
+        <ResultFooterActions
+          redo={
+            scope === 'date' && !isArchiveMode
+              ? {
+                  label: '다른 날짜로 다시 풀이받기',
+                  onClick: () => {
+                    setDateConfirmed(false);
+                    setPickedDateReport(null);
+                    window.scrollTo({ top: 0 });
+                  },
+                }
+              : undefined
+          }
+        />
       )}
 
       <RestoreReportModal
