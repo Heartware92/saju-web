@@ -177,7 +177,7 @@ function SinsalChipList({
   const [openIdx, setOpenIdx] = useState<number | null>(null);
   return (
     <div className="flex flex-col gap-2.5">
-      <div className="flex flex-wrap gap-2">
+      <div className="grid grid-cols-3 gap-2">
         {items.map((it, i) => {
           const open = openIdx === i;
           return (
@@ -185,15 +185,15 @@ function SinsalChipList({
               key={i}
               type="button"
               onClick={() => setOpenIdx(open ? null : i)}
-              className="inline-flex items-center gap-1.5 rounded-full px-3.5 py-2 text-[16px] font-bold border transition-all active:scale-[0.97]"
+              className="flex w-full items-center justify-center gap-1 rounded-full px-2 py-2 text-[15px] font-bold border transition-all active:scale-[0.97]"
               style={{
                 background: open ? `${accent}30` : `${accent}14`,
                 color: accent,
                 borderColor: `${accent}${open ? 'aa' : '55'}`,
               }}
             >
-              {it.name}
-              <span className="text-[11px] opacity-60">{open ? '▲' : '▼'}</span>
+              <span style={{ wordBreak: 'keep-all' }}>{it.name}</span>
+              <span className="text-[10px] opacity-60 shrink-0">{open ? '▲' : '▼'}</span>
             </button>
           );
         })}
