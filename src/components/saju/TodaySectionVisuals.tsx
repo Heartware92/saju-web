@@ -63,34 +63,23 @@ function CardWrap({
   );
 }
 
-// 점수 게이지 한 줄 — 라벨 + 막대 + 점수
+// 점수 게이지 한 줄 — 라벨 + 막대 + 점수 (열 정렬 통일)
 function MiniGauge({ label, score, color }: { label: string; score: number; color: string }) {
   return (
     <div className="flex items-center gap-2.5">
-      <span className="w-16 shrink-0 text-[13px] font-semibold text-text-secondary">{label}</span>
+      <span className="w-[78px] shrink-0 text-[13px] font-semibold text-text-secondary" style={{ wordBreak: 'keep-all' }}>
+        {label}
+      </span>
       <div className="flex-1 h-2.5 rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.06)' }}>
         <div
           className="h-full rounded-full"
           style={{ width: `${Math.min(100, Math.max(4, score))}%`, background: color }}
         />
       </div>
-      <span className="w-12 text-right text-[14px] font-bold shrink-0" style={{ color }}>
+      <span className="w-11 text-right text-[14px] font-bold shrink-0" style={{ color }}>
         {score}점
       </span>
     </div>
-  );
-}
-
-// 영역 칩
-function DomainChip({ label, score, color }: { label: string; score: number; color: string }) {
-  return (
-    <span
-      className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[13px] font-bold border"
-      style={{ background: `${color}16`, borderColor: `${color}50`, color: 'var(--text-primary)' }}
-    >
-      <span>{label}</span>
-      <span style={{ color }}>{score}점</span>
-    </span>
   );
 }
 
@@ -162,8 +151,8 @@ function HobbyVisual({ report }: { report: TodayFortuneV3AIResult }) {
   const jobState = uc.customJobState?.trim() || uc.jobState;
   const loveState = uc.customLoveState?.trim() || uc.loveState;
   return (
-    <CardWrap accent="#C9A6FF" title="오늘 풀이에 반영된 입력">
-      <div className="text-[12px] text-text-tertiary mb-1.5">관심사</div>
+    <CardWrap accent="#C9A6FF" title="오늘의 나는 이런 상태예요">
+      <div className="text-[12px] text-text-tertiary mb-1.5">요즘 관심 가는 것</div>
       <div className="flex flex-wrap gap-1.5 mb-3">
         {hobbies.map((h, i) => (
           <span
@@ -318,8 +307,47 @@ function RelationshipVisual({ report }: { report: TodayFortuneV3AIResult }) {
   );
 }
 
+// 순위 행 — 순위 배지 + 라벨 + 막대 + 점수 (열 정렬 통일)
+function RankRow({
+  rank,
+  label,
+  score,
+  color,
+}: {
+  rank: number;
+  label: string;
+  score: number;
+  color: string;
+}) {
+  return (
+    <div className="flex items-center gap-2.5">
+      <span
+        className="inline-flex items-center justify-center w-5 h-5 rounded-full shrink-0 text-[11px] font-bold"
+        style={{ background: `${color}26`, color }}
+      >
+        {rank}
+      </span>
+      <span
+        className="w-[78px] shrink-0 text-[13.5px] font-bold text-text-primary"
+        style={{ wordBreak: 'keep-all' }}
+      >
+        {label}
+      </span>
+      <div className="flex-1 h-2.5 rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.06)' }}>
+        <div
+          className="h-full rounded-full"
+          style={{ width: `${Math.min(100, Math.max(4, score))}%`, background: color }}
+        />
+      </div>
+      <span className="w-11 text-right text-[14px] font-bold shrink-0" style={{ color }}>
+        {score}점
+      </span>
+    </div>
+  );
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
-// 6) 주의할 점 — 오늘 점수가 낮은 영역
+// 6) 주의할 점 — 오늘 점수가 낮은 영역 순위
 // ─────────────────────────────────────────────────────────────────────────────
 function CautionVisual({ report }: { report: TodayFortuneV3AIResult }) {
   const s = report.domainScores;
@@ -330,9 +358,9 @@ function CautionVisual({ report }: { report: TodayFortuneV3AIResult }) {
     .slice(0, 3);
   return (
     <CardWrap accent="#FB923C" title="오늘 더 살펴야 할 영역" titleSub="점수 낮은 순">
-      <div className="flex flex-wrap gap-1.5">
-        {ranked.map((d) => (
-          <DomainChip key={d.label} label={d.label} score={d.score} color={scoreTier(d.score).color} />
+      <div className="flex flex-col gap-2.5">
+        {ranked.map((d, i) => (
+          <RankRow key={d.label} rank={i + 1} label={d.label} score={d.score} color={scoreTier(d.score).color} />
         ))}
       </div>
     </CardWrap>
@@ -340,7 +368,7 @@ function CautionVisual({ report }: { report: TodayFortuneV3AIResult }) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// 7) 좋은 포인트 — 오늘 점수가 높은 영역 + 종합 점수
+// 7) 좋은 포인트 — 오늘 점수가 높은 영역 순위 + 종합 점수
 // ─────────────────────────────────────────────────────────────────────────────
 function StrengthVisual({ report }: { report: TodayFortuneV3AIResult }) {
   const s = report.domainScores;
@@ -351,9 +379,9 @@ function StrengthVisual({ report }: { report: TodayFortuneV3AIResult }) {
     .slice(0, 3);
   return (
     <CardWrap accent="#34D399" title="오늘 가장 빛나는 영역" titleSub={`종합 ${s.overall}점`}>
-      <div className="flex flex-wrap gap-1.5">
-        {ranked.map((d) => (
-          <DomainChip key={d.label} label={d.label} score={d.score} color="#34D399" />
+      <div className="flex flex-col gap-2.5">
+        {ranked.map((d, i) => (
+          <RankRow key={d.label} rank={i + 1} label={d.label} score={d.score} color="#34D399" />
         ))}
       </div>
     </CardWrap>
@@ -361,7 +389,100 @@ function StrengthVisual({ report }: { report: TodayFortuneV3AIResult }) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// 8) 행운 카드 — 일진 천간 오행 기반 결정론적 행운 처방
+// 8) 식사 가이드 — 일진 지지 오행 기반 오미·장부·음식 기운
+// ─────────────────────────────────────────────────────────────────────────────
+const ELEMENT_FOOD: Record<string, { taste: string; organ: string; foods: string[] }> = {
+  목: { taste: '신맛', organ: '간·담', foods: ['푸른 잎채소', '매실', '신김치', '딸기'] },
+  화: { taste: '쓴맛', organ: '심장·소장', foods: ['도라지', '쌉쌀한 나물', '녹차', '자몽'] },
+  토: { taste: '단맛', organ: '비위', foods: ['단호박', '고구마', '대추', '꿀'] },
+  금: { taste: '매운맛', organ: '폐·대장', foods: ['무', '생강', '마늘', '배'] },
+  수: { taste: '짠맛', organ: '신장·방광', foods: ['해조류', '검은콩', '두부', '견과'] },
+};
+
+function MealVisual({ report }: { report: TodayFortuneV3AIResult }) {
+  const el = report.todayGz?.zhiElement;
+  const food = el ? ELEMENT_FOOD[el] : undefined;
+  if (!el || !food) return null;
+  const color = ELEMENT_COLOR[el] ?? '#F4A261';
+  return (
+    <CardWrap accent={color} title="오늘 몸에 맞는 식사 기운" titleSub={`일진 ${el} 기운`}>
+      <div className="grid grid-cols-2 gap-2 mb-3">
+        <div
+          className="rounded-xl px-3 py-2.5 border text-center"
+          style={{ background: `${color}12`, borderColor: `${color}45` }}
+        >
+          <div className="text-[11.5px] text-text-tertiary mb-1">어울리는 맛</div>
+          <div className="text-[15px] font-bold" style={{ color }}>{food.taste}</div>
+        </div>
+        <div
+          className="rounded-xl px-3 py-2.5 border text-center"
+          style={{ background: `${color}12`, borderColor: `${color}45` }}
+        >
+          <div className="text-[11.5px] text-text-tertiary mb-1">살피면 좋은 장부</div>
+          <div className="text-[15px] font-bold" style={{ color }}>{food.organ}</div>
+        </div>
+      </div>
+      <div className="text-[12px] text-text-tertiary mb-1.5">오늘 챙기면 좋은 음식</div>
+      <div className="flex flex-wrap gap-1.5">
+        {food.foods.map((f) => (
+          <span
+            key={f}
+            className="text-[13px] font-semibold px-2.5 py-1.5 rounded-lg border text-text-primary"
+            style={{ background: `${color}16`, borderColor: `${color}45` }}
+          >
+            {f}
+          </span>
+        ))}
+      </div>
+    </CardWrap>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 9) 맞춤 포인트 — 직업·역할에 닿는 영역 점수
+// ─────────────────────────────────────────────────────────────────────────────
+const ROLE_DOMAINS: Record<string, [keyof typeof TODAY_V3_DOMAIN_LABELS, keyof typeof TODAY_V3_DOMAIN_LABELS]> = {
+  학생: ['exam', 'focus'],
+  직장인: ['focus', 'recovery'],
+  '자영업·프리랜서': ['money', 'social'],
+  '구직 중': ['social', 'mental'],
+  주부: ['recovery', 'mental'],
+  기타: ['focus', 'mental'],
+};
+
+function PersonaVisual({ report }: { report: TodayFortuneV3AIResult }) {
+  const uc = report.userContext;
+  const s = report.domainScores;
+  if (!uc || !s) return null;
+  const pair = ROLE_DOMAINS[uc.jobState] ?? ROLE_DOMAINS['기타'];
+  const roleLabel = uc.customJobState?.trim() || uc.jobState;
+  return (
+    <CardWrap accent="#F4C2A1" title="내 역할에 닿는 오늘 기운">
+      <div className="flex items-center gap-2 mb-3">
+        <span className="text-[12.5px] text-text-tertiary">오늘의 나</span>
+        <span
+          className="text-[13px] font-bold px-2.5 py-1 rounded-full"
+          style={{ background: 'rgba(244,194,161,0.2)', color: '#F4C2A1' }}
+        >
+          {roleLabel}
+        </span>
+      </div>
+      <div className="flex flex-col gap-2.5">
+        {pair.map((k) => (
+          <MiniGauge
+            key={k}
+            label={TODAY_V3_DOMAIN_LABELS[k]}
+            score={s[k]}
+            color={scoreTier(s[k]).color}
+          />
+        ))}
+      </div>
+    </CardWrap>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 10) 행운 카드 — 일진 천간 오행 기반 결정론적 행운 처방
 // ─────────────────────────────────────────────────────────────────────────────
 function LuckyVisual({ report }: { report: TodayFortuneV3AIResult }) {
   const el = report.todayGz?.ganElement;
@@ -403,15 +524,19 @@ export function renderTodaySectionVisual(key: TodayV3SectionKey, report: TodayFo
       ) : null;
     case 'today_relationship':
       return <RelationshipVisual report={report} />;
+    case 'today_meal':
+      return <MealVisual report={report} />;
     case 'today_caution':
       return <CautionVisual report={report} />;
     case 'today_strength':
       return <StrengthVisual report={report} />;
+    case 'today_persona_extra':
+      return <PersonaVisual report={report} />;
     case 'today_lucky_card':
       return <LuckyVisual report={report} />;
     default:
-      // today_domains_brief·today_meal·today_persona_extra·today_fortune_message
-      // 은 별도 결정값이 없거나 상단 차트로 충분해 카드 없음
+      // today_domains_brief·today_fortune_message 는 상단 차트로 충분하거나
+      // 별도 결정값이 없어 카드 없음
       return null;
   }
 }
