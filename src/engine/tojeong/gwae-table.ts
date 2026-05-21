@@ -184,10 +184,11 @@ function buildDomainMoods(
   const wealth = (() => {
     const sangElTone =
       sang.element === '木' ? '확장·새 사업 투자기'
+      : sang.element === '火' ? '명예·평판이 수익으로 이어지는 흐름'
       : sang.element === '土' ? '축적·부동산·실물 자산'
       : sang.element === '金' ? '결실·매듭·정리 수익'
       : sang.element === '水' ? '유동성·이동 자금·현금 흐름'
-      : '확장과 손실 양면 — 큰 거래 주의';
+      : '확장과 손실이 함께하니 큰 거래는 주의';
     const haGain =
       ha.num === 2 ? '재물 무대가 정면에 섬'
       : ha.num === 3 ? '인연·소개로 들어오는 수입'
@@ -230,10 +231,10 @@ function buildDomainMoods(
       : sang.element === '土' ? '환절기'
       : sang.element === '金' ? '가을철'
       : '겨울철';
-    if (isUpper) return `${organ} 활발 — ${season} 과로만 단속`;
-    if (isMid) return `${organ} 무난 — ${season} 환절기 기본 관리`;
-    if (isTest) return `${organ} 시험기 — ${season} 환절기 예방 우선`;
-    return `${organ} 약화 — ${season} 무리 금지 + 정기 검진 권장`;
+    if (isUpper) return `${organ} 활기, ${season} 과로만 단속`;
+    if (isMid) return `${organ} 무난, ${season} 환절기 기본 관리`;
+    if (isTest) return `${organ} 시험기, ${season} 환절기 예방 우선`;
+    return `${organ} 약화 주의, ${season} 무리 금지와 정기 검진`;
   })();
 
   // ── 직장·학업 — jung 효위치 중심 + sang 강건성 ──
