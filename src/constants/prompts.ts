@@ -4172,7 +4172,8 @@ const TAEKIL_KNOWLEDGE: Record<string, string> = {
 시험·면접 행사는 일반 길흉에 더해 "정관·정인이 만나는 날", "상관·편관 충돌 없는 날" 관점 추가 강조.`,
 
   heal: `[몸을 보살피다 — 수술·시술·치유 택일 명리 지식]
-이 묶음은 "몸의 회복을 도모하는 행사" — 수술, 시술, 큰 치료 시작, 회복기 진입.
+이 묶음은 "몸의 회복을 도모하는 일" — 수술, 시술, 큰 치료 시작, 회복기 진입.
+※ 수술·시술·치유는 행사가 아니다. 본문에서 "행사"라 부르지 말고 "일"·"치료"·구체 명칭(수술/시술 등)으로 지칭할 것.
 정인 = 보호·회복 에너지. 핵심 길성.
 식신 = 체력·면역. 수술 후 경과 좋음.
 편인 = 식신 극(도식·倒食). 회복력 저하·부작용 주의. 강한 감점.
@@ -4243,6 +4244,9 @@ export const generateTaekilAdvicePrompt = (
 ): string => {
   const isBirth = taekil.category === 'birth';
   const isCustom = taekil.category === 'custom';
+  // 카테고리별 지칭 명사 — '몸을 보살피다'(수술·시술·치유)·'새 생명을 맞다'(출산)는
+  // 행사가 아니므로 '일'로 지칭. 결혼·계약 등 행사성 묶음만 '행사' 유지.
+  const eventNoun = (taekil.category === 'heal' || taekil.category === 'birth') ? '일' : '행사';
   const isCompareMode = taekil.days.length >= 2 && taekil.days.length <= 7;
   const topDays = isCompareMode
     ? [...taekil.days].sort((a, b) => b.score - a.score).slice(0, 3)
@@ -4405,13 +4409,14 @@ ${detail && detail.trim() ? `━━━━━━━━━━━━━━━━━
 2) 마커 출력 순서 (필수, 누락·순서 변경 금지):
    [comprehensive_analysis] → [top1] → [top2]${topCount >= 3 ? ' → [top3]' : ''}${worstDays.length > 0 ? ' → [avoid]' : ''} → [overall_advice] → [alternative]
 3) ★★★★★ [comprehensive_analysis] (340~460자, 5~7문장) — "종합 분석" 영역. 가장 먼저 출력.
-   - 본인 사주(일간·격국·용신·신강신약·핵심 십성)와 ${taekil.subItem ?? taekil.customLabel ?? taekil.categoryLabel}이라는 행사를 명리적으로 어떻게 엮어야 하는지 풍부하게 풀어쓸 것.
+   - 본인 사주(일간·격국·용신·신강신약·핵심 십성)와 ${taekil.subItem ?? taekil.customLabel ?? taekil.categoryLabel}이라는 ${eventNoun}을 명리적으로 어떻게 엮어야 하는지 풍부하게 풀어쓸 것.
    - 반드시 본문에 본인 사주 요소 (일간 + 용신 + 격국 또는 신강신약 중 최소 2가지) 를 구체적으로 언급.
      예: "당신의 일간은 ${saju.dayMaster}(${saju.dayMasterElement})이며 용신은 ${saju.yongSinElement}, ${gyeokguk.name}으로…"
-   - 행사 카테고리(${taekil.categoryLabel})${taekil.subItem ? ` 중 "${taekil.subItem}"` : ''}${taekil.customLabel ? ` ("${taekil.customLabel}")` : ''}이
+   - 카테고리(${taekil.categoryLabel})${taekil.subItem ? ` 중 "${taekil.subItem}"` : ''}${taekil.customLabel ? ` ("${taekil.customLabel}")` : ''}이
      본인 사주와 만났을 때 어떤 결을 만드는지 — 길한 흐름·주의해야 할 흐름·전체 톤·결단 포인트.
    - 사용자가 적은 상세 정황이 있다면 그 정황(인물·장소·시기·역할 등)을 본문 한 곳 이상에 자연스럽게 인용.
-   - "당신은 …", "이번 행사는 …" 같은 2인칭·맞춤 톤. 일반론·격언 금지.
+   - "당신은 …", "이번 ${eventNoun}은 …" 같은 2인칭·맞춤 톤. 일반론·격언 금지.
+   - ★ "수술·시술·치유·출산"처럼 행사가 아닌 ${taekil.categoryLabel} 묶음에서는 이를 "행사"라고 부르지 말 것. "${eventNoun}"·구체 명칭(예: "${taekil.subItem ?? '이 일'}")으로 지칭.
 4) ★★★★★ 각 [topN] 섹션은 반드시 다음 4줄 라벨을 한 줄씩 순서대로 출력. 4 라벨 누락 시 응답 무효:
    "종합: …" (5~7문장, 220~320자) — 이 날이 ${taekil.subItem ?? taekil.categoryLabel}에 적합한 명리적 결.
      일진 천간·지지 오행 + 원국 관계(생극·합충형) + 핵심 십성 영향 + 12운성 의미를
@@ -4431,15 +4436,16 @@ ${detail && detail.trim() ? `━━━━━━━━━━━━━━━━━
    - 첫 줄에 흉일 날짜 명시 + 신살이 있으면 신살 이름·의미 1문장.
    - 일진×원국 합충·형 관계 1~2가지 구체 명시 (어느 기둥과 어떤 충돌인지).
    - 이 날 ${taekil.subItem ?? taekil.categoryLabel}을(를) 강행할 경우 어떤 위험이 따르는지 2~3문장 (재물·관계·건강·운기 측면).
+   - ※ 본문에서 ${taekil.categoryLabel} 을(를) 지칭할 땐 "행사" 대신 "${eventNoun}" 또는 구체 명칭 사용.
    - 마지막에 "꼭 해야 한다면 …" 또는 "대체 시기로는 …" 같이 1순위 길일 또는 보완 행동 1가지 제시.
    - "흉일이니 피하세요" 단조롭게 끝내지 말 것 — 왜 흉인지 + 대안까지 풀어쓸 것.
 6) ★ [overall_advice] (260~360자) — "${taekil.subItem ?? taekil.customLabel ?? taekil.categoryLabel}에 대한 조언" 영역.
-   - 1·2·3위 풀이를 종합해 행사 자체에 대한 전반적 권고.
+   - 1·2·3위 풀이를 종합해 ${eventNoun} 자체에 대한 전반적 권고.
    - 마음가짐·준비·태도 2가지와 함정 1~2가지.
-   - 특정 날짜에 매이지 않은 "이 행사에 대한 조언" 톤. 사용자 정황 반영.
+   - 특정 날짜에 매이지 않은 "이 ${eventNoun}에 대한 조언" 톤. 사용자 정황 반영.
 7) ★★ [alternative] (260~360자) — "추천 대체 방법" 영역. 반드시 ★ 3가지 ★ 대안 제시.
    - 대안 1: 시간대를 옮기는 안 (예: 오전→저녁, 또는 다른 시진).
-   - 대안 2: 행사 자체를 변형·분할하는 안 (예: 본 행사 + 사전 미팅 분리).
+   - 대안 2: ${eventNoun} 자체를 변형·분할하는 안 (예: 본 ${eventNoun} + 사전 준비 분리).
    - 대안 3: 동행자·장소·규모를 조정하는 안 (또는 다른 분기·달 시도).
    - 각 대안마다 "첫째로 …", "둘째로 …", "셋째로 …" 같이 명시적으로 번호 부여(불릿 금지, 문장 안에서).
    - 추상 격언 금지. 구체 시점·행동·근거.
@@ -6198,10 +6204,10 @@ ${GUNGHAP_SECTION_FORMAT}
 ▶ 영혼의 공명 — 왜 통하는가 (280~360자)
 지지 합·삼합 결과(${crossInteractions})를 근거로 두 사람 사이에 흐르는 보이지 않는 연결을 묘사하세요. 일간이 동일하다면 비화(비견)의 공명 구조를, 다르다면 상생·상극에서 나오는 당김의 에너지를 설명. 십성 분포 비교(${sipseongCompare})에서 "서로가 서로를 어떤 존재로 인식하는지"도 분석하세요.
 
-▶ 영혼의 거울 (260~340자)
+▶ 상대가 보는 나 (260~340자)
 이 두 사람이 서로에게 "거울" 역할을 하는 구조를 분석. 상대를 통해 자기 자신의 숨겨진 면을 발견하는 경험을 십성·오행 구조로 서술. "이 사람이 내게 보여주는 나의 모습"을 각자 입장에서 묘사하세요.
 
-▶ 일상 속 공명 (260~340자)
+▶ 일상 케미 포인트 (260~340자)
 특별한 사건이 아닌 일상에서 소울메이트 케미가 드러나는 순간 3가지를 구체적으로 묘사. "같은 생각을 동시에 하는 순간", "말하지 않아도 아는 순간", "함께 있으면 시간이 다르게 흐르는 감각"을 명리 구조로 설명.
 
 ▶ 이 인연에서 각자가 성장하는 것 (260~340자)
