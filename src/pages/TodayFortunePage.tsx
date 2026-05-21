@@ -19,6 +19,7 @@ import { useProfileStore } from '../store/useProfileStore';
 import { extractMetaphor } from '../utils/parseMetaphor';
 import { renderEmphasis } from '../utils/renderEmphasis';
 import { SectionCollapsible } from '../components/saju/SectionCollapsible';
+import { renderTodaySectionVisual } from '../components/saju/TodaySectionVisuals';
 import { useCreditStore } from '../store/useCreditStore';
 import { useReportCacheStore, sajuKey, type ReportKind } from '../store/useReportCacheStore';
 import { RestoreReportModal } from '../components/RestoreReportModal';
@@ -1111,6 +1112,8 @@ export default function TodayFortunePage() {
                 defaultOpen={idx === 0}
                 enterDelay={0.05 * idx}
               >
+                {/* 섹션별 시각 데이터 카드 — 본문 줄글 위 한눈 요약 */}
+                {renderTodaySectionVisual(key, report)}
                 <div className="text-[17px] text-text-secondary leading-[1.85] tracking-[-0.005em] space-y-3">
                   {bodyText.split(/\n\n+/).map((para, pi) => (
                     <p key={pi} className="whitespace-pre-line">{renderEmphasis(para.trim())}</p>
