@@ -40,6 +40,7 @@ import { SUN_COST_BIG, CHARGE_REASONS } from '../constants/creditCosts';
 import { ZAMIDUSU_SECTION_KEYS, ZAMIDUSU_SECTION_LABELS } from '../constants/prompts';
 import { MAJOR_STARS_META, MINOR_STARS_META, MUTAGEN_META, PALACE_ROLE_META } from '../engine/zamidusu/knowledge';
 import { AILoadingBar } from '../components/AILoadingBar';
+import { LuckyVisualCard, ELEMENT_LUCKY } from '../components/saju/LuckyVisualCard';
 import { BackButton } from '../components/ui/BackButton';
 import { StarChart } from '../components/zamidusu/StarChart';
 import { CorePalaceScores } from '../components/zamidusu/CorePalaceScores';
@@ -165,18 +166,20 @@ function MainStarCards({ palace }: { palace: ZamidusuPalace }) {
   );
 }
 
-function HelperStarGroup({ label, stars, color, bg }: { label: string; stars: ZamidusuPalace['minorStars']; color: string; bg: string }) {
+function HelperStarGroup({ title, desc, stars, color, bg }: {
+  title: string; desc: string; stars: ZamidusuPalace['minorStars']; color: string; bg: string;
+}) {
   if (stars.length === 0) return null;
   return (
     <div style={{ padding: ZV.pad, borderRadius: ZV.radius, background: bg, border: `1px solid ${color}55`, marginBottom: ZV.gap }}>
-      {/* 라벨 + 개수 배지 — 길성·흉성이 몇 개인지 한눈에 */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 11 }}>
-        <span style={{ fontSize: 13.5, color, fontWeight: 700, letterSpacing: '0.04em' }}>{label}</span>
-        <span style={{
-          fontSize: 11.5, fontWeight: 700, color, lineHeight: 1,
-          background: `${color}22`, border: `1px solid ${color}55`,
-          borderRadius: 999, padding: '3px 8px',
-        }}>{stars.length}</span>
+      {/* 제목 + 개수 — "길성 2개" 처럼 분류명과 개수를 자연스럽게 */}
+      <div style={{ display: 'flex', alignItems: 'baseline', gap: 7, marginBottom: 6 }}>
+        <span style={{ fontSize: 15, color, fontWeight: 700 }}>{title}</span>
+        <span style={{ fontSize: 14, color, fontWeight: 700 }}>{stars.length}개</span>
+      </div>
+      {/* 부연 설명 — 이 별 무리가 뭘 뜻하는지 */}
+      <div style={{ fontSize: 12.5, color: 'var(--text-tertiary)', lineHeight: 1.6, marginBottom: 11, wordBreak: 'keep-all' }}>
+        {desc}
       </div>
       <div style={{ display: 'flex', gap: 7, flexWrap: 'wrap' }}>
         {stars.map(s => {
@@ -211,9 +214,26 @@ function HelperStarsChips({ palace }: { palace: ZamidusuPalace }) {
   }
   return (
     <div style={{ marginBottom: ZV.sectionGap }}>
-      <HelperStarGroup label="6 길성 — 귀인·복" stars={lucky} color="#34D399" bg="rgba(52,211,153,0.08)" />
-      <HelperStarGroup label="4 흉성 — 압력·함정" stars={unlucky} color="#F87171" bg="rgba(248,113,113,0.08)" />
-      <HelperStarGroup label="록존·천마" stars={other} color="#FBBF24" bg="rgba(251,191,36,0.08)" />
+      {/* 보조성 = 명궁 주성을 곁에서 받쳐주는 별. 길성·흉성·재물성 3 갈래 */}
+      <div style={{ fontSize: 13, color: 'var(--text-tertiary)', lineHeight: 1.65, marginBottom: 10, wordBreak: 'keep-all' }}>
+        보조성은 명궁의 주인공 별을 곁에서 돕거나 자극하는 별이에요. 명궁에 들어온 별만
+        아래에 모았습니다.
+      </div>
+      <HelperStarGroup
+        title="길성"
+        desc="위기에 손 내밀어 주는 귀인·조력의 별. 명궁에 많을수록 사람 덕·기회 덕이 두텁습니다."
+        stars={lucky} color="#34D399" bg="rgba(52,211,153,0.08)"
+      />
+      <HelperStarGroup
+        title="흉성"
+        desc="압력·시련을 주는 별. 부담스럽지만 잘 다스리면 나를 단련시키는 추진력이 됩니다."
+        stars={unlucky} color="#F87171" bg="rgba(248,113,113,0.08)"
+      />
+      <HelperStarGroup
+        title="록존·천마"
+        desc="재물복을 부르는 록존, 이동·변동·기회를 부르는 천마. 활동성과 실리의 별입니다."
+        stars={other} color="#FBBF24" bg="rgba(251,191,36,0.08)"
+      />
     </div>
   );
 }
@@ -417,6 +437,38 @@ function SohanCard({ chart, currentAge }: { chart: ZamidusuResult; currentAge?: 
   );
 }
 
+// 오행국(水二局·木三局 등)에서 한글 오행 한 글자 추출
+function elementFromFiveClass(cls: string): string {
+  if (/水|수/.test(cls)) return '수';
+  if (/木|목/.test(cls)) return '목';
+  if (/金|금/.test(cls)) return '금';
+  if (/土|토/.test(cls)) return '토';
+  if (/火|화/.test(cls)) return '화';
+  return '목';
+}
+
+// 별의 조언 — 오행국 기준 개운 시각 카드 (나침반·색·시간 — 정통사주 용신 처방과 동일 UI)
+function AdviceLuckyCard({ chart }: { chart: ZamidusuResult }) {
+  const el = elementFromFiveClass(chart.fiveElementsClass);
+  const data = ELEMENT_LUCKY[el] ?? ELEMENT_LUCKY['목'];
+  return (
+    <div style={{ marginBottom: ZV.sectionGap }}>
+      <div style={{ ...ZV.label, marginBottom: 10 }}>
+        오행국 ({chart.fiveElementsClass}) 기준 개운 처방
+      </div>
+      <LuckyVisualCard
+        colors={data.colors}
+        colorCss={data.colorCss}
+        numbers={data.numbers}
+        direction={data.direction}
+        timeSlot={data.timeSlot}
+        gem={data.gem}
+        activity={data.activity}
+      />
+    </div>
+  );
+}
+
 function renderSectionDataCards(
   key: string,
   chart: ZamidusuResult,
@@ -450,6 +502,8 @@ function renderSectionDataCards(
       return <DaehanTable chart={chart} currentAge={currentAge} />;
     case 'sohan':
       return <SohanCard chart={chart} currentAge={currentAge} />;
+    case 'advice':
+      return <AdviceLuckyCard chart={chart} />;
     default:
       return null;
   }
