@@ -17,6 +17,7 @@ import { useUserStore } from '../store/useUserStore';
 import { SAJU_CATEGORY_LABEL, TAROT_SPREAD_LABEL } from '../constants/adminLabels';
 import type { SajuRecord, TarotRecord } from '../types/credit';
 import { ShareBar } from '@/components/share/ShareBar';
+import { TAEKIL_CATEGORIES } from '../engine/taekil';
 
 type TabType = 'saju' | 'tarot';
 
@@ -45,6 +46,37 @@ function formatDate(iso: string): string {
   } catch {
     return iso;
   }
+}
+
+// 궁합 관계 칩 → 한글 라벨 (GunghapPage CATEGORY_LABEL_MAP 과 동일 — 칩 종류 표기용)
+const GUNGHAP_CHIP_LABEL: Record<string, string> = {
+  secret_crush: '짝사랑', som: '썸남·썸녀', lover: '연인', spouse: '배우자',
+  ex_lover: 'X여친·X남친', ex_spouse: 'X남편·X아내', soulmate: '소울메이트',
+  rival: '라이벌', mentor: '멘토·멘티', friend: '친구', parent_child: '부모와 자녀',
+  sibling: '형제·자매', work: '직장 동료', business: '사업 파트너',
+  idol_fan: '유명인과의 궁합', pet: '반려동물', custom: '직접 입력',
+};
+
+/**
+ * 칩 선택이 있는 카테고리(궁합·택일)에서 어떤 칩을 봤는지 라벨 추출.
+ * 칩 정보가 없으면 null — 호출부에서 배지 미표시.
+ */
+function getSubCategoryLabel(record: SajuRecord): string | null {
+  const eng = record.engine_result;
+  if (!eng) return null;
+  if (record.category === 'gunghap') {
+    const custom = typeof eng.customLabel === 'string' ? eng.customLabel.trim() : '';
+    if (custom) return custom;
+    const cat = typeof eng.gunghapCategory === 'string' ? eng.gunghapCategory : '';
+    return GUNGHAP_CHIP_LABEL[cat] ?? null;
+  }
+  if (record.category === 'taekil') {
+    const label = typeof eng.categoryLabel === 'string' ? eng.categoryLabel.trim() : '';
+    if (label) return label;
+    const cat = typeof eng.category === 'string' ? eng.category : '';
+    return TAEKIL_CATEGORIES.find((c) => c.id === cat)?.label ?? null;
+  }
+  return null;
 }
 
 /** 보관함에 표시할 프로필 라벨 — 신규 컬럼(profile_name) 우선, 없으면 생일로 fallback. */
@@ -328,6 +360,8 @@ export default function ArchivePage() {
                     : SAJU_CATEGORY_LABEL[record.category] ?? record.category;
                   const color = SAJU_CATEGORY_COLOR[record.category] ?? '#94a3b8';
                   const profileLabel = getProfileLabel(record);
+                  // 칩 선택이 있는 카테고리(궁합·택일) — 어떤 칩을 봤는지
+                  const subLabel = getSubCategoryLabel(record);
                   return (
                     <div key={record.id} className="relative">
                       <Link
@@ -352,11 +386,19 @@ export default function ArchivePage() {
                             <div className="flex-1 min-w-0 pr-7">
                               <div className="flex items-center gap-2 mb-1">
                                 <h3
-                                  className="text-sm font-bold truncate"
+                                  className="text-sm font-bold truncate flex-shrink-0"
                                   style={{ color }}
                                 >
                                   {categoryLabel}
                                 </h3>
+                                {subLabel && (
+                                  <span
+                                    className="text-[10px] font-semibold px-1.5 py-[1px] rounded flex-shrink min-w-0 truncate"
+                                    style={{ color, backgroundColor: `${color}1f`, border: `1px solid ${color}55` }}
+                                  >
+                                    {subLabel}
+                                  </span>
+                                )}
                                 {record.is_detailed && (
                                   <span className="text-[10px] text-cta border border-cta/40 px-1.5 py-[1px] rounded flex-shrink-0">상세</span>
                                 )}
