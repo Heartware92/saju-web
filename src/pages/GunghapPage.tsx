@@ -624,6 +624,24 @@ export default function GunghapPage() {
     return () => { cancelled = true; };
   }, [isArchiveMode, step]);
 
+  // 궁합 메인(landing)에 머무는 동안 백그라운드 잡이 완료되면 이전 결과 목록을 자동 갱신.
+  // findGunghapArchives 는 status=done 만 반환하므로, 잡이 done 으로 UPDATE 되는 순간 재fetch 하면
+  // 그때 목록에 새 결과가 등장한다.
+  useEffect(() => {
+    if (isArchiveMode || step !== 'landing' || !user) return;
+    const ch = supabase
+      .channel(`gunghap-archive:${user.id}`)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'saju_records', filter: `user_id=eq.${user.id}` },
+        () => {
+          findGunghapArchives(20).then(setArchiveList).catch(() => {});
+        },
+      )
+      .subscribe();
+    return () => { void supabase.removeChannel(ch); };
+  }, [isArchiveMode, step, user]);
+
   const otherDisplayName = isPetCategory
     ? pet.name.trim()
     : otherMode === 'profile'

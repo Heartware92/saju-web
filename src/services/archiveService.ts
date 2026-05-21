@@ -294,6 +294,9 @@ export async function findGunghapArchives(limit = 20): Promise<GunghapArchiveIte
       .select('id, created_at, profile_name, partner_name, partner_birth_date, engine_result')
       .eq('user_id', user.id)
       .eq('category', 'gunghap')
+      // 진행 중·실패 잡은 제외 — 백그라운드 완료(status=done)된 결과만 목록에 노출.
+      // 옛 row 는 037 마이그레이션으로 status 기본값 'done'.
+      .eq('status', 'done')
       .order('created_at', { ascending: false })
       .limit(limit);
     if (error || !data) return [];

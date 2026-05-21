@@ -232,9 +232,9 @@ function classifyGunghapSection(title: string): GunghapDomainKey | null {
   const t = title;
   if (/갈등|마찰|주의|위험|그림자|오해|이별|헤어|독이|상처|함정/.test(t)) return 'conflict';
   if (/소통|대화|의사소통|이해|표현|시선|보는|속마음/.test(t)) return 'communication';
-  if (/가치관|경제|금전|자산|신뢰|역할|생활|의사결정|방식/.test(t)) return 'values';
-  if (/성장|발전|시너지|성과|배움|미래|전망|변곡|가능성|진로/.test(t)) return 'growth';
-  if (/공명|끌림|에너지|유대|설렘|감정|정서|마음|온도|케미|연결|영혼|공명/.test(t)) return 'emotion';
+  if (/가치관|경제|금전|자산|신뢰|역할|생활|의사결정|방식|자녀/.test(t)) return 'values';
+  if (/성장|발전|시너지|성과|배움|배운|미래|전망|변곡|가능성|진로|청사진/.test(t)) return 'growth';
+  if (/공명|끌림|에너지|유대|설렘|감정|정서|마음|온도|케미|연결|영혼|존재|남은/.test(t)) return 'emotion';
   return null;
 }
 
