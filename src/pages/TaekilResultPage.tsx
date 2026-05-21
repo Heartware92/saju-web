@@ -88,6 +88,49 @@ function parseKeywordToken(token: string): TaekilKeyword | null {
   return { name, desc };
 }
 
+/**
+ * 조언·주의 본문을 문장별 항목으로 분리.
+ * - 새 record: AI 가 "- " 불릿으로 출력 → 불릿 라인 추출
+ * - 옛 record: 줄글 → 문장 종결부 기준 분리 (fallback)
+ */
+function toBullets(text: string): string[] {
+  const lines = text.split('\n').map((l) => l.trim()).filter(Boolean);
+  const bulletLines = lines.filter((l) => /^[-·•▸*]/.test(l));
+  if (bulletLines.length >= 2) {
+    return bulletLines.map((l) => l.replace(/^[-·•▸*]\s*/, '').trim()).filter(Boolean);
+  }
+  return text
+    .replace(/\s*\n+\s*/g, ' ')
+    .split(/(?<=[.!?])\s+/)
+    .map((s) => s.trim())
+    .filter(Boolean);
+}
+
+/** 조언·주의 — 문장별 불릿 리스트 (색점 + 한 문장) */
+function SentenceList({ items, color }: { items: string[]; color: string }) {
+  if (items.length === 0) return null;
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 11 }}>
+      {items.map((s, i) => (
+        <div key={i} style={{ display: 'flex', gap: 9, alignItems: 'flex-start' }}>
+          <span
+            style={{
+              marginTop: 9, width: 5, height: 5, borderRadius: '50%',
+              background: color, flexShrink: 0,
+            }}
+          />
+          <span
+            className="text-text-secondary"
+            style={{ fontSize: 16, lineHeight: 1.7, fontFamily: 'var(--font-body)', letterSpacing: '-0.005em' }}
+          >
+            {renderEmphasis(s)}
+          </span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 function parseTaekilStructuredAdvice(raw: string): TaekilParsedAdvice {
   // ── 마커 변형 정규화 ──
   // LLM 이 [top1] 대신 "1위", "1순위", "## 1위", "**1위**", "<1위>" 등으로 답하는 경우가 있어
@@ -702,17 +745,8 @@ export default function TaekilResultPage() {
                             }}>
                               이렇게 하면 좋아요
                             </div>
-                            {/* 본문은 위 "종합" 본문과 동일 사이즈·자간·줄간격으로 통일. */}
-                            <p
-                              className="text-text-secondary leading-[1.85] tracking-[-0.005em]"
-                              style={{
-                                fontSize: 17,
-                                margin: 0, whiteSpace: 'pre-line',
-                                fontFamily: 'var(--font-body)',
-                              }}
-                            >
-                              {adv.advice}
-                            </p>
+                            {/* 줄글 대신 실천 항목별 문장 리스트 — 종합 본문과 역할 분리. */}
+                            <SentenceList items={toBullets(adv.advice)} color="#34D399" />
                           </div>
                         )}
                         {adv.caution && (
@@ -733,16 +767,7 @@ export default function TaekilResultPage() {
                             }}>
                               주의할 점
                             </div>
-                            <p
-                              className="text-text-secondary leading-[1.85] tracking-[-0.005em]"
-                              style={{
-                                fontSize: 17,
-                                margin: 0, whiteSpace: 'pre-line',
-                                fontFamily: 'var(--font-body)',
-                              }}
-                            >
-                              {adv.caution}
-                            </p>
+                            <SentenceList items={toBullets(adv.caution)} color="#F87171" />
                           </div>
                         )}
 
