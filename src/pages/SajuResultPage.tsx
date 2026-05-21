@@ -629,6 +629,10 @@ export default function SajuResultPage() {
                     yongSinElement={result.yongSinElement}
                     meta={report.adviceMeta}
                   />
+                ) : key === 'luck' ? (
+                  /* 대운·세운 — LuckVisual 이 대운별 칩+인라인 펼침으로 본문까지 전담.
+                     옛 record (대운 마커 없음) 는 LuckVisual 내부에서 통짜 본문 fallback. */
+                  renderJungtongsajuSectionVisual('luck', result, bodyText)
                 ) : (
                   <>
                     {/* 섹션별 시각 데이터 카드 — 본문 줄글 위 한눈 요약 */}

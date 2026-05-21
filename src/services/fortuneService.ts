@@ -937,8 +937,8 @@ export const getJungtongsajuReport = async (
     // 8섹션이 모두 들어왔는지 검증 — 결제 사고 방지의 최후 보루
     const APPLICATION_KEYS = ['character', 'career', 'wealth', 'love', 'health', 'relation', 'luck', 'advice'] as const;
     const tryApplicationCall = async (): Promise<{ content: string; sections: Partial<Record<JungtongsajuSectionKey, string>> }> => {
-      // 명세 ~5,200자 → 14,000 (이전 12,000 → truncation 여유 확보)
-      const content = await callGPT(appPrompt, 14000);
+      // 명세 ~6,400자 (luck 대운별 소섹션 확장으로 +1,200자) → 18,000 토큰.
+      const content = await callGPT(appPrompt, 18000);
       const sections = parseJungtongsaju(content);
       const parsedKeys = Object.keys(sections);
       // 마커 누락 / 형식 어긋남 등으로 빈 객체 또는 일부만 파싱된 경우 — 에러로 취급해 retry 트리거

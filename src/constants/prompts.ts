@@ -2158,6 +2158,19 @@ function buildJungtongsajuInput(result: SajuResult) {
     .map(s => `${s.year}년 ${s.gan}${s.zhi}(${s.ganElement}${s.zhiElement}·${s.tenGod}·${s.twelveStage})`)
     .join(' | ');
 
+  // ── [luck] 대운별 소섹션용 — 현재 대운부터 데이터 끝(약 90대)까지 ──
+  // 각 대운을 [대운 N세] 마커로 풀이하도록. N = 대운 시작 나이.
+  const futureDaeWoonList = currentDaeWoonIdx >= 0
+    ? validDaeWoons.slice(currentDaeWoonIdx)
+    : validDaeWoons;
+  const futureDaeWoonBlock = futureDaeWoonList
+    .map((d, i) => {
+      const sAge = birthYearJT > 0 ? d.startAge - birthYearJT : d.startAge;
+      const eAge = birthYearJT > 0 ? d.endAge - birthYearJT : d.endAge;
+      return `${i === 0 ? '(현재) ' : ''}[대운 ${sAge}세] — ${sAge}~${eAge}세 ${d.gan}${d.zhi}(${d.ganElement}${d.zhiElement}·${d.tenGod}·${d.twelveStage})`;
+    })
+    .join('\n');
+
   const hourNote = hourUnknown
     ? '\n출생 시간 미상 — 삼주추명 원칙: 자녀궁·말년·시간대별 상세는 간략히만 처리.'
     : '';
@@ -2230,6 +2243,7 @@ ${dayTraitsBlock}`;
     nextDaeWoonStr,
     nextNextDaeWoonStr,
     recentSeWoon,
+    futureDaeWoonBlock,
     strengthStatus: result.strengthStatus,
     missingSipseongStr,
     sipseong,
@@ -2360,7 +2374,7 @@ export const generateJungtongsajuApplicationPrompt = (
   forbiddenAliases: string[] = [],
 ): string => {
   const v = buildJungtongsajuInput(result);
-  const { inputBlock, commonRules, yongSinElement, yongSin, pillars, gyeokguk, prevDaeWoonStr, currentDaeWoonStr, nextDaeWoonStr, nextNextDaeWoonStr, recentSeWoon, missingSipseongStr, sipseong } = v;
+  const { inputBlock, commonRules, yongSinElement, yongSin, pillars, gyeokguk, prevDaeWoonStr, currentDaeWoonStr, nextDaeWoonStr, nextNextDaeWoonStr, recentSeWoon, futureDaeWoonBlock, missingSipseongStr, sipseong } = v;
 
   // B 옵션 — 1차에서 쓴 별칭들을 동적 차단 블록으로 만듦
   const forbiddenBlock = forbiddenAliases.length > 0
@@ -2568,23 +2582,29 @@ ${KEY_SENTENCE_EMPHASIS_RULE}
 - **[love] 영역과 분리(필수)**: 배우자 성격·만남 방식·연애 패턴·결혼 안정성은 [love] 섹션 전담 — 여기서는 **가족 구성원으로서의 처가·시댁·중재자 역할**만 1~2문장. 배우자 자체 묘사 절대 금지
 - **[character] 영역과 분리(필수)**: 본인 성격·기질 묘사는 [character] 전담 — 여기서는 **관계 행동·가족 역학**만
 
-[luck] — 1080~1320자 (대운 흐름 입체적, 가장 깊이)
-작성 순서:
-첫 줄: 은유 제목 (대운 흐름의 과거·현재·미래를 달의 차고 기움·계절 전환으로 대비)
-빈 줄
-본문 4단락 구조 필수. 단락들은 분리된 시기 나열이 아니라 한 편의 글처럼 흐를 것 — "그 흐름이 이어져", "그 기반 위에서", "그 다음으로 열리는 국면은" 같은 연결어로 시기 사이를 부드럽게 잇고, 십성 용어 첫 등장 시 같은 호흡 안에서 일상어로 즉시 풀어 설명.
+[luck] — 대운별 소섹션 구조 (★ 파싱에 사용 — 형식 정확히 준수)
 
-[1단락 — 과거 대운 회고] 150~220자
-이전 대운(${prevDaeWoonStr})이 어떤 시기였는지를 **간지·오행·십성** 중 적어도 1개로 명리 근거를 노출하면서 진단. 그 시기 형성된 **기반(긍정 자산) 1가지** + **미해결 과제(부정 자산) 1가지**를 양면 묘사로. 추상 격언("힘든 시기였다") 금지, 구체적 영역(일·관계·재물 중 무엇이 어떻게)으로 묘사. 첫 대운이라 이전 없으면 "대운 시작 전 청소년기는 사주 원국이 그대로 발현되던 잠재기"로 시작 후 그 잠재기의 결을 사주 원국 결로 풀이.
+현재 대운부터 데이터 끝(약 90대)까지 아래 목록의 **각 대운마다** 소섹션 1개씩 작성.
 
-[2단락 — 현재 대운 본론] 480~600자
-1단락 마무리 호흡을 받아 자연스럽게 이어 시작. 현재 대운(${currentDaeWoonStr})의 **간지·오행·십성·12운성**을 명시적으로 노출하면서, 그 대운이 일·관계·재물 각각에 미치는 영향을 5~6문장으로 입체 묘사. 각 영역마다 **유리한 조건 vs 불리한 조건** 양면 명시 (예: "재성 대운이라 사업·투자 활동이 활발해지지만, 동시에 비겁이 강한 사주라면 동업·합작에서 분쟁 가능성 증가"). 향후 5년 세운(${recentSeWoon}) 5개 연도 각각 한 줄씩 "YYYY년 OO(간지·십성)은 ~한 흐름이 들어와 ~을 우선해야 한다" 형식 (5줄 모두 필수). 5개년 간 **단순 나열 X**, 흐름이 어떻게 변하는지(예: "전반기 ~ 후 후반기 ~로 전환") 한 호흡으로 묶기.
+풀이 대상 대운 목록:
+${futureDaeWoonBlock}
 
-[3단락 — 미래 대운 예고] 320~400자
-2단락 마무리 호흡을 받아 자연스럽게 이어 시작. 다음 대운(${nextDaeWoonStr})의 간지·오행·십성을 노출하면서, 어떤 국면이 열리는지 3~4문장 입체 묘사. **유리한 영역 vs 도전 영역** 양면 명시. 그 대운에서 가장 중요한 준비 한 가지를 **지금부터 무엇으로 시작해야 하는지** 구체 행동 단위로 (예: "다음 대운 진입 전 자격증·인맥·자본 중 ~를 미리 확보"). 차차기 대운(${nextNextDaeWoonStr})까지 데이터 있으면 "그 다음 대운에선 ~" 한 줄로 예고. 데이터 끝이면 "그 너머는 본 사주 데이터 범위 밖" 명시.
+작성 형식 — 위 목록의 대운 순서대로, 각 대운마다:
+  1) 마커 줄: 위 목록의 [대운 N세] 를 그 줄 맨 앞에 단독으로 출력 (예: [대운 28세]). N 은 목록의 나이 그대로, 변형 금지.
+  2) 그 다음 줄부터 그 대운 풀이 본문 220~300자.
 
-[4단락 — 마무리] 80자 내외
-3단락 마무리 호흡을 자연스럽게 이어받아 제목 은유 회수 + "대운은 10년 단위로 바뀌는 하늘의 계절"임을 한 줄로 정리.
+각 대운 풀이 본문 지침:
+- 그 대운의 **간지·오행·십성·12운성**을 명시적으로 노출하면서, 일·관계·재물에 미치는 영향을 입체 묘사.
+- **유리한 조건 vs 불리한 조건** 양면 명시 (예: "재성 대운이라 사업·투자가 활발해지지만, 비겁이 강한 사주라 동업 분쟁 가능성 증가").
+- 십성 용어 첫 등장 시 같은 호흡 안에서 일상어로 즉시 풀이.
+- 추상 격언("좋은 시기다") 금지, 구체적 영역(일·관계·재물 중 무엇이 어떻게)으로.
+- ★ 첫 대운 (현재, 목록 맨 위) 본문 끝에는 향후 5년 세운을 각 한 줄씩 추가:
+  세운 데이터(${recentSeWoon}) — "YYYY년 OO(간지·십성)은 ~한 흐름이라 ~을 우선" 형식 5줄.
+  이 5줄로 첫 대운만 분량 480~600자.
+- 마지막 대운 본문 끝에 "그 너머는 본 사주 데이터 범위 밖" 한 줄.
+
+★★ [대운 N세] 마커는 위 목록의 나이를 정확히 그대로. "[대운 28세]" 외 변형("28~37세", "대운1") 절대 금지. 마커는 줄 맨 앞 단독.
+★ 은유 제목·4단락 구조는 쓰지 말 것 — 대운별 소섹션만.
 
 중복 회피(중요):
 - 격국·신강신약·용신·오행 분포·일주 단독 묘사는 [general]·[element]·[daymaster] 섹션 전담 — 사용 금지 (여기서는 대운·세운이 그 결과에 어떻게 영향을 주는지만)

@@ -711,53 +711,48 @@ function RelationVisual({ saju }: { saju: SajuResult }) {
 // ─────────────────────────────────────────────────────────────────────────────
 // 11) 대운·세운 흐름 — 현재 대운 강조 + 향후 대운 + 올해 세운
 // ─────────────────────────────────────────────────────────────────────────────
-function DaeChip({
-  d,
-  birthYear,
-  isCurrent,
-}: {
-  d: DaeWoon;
-  birthYear: number;
-  isCurrent?: boolean;
-}) {
-  const toAge = (yr: number) => (birthYear > 0 ? yr - birthYear : yr);
-  const accent = isCurrent ? SIGNAL.cta : SIGNAL.info;
-  return (
-    <span
-      className="inline-flex items-center gap-2 rounded-xl px-3.5 py-2 text-[14px] font-bold border"
-      style={{
-        background: isCurrent ? `${accent}26` : `${accent}14`,
-        color: 'var(--text-primary)',
-        borderColor: `${accent}${isCurrent ? '88' : '44'}`,
-      }}
-    >
-      <span style={{ color: accent }}>{toAge(d.startAge)}~{toAge(d.endAge)}세</span>
-      <span style={{ fontFamily: 'var(--font-serif)' }}>{d.gan}{d.zhi}</span>
-      <span className="text-text-tertiary font-normal">{d.tenGod}</span>
-    </span>
-  );
+/** [luck] 본문을 [대운 N세] 마커로 대운별 분리. 마커 없으면 null (옛 record — 통짜 fallback) */
+function parseLuckByDaeWoon(text: string): { ageStart: number; body: string }[] | null {
+  if (!text) return null;
+  const re = /\[대운\s*(\d+)\s*세\]/g;
+  const matches = [...text.matchAll(re)];
+  if (matches.length === 0) return null;
+  const out: { ageStart: number; body: string }[] = [];
+  for (let i = 0; i < matches.length; i++) {
+    const m = matches[i];
+    const ageStart = parseInt(m[1], 10);
+    const bodyStart = (m.index ?? 0) + m[0].length;
+    const bodyEnd = i + 1 < matches.length ? (matches[i + 1].index ?? text.length) : text.length;
+    const body = text.slice(bodyStart, bodyEnd).trim();
+    if (body) out.push({ ageStart, body });
+  }
+  return out.length > 0 ? out : null;
 }
 
-function LuckVisual({ saju }: { saju: SajuResult }) {
+function LuckVisual({ saju, sectionText }: { saju: SajuResult; sectionText?: string }) {
   const now = new Date().getFullYear();
   const birthYear = saju.solarDate ? new Date(saju.solarDate).getFullYear() : 0;
-  const current = saju.daeWoon.find((d) => d.gan && now >= d.startAge && now <= d.endAge);
-  const upcoming = saju.daeWoon.filter((d) => d.gan && d.startAge > now).slice(0, 3);
+  const toAge = (yr: number) => (birthYear > 0 ? yr - birthYear : yr);
+  const valid = saju.daeWoon.filter((d) => d.gan && d.zhi);
+  const curIdx = valid.findIndex((d) => now >= d.startAge && now <= d.endAge);
+  // 현재 대운부터 데이터 끝(약 90대)까지
+  const future = curIdx >= 0 ? valid.slice(curIdx) : valid;
   const thisYear = saju.currentSeWoon;
 
+  const luckByDae = parseLuckByDaeWoon(sectionText ?? '');
+  // 현재 대운(0번)을 기본 펼침
+  const [openIdx, setOpenIdx] = useState<number | null>(future.length > 0 ? 0 : null);
+
+  // 대운 → AI 설명 매칭 (시작 나이 ±1 허용)
+  const descFor = (d: DaeWoon): string | null => {
+    if (!luckByDae) return null;
+    const sAge = toAge(d.startAge);
+    return luckByDae.find((l) => Math.abs(l.ageStart - sAge) <= 1)?.body ?? null;
+  };
+
   return (
-    <div className="grid grid-cols-1 gap-2 mb-3">
-      <SectionCardWrap accent={SIGNAL.cta} title="대운 흐름" titleSub="현재 + 향후 30년">
-        <div className="flex flex-wrap gap-2">
-          {current && <DaeChip d={current} birthYear={birthYear} isCurrent />}
-          {upcoming.map((d, i) => (
-            <DaeChip key={i} d={d} birthYear={birthYear} />
-          ))}
-          {!current && upcoming.length === 0 && (
-            <span className="text-[17px] text-text-secondary leading-relaxed">대운 데이터 없음</span>
-          )}
-        </div>
-      </SectionCardWrap>
+    <div className="flex flex-col gap-2 mb-3">
+      {/* 올해 세운 — 맨 위 */}
       {thisYear && (
         <StatCard
           label={`올해 세운 (${thisYear.year}년)`}
@@ -766,6 +761,72 @@ function LuckVisual({ saju }: { saju: SajuResult }) {
           color={SIGNAL.good}
         />
       )}
+
+      {/* 대운 타임라인 — 현재 대운부터 90대까지 칩, 탭하면 그 대운 설명 인라인 펼침 */}
+      <SectionCardWrap accent={SIGNAL.cta} title="대운 흐름" titleSub="현재 ~ 90대">
+        {future.length === 0 ? (
+          <span className="text-[17px] text-text-secondary leading-relaxed">대운 데이터 없음</span>
+        ) : (
+          <div className="flex flex-col gap-2.5">
+            <div className="grid grid-cols-3 gap-2">
+              {future.map((d, i) => {
+                const open = openIdx === i;
+                const isCur = i === 0;
+                const accent = isCur ? SIGNAL.cta : SIGNAL.info;
+                return (
+                  <button
+                    key={i}
+                    type="button"
+                    onClick={() => setOpenIdx(open ? null : i)}
+                    className="flex w-full flex-col items-center gap-0.5 rounded-xl px-2 py-2 border transition-all active:scale-[0.97]"
+                    style={{
+                      background: open ? `${accent}30` : `${accent}14`,
+                      borderColor: `${accent}${open ? 'aa' : '44'}`,
+                    }}
+                  >
+                    <span className="text-[14px] font-bold" style={{ color: accent }}>
+                      {toAge(d.startAge)}~{toAge(d.endAge)}세
+                    </span>
+                    <span className="text-[13px]" style={{ color: 'var(--text-secondary)', fontFamily: 'var(--font-serif)' }}>
+                      {d.gan}{d.zhi} · {d.tenGod}
+                    </span>
+                    {isCur && <span className="text-[10px] font-bold" style={{ color: accent }}>현재</span>}
+                  </button>
+                );
+              })}
+            </div>
+            {openIdx !== null && future[openIdx] && (() => {
+              const d = future[openIdx];
+              const accent = openIdx === 0 ? SIGNAL.cta : SIGNAL.info;
+              const desc = descFor(d);
+              return (
+                <div
+                  className="rounded-xl px-4 py-3 border"
+                  style={{ background: `${accent}14`, borderColor: `${accent}55` }}
+                >
+                  <span className="text-[18px] font-bold block mb-1.5" style={{ color: 'var(--text-primary)' }}>
+                    {toAge(d.startAge)}~{toAge(d.endAge)}세 · {d.gan}{d.zhi}({d.ganElement}{d.zhiElement}·{d.tenGod})
+                  </span>
+                  <span className="text-[17px] text-text-secondary leading-relaxed whitespace-pre-line" style={{ wordBreak: 'keep-all' }}>
+                    {desc ?? '이 풀이는 대운별 상세 설명 추가 전에 받으셨어요. 같은 사주로 다시 풀이 받으시면 각 대운별 흐름이 칩마다 나타나요.'}
+                  </span>
+                </div>
+              );
+            })()}
+          </div>
+        )}
+      </SectionCardWrap>
+
+      {/* 옛 record — 대운별 마커가 없으면 통짜 본문 그대로 노출 */}
+      {sectionText && !luckByDae && (
+        <div className="rounded-2xl p-4 border" style={{ background: 'rgba(20,12,38,0.55)', borderColor: `${SIGNAL.cta}45` }}>
+          <div className="text-[17px] text-text-secondary leading-[1.85] tracking-[-0.005em] space-y-3">
+            {sectionText.split(/\n\n+/).map((para, pi) => (
+              <p key={pi} className="whitespace-pre-line">{para.trim()}</p>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -773,7 +834,12 @@ function LuckVisual({ saju }: { saju: SajuResult }) {
 // ─────────────────────────────────────────────────────────────────────────────
 // 통합 라우터 — 섹션 키에 따라 알맞은 시각 카드 반환 (advice 는 AdviceCard 별도)
 // ─────────────────────────────────────────────────────────────────────────────
-export function renderJungtongsajuSectionVisual(key: string, saju: SajuResult | null) {
+export function renderJungtongsajuSectionVisual(
+  key: string,
+  saju: SajuResult | null,
+  /** luck 섹션 — 대운별 칩 펼침에 쓸 [luck] 본문. 다른 섹션은 미사용. */
+  sectionText?: string,
+) {
   if (!saju) return null;
   switch (key) {
     case 'general':
@@ -797,7 +863,7 @@ export function renderJungtongsajuSectionVisual(key: string, saju: SajuResult | 
     case 'relation':
       return <RelationVisual saju={saju} />;
     case 'luck':
-      return <LuckVisual saju={saju} />;
+      return <LuckVisual saju={saju} sectionText={sectionText} />;
     default:
       return null;
   }
