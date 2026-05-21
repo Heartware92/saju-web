@@ -139,55 +139,57 @@ function ChongunVisual({
 
   return (
     <CardWrap accent={gColor} title="올해 운세 한눈 요약">
-      <div className="flex items-center gap-3 mb-3">
-        <div
-          className="flex flex-col items-center justify-center rounded-xl px-3 py-2 border shrink-0"
-          style={{ background: `${gColor}18`, borderColor: `${gColor}55` }}
+      {/* 헤로 — 등급을 가운데 크게, 괘 번호·평균은 보조 라인 */}
+      <div className="flex flex-col items-center text-center">
+        <span className="text-[12px] text-text-tertiary mb-1.5">올해의 운세 등급</span>
+        <span
+          className="text-[30px] font-bold leading-none px-6 py-2.5 rounded-2xl border"
+          style={{
+            color: gColor,
+            background: `${gColor}1a`,
+            borderColor: `${gColor}55`,
+            fontFamily: 'var(--font-serif)',
+          }}
         >
-          <span className="text-[11px] text-text-tertiary leading-none mb-1">올해의 괘</span>
-          <span
-            className="text-[22px] font-bold leading-none"
-            style={{ color: gColor, fontFamily: 'var(--font-serif)' }}
-          >
-            {tojeong.gwaeNumber}
-          </span>
-        </div>
-        <div className="flex-1 min-w-0">
-          <div className="text-[13px] text-text-tertiary mb-0.5">144괘 중 {tojeong.gwaeNumber}괘</div>
-          <div className="text-[20px] font-bold leading-tight" style={{ color: gColor }}>
-            {reading.grade}
-          </div>
-        </div>
-        {avg != null && (
-          <div className="text-right shrink-0">
-            <div className="text-[11px] text-text-tertiary leading-none mb-1">분야 평균</div>
-            <div className="text-[24px] font-bold leading-none" style={{ color: gColor }}>
-              {avg}
-              <span className="text-[13px] text-text-tertiary font-normal ml-0.5">점</span>
-            </div>
-          </div>
-        )}
+          {reading.grade}
+        </span>
+        <span className="text-[12.5px] text-text-tertiary mt-2">
+          144괘 중 {tojeong.gwaeNumber}괘
+          {avg != null && (
+            <>
+              {' · 분야 평균 '}
+              <span className="font-bold" style={{ color: gColor }}>
+                {avg}점
+              </span>
+            </>
+          )}
+        </span>
       </div>
+
+      {/* 최고·보완 분야 — 동일 크기 셀 2칸 */}
       {best && worst && (
-        <div className="grid grid-cols-2 gap-2">
-          <div
-            className="rounded-xl px-3 py-2.5 border"
-            style={{ background: '#34D39912', borderColor: '#34D39945' }}
-          >
-            <div className="text-[12px] text-text-tertiary mb-1">가장 빛나는 분야</div>
-            <div className="text-[14px] font-bold" style={{ color: '#34D399' }}>
-              {best.label} {best.score}점
+        <div className="grid grid-cols-2 gap-2 mt-3.5">
+          {[
+            { tag: '가장 빛나는 분야', d: best, c: '#34D399', arrow: '▲' },
+            { tag: '살펴야 할 분야', d: worst, c: '#FB923C', arrow: '▼' },
+          ].map(({ tag, d, c, arrow }) => (
+            <div
+              key={tag}
+              className="rounded-xl px-3 py-2.5 border flex flex-col gap-1.5"
+              style={{ background: `${c}12`, borderColor: `${c}40` }}
+            >
+              <span className="text-[11.5px] text-text-tertiary">{tag}</span>
+              <div className="flex items-baseline gap-1">
+                <span className="text-[11px]" style={{ color: c }}>
+                  {arrow}
+                </span>
+                <span className="text-[15px] font-bold text-text-primary">{d.label}</span>
+                <span className="text-[14px] font-bold ml-auto" style={{ color: c }}>
+                  {d.score}점
+                </span>
+              </div>
             </div>
-          </div>
-          <div
-            className="rounded-xl px-3 py-2.5 border"
-            style={{ background: '#FB923C12', borderColor: '#FB923C45' }}
-          >
-            <div className="text-[12px] text-text-tertiary mb-1">살펴야 할 분야</div>
-            <div className="text-[14px] font-bold" style={{ color: '#FB923C' }}>
-              {worst.label} {worst.score}점
-            </div>
-          </div>
+          ))}
         </div>
       )}
     </CardWrap>
