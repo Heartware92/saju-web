@@ -1150,6 +1150,14 @@ export default function GunghapPage() {
         {/* ── STEP 1: 관계 유형 선택 ── */}
         {step === 'category' && (
           <motion.div key="category" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="px-5 space-y-5">
+            {/* 진입 직후 — 이전 결과 fetch 중엔 로딩만, 모달이 떠 있는 동안엔 빈 화면(모달이 가림).
+                카테고리 카드가 모달보다 먼저·함께 노출되지 않도록 차단. */}
+            {archiveLoading && !isArchiveMode ? (
+              <div className="flex items-center justify-center py-20">
+                <div className="w-8 h-8 border-3 border-cta border-t-transparent rounded-full animate-spin" />
+              </div>
+            ) : showArchiveList ? null : (
+            <>
             {/* 이전 궁합 결과 보기 — 기록 있을 때만, 리스트 모달 재호출 */}
             {!isArchiveMode && archiveList.length > 0 && (
               <button
@@ -1212,6 +1220,8 @@ export default function GunghapPage() {
             >
               다음 — 상대 정보
             </button>
+            </>
+            )}
           </motion.div>
         )}
 
