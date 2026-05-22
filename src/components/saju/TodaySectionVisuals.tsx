@@ -213,17 +213,19 @@ function TimeflowVisual({ report }: { report: TodayFortuneV3AIResult }) {
                   style={{ width: `${Math.min(100, Math.max(4, score))}%`, background: tier.color }}
                 />
               </div>
-              <span className="w-12 text-right text-[14px] font-bold shrink-0" style={{ color: tier.color }}>
+              <span className="w-11 text-right text-[14px] font-bold shrink-0" style={{ color: tier.color }}>
                 {score}점
               </span>
-              {isNow && (
-                <span
-                  className="text-[11px] font-bold px-1.5 py-0.5 rounded-md shrink-0"
-                  style={{ background: 'rgba(125,211,252,0.22)', color: '#7DD3FC' }}
-                >
-                  지금
-                </span>
-              )}
+              <span className="w-10 shrink-0 flex justify-end">
+                {isNow && (
+                  <span
+                    className="text-[11px] font-bold px-1.5 py-0.5 rounded-md"
+                    style={{ background: 'rgba(125,211,252,0.22)', color: '#7DD3FC' }}
+                  >
+                    지금
+                  </span>
+                )}
+              </span>
             </div>
           );
         })}
