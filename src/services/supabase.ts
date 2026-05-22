@@ -158,9 +158,13 @@ export const creditDB = {
       .eq('user_id', userId)
       .maybeSingle();
 
+    // error 와 "row 없음" 을 구분한다.
+    // - error: 조회 실패 → throw. 호출처가 잔액을 0 으로 오인하면 안 됨
+    //   (탭 복귀 시 토큰 갱신 중 일시적 조회 실패가 잔액 0 으로 표시되던 버그 차단)
+    // - data=null & error=null: 진짜 row 없음(신규 가입 직후 등) → null 반환
     if (error) {
       console.error('Error fetching balance:', error);
-      return null;
+      throw error;
     }
 
     return data;

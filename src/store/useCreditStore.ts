@@ -82,7 +82,10 @@ export const useCreditStore = create<CreditState>()(
 
           const uid = userId ?? (await auth.getCurrentUser())?.id;
           if (!uid) {
-            set({ sunBalance: 0, moonBalance: 0, loading: false });
+            // uid 미해결 — 잔액을 0 으로 덮어쓰지 않는다.
+            // 진짜 로그아웃은 onAuthStateChange → reset() 이 처리.
+            // 탭 복귀 중 getCurrentUser() 일시 실패를 잔액 0 으로 오인하면 안 됨.
+            set({ loading: false });
             return;
           }
 
@@ -96,6 +99,9 @@ export const useCreditStore = create<CreditState>()(
             lastFetched: Date.now(),
           });
         } catch (error: any) {
+          // 조회 실패 — moonBalance·lastFetched 를 건드리지 않는다.
+          // 기존 잔액을 그대로 유지하고, lastFetched 가 갱신되지 않으므로
+          // 다음 trigger(onAuthStateChange·페이지 이동) 에서 자동 재조회된다.
           console.error('Error fetching balance:', error);
           set({ error: error.message, loading: false });
         }
