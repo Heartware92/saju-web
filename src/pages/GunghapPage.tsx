@@ -621,11 +621,18 @@ export default function GunghapPage() {
     findGunghapArchives(20).then(list => {
       if (cancelled) return;
       setArchiveList(list);
-      if (list.length > 0) { setArchiveModalIsEntry(true); setShowArchiveList(true); }
+      // 진입 모달은 '진짜 첫 진입'(카테고리 스텝·jobId 없음)에서만 자동 표시.
+      // ?jobId 결과 화면 위에 모달이 덮이지 않도록 차단.
+      if (list.length > 0 && step === 'category' && !urlJobId) {
+        setArchiveModalIsEntry(true);
+        setShowArchiveList(true);
+      }
     }).catch(() => {}).finally(() => {
       if (!cancelled) setArchiveLoading(false);
     });
     return () => { cancelled = true; };
+    // step·urlJobId 는 진입(마운트) 시점 값으로 판정 — deps 에 넣지 않음.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isArchiveMode]);
 
   // 궁합 메인(landing)에 머무는 동안 백그라운드 잡이 완료되면 이전 결과 목록을 자동 갱신.
@@ -1104,10 +1111,13 @@ export default function GunghapPage() {
   // 결과 리스트 모달 닫기 — 진입 모달이면 궁합 화면이 아니라 홈으로 빠진다.
   // 카테고리 화면에서 다시 연 모달이면 카테고리 화면으로 복귀.
   const handleArchiveModalClose = () => {
-    setShowArchiveList(false);
     if (archiveModalIsEntry && typeof window !== 'undefined') {
+      // 진입 모달 — 모달을 닫지 않고 곧바로 직전 화면(홈)으로.
+      // setShowArchiveList(false) 를 호출하면 언마운트 직전 카테고리 화면이 한 프레임 깜빡임.
       window.history.length > 1 ? window.history.back() : window.location.assign('/');
+      return;
     }
+    setShowArchiveList(false);
   };
 
   const flowSteps: Step[] = ['category', 'input', 'result'];
@@ -1117,8 +1127,9 @@ export default function GunghapPage() {
   // 진입 직후 이전 결과 조회 중이거나 결과 리스트 모달이 떠 있는 동안엔
   // 페이지 본체(헤더·스텝·카테고리)를 아예 렌더하지 않는다.
   // → 모달 뒤로 궁합 페이지가 비쳐 "이미 넘어간 것처럼" 보이는 문제 차단.
+  // step==='category' 한정 — ?jobId 결과/진행 화면(step='result')은 가리지 않는다.
   const modalGateActive =
-    !isArchiveMode && (archiveLoading || (showArchiveList && archiveList.length > 0));
+    !isArchiveMode && step === 'category' && (archiveLoading || (showArchiveList && archiveList.length > 0));
 
   return (
     <div className="min-h-screen pb-24">
