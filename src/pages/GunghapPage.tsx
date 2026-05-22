@@ -38,7 +38,9 @@ import {
   type PetSpecies,
   type PetInput,
   injectRoleContext,
+  injectCustomPhrase,
   type GunghapCategory,
+  type RelationClassification,
 } from '../constants/prompts';
 import { sanitizeAIOutput } from '../services/fortuneService';
 import { archiveSaju, findGunghapArchives, type GunghapArchiveItem } from '../services/archiveService';
@@ -334,6 +336,10 @@ export default function GunghapPage() {
   const [step, setStep] = useState<Step>(urlRecordId || urlJobId ? 'result' : 'category');
   const [category, setCategory] = useState<GunghapCategory>('lover');
   const [customLabel, setCustomLabel] = useState('');
+  // 직접 입력 관계 — 1차 분류 API 결과 (null = 미분류·폴백)
+  const [classifiedRelation, setClassifiedRelation] = useState<RelationClassification | null>(null);
+  const [classifying, setClassifying] = useState(false);
+  const [classifyError, setClassifyError] = useState('');
   const [myRole, setMyRole] = useState('');
   const [otherRole, setOtherRole] = useState('');
   const [roleSwapped, setRoleSwapped] = useState(false);
@@ -437,6 +443,14 @@ export default function GunghapPage() {
       }
     }
   }, [category, roleSwapped]);
+
+  // 카테고리가 custom 이 아니게 바뀌면 분류 상태 초기화
+  useEffect(() => {
+    if (category !== 'custom') {
+      setClassifiedRelation(null);
+      setClassifyError('');
+    }
+  }, [category]);
 
   // ── 잡 결과 → state 동기화 ──
   // useFortuneJob 으로 받은 saju_records row 의 모든 정보를 GunghapPage state 에 매핑.
@@ -670,6 +684,45 @@ export default function GunghapPage() {
     return selectedCat?.label ?? '';
   };
 
+  // STEP 1 → STEP 2 진행. custom 이면 먼저 관계 분류 API 를 1차 호출한다.
+  // 분류 실패·타임아웃 시엔 null 로 두고 진행 → handleAnalyze 가 키워드 매칭으로 폴백.
+  const handleCategoryNext = async () => {
+    if (category !== 'custom') {
+      setStep('input');
+      return;
+    }
+    const label = customLabel.trim();
+    if (!label) return;
+    // 이미 같은 라벨을 분류해 둔 경우 재호출 생략
+    if (classifiedRelation) {
+      setStep('input');
+      return;
+    }
+    setClassifying(true);
+    setClassifyError('');
+    try {
+      const res = await fetch('/api/gunghap/classify-relation', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ label }),
+      });
+      if (res.ok) {
+        const data: RelationClassification = await res.json();
+        if (!data.valid) {
+          setClassifyError('관계를 알아볼 수 있게 입력해 주세요. 예: 전생의 연인, 오래된 친구');
+          setClassifying(false);
+          return;
+        }
+        setClassifiedRelation(data);
+      }
+      // res 가 ok 가 아니면 classifiedRelation 은 null 유지 → 키워드 매칭 폴백
+    } catch {
+      // 네트워크 실패 — 폴백으로 진행
+    }
+    setClassifying(false);
+    setStep('input');
+  };
+
   // ── 백그라운드 잡 생성 헬퍼 ──
   // POST /api/fortune/jobs/create → jobId 받음 → URL ?jobId 로 replace.
   // 이후 useFortuneJob 이 saju_records Realtime 구독, 결과 도착 시 동기화 useEffect 가 setResult.
@@ -881,7 +934,14 @@ export default function GunghapPage() {
       const otherName = otherBase.name;
       let prompt = '';
 
-      switch (category) {
+      // 직접 입력은 1차 분류 결과로 분석 틀을 정한다.
+      // general 이거나 분류 실패면 'custom' 유지 → switch default 에서 처리.
+      const effectiveCategory: GunghapCategory =
+        category === 'custom' && classifiedRelation && classifiedRelation.category !== 'general'
+          ? classifiedRelation.category
+          : category;
+
+      switch (effectiveCategory) {
         case 'secret_crush':
           prompt = generateSecretCrushGunghapPrompt(myResult, otherResult, myName, otherName);
           break;
@@ -926,32 +986,46 @@ export default function GunghapPage() {
           break;
         default: {
           const lbl = getCategoryDisplayLabel();
-          const resolved = category === 'custom' ? resolveCustomCategory(lbl) : null;
-          if (resolved === 'lover') {
-            prompt = generateLoverGunghapPrompt(myResult, otherResult, myName, otherName);
-          } else if (resolved === 'friend') {
-            prompt = generateFriendGunghapPrompt(myResult, otherResult, myName, otherName);
-          } else if (resolved === 'parent_child') {
-            prompt = generateFamilyGunghapPrompt(myResult, otherResult, myName, otherName, '부모-자녀');
-          } else if (resolved === 'sibling') {
-            prompt = generateFamilyGunghapPrompt(myResult, otherResult, myName, otherName, '형제자매');
-          } else if (resolved === 'work') {
-            prompt = generateWorkGunghapPrompt(myResult, otherResult, myName, otherName);
-          } else if (resolved === 'business') {
-            prompt = generateBusinessGunghapPrompt(myResult, otherResult, myName, otherName);
-          } else if (resolved === 'spouse') {
-            prompt = generateSpouseGunghapPrompt(myResult, otherResult, myName, otherName);
-          } else if (resolved === 'rival') {
-            prompt = generateRivalGunghapPrompt(myResult, otherResult, myName, otherName);
-          } else if (resolved === 'mentor') {
-            prompt = generateMentorGunghapPrompt(myResult, otherResult, myName, otherName);
-          } else if (resolved === 'som') {
-            prompt = generateSomGunghapPrompt(myResult, otherResult, myName, otherName);
+          if (classifiedRelation) {
+            // 분류기가 general 로 판정 — 키워드 매칭 생략, 일반 궁합으로 진행
+            prompt = generateGeneralGunghapPrompt(
+              myResult, otherResult, myName, otherName,
+              classifiedRelation.normalizedLabel || lbl,
+            );
           } else {
-            prompt = generateGeneralGunghapPrompt(myResult, otherResult, myName, otherName, lbl);
+            // 분류 실패 폴백 — 기존 키워드 매칭
+            const resolved = category === 'custom' ? resolveCustomCategory(lbl) : null;
+            if (resolved === 'lover') {
+              prompt = generateLoverGunghapPrompt(myResult, otherResult, myName, otherName);
+            } else if (resolved === 'friend') {
+              prompt = generateFriendGunghapPrompt(myResult, otherResult, myName, otherName);
+            } else if (resolved === 'parent_child') {
+              prompt = generateFamilyGunghapPrompt(myResult, otherResult, myName, otherName, '부모-자녀');
+            } else if (resolved === 'sibling') {
+              prompt = generateFamilyGunghapPrompt(myResult, otherResult, myName, otherName, '형제자매');
+            } else if (resolved === 'work') {
+              prompt = generateWorkGunghapPrompt(myResult, otherResult, myName, otherName);
+            } else if (resolved === 'business') {
+              prompt = generateBusinessGunghapPrompt(myResult, otherResult, myName, otherName);
+            } else if (resolved === 'spouse') {
+              prompt = generateSpouseGunghapPrompt(myResult, otherResult, myName, otherName);
+            } else if (resolved === 'rival') {
+              prompt = generateRivalGunghapPrompt(myResult, otherResult, myName, otherName);
+            } else if (resolved === 'mentor') {
+              prompt = generateMentorGunghapPrompt(myResult, otherResult, myName, otherName);
+            } else if (resolved === 'som') {
+              prompt = generateSomGunghapPrompt(myResult, otherResult, myName, otherName);
+            } else {
+              prompt = generateGeneralGunghapPrompt(myResult, otherResult, myName, otherName, lbl);
+            }
           }
           break;
         }
+      }
+
+      // 직접 입력 관계 — 원문·뉘앙스를 각 섹션에 주입 (분류 성공 시에만)
+      if (category === 'custom' && classifiedRelation) {
+        prompt = injectCustomPhrase(prompt, customLabel.trim(), classifiedRelation);
       }
 
       // 역할 컨텍스트 주입 + 제목/점수 요청 래핑
@@ -1036,6 +1110,8 @@ export default function GunghapPage() {
     setOtherRole('');
     setRoleSwapped(false);
     setCustomLabel('');
+    setClassifiedRelation(null);
+    setClassifyError('');
     window.scrollTo({ top: 0 });
   };
 
@@ -1233,21 +1309,29 @@ export default function GunghapPage() {
                   <input
                     type="text"
                     value={customLabel}
-                    onChange={e => setCustomLabel(e.target.value)}
+                    onChange={e => {
+                      setCustomLabel(e.target.value);
+                      // 라벨이 바뀌면 이전 분류 결과·에러 폐기
+                      setClassifiedRelation(null);
+                      setClassifyError('');
+                    }}
                     placeholder="관계를 직접 입력 (예: 전생의 연인, 인터넷 친구)"
                     maxLength={30}
                     className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/15 text-text-primary text-[16px] placeholder-text-tertiary focus:border-cta/50 focus:outline-none transition"
                   />
+                  {classifyError && (
+                    <p className="mt-2 text-[13px] text-[#FB923C]">{classifyError}</p>
+                  )}
                 </motion.div>
               )}
             </AnimatePresence>
 
             <button
-              onClick={() => setStep('input')}
-              disabled={category === 'custom' && !customLabel.trim()}
+              onClick={handleCategoryNext}
+              disabled={(category === 'custom' && !customLabel.trim()) || classifying}
               className="w-full py-3.5 rounded-2xl bg-cta text-white font-bold text-[17px] active:scale-[0.98] transition-all disabled:opacity-40"
             >
-              다음 — 상대 정보
+              {classifying ? '관계 분석 중...' : '다음 — 상대 정보'}
             </button>
           </motion.div>
         )}
