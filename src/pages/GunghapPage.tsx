@@ -373,6 +373,9 @@ export default function GunghapPage() {
   const [archiveLoading, setArchiveLoading] = useState(true);
   // 이전 궁합 결과 리스트 모달 — 택일·지정일과 동일 UX. 진입 시 기록 있으면 표시.
   const [showArchiveList, setShowArchiveList] = useState(false);
+  // 모달이 '진입 모달'인지(true) 카테고리 화면에서 다시 연 것인지(false) 구분.
+  // 진입 모달을 취소하면 궁합 화면이 아니라 직전 화면(홈)으로 돌아가야 한다.
+  const [archiveModalIsEntry, setArchiveModalIsEntry] = useState(true);
   const [forceNewReading, setForceNewReading] = useState(false);
 
   // ── 로딩 안전장치: 70초 초과 시 강제 해제 ──
@@ -618,7 +621,7 @@ export default function GunghapPage() {
     findGunghapArchives(20).then(list => {
       if (cancelled) return;
       setArchiveList(list);
-      if (list.length > 0) setShowArchiveList(true);
+      if (list.length > 0) { setArchiveModalIsEntry(true); setShowArchiveList(true); }
     }).catch(() => {}).finally(() => {
       if (!cancelled) setArchiveLoading(false);
     });
@@ -1098,6 +1101,15 @@ export default function GunghapPage() {
     }
   };
 
+  // 결과 리스트 모달 닫기 — 진입 모달이면 궁합 화면이 아니라 홈으로 빠진다.
+  // 카테고리 화면에서 다시 연 모달이면 카테고리 화면으로 복귀.
+  const handleArchiveModalClose = () => {
+    setShowArchiveList(false);
+    if (archiveModalIsEntry && typeof window !== 'undefined') {
+      window.history.length > 1 ? window.history.back() : window.location.assign('/');
+    }
+  };
+
   const flowSteps: Step[] = ['category', 'input', 'result'];
   const flowIdx = flowSteps.indexOf(step);
   const showStepper = !isArchiveMode;
@@ -1168,7 +1180,7 @@ export default function GunghapPage() {
             {!isArchiveMode && archiveList.length > 0 && (
               <button
                 type="button"
-                onClick={() => setShowArchiveList(true)}
+                onClick={() => { setArchiveModalIsEntry(false); setShowArchiveList(true); }}
                 className="w-full py-3 rounded-2xl border border-cta/40 text-cta font-semibold text-[14px] hover:bg-cta/10 transition-all"
               >
                 이전 궁합 결과 보기 ({archiveList.length})
@@ -1884,7 +1896,7 @@ export default function GunghapPage() {
               exit={{ opacity: 0 }}
               transition={{ duration: 0.15 }}
               className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm"
-              onClick={() => setShowArchiveList(false)}
+              onClick={handleArchiveModalClose}
             />
             <motion.div
               initial={{ opacity: 0, scale: 0.96 }}
@@ -1896,7 +1908,7 @@ export default function GunghapPage() {
               <div className="relative w-full max-w-[400px] rounded-2xl bg-[rgba(20,12,38,0.97)] border border-[var(--border-subtle)] p-6 text-center shadow-2xl pointer-events-auto">
                 <button
                   type="button"
-                  onClick={() => setShowArchiveList(false)}
+                  onClick={handleArchiveModalClose}
                   className="absolute top-3 right-3 w-8 h-8 flex items-center justify-center rounded-full text-text-tertiary hover:text-text-primary hover:bg-white/10 transition-colors"
                   aria-label="닫기"
                 >
@@ -1944,7 +1956,7 @@ export default function GunghapPage() {
                   </button>
                   <button
                     type="button"
-                    onClick={() => setShowArchiveList(false)}
+                    onClick={handleArchiveModalClose}
                     className="block w-full h-12 rounded-lg border border-[var(--border-subtle)] text-text-secondary font-medium text-[15px] hover:bg-white/5 transition-all"
                   >
                     취소
