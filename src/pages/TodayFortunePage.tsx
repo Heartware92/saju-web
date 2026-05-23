@@ -416,7 +416,7 @@ function InputForm({
             지금 상태
           </h3>
         </div>
-        <p className="text-[12px] text-text-tertiary mb-3">{slotLabel}에 어울리는 질문 2개 — 답변하지 않아도 풀이는 가능해요.</p>
+        <p className="text-[12px] text-text-tertiary mb-3">답변하지 않아도 풀이는 가능해요.</p>
         <div className="space-y-5">
           {([
             { question: q1, value: q1Answer, setValue: setQ1Answer, custom: q1Custom, setCustom: setQ1Custom },
@@ -883,6 +883,13 @@ export default function TodayFortunePage() {
               setReport(null);
               setUserCtx(null);
               apiCalledKeyRef.current = null;
+              // URL에 박혀 있던 ?jobId 제거 — 안 지우면 새로고침 시 결과로 다시 점프
+              setCreatedJobId(null);
+              const url = new URL(window.location.href);
+              if (url.searchParams.has('jobId')) {
+                url.searchParams.delete('jobId');
+                window.history.replaceState(null, '', url.toString());
+              }
             } else {
               router.back();
             }
@@ -1139,6 +1146,14 @@ export default function TodayFortunePage() {
                 onClick: () => {
                   setReport(null);
                   setUserCtx(null);
+                  apiCalledKeyRef.current = null;
+                  // URL에 박혀 있던 ?jobId 제거 — 안 지우면 새로고침 시 결과로 다시 점프
+                  setCreatedJobId(null);
+                  const url = new URL(window.location.href);
+                  if (url.searchParams.has('jobId')) {
+                    url.searchParams.delete('jobId');
+                    window.history.replaceState(null, '', url.toString());
+                  }
                   window.scrollTo({ top: 0 });
                 },
               }

@@ -20,6 +20,47 @@ const ELEMENT_COLOR: Record<string, string> = {
   목: '#34D399', 화: '#F87171', 토: '#FBBF24', 금: '#E5E7EB', 수: '#60A5FA',
 };
 
+// 오행 한줄 의미 — 일진 카드 캡션용 (6자 내외)
+const ELEMENT_MEANING: Record<string, string> = {
+  목: '성장·뻗어남',
+  화: '열정·확산',
+  토: '안정·중심',
+  금: '결단·정리',
+  수: '흐름·지혜',
+};
+
+// 십성 한줄 의미 — 일진 카드 캡션용 (6~8자)
+const TENGOD_MEANING: Record<string, string> = {
+  비견: '동등·자립',
+  겁재: '경쟁·도전',
+  식신: '표현·여유',
+  상관: '창의·반항',
+  편재: '활동성·기회',
+  정재: '안정 재물',
+  편관: '압박·강행',
+  정관: '책임·정도',
+  편인: '직관·연구',
+  정인: '보호·학문',
+};
+
+// "일진유×유 동(同)" → 사람말 풀이
+function parseInteraction(raw: string): { kind: '동' | '충' | '합' | 'etc'; mate: string; label: string; desc: string } {
+  const m = raw.match(/일진([^\s×]+)×([^\s]+)\s*(동|충|합)/);
+  if (!m) return { kind: 'etc', mate: '', label: raw, desc: '' };
+  const mate = m[2];
+  const k = m[3] as '동' | '충' | '합';
+  if (k === '동') return { kind: '동', mate, label: '같은 기운', desc: `내 사주의 ${mate}와 겹쳐 같은 흐름이 강해져요` };
+  if (k === '충') return { kind: '충', mate, label: '부딪힘',   desc: `내 사주의 ${mate}와 충돌해 변화·갈등이 생겨요` };
+  return { kind: '합', mate, label: '어울림', desc: `내 사주의 ${mate}와 어울려 호응·결속이 일어나요` };
+}
+
+const INTERACTION_TONE: Record<'동' | '충' | '합' | 'etc', { bg: string; border: string; text: string }> = {
+  동: { bg: 'rgba(251,191,36,0.14)',  border: 'rgba(251,191,36,0.45)',  text: '#FCD34D' },
+  충: { bg: 'rgba(248,113,113,0.14)', border: 'rgba(248,113,113,0.45)', text: '#FCA5A5' },
+  합: { bg: 'rgba(52,211,153,0.14)',  border: 'rgba(52,211,153,0.45)',  text: '#6EE7B7' },
+  etc:{ bg: 'rgba(201,166,255,0.12)', border: 'rgba(201,166,255,0.40)', text: '#C9A6FF' },
+};
+
 const FLOW_ORDER: TodayTimeSlot[] = ['midnight', 'morning', 'afternoon', 'evening'];
 
 function scoreTier(s: number): { label: string; color: string } {
@@ -91,48 +132,82 @@ function IljinVisual({ report }: { report: TodayFortuneV3AIResult }) {
   if (!gz) return null;
   const ganColor = ELEMENT_COLOR[gz.ganElement] ?? '#C9A6FF';
   const zhiColor = ELEMENT_COLOR[gz.zhiElement] ?? '#C9A6FF';
+  const ganHanja = gz.hanja?.[0] ?? '';
+  const zhiHanja = gz.hanja?.[1] ?? '';
   const pillars = [
-    { tag: '천간', gz: gz.gan, el: gz.ganElement, tenGod: gz.tenGodGan, color: ganColor },
-    { tag: '지지', gz: gz.zhi, el: gz.zhiElement, tenGod: gz.tenGodZhi, color: zhiColor },
+    { tag: '하늘 기운 (천간)', gz: gz.gan, hanja: ganHanja, el: gz.ganElement, tenGod: gz.tenGodGan, color: ganColor },
+    { tag: '땅 기운 (지지)',   gz: gz.zhi, hanja: zhiHanja, el: gz.zhiElement, tenGod: gz.tenGodZhi, color: zhiColor },
   ];
   return (
-    <CardWrap accent={ganColor} title="오늘의 일진" titleSub={gz.hanja}>
+    <CardWrap accent={ganColor} title="오늘의 일진" titleSub={`${gz.hanja} · ${gz.gan}${gz.zhi}`}>
+      <p className="text-[11.5px] text-text-tertiary mb-2.5 leading-relaxed">
+        일진은 오늘 하루를 이끄는 두 기운이에요. 하늘 기운은 오늘의 분위기, 땅 기운은 그 분위기가 머무는 자리예요.
+      </p>
       <div className="grid grid-cols-2 gap-2">
         {pillars.map((p) => (
           <div
             key={p.tag}
-            className="rounded-xl px-3 py-3 border flex flex-col items-center gap-1"
+            className="rounded-xl px-3 py-3 border flex flex-col items-center gap-1.5"
             style={{ background: `${p.color}12`, borderColor: `${p.color}45` }}
           >
-            <span className="text-[12px] text-text-tertiary">{p.tag}</span>
-            <span
-              className="text-[26px] font-bold leading-none"
-              style={{ color: p.color, fontFamily: 'var(--font-serif)' }}
-            >
-              {p.gz}
+            <span className="text-[11.5px] text-text-tertiary">{p.tag}</span>
+            <span className="flex items-baseline gap-1">
+              <span
+                className="text-[28px] font-bold leading-none"
+                style={{ color: p.color, fontFamily: 'var(--font-serif)' }}
+              >
+                {p.gz}
+              </span>
+              {p.hanja && (
+                <span className="text-[14px] text-text-tertiary leading-none">({p.hanja})</span>
+              )}
             </span>
-            <span className="text-[12.5px] font-semibold" style={{ color: p.color }}>
-              {p.el}
+            <span className="text-[12.5px] font-semibold leading-tight text-center" style={{ color: p.color }}>
+              오행 {p.el}
+              {ELEMENT_MEANING[p.el] && (
+                <span className="block text-[11px] font-normal text-text-tertiary mt-0.5">
+                  {ELEMENT_MEANING[p.el]}
+                </span>
+              )}
             </span>
             {p.tenGod && (
-              <span className="text-[12px] text-text-tertiary mt-0.5">십성 {p.tenGod}</span>
+              <span className="text-[12px] text-text-secondary mt-0.5 text-center leading-tight">
+                십성 {p.tenGod}
+                {TENGOD_MEANING[p.tenGod] && (
+                  <span className="block text-[11px] text-text-tertiary mt-0.5">
+                    {TENGOD_MEANING[p.tenGod]}
+                  </span>
+                )}
+              </span>
             )}
           </div>
         ))}
       </div>
       {gz.interactions.length > 0 && (
-        <div className="mt-2.5">
+        <div className="mt-3">
           <div className="text-[12px] text-text-tertiary mb-1.5">내 사주 원국과의 작용</div>
-          <div className="flex flex-wrap gap-1.5">
-            {gz.interactions.map((it, i) => (
-              <span
-                key={i}
-                className="text-[12.5px] font-semibold px-2.5 py-1 rounded-md border text-text-secondary"
-                style={{ background: 'rgba(201,166,255,0.12)', borderColor: 'rgba(201,166,255,0.4)' }}
-              >
-                {it}
-              </span>
-            ))}
+          <div className="flex flex-col gap-1.5">
+            {gz.interactions.map((it, i) => {
+              const parsed = parseInteraction(it);
+              const tone = INTERACTION_TONE[parsed.kind];
+              return (
+                <div
+                  key={i}
+                  className="flex items-start gap-2 px-2.5 py-1.5 rounded-md border"
+                  style={{ background: tone.bg, borderColor: tone.border }}
+                >
+                  <span
+                    className="text-[12px] font-bold px-1.5 py-0.5 rounded shrink-0"
+                    style={{ background: tone.border, color: tone.text }}
+                  >
+                    {parsed.kind === 'etc' ? '작용' : parsed.kind}
+                  </span>
+                  <span className="text-[12.5px] text-text-secondary leading-snug">
+                    {parsed.desc || parsed.label}
+                  </span>
+                </div>
+              );
+            })}
           </div>
         </div>
       )}
