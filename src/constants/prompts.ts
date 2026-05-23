@@ -4547,12 +4547,12 @@ function buildPersonBlock(result: SajuResult, name: string): string {
 }
 
 /** 두 일간 사이 오행 관계 */
-function twoPersonElRelation(elA: string, elB: string): string {
+function twoPersonElRelation(elA: string, elB: string, nameA: string, nameB: string): string {
   if (elA === elB) return '비화(같은 오행 — 공명·경쟁 공존)';
-  if (EL_GEN[elA] === elB) return `A→B 상생(${elA}生${elB} — A가 B를 키움)`;
-  if (EL_GEN[elB] === elA) return `B→A 상생(${elB}生${elA} — B가 A를 키움)`;
-  if (EL_CON[elA] === elB) return `A→B 상극(${elA}克${elB} — A가 B를 제어·부담)`;
-  if (EL_CON[elB] === elA) return `B→A 상극(${elB}克${elA} — B가 A를 제어·부담)`;
+  if (EL_GEN[elA] === elB) return `상생(${elA}生${elB} — ${nameA}가 ${nameB}를 키움)`;
+  if (EL_GEN[elB] === elA) return `상생(${elB}生${elA} — ${nameB}가 ${nameA}를 키움)`;
+  if (EL_CON[elA] === elB) return `상극(${elA}克${elB} — ${nameA}가 ${nameB}를 제어·부담)`;
+  if (EL_CON[elB] === elA) return `상극(${elB}克${elA} — ${nameB}가 ${nameA}를 제어·부담)`;
   return '무관계';
 }
 
@@ -5017,7 +5017,7 @@ export const generateLoverGunghapPrompt = (
 ): string => {
   const myEl = me.pillars.day.ganElement;
   const otherEl = other.pillars.day.ganElement;
-  const elRel = twoPersonElRelation(myEl, otherEl);
+  const elRel = twoPersonElRelation(myEl, otherEl, myName, otherName);
   const eumYangHap = checkEumYangHap(me.pillars.day.zhi, other.pillars.day.zhi);
 
   // 내가 상대 배우자성에 해당하는지 (남성 기준: 상대 여성의 관성=나 / 여성 기준: 상대 남성의 재성=나)
@@ -5025,10 +5025,10 @@ export const generateLoverGunghapPrompt = (
     if (other.gender === 'female') {
       // 상대(여) 관성 오행 = 상대 일간을 극하는 오행
       const otherGuanEl = Object.entries(EL_CON).find(([, v]) => v === other.pillars.day.ganElement)?.[0] || '';
-      return myEl === otherGuanEl ? `${myName}의 오행(${myEl})이 ${otherName}의 관성 오행 — 배우자 인연 강함` : `배우자성 오행 불일치(관성 ${otherGuanEl} vs ${myName} ${myEl})`;
+      return myEl === otherGuanEl ? `${myName}의 오행(${myEl})이 ${otherName}의 관성 오행 — 배우자 인연 강함` : `배우자성 오행 불일치(${otherName} 관성 ${otherGuanEl} vs ${myName} 일간 ${myEl})`;
     } else {
       const otherJaeEl = EL_CON[other.pillars.day.ganElement] || '';
-      return myEl === otherJaeEl ? `${myName}의 오행(${myEl})이 ${otherName}의 재성 오행 — 배우자 인연 강함` : `배우자성 오행 불일치(재성 ${otherJaeEl} vs ${myName} ${myEl})`;
+      return myEl === otherJaeEl ? `${myName}의 오행(${myEl})이 ${otherName}의 재성 오행 — 배우자 인연 강함` : `배우자성 오행 불일치(${otherName} 재성 ${otherJaeEl} vs ${myName} 일간 ${myEl})`;
     }
   })();
 
@@ -5130,7 +5130,7 @@ export const generateFriendGunghapPrompt = (
 ): string => {
   const myEl = me.pillars.day.ganElement;
   const otherEl = other.pillars.day.ganElement;
-  const elRel = twoPersonElRelation(myEl, otherEl);
+  const elRel = twoPersonElRelation(myEl, otherEl, myName, otherName);
 
   // 비겁 개수 (동류 에너지 공명 여부)
   const myBijeop = (computeSipseongCounts(me)['비견'] || 0) + (computeSipseongCounts(me)['겁재'] || 0);
@@ -5228,10 +5228,10 @@ export const generateFamilyGunghapPrompt = (
 ): string => {
   const myEl = me.pillars.day.ganElement;
   const otherEl = other.pillars.day.ganElement;
-  const elRel = twoPersonElRelation(myEl, otherEl);
+  const elRel = twoPersonElRelation(myEl, otherEl, myName, otherName);
 
   // 년주(조상·뿌리) 연결
-  const yearRel = twoPersonElRelation(me.pillars.year.ganElement, other.pillars.year.ganElement);
+  const yearRel = twoPersonElRelation(me.pillars.year.ganElement, other.pillars.year.ganElement, myName, otherName);
 
   // 부모자식 관계에서의 십성 분석
   // 부모 입장: 자녀 = 남자는 관성, 여자는 식상
@@ -5332,7 +5332,7 @@ export const generateWorkGunghapPrompt = (
 ): string => {
   const myEl = me.pillars.day.ganElement;
   const otherEl = other.pillars.day.ganElement;
-  const elRel = twoPersonElRelation(myEl, otherEl);
+  const elRel = twoPersonElRelation(myEl, otherEl, myName, otherName);
 
   // 관성·식상 비교 (업무 스타일)
   const myCounts = computeSipseongCounts(me);
@@ -5438,7 +5438,7 @@ export const generateGeneralGunghapPrompt = (
 ): string => {
   const myEl = me.pillars.day.ganElement;
   const otherEl = other.pillars.day.ganElement;
-  const elRel = twoPersonElRelation(myEl, otherEl);
+  const elRel = twoPersonElRelation(myEl, otherEl, myName, otherName);
   const eumYangHap = checkEumYangHap(me.pillars.day.zhi, other.pillars.day.zhi);
 
   const crossInteractions = buildCrossJiziInteractions(me, other, myName, otherName);
@@ -5642,7 +5642,7 @@ export const generateSomGunghapPrompt = (
 ): string => {
   const myEl = me.pillars.day.ganElement;
   const otherEl = other.pillars.day.ganElement;
-  const elRel = twoPersonElRelation(myEl, otherEl);
+  const elRel = twoPersonElRelation(myEl, otherEl, myName, otherName);
   const eumYangHap = checkEumYangHap(me.pillars.day.zhi, other.pillars.day.zhi);
 
   const attractionCheck = (() => {
@@ -5748,7 +5748,7 @@ export const generateSpouseGunghapPrompt = (
 ): string => {
   const myEl = me.pillars.day.ganElement;
   const otherEl = other.pillars.day.ganElement;
-  const elRel = twoPersonElRelation(myEl, otherEl);
+  const elRel = twoPersonElRelation(myEl, otherEl, myName, otherName);
   const eumYangHap = checkEumYangHap(me.pillars.day.zhi, other.pillars.day.zhi);
 
   const householdRole = me.isStrong && !other.isStrong
@@ -5881,7 +5881,7 @@ export const generateExRelationGunghapPrompt = (
 ): string => {
   const myEl = me.pillars.day.ganElement;
   const otherEl = other.pillars.day.ganElement;
-  const elRel = twoPersonElRelation(myEl, otherEl);
+  const elRel = twoPersonElRelation(myEl, otherEl, myName, otherName);
 
   const conflictCore = me.giSin === otherEl
     ? `${myName}에게 ${otherName}의 일간(${otherEl})은 기신 — 함께할수록 에너지 소진, 이별 구조 설명 가능`
@@ -6004,7 +6004,7 @@ export const generateBusinessGunghapPrompt = (
 ): string => {
   const myEl = me.pillars.day.ganElement;
   const otherEl = other.pillars.day.ganElement;
-  const elRel = twoPersonElRelation(myEl, otherEl);
+  const elRel = twoPersonElRelation(myEl, otherEl, myName, otherName);
 
   const myCounts = computeSipseongCounts(me);
   const otherCounts = computeSipseongCounts(other);
@@ -6124,7 +6124,7 @@ export const generateSecretCrushGunghapPrompt = (
 ): string => {
   const myEl = me.pillars.day.ganElement;
   const otherEl = other.pillars.day.ganElement;
-  const elRel = twoPersonElRelation(myEl, otherEl);
+  const elRel = twoPersonElRelation(myEl, otherEl, myName, otherName);
   const eumYangHap = checkEumYangHap(me.pillars.day.zhi, other.pillars.day.zhi);
 
   // 나 → 상대방 끌림의 명리 근거
@@ -6234,7 +6234,7 @@ export const generateSoulmateGunghapPrompt = (
 ): string => {
   const myEl = me.pillars.day.ganElement;
   const otherEl = other.pillars.day.ganElement;
-  const elRel = twoPersonElRelation(myEl, otherEl);
+  const elRel = twoPersonElRelation(myEl, otherEl, myName, otherName);
   const eumYangHap = checkEumYangHap(me.pillars.day.zhi, other.pillars.day.zhi);
 
   const myMissing = Object.entries(me.elementPercent).filter(([, v]) => v === 0).map(([k]) => k);
@@ -6344,7 +6344,7 @@ export const generateRivalGunghapPrompt = (
 ): string => {
   const myEl = me.pillars.day.ganElement;
   const otherEl = other.pillars.day.ganElement;
-  const elRel = twoPersonElRelation(myEl, otherEl);
+  const elRel = twoPersonElRelation(myEl, otherEl, myName, otherName);
 
   const myCounts = computeSipseongCounts(me);
   const otherCounts = computeSipseongCounts(other);
@@ -6465,7 +6465,7 @@ export const generateMentorGunghapPrompt = (
 ): string => {
   const myEl = me.pillars.day.ganElement;
   const otherEl = other.pillars.day.ganElement;
-  const elRel = twoPersonElRelation(myEl, otherEl);
+  const elRel = twoPersonElRelation(myEl, otherEl, myName, otherName);
 
   const myCounts = computeSipseongCounts(me);
   const otherCounts = computeSipseongCounts(other);
