@@ -5611,32 +5611,103 @@ export function buildRelationClassifyPrompt(rawLabel: string): string {
 {"valid": true, "category": "lover", "normalizedLabel": "연인", "nuance": "..."}`;
 }
 
-/**
- * 직접 입력 관계의 원문·뉘앙스를 궁합 프롬프트 각 섹션에 강제로 녹이는 블록 주입.
- * injectRoleContext 와 동일하게 '[작성 지침' 라인 직전에 삽입.
- */
-export function injectCustomPhrase(
-  prompt: string,
+// ─────────────────────────────────────────────
+// 직접 입력 관계 — 동적 섹션 구조 생성기
+//
+// 14개 specialized generator 와 달리 섹션 제목·구성을 LLM 이 라벨 맥락으로
+// 동적 생성한다. 사주아이 풀이 스타일을 본떠 모든 섹션 본문에 사용자 입력
+// 원문이 자연스럽게 노출되도록 강제. 명리 데이터 블록은 기존 빌더 재사용.
+// ─────────────────────────────────────────────
+export const generateCustomDynamicGunghapPrompt = (
+  me: SajuResult, other: SajuResult,
+  myName: string, otherName: string,
   rawLabel: string,
   c: RelationClassification,
-): string {
-  const block = `\n▶ 사용자가 직접 표현한 관계 (모든 섹션에 반영 ★★★)
-사용자는 두 사람의 관계를 "${rawLabel}" 라고 표현했습니다.
-정제 라벨: ${c.normalizedLabel} / 이 관계의 뉘앙스: ${c.nuance}
+): string => {
+  const myEl = me.pillars.day.ganElement;
+  const otherEl = other.pillars.day.ganElement;
+  const elRel = twoPersonElRelation(myEl, otherEl, myName, otherName);
+  const eumYangHap = checkEumYangHap(me.pillars.day.zhi, other.pillars.day.zhi);
+  const crossInteractions = buildCrossJiziInteractions(me, other, myName, otherName);
+  const sipseongCompare = buildGunghapSipseong(me, other, myName, otherName);
+  const ohaengCompare = buildOhaengCompare(me, other, myName, otherName);
+  const yongSinClash = [
+    `${myName} 용신(${me.yongSinElement}) vs ${otherName} 기신(${other.giSin}): ${me.yongSinElement === other.giSin ? '충돌 — 에너지 소진 주의' : '충돌 없음'}`,
+    `${otherName} 용신(${other.yongSinElement}) vs ${myName} 기신(${me.giSin}): ${other.yongSinElement === me.giSin ? '충돌 — 에너지 소진 주의' : '충돌 없음'}`,
+  ].join('\n');
 
-[관계 표현 반영 강제 규칙 ★★★]
-- 명리 분석의 큰 틀은 ${c.normalizedLabel} 관계로 진행하되, 사용자가 표현한 "${rawLabel}"의 고유한 뉘앙스(${c.nuance})를 모든 섹션에 자연스럽게 녹여낸다.
-- 은유 제목·핵심 요약뿐 아니라 에너지 구조·갈등·처방·미래 등 각 섹션 본문에서도 이 관계 특유의 맥락이 구체적으로 드러나야 한다. 일반적인 ${c.normalizedLabel} 풀이를 그대로 옮겨 적지 말 것.
-- 사용자가 쓴 표현이 가볍든, 민감하든, 적대적이든 — 비난·미화·회피 없이 있는 그대로의 관계로 풀이한다. 표현을 순화하거나 검열하지 않는다.
-- 긍정적 관계가 아니라면 억지로 따뜻하게 포장하지 말 것. 원수·채권 추심처럼 적대적이거나 이해관계 중심의 관계라면, 화합·시너지 위주 서술 대신 충돌 구조·힘의 균형·관계를 정리하거나 풀어갈 방향을 명리로 솔직하게 짚는다.
+  return `당신은 사주명리 전문가입니다. 두 사람의 "${rawLabel}" 관계 궁합을 풀이하세요.
+
+[관계 정의 — 본 풀이 전체의 출발점 ★★★]
+- 사용자는 두 사람의 관계를 "${rawLabel}" 라고 직접 표현했습니다.
+- 정제 라벨(분석 틀의 결): ${c.normalizedLabel}
+- 이 관계의 뉘앙스: ${c.nuance}
+- 분류된 관계 결: ${c.category}
+
+[절대 규칙 ★★★]
+- Markdown·이모지 금지. 섹션 제목은 반드시 "▶ 제목" 형식으로만.
+- 섹션 제목은 코드에 박힌 정적 제목이 아니라, 위 관계 뉘앙스(${c.nuance})에 맞춰 매 섹션 LLM 이 직접 짠 은유 부제목이어야 한다. "▶ 핵심 요약"·"▶ 갈등 포인트" 같은 일반화된 제목 금지 — 모든 ▶ 제목은 "${rawLabel}" 의 결을 담은 은유 한 줄(10~30자, 명사구 종결).
+- ★ 모든 섹션 본문에 사용자가 표현한 "${rawLabel}" 단어가 한 번 이상 자연스럽게 노출되어야 한다. 회피하거나 "이 관계", "두 사람" 같은 일반어로만 대체 금지.
+- 사용자가 쓴 표현이 가볍든, 민감하든, 적대적이든 — 비난·미화·회피 없이 있는 그대로의 관계로 풀이한다. 표현을 순화·검열하지 않는다.
+- 긍정적 관계가 아니라면 억지로 따뜻하게 포장하지 말 것. 원수·채권 추심처럼 적대적·이해관계 중심의 관계라면 화합·시너지 위주 서술 대신 충돌 구조·힘의 균형·관계를 정리하거나 풀어갈 방향을 명리로 솔직하게 짚는다.
+- 모든 분석은 반드시 제공된 두 사주 데이터의 구체적 글자(천간·지지·신살·합·충·형)를 인용하며 서술. 추상적 일반론 금지.
+- 출력은 첫 줄에 "${rawLabel}" 의 결을 압축한 메인 은유 제목(7~24자) 한 줄로 시작. 대괄호·섹션 태그·식별자는 절대 출력 금지. 총 분량: 4,000~5,500자.
+
+[${myName} 사주]
+${buildPersonBlock(me, myName)}
+
+[${otherName} 사주]
+${buildPersonBlock(other, otherName)}
+
+▶ 일간 오행 관계
+${elRel}
+
+▶ 일지 음양합
+${eumYangHap}
+
+▶ 두 사람 지지 합·충·형
+${crossInteractions}
+
+▶ 오행 분포 비교
+${ohaengCompare}
+
+▶ 십성 분포 비교
+${sipseongCompare}
+
+▶ 용신·기신 충돌
+${yongSinClash}
+
+${GUNGHAP_RELATION_KB}
+${METAPHOR_KB}
+${METAPHOR_TITLE_RULE}
+${GUNGHAP_SECTION_FORMAT}
+
+[작성 지침 — 동적 섹션 구조]
+"${rawLabel}" 관계의 결(${c.nuance})에 맞춰 10~13개의 ▶ 섹션을 직접 구성해 작성하세요. 섹션 제목은 모두 "${rawLabel}" 맥락의 은유 한 줄이어야 합니다.
+
+섹션 구성 가이드 — 아래 13개 주제를 빠짐없이 다루되, 제목과 순서·통합 여부는 "${rawLabel}" 결에 맞게 자유 구성:
+1) 핵심 요약 — 이 관계의 본질을 한 호흡으로. 일간 오행 관계·일지 음양합·용신 흐름을 종합.
+2) 본능적 끌림 / 만나게 된 명리 구조 — 왜 이 두 사람이 "${rawLabel}" 같은 결의 관계로 만났는가, 어떤 글자가 둘을 당겼는가.
+3) 오행 상보 — 결핍과 보완. "${rawLabel}" 관계에서 이 보완이 어떻게 드러나는가.
+4) 일지·간합 등 깊은 케미 — 일지 동일·합·충, 천간합이 "${rawLabel}" 맥락에서 만드는 감각·정서·일상 결.
+5) 마찰·갈등 포인트 — 충·형·신살·기신 충돌이 "${rawLabel}" 관계 특유의 어떤 장면에서 터지는가 + 처방.
+6) 두 사람만의 깊이 — 명리 데이터로 본 이 관계의 가장 강한 연결고리(소울메이트급 공감·영혼의 교감·단순한 거래 이상의 무엇·또는 적대 관계라면 가장 강한 충돌 축 — 라벨 결에 맞게).
+7) 장기 흐름·전환 가능성 — 이 관계가 장기적으로 어떻게 변할 수 있는지, 다른 결로 전환될 가능성(예: 섹스파트너 → 연인, 라이벌 → 동료, 원수 → 화해 등). 라벨 결에 맞게.
+8) 미래·생산성·결실 — 둘이 함께 만들 수 있는 것. 라벨 결에 맞게 (관계 자체의 성숙·공동 프로젝트·갈등 해소·관계 청산 등).
+9) 사회적·주변 영향 — 이 관계가 두 사람 주변(가족·친구·동료)에 미치는 영향. 라벨 결에 따라 비밀 유지·공개·갈등 노출 등 다르게.
+10) 성격·기질 차이 — 두 사람 기질 차이가 "${rawLabel}" 관계에서 어떻게 드러나는가.
+11) 상대가 진짜 원하는 것 — 각자가 상대에게 무엇을 기대하는가. 십성 구조로 풀이.
+12) 속마음·진심 — 각자가 말 못 하는 감정. 1인칭 화법 권장.
+13) 마무리 처방·개운법 — 이 관계를 가장 건강하게 유지(또는 정리)하는 길. "${rawLabel}" 결을 존중하면서.
+
+★ 위 13개 주제를 그대로 베껴 제목으로 쓰지 말 것. 각 주제를 "${rawLabel}" 결에 맞는 은유로 변환해 ▶ 제목으로 출력. 주제는 합치거나 분리해 10~13개 사이에서 조정 가능.
+
+★ 각 섹션 본문은 280~430자, 2~3 문단 분리(빈 줄 1줄).
+★ 각 섹션마다 두 사주의 실제 글자(천간·지지·신살·합충)를 최소 1회 구체 인용.
+★ 각 섹션마다 "${rawLabel}" 단어가 한 번 이상 자연스럽게 등장.
 
 `;
-  const lines = prompt.split('\n');
-  const insertIdx = lines.findIndex((ln) => ln.startsWith('[작성 지침'));
-  if (insertIdx === -1) return prompt + block;
-  lines.splice(insertIdx, 0, block);
-  return lines.join('\n');
-}
+};
 
 // ─────────────────────────────────────────────
 // 썸남/썸녀 궁합
