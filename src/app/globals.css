@@ -218,13 +218,11 @@ html {
 }
 
 body {
-  /* 바깥(데스크탑 여백)은 정적인 듀스크 그라디언트 —
-     별똥별 애니메이션은 app-container(9:16 프레임) 안쪽에서만 재생 */
-  background:
-    radial-gradient(ellipse at 50% 110%, rgba(232, 180, 216, 0.22) 0%, transparent 55%),
-    radial-gradient(ellipse at 20% 10%, rgba(124, 92, 200, 0.14) 0%, transparent 50%),
-    linear-gradient(180deg, #1a1230 0%, #2d1f4a 35%, #4a3968 70%, #7a5588 100%);
-  background-attachment: fixed;
+  /* 배경은 html root 에서 처리 — Safari async-scrolling compositor 가
+     fixed pseudo-element 를 별도 GPU 레이어로 합성하면서 scrolling thread 와
+     페인트 타이밍이 어긋나 발생하는 가로 tearing(브라운관 주사선) 회피.
+     root element background 는 viewport canvas 에 직접 paint 되어 합성 경합 없음. */
+  background: transparent;
   color: var(--text-primary);
   font-family: 'Pretendard', -apple-system, 'Noto Sans KR', sans-serif;
   -webkit-font-smoothing: antialiased;
@@ -586,9 +584,16 @@ p, li, span, div, button, a {
    Mobile / WebView Optimizations
    ============================================ */
 
-/* Prevent overscroll bounce coloring — body 에 그라디언트가 있으므로 html 은 단색 fallback */
+/* 듀스크 그라디언트 — root element(html) 의 background 는 viewport canvas 에
+   직접 paint 되어 Safari async-scrolling compositor 합성을 거치지 않음.
+   → fixed pseudo-element 방식에서 발생하던 스크롤 중 가로 tearing 완전 제거.
+   동시에 overscroll bounce(rubber band) 배경 색도 자동으로 해결. */
 html {
-  background: #1a1230;
+  background-color: #1a1230;
+  background-image:
+    radial-gradient(ellipse at 50% 110%, rgba(232, 180, 216, 0.22) 0%, transparent 55%),
+    radial-gradient(ellipse at 20% 10%, rgba(124, 92, 200, 0.14) 0%, transparent 50%),
+    linear-gradient(180deg, #1a1230 0%, #2d1f4a 35%, #4a3968 70%, #7a5588 100%);
   overscroll-behavior: none;
 }
 
