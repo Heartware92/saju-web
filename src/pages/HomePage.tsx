@@ -22,14 +22,16 @@ import MoonPhase from '../components/MoonPhase';
 
 /**
  * 운세 서비스 목록
- * - 메인 2x2: 신년운세 / 정통사주 / 실시간 운세 / 지정일 운세
- * - 메인 하단 1x2: 토정비결 / 자미두수
- * - 서브 (작은 칩): 애정운 / 재물운 / 타로
+ * - 메인 2x2: 신년운세 / 정통사주 / 궁합 / 지정일 운세
+ * - 메인 하단 1x2: 택일 운세 / 연도별 운세 / 자미두수
+ *   (토정비결은 업데이트 예정으로 홈에서 숨김)
+ * - 서브 (작은 칩): 더 많은 운세 / 타로
  */
 const CURRENT_YEAR = new Date().getFullYear();
 
-// 상단 7종 — 모두 동일 크기 (지정일·택일 운세 사이즈) 로 통일.
-// 신년 / 정통 / 궁합 (해 크레딧 정식 풀이) + 지정일 / 택일 / 토정비결 / 자미두수
+// 상단 메인 풀이 — 모두 동일 크기 (지정일·택일 운세 사이즈) 로 통일.
+// 신년 / 정통 / 궁합 + 지정일 / 택일 / 연도별 / 자미두수
+// 토정비결은 TOP_SERVICES에서 주석 처리됨 (게이트·페이지·엔진은 유지)
 const TOP_SERVICES = [
   {
     id: 'newyear',
@@ -66,12 +68,20 @@ const TOP_SERVICES = [
     direct: '/saju/taekil',
     gradient: 'from-teal-500/20 to-emerald-500/10',
   },
+  // 토정비결 — 홈에서 숨김 (업데이트 예정). 페이지/엔진/게이트 설정은 유지.
+  // {
+  //   id: 'tojeong',
+  //   title: '토정비결',
+  //   desc: '한 해의 길흉',
+  //   direct: '/saju/tojeong',
+  //   gradient: 'from-emerald-500/20 to-teal-500/10',
+  // },
   {
-    id: 'tojeong',
-    title: '토정비결',
-    desc: '한 해의 길흉',
-    direct: '/saju/tojeong',
-    gradient: 'from-emerald-500/20 to-teal-500/10',
+    id: 'year-fortune',
+    title: '연도별 운세',
+    desc: '특정 연도의 운세',
+    direct: '/saju/year-fortune',
+    gradient: 'from-amber-500/20 to-orange-500/10',
   },
   {
     id: 'zamidusu',
@@ -79,13 +89,6 @@ const TOP_SERVICES = [
     desc: '별자리 명리',
     direct: '/saju/zamidusu',
     gradient: 'from-violet-500/20 to-fuchsia-500/10',
-  },
-  {
-    id: 'year-fortune',
-    title: '연도별 운세',
-    desc: '특정 연도의 운세',
-    direct: '/saju/year-fortune',
-    gradient: 'from-amber-500/20 to-orange-500/10',
   },
 ];
 
