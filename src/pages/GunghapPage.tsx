@@ -32,11 +32,6 @@ import {
   generateSoulmateGunghapPrompt,
   generateRivalGunghapPrompt,
   generateMentorGunghapPrompt,
-  generatePetGunghapPrompt,
-  PET_SPECIES_VIBE,
-  PET_PERSONALITY_OPTIONS,
-  type PetSpecies,
-  type PetInput,
   injectRoleContext,
   generateCustomDynamicGunghapPrompt,
   type GunghapCategory,
@@ -145,17 +140,6 @@ function resolveCustomCategory(label: string): ResolvedCategory {
   }
   return null;
 }
-
-// ──────────────────────────────────────────────
-// 반려동물 입력 기본값
-const defaultPet: PetInput = {
-  name: '',
-  species: 'dog',
-  gender: 'unknown',
-  personalityKeywords: [],
-  birthDate: '',
-  adoptionDate: '',
-};
 
 type Step = 'category' | 'input' | 'result';
 
@@ -326,9 +310,8 @@ export default function GunghapPage() {
   const [otherRole, setOtherRole] = useState('');
   const [roleSwapped, setRoleSwapped] = useState(false);
   const [myProfileId, setMyProfileId] = useState<string>('');
-  const [pet, setPet] = useState<PetInput>(defaultPet);
   // 상대방은 본인과 동일한 흐름 — 등록 birth_profiles 에서 선택.
-  // 새 사람을 보고 싶으면 '새 프로필 추가' 로 birth_profile 만들어 와서 선택.
+  // pet 카테고리(반려동물)도 일반 카테고리와 동일 — 반려동물도 birth_profile 로 등록해 선택.
   const [otherProfileId, setOtherProfileId] = useState<string>('');
   // archiveModalIsEntry 제거: 페이지 진입 시에만 자동 모달 → close 는 무조건 history.back.
   const [loading, setLoading] = useState(false);
@@ -410,7 +393,6 @@ export default function GunghapPage() {
     return () => window.removeEventListener('popstate', onPop);
   }, [step]);
 
-  const isPetCategory = category === 'pet';
 
   const SWAPPABLE_CATEGORIES = ['parent_child', 'mentor', 'idol_fan'];
 
@@ -650,13 +632,8 @@ export default function GunghapPage() {
     return () => { void supabase.removeChannel(ch); };
   }, [isArchiveMode, step, user]);
 
-  const otherDisplayName = isPetCategory
-    ? pet.name.trim()
-    : (selectedOtherProfile?.name ?? '');
-
-  const isOtherValid = isPetCategory
-    ? !!pet.name.trim()
-    : !!selectedOtherProfile;
+  const otherDisplayName = selectedOtherProfile?.name ?? '';
+  const isOtherValid = !!selectedOtherProfile;
 
   const getCategoryDisplayLabel = () => {
     if (category === 'custom' && customLabel.trim()) return customLabel.trim();
@@ -793,71 +770,8 @@ export default function GunghapPage() {
       if (!myResult) throw new Error('내 사주 계산 실패');
       setMySajuResult(myResult);
 
-      // ── 반려동물 전용 분기 (사주 없이 주인 사주 + 동물 상징 기운으로 해석) ──
-      if (isPetCategory) {
-        const petTrimmed: PetInput = {
-          ...pet,
-          name: pet.name.trim(),
-          birthDate: pet.birthDate || undefined,
-          adoptionDate: pet.adoptionDate || undefined,
-        };
-        const petCacheKey = [
-          sajuKey(myResult),
-          'pet',
-          petTrimmed.species,
-          petTrimmed.gender,
-          petTrimmed.name,
-          petTrimmed.personalityKeywords.slice().sort().join(','),
-          petTrimmed.birthDate ?? '_',
-          petTrimmed.adoptionDate ?? '_',
-        ].join('|');
-        if (!forceNewReading) {
-          const petCached = useReportCacheStore.getState().getReport<string>('gunghap', petCacheKey);
-          if (petCached?.error) {
-            setError(petCached.error);
-            setLoading(false);
-            return;
-          }
-          if (petCached?.data) {
-            setResult(petCached.data);
-            setStep('result');
-            setLoading(false);
-            return;
-          }
-        }
-        setForceNewReading(false);
-        activeCacheKey = petCacheKey;
-        const petPrompt = generatePetGunghapPrompt(myResult, selectedProfile.name, petTrimmed);
-        // 백그라운드 잡 생성 — 차감·INSERT·archive 모두 서버에서 처리. 클라는 jobId 만 받고 빠짐.
-        // jobCreated=true 로 finally 의 setLoading(false) skip → 잡 동기화 useEffect 가 책임.
-        jobCreated = true;
-        const minuteBucket = Math.floor(Date.now() / 60000);
-        await createGunghapJob({
-          prompt: petPrompt,
-          sajuResult: myResult,
-          profileId: selectedProfile.id,
-          profileName: selectedProfile.name,
-          sourceBirth: {
-            birthDate: selectedProfile.birth_date,
-            birthTime: selectedProfile.birth_time ?? null,
-            birthPlace: selectedProfile.birth_place ?? null,
-            gender: selectedProfile.gender,
-            calendarType: selectedProfile.calendar_type,
-          },
-          partnerName: petTrimmed.name || '반려동물',
-          partnerBirthDate: petTrimmed.birthDate ?? null,
-          engineResult: {
-            gunghapCategory: 'pet',
-            pet: petTrimmed,
-            myRole: myRole.trim(),
-            otherRole: otherRole.trim(),
-          },
-          idempotencyKey: `${petCacheKey}:${minuteBucket}`,
-        });
-        return;
-      }
-
       // 상대 사주 계산 — 등록 birth_profiles 에서 선택한 프로필만 사용 (manual 폐지).
+      // pet 카테고리(반려동물)도 동일 흐름 — 동물도 birth_profile 로 등록해 일반 궁합 풀이 적용.
       // isOtherValid 가 selectedOtherProfile 의 truthy 를 보장.
       const otherBase: BirthProfile = selectedOtherProfile!;
       const otherResult = computeSajuFromProfile(otherBase);
@@ -1044,7 +958,6 @@ export default function GunghapPage() {
     setStep('category');
     setResult('');
     setError('');
-    setPet(defaultPet);
     setOtherProfileId('');
     setMyRole('');
     setOtherRole('');
@@ -1356,150 +1269,69 @@ export default function GunghapPage() {
                 </div>
               </div>
 
-              {isPetCategory ? (
-                /* ── 반려동물 카테고리 — 종·이름·성격 키워드 입력 ── */
-                <div className="space-y-4">
-                  <div>
-                    <label className="text-[13px] font-medium text-text-tertiary mb-1.5 block">이름</label>
-                    <input
-                      type="text"
-                      value={pet.name}
-                      onChange={e => setPet(p => ({ ...p, name: e.target.value }))}
-                      placeholder="반려동물 이름"
-                      className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-text-primary text-[16px] placeholder-text-tertiary focus:border-cta/50 focus:outline-none transition"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="text-[13px] font-medium text-text-tertiary mb-1.5 block">종</label>
-                    <div className="grid grid-cols-4 gap-2">
-                      {(Object.keys(PET_SPECIES_VIBE) as PetSpecies[]).map(s => (
-                        <button
-                          key={s}
-                          type="button"
-                          onClick={() => setPet(p => ({ ...p, species: s }))}
-                          className={`py-2 rounded-xl text-[13px] font-medium border transition-all
-                            ${pet.species === s ? 'bg-cta/20 border-cta/50 text-cta' : 'bg-white/5 border-white/10 text-text-secondary hover:border-white/20'}`}
-                        >
-                          {PET_SPECIES_VIBE[s].label}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="text-[13px] font-medium text-text-tertiary mb-1.5 block">성별</label>
-                    <div className="grid grid-cols-3 gap-2">
-                      {(['male', 'female', 'unknown'] as const).map(g => (
-                        <button
-                          key={g}
-                          type="button"
-                          onClick={() => setPet(p => ({ ...p, gender: g }))}
-                          className={`py-2 rounded-xl text-[14px] font-medium border transition-all
-                            ${pet.gender === g ? 'bg-cta/20 border-cta/50 text-cta' : 'bg-white/5 border-white/10 text-text-secondary hover:border-white/20'}`}
-                        >
-                          {g === 'male' ? '수컷' : g === 'female' ? '암컷' : '모름'}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div>
-                    <div className="flex items-center justify-between mb-1.5">
-                      <label className="text-[13px] font-medium text-text-tertiary block">성격 (최대 3개, 선택)</label>
-                      <span className="text-[11px] text-text-tertiary">{pet.personalityKeywords.length}/3</span>
-                    </div>
-                    <div className="flex flex-wrap gap-1.5">
-                      {PET_PERSONALITY_OPTIONS.map(kw => {
-                        const active = pet.personalityKeywords.includes(kw);
-                        const full = pet.personalityKeywords.length >= 3 && !active;
-                        return (
-                          <button
-                            key={kw}
-                            type="button"
-                            disabled={full}
-                            onClick={() => setPet(p => ({
-                              ...p,
-                              personalityKeywords: active
-                                ? p.personalityKeywords.filter(k => k !== kw)
-                                : [...p.personalityKeywords, kw],
-                            }))}
-                            className={`px-3 py-1.5 rounded-full text-[12px] font-medium border transition-all
-                              ${active ? 'bg-cta/20 border-cta/50 text-cta'
-                              : full ? 'bg-white/5 border-white/10 text-text-tertiary opacity-40 cursor-not-allowed'
-                              : 'bg-white/5 border-white/10 text-text-secondary hover:border-white/20'}`}
-                          >
-                            {kw}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-                </div>
-              ) : (
-                /* ── 일반 카테고리 — 등록된 birth_profiles 중에서 선택 ── */
-                <div>
-                  <p className="text-[13px] font-medium text-text-tertiary mb-2">
-                    상대로 분석할 프로필을 선택하세요
+              {/* 모든 카테고리 통일 — birth_profiles 에서 선택.
+                  반려동물도 birth_profile 로 등록하면 사람과 동일한 사주 풀이가 적용됨. */}
+              <div>
+                <p className="text-[13px] font-medium text-text-tertiary mb-2">
+                  상대로 분석할 프로필을 선택하세요
+                </p>
+                {otherProfileChoices.length === 0 ? (
+                  <p className="text-[13px] text-text-tertiary py-2">
+                    선택 가능한 다른 프로필이 없어요. 아래 &lsquo;새 프로필 추가&rsquo;로 만들어 주세요.
                   </p>
-                  {otherProfileChoices.length === 0 ? (
-                    <p className="text-[13px] text-text-tertiary py-2">
-                      선택 가능한 다른 프로필이 없어요. 아래 &lsquo;새 프로필 추가&rsquo;로 만들어 주세요.
-                    </p>
-                  ) : (
-                    <div className="grid grid-cols-1 gap-2">
-                      {otherProfileChoices.map(p => {
-                        const active = selectedOtherProfile?.id === p.id;
-                        return (
-                          <button
-                            key={p.id}
-                            type="button"
-                            onClick={() => setOtherProfileId(p.id)}
-                            className={`p-3 rounded-xl border text-left transition-all active:scale-[0.98]
-                              ${active ? 'bg-cta/15 border-cta/50' : 'bg-white/5 border-white/10 hover:border-white/20'}`}
-                          >
-                            <div className="flex items-center gap-3">
-                              <div className={`w-9 h-9 rounded-full flex items-center justify-center text-[13px] font-semibold shrink-0 ${
-                                p.gender === 'male' ? 'bg-sky-500/15 text-sky-300' : 'bg-pink-400/15 text-pink-300'
-                              }`}>
-                                {p.gender === 'male' ? '남' : '여'}
-                              </div>
-                              <div className="flex-1 min-w-0">
-                                <p className={`text-[15px] font-semibold truncate ${active ? 'text-cta' : 'text-text-primary'}`}>
-                                  {p.name}
-                                </p>
-                                <p className="text-[12px] text-text-tertiary mt-0.5 truncate">
-                                  {p.birth_date.replace(/-/g, '.')}
-                                  {p.birth_time ? ` ${p.birth_time}` : ' (시간 모름)'}
-                                </p>
-                              </div>
-                              {active && (
-                                <span className="text-[12px] px-2 py-0.5 rounded-full bg-cta/20 text-cta font-semibold flex-shrink-0">
-                                  선택됨
-                                </span>
-                              )}
+                ) : (
+                  <div className="grid grid-cols-1 gap-2">
+                    {otherProfileChoices.map(p => {
+                      const active = selectedOtherProfile?.id === p.id;
+                      return (
+                        <button
+                          key={p.id}
+                          type="button"
+                          onClick={() => setOtherProfileId(p.id)}
+                          className={`p-3 rounded-xl border text-left transition-all active:scale-[0.98]
+                            ${active ? 'bg-cta/15 border-cta/50' : 'bg-white/5 border-white/10 hover:border-white/20'}`}
+                        >
+                          <div className="flex items-center gap-3">
+                            <div className={`w-9 h-9 rounded-full flex items-center justify-center text-[13px] font-semibold shrink-0 ${
+                              p.gender === 'male' ? 'bg-sky-500/15 text-sky-300' : 'bg-pink-400/15 text-pink-300'
+                            }`}>
+                              {p.gender === 'male' ? '남' : '여'}
                             </div>
-                          </button>
-                        );
-                      })}
-                    </div>
-                  )}
+                            <div className="flex-1 min-w-0">
+                              <p className={`text-[15px] font-semibold truncate ${active ? 'text-cta' : 'text-text-primary'}`}>
+                                {p.name}
+                              </p>
+                              <p className="text-[12px] text-text-tertiary mt-0.5 truncate">
+                                {p.birth_date.replace(/-/g, '.')}
+                                {p.birth_time ? ` ${p.birth_time}` : ' (시간 모름)'}
+                              </p>
+                            </div>
+                            {active && (
+                              <span className="text-[12px] px-2 py-0.5 rounded-full bg-cta/20 text-cta font-semibold flex-shrink-0">
+                                선택됨
+                              </span>
+                            )}
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
 
-                  {/* 새 프로필 추가 — 본인 슬롯·정통사주·신년운세와 동일 패턴.
-                      SajuInputPage 로 라우팅해 저장 후 돌아오면 birth_profiles 에 추가되어 위 칩 리스트에 자동 노출. */}
-                  <button
-                    type="button"
-                    onClick={() => router.push('/saju/input?mode=profile-only')}
-                    className="mt-3 w-full rounded-2xl border-2 border-dashed border-[var(--border-subtle)] hover:border-cta/40 p-4 flex items-center justify-center gap-2 text-text-tertiary hover:text-cta transition-all"
-                  >
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
-                      <line x1="12" y1="5" x2="12" y2="19" />
-                      <line x1="5" y1="12" x2="19" y2="12" />
-                    </svg>
-                    <span className="text-sm font-medium">새 프로필 추가</span>
-                  </button>
-                </div>
-              )}
+                {/* 새 프로필 추가 — 본인 슬롯·정통사주·신년운세와 동일 패턴.
+                    SajuInputPage 로 라우팅해 저장 후 돌아오면 birth_profiles 에 추가되어 위 칩 리스트에 자동 노출. */}
+                <button
+                  type="button"
+                  onClick={() => router.push('/saju/input?mode=profile-only')}
+                  className="mt-3 w-full rounded-2xl border-2 border-dashed border-[var(--border-subtle)] hover:border-cta/40 p-4 flex items-center justify-center gap-2 text-text-tertiary hover:text-cta transition-all"
+                >
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
+                    <line x1="12" y1="5" x2="12" y2="19" />
+                    <line x1="5" y1="12" x2="19" y2="12" />
+                  </svg>
+                  <span className="text-sm font-medium">새 프로필 추가</span>
+                </button>
+              </div>
             </div>
 
             {error && (
@@ -1511,13 +1343,9 @@ export default function GunghapPage() {
             {/* 비활성 사유 — 사용자가 무엇이 부족한지 알 수 있게 */}
             {!isOtherValid && !loading && (
               <p className="mt-3 text-[12px] text-amber-300/80 text-center">
-                {isPetCategory ? '반려동물 이름을 입력해주세요' : '상대 프로필을 선택해주세요'}
+                상대 프로필을 선택해주세요
               </p>
             )}
-            {/* 임시 진단 — 비활성화 원인 추적용. 캡처 확인 후 제거 예정. */}
-            <p className="mt-1 text-[10px] text-text-tertiary/60 text-center font-mono">
-              [diag] cat={category} pet={String(isPetCategory)} name=&quot;{pet.name || '_'}&quot; valid={String(isOtherValid)} loading={String(loading)}
-            </p>
 
             <div className="flex gap-2 mt-3">
               <button
@@ -1613,17 +1441,12 @@ export default function GunghapPage() {
                     <p className="text-[12px] text-cta/80 mt-0.5">{archiveMeta ? archiveMeta.myRole : myRole}</p>
                   )}
                 </div>
-                <span className="text-[20px] text-cta/60">
-                  {isPetCategory && !archiveMeta ? '🐾' : '·'}
-                </span>
+                <span className="text-[20px] text-cta/60">·</span>
                 <div className="text-center">
                   <p className="text-[16px] font-bold text-text-primary">
                     {archiveMeta ? archiveMeta.partnerName : otherDisplayName}
-                    {!archiveMeta && isPetCategory && pet.species && (
-                      <span className="text-[12px] font-normal text-text-secondary ml-1">({PET_SPECIES_VIBE[pet.species].label})</span>
-                    )}
                   </p>
-                  {!archiveMeta && !isPetCategory && (
+                  {!archiveMeta && (
                     <p className="text-[12px] text-text-tertiary mt-0.5">
                       {selectedOtherProfile?.birth_date?.replace(/-/g, '.')}
                     </p>
@@ -1636,7 +1459,7 @@ export default function GunghapPage() {
             </div>
 
             {/* 두 사람 사주명식 표 — 만세력 스타일 */}
-            {!isPetCategory && mySajuResult && otherSajuResult && (
+            {mySajuResult && otherSajuResult && (
               <div className="space-y-4 mb-4">
                 {[
                   { label: archiveMeta?.profileName ?? selectedProfile?.name ?? '나', result: mySajuResult },
@@ -1699,13 +1522,6 @@ export default function GunghapPage() {
                     </div>
                   );
                 })}
-              </div>
-            )}
-
-            {/* 반려동물 재미 해석 안내 — 결과 상단 */}
-            {isPetCategory && (
-              <div className="mb-4 p-3 rounded-xl bg-amber-500/10 border border-amber-500/25 text-[13px] text-amber-200 leading-relaxed">
-                이 결과는 <b>주인의 사주 + 동물 상징 기운</b>으로 풀어낸 재미 해석입니다. 정통 사주 풀이가 아닌 라이프스타일 참고용으로 가볍게 봐주세요.
               </div>
             )}
 
