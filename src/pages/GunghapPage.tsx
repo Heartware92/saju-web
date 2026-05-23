@@ -38,7 +38,7 @@ import {
   type PetSpecies,
   type PetInput,
   injectRoleContext,
-  injectCustomPhrase,
+  generateCustomDynamicGunghapPrompt,
   type GunghapCategory,
   type RelationClassification,
 } from '../constants/prompts';
@@ -147,24 +147,6 @@ function resolveCustomCategory(label: string): ResolvedCategory {
 }
 
 // ──────────────────────────────────────────────
-// 상대방 입력 폼 상태
-// ──────────────────────────────────────────────
-interface OtherInput {
-  name: string;
-  birth_date: string;
-  birth_time: string;
-  gender: 'male' | 'female';
-  calendar_type: 'solar' | 'lunar';
-}
-
-const defaultOther: OtherInput = {
-  name: '',
-  birth_date: '',
-  birth_time: '',
-  gender: 'female',
-  calendar_type: 'solar',
-};
-
 // 반려동물 입력 기본값
 const defaultPet: PetInput = {
   name: '',
@@ -321,7 +303,7 @@ export default function GunghapPage() {
   const urlRecordId = searchParams?.get('recordId') ?? null;
   const urlJobId = searchParams?.get('jobId') ?? null;
   const { user } = useUserStore();
-  const { profiles, addProfile } = useProfileStore();
+  const { profiles } = useProfileStore();
 
   // 내부 recordId — URL 파라미터 또는 랜딩에서 클릭한 결과
   const [activeRecordId, setActiveRecordId] = useState<string | null>(urlRecordId);
@@ -344,12 +326,9 @@ export default function GunghapPage() {
   const [otherRole, setOtherRole] = useState('');
   const [roleSwapped, setRoleSwapped] = useState(false);
   const [myProfileId, setMyProfileId] = useState<string>('');
-  const [other, setOther] = useState<OtherInput>(defaultOther);
-  // 상대방 직접입력 — 출생시간 모름 여부. birth_time 빈 값과 분리된 독립 state.
-  // (사고: checked={!other.birth_time} 이면 시간 숫자를 다 지웠을 때 모름이 자동 체크됨)
-  const [otherHourUnknown, setOtherHourUnknown] = useState(true);
   const [pet, setPet] = useState<PetInput>(defaultPet);
-  const [otherMode, setOtherMode] = useState<'profile' | 'manual'>('profile');
+  // 상대방은 본인과 동일한 흐름 — 등록 birth_profiles 에서 선택.
+  // 새 사람을 보고 싶으면 '새 프로필 추가' 로 birth_profile 만들어 와서 선택.
   const [otherProfileId, setOtherProfileId] = useState<string>('');
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<string>('');
@@ -410,21 +389,13 @@ export default function GunghapPage() {
     [otherProfileChoices, otherProfileId],
   );
 
-  // 선택 가능한 다른 프로필이 1개 이상 생기면 자동으로 'profile' 모드 전환
-  // (사용자가 수동으로 manual을 고른 뒤엔 유지됨 — 아래 toggle 버튼만 반응)
+  // 내 프로필이 변경되어 상대로 선택했던 프로필이 더 이상 후보에 없어졌으면 초기화.
   useEffect(() => {
-    if (otherProfileChoices.length > 0 && otherMode === 'manual' && !other.name && !other.birth_date) {
-      setOtherMode('profile');
-    }
-    if (otherProfileChoices.length === 0 && otherMode === 'profile') {
-      setOtherMode('manual');
-    }
-    // 내 프로필이 변경되어 상대로 선택했던 프로필이 더 이상 후보에 없어졌으면 초기화
     if (otherProfileId && !otherProfileChoices.some(p => p.id === otherProfileId)) {
       setOtherProfileId('');
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [otherProfileChoices.length, selectedProfile?.id, category]);
+  }, [otherProfileChoices.length, selectedProfile?.id]);
 
   const isPetCategory = category === 'pet';
 
@@ -669,15 +640,11 @@ export default function GunghapPage() {
 
   const otherDisplayName = isPetCategory
     ? pet.name.trim()
-    : otherMode === 'profile'
-      ? (selectedOtherProfile?.name ?? '')
-      : other.name.trim();
+    : (selectedOtherProfile?.name ?? '');
 
   const isOtherValid = isPetCategory
     ? !!pet.name.trim()
-    : otherMode === 'profile'
-      ? !!selectedOtherProfile
-      : !!(other.name.trim() && other.birth_date && other.gender);
+    : !!selectedOtherProfile;
 
   const getCategoryDisplayLabel = () => {
     if (category === 'custom' && customLabel.trim()) return customLabel.trim();
@@ -878,22 +845,9 @@ export default function GunghapPage() {
         return;
       }
 
-      // 상대 사주 계산 — 등록 프로필 선택 모드면 해당 프로필 그대로 사용
-      const otherBase: BirthProfile = otherMode === 'profile' && selectedOtherProfile
-        ? selectedOtherProfile
-        : {
-            id: 'other',
-            user_id: '',
-            name: other.name.trim(),
-            birth_date: other.birth_date,
-            birth_time: other.birth_time || undefined,
-            birth_place: 'seoul',
-            gender: other.gender,
-            calendar_type: other.calendar_type,
-            is_primary: false,
-            created_at: '',
-            updated_at: '',
-          };
+      // 상대 사주 계산 — 등록 birth_profiles 에서 선택한 프로필만 사용 (manual 폐지).
+      // isOtherValid 가 selectedOtherProfile 의 truthy 를 보장.
+      const otherBase: BirthProfile = selectedOtherProfile!;
       const otherResult = computeSajuFromProfile(otherBase);
       if (!otherResult) throw new Error('상대방 사주 계산 실패');
       setOtherSajuResult(otherResult);
@@ -934,14 +888,15 @@ export default function GunghapPage() {
       const otherName = otherBase.name;
       let prompt = '';
 
-      // 직접 입력은 1차 분류 결과로 분석 틀을 정한다.
-      // general 이거나 분류 실패면 'custom' 유지 → switch default 에서 처리.
-      const effectiveCategory: GunghapCategory =
-        category === 'custom' && classifiedRelation && classifiedRelation.category !== 'general'
-          ? classifiedRelation.category
-          : category;
-
-      switch (effectiveCategory) {
+      // 직접 입력 + 분류 성공 → 항상 dynamic 생성기.
+      // 섹션 제목·구성을 LLM 이 라벨 맥락으로 동적 생성 (사주아이 스타일).
+      // 분류 실패한 경우만 아래 switch default 의 키워드 매칭 fallback 으로 빠진다.
+      if (category === 'custom' && classifiedRelation) {
+        prompt = generateCustomDynamicGunghapPrompt(
+          myResult, otherResult, myName, otherName,
+          customLabel.trim(), classifiedRelation,
+        );
+      } else switch (category) {
         case 'secret_crush':
           prompt = generateSecretCrushGunghapPrompt(myResult, otherResult, myName, otherName);
           break;
@@ -985,52 +940,44 @@ export default function GunghapPage() {
           prompt = generateBusinessGunghapPrompt(myResult, otherResult, myName, otherName);
           break;
         default: {
+          // custom 인데 분류 실패한 경우 + idol_fan 같은 미지원 카테고리 → 키워드 매칭 fallback
           const lbl = getCategoryDisplayLabel();
-          if (classifiedRelation) {
-            // 분류기가 general 로 판정 — 키워드 매칭 생략, 일반 궁합으로 진행
-            prompt = generateGeneralGunghapPrompt(
-              myResult, otherResult, myName, otherName,
-              classifiedRelation.normalizedLabel || lbl,
-            );
+          const resolved = category === 'custom' ? resolveCustomCategory(lbl) : null;
+          if (resolved === 'lover') {
+            prompt = generateLoverGunghapPrompt(myResult, otherResult, myName, otherName);
+          } else if (resolved === 'friend') {
+            prompt = generateFriendGunghapPrompt(myResult, otherResult, myName, otherName);
+          } else if (resolved === 'parent_child') {
+            prompt = generateFamilyGunghapPrompt(myResult, otherResult, myName, otherName, '부모-자녀');
+          } else if (resolved === 'sibling') {
+            prompt = generateFamilyGunghapPrompt(myResult, otherResult, myName, otherName, '형제자매');
+          } else if (resolved === 'work') {
+            prompt = generateWorkGunghapPrompt(myResult, otherResult, myName, otherName);
+          } else if (resolved === 'business') {
+            prompt = generateBusinessGunghapPrompt(myResult, otherResult, myName, otherName);
+          } else if (resolved === 'spouse') {
+            prompt = generateSpouseGunghapPrompt(myResult, otherResult, myName, otherName);
+          } else if (resolved === 'rival') {
+            prompt = generateRivalGunghapPrompt(myResult, otherResult, myName, otherName);
+          } else if (resolved === 'mentor') {
+            prompt = generateMentorGunghapPrompt(myResult, otherResult, myName, otherName);
+          } else if (resolved === 'som') {
+            prompt = generateSomGunghapPrompt(myResult, otherResult, myName, otherName);
           } else {
-            // 분류 실패 폴백 — 기존 키워드 매칭
-            const resolved = category === 'custom' ? resolveCustomCategory(lbl) : null;
-            if (resolved === 'lover') {
-              prompt = generateLoverGunghapPrompt(myResult, otherResult, myName, otherName);
-            } else if (resolved === 'friend') {
-              prompt = generateFriendGunghapPrompt(myResult, otherResult, myName, otherName);
-            } else if (resolved === 'parent_child') {
-              prompt = generateFamilyGunghapPrompt(myResult, otherResult, myName, otherName, '부모-자녀');
-            } else if (resolved === 'sibling') {
-              prompt = generateFamilyGunghapPrompt(myResult, otherResult, myName, otherName, '형제자매');
-            } else if (resolved === 'work') {
-              prompt = generateWorkGunghapPrompt(myResult, otherResult, myName, otherName);
-            } else if (resolved === 'business') {
-              prompt = generateBusinessGunghapPrompt(myResult, otherResult, myName, otherName);
-            } else if (resolved === 'spouse') {
-              prompt = generateSpouseGunghapPrompt(myResult, otherResult, myName, otherName);
-            } else if (resolved === 'rival') {
-              prompt = generateRivalGunghapPrompt(myResult, otherResult, myName, otherName);
-            } else if (resolved === 'mentor') {
-              prompt = generateMentorGunghapPrompt(myResult, otherResult, myName, otherName);
-            } else if (resolved === 'som') {
-              prompt = generateSomGunghapPrompt(myResult, otherResult, myName, otherName);
-            } else {
-              prompt = generateGeneralGunghapPrompt(myResult, otherResult, myName, otherName, lbl);
-            }
+            prompt = generateGeneralGunghapPrompt(myResult, otherResult, myName, otherName, lbl);
           }
           break;
         }
       }
 
-      // 직접 입력 관계 — 원문·뉘앙스를 각 섹션에 주입 (분류 성공 시에만)
-      if (category === 'custom' && classifiedRelation) {
-        prompt = injectCustomPhrase(prompt, customLabel.trim(), classifiedRelation);
-      }
-
-      // 역할 컨텍스트 주입 + 제목/점수 요청 래핑
+      // 역할 컨텍스트 주입 + 제목/점수 요청 래핑.
+      // 직접 입력 dynamic 의 timeline 노출 여부는 분류된 카테고리 기준.
       prompt = injectRoleContext(prompt, myName, myRole, otherName, otherRole);
-      prompt = wrapWithTitleScore(prompt, TIMELINE_CATEGORIES.includes(category));
+      const timelineCategory: GunghapCategory =
+        category === 'custom' && classifiedRelation && classifiedRelation.category !== 'general'
+          ? classifiedRelation.category
+          : category;
+      prompt = wrapWithTitleScore(prompt, TIMELINE_CATEGORIES.includes(timelineCategory));
 
       // 백그라운드 잡 생성 — 차감·INSERT·archive 모두 서버. 결과는 useFortuneJob → 동기화 useEffect 가
       // parseGunghapHeader → setResult + setGunghapTitle/Score/Domain 으로 매핑.
@@ -1063,23 +1010,6 @@ export default function GunghapPage() {
         idempotencyKey: `${cacheKey}:${minuteBucket}`,
       });
 
-      // 직접 입력 모드일 때 상대방 정보를 추가 프로필로 자동 저장
-      if (otherMode === 'manual' && other.name.trim()) {
-        const isDuplicate = profiles.some(
-          p => p.name === other.name.trim() && p.birth_date === other.birth_date,
-        );
-        if (!isDuplicate) {
-          addProfile({
-            name: other.name.trim(),
-            birth_date: other.birth_date,
-            birth_time: other.birth_time || undefined,
-            birth_place: 'seoul',
-            gender: other.gender,
-            calendar_type: other.calendar_type,
-            is_primary: false,
-          }).catch((err) => console.warn('[Gunghap] auto-save profile failed:', err));
-        }
-      }
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : '분석 중 오류가 발생했습니다.';
       setError(msg);
@@ -1102,10 +1032,8 @@ export default function GunghapPage() {
     setStep('category');
     setResult('');
     setError('');
-    setOther(defaultOther);
     setPet(defaultPet);
     setOtherProfileId('');
-    setOtherMode('profile');
     setMyRole('');
     setOtherRole('');
     setRoleSwapped(false);
@@ -1419,189 +1347,68 @@ export default function GunghapPage() {
                 </div>
               </div>
 
-              {/* 모드 탭 — 내 등록 프로필 중 상대로 쓸 수 있는 게 있을 때만 노출 */}
-              {otherProfileChoices.length > 0 && (
-                <div className="flex gap-1 p-1 rounded-xl bg-white/5 border border-white/10">
-                  <button
-                    type="button"
-                    onClick={() => setOtherMode('profile')}
-                    className={`flex-1 py-2 rounded-lg text-[14px] font-semibold transition-all
-                      ${otherMode === 'profile' ? 'bg-cta/20 text-cta' : 'text-text-secondary hover:text-text-primary'}`}
-                  >
-                    내 프로필에서
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setOtherMode('manual')}
-                    className={`flex-1 py-2 rounded-lg text-[14px] font-semibold transition-all
-                      ${otherMode === 'manual' ? 'bg-cta/20 text-cta' : 'text-text-secondary hover:text-text-primary'}`}
-                  >
-                    직접 입력
-                  </button>
-                </div>
-              )}
-
-              {otherMode === 'profile' ? (
-                // ── 모드 A: 내 등록 프로필 중에서 선택 ──
-                <div>
-                  <p className="text-[13px] font-medium text-text-tertiary mb-2">
-                    상대로 분석할 프로필을 선택하세요
+              {/* 본인 슬롯과 동일한 흐름 — 등록된 birth_profiles 중에서 선택. 새 사람은 '새 프로필 추가' 로. */}
+              <div>
+                <p className="text-[13px] font-medium text-text-tertiary mb-2">
+                  상대로 분석할 프로필을 선택하세요
+                </p>
+                {otherProfileChoices.length === 0 ? (
+                  <p className="text-[13px] text-text-tertiary py-2">
+                    선택 가능한 다른 프로필이 없어요. 아래 &lsquo;새 프로필 추가&rsquo;로 만들어 주세요.
                   </p>
-                  {otherProfileChoices.length === 0 ? (
-                    <p className="text-[13px] text-text-tertiary py-2">
-                      선택 가능한 다른 프로필이 없어요. 먼저 프로필을 추가하거나 직접 입력을 이용해주세요.
-                    </p>
-                  ) : (
-                    <div className="grid grid-cols-1 gap-2">
-                      {otherProfileChoices.map(p => {
-                        const active = selectedOtherProfile?.id === p.id;
-                        return (
-                          <button
-                            key={p.id}
-                            type="button"
-                            onClick={() => setOtherProfileId(p.id)}
-                            className={`p-3 rounded-xl border text-left transition-all active:scale-[0.98]
-                              ${active ? 'bg-cta/15 border-cta/50' : 'bg-white/5 border-white/10 hover:border-white/20'}`}
-                          >
-                            <div className="flex items-center gap-3">
-                              <div className="w-9 h-9 rounded-full bg-[rgba(124,92,252,0.12)] flex items-center justify-center text-lg shrink-0">
-                                {p.gender === 'male' ? '👨' : '👩'}
-                              </div>
-                              <div className="flex-1 min-w-0">
-                                <p className={`text-[15px] font-semibold ${active ? 'text-cta' : 'text-text-primary'}`}>
-                                  {p.name}
-                                </p>
-                                <p className="text-[12px] text-text-tertiary mt-0.5">
-                                  {p.birth_date.replace(/-/g, '.')}
-                                  {p.birth_time ? ` ${p.birth_time}` : ' (시간 모름)'}
-                                  {' · '}
-                                  {p.gender === 'male' ? '남' : '여'}
-                                </p>
-                              </div>
-                              {active && (
-                                <span className="text-[12px] px-2 py-0.5 rounded-full bg-cta/20 text-cta font-semibold flex-shrink-0">
-                                  선택됨
-                                </span>
-                              )}
+                ) : (
+                  <div className="grid grid-cols-1 gap-2">
+                    {otherProfileChoices.map(p => {
+                      const active = selectedOtherProfile?.id === p.id;
+                      return (
+                        <button
+                          key={p.id}
+                          type="button"
+                          onClick={() => setOtherProfileId(p.id)}
+                          className={`p-3 rounded-xl border text-left transition-all active:scale-[0.98]
+                            ${active ? 'bg-cta/15 border-cta/50' : 'bg-white/5 border-white/10 hover:border-white/20'}`}
+                        >
+                          <div className="flex items-center gap-3">
+                            <div className="w-9 h-9 rounded-full bg-[rgba(124,92,252,0.12)] flex items-center justify-center text-lg shrink-0">
+                              {p.gender === 'male' ? '👨' : '👩'}
                             </div>
-                          </button>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
-              ) : (
-                // ── 모드 B: 직접 입력 ──
-                <div className="space-y-4">
-                  <div>
-                    <label className="text-[13px] font-medium text-text-tertiary mb-1.5 block">이름</label>
-                    <input
-                      type="text"
-                      value={other.name}
-                      onChange={e => setOther(o => ({ ...o, name: e.target.value }))}
-                      placeholder="상대방 이름"
-                      className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-text-primary text-[16px] placeholder-text-tertiary focus:border-cta/50 focus:outline-none transition"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="text-[13px] font-medium text-text-tertiary mb-1.5 block">생년월일 (YYYYMMDD)</label>
-                    <input
-                      type="text"
-                      inputMode="numeric"
-                      maxLength={8}
-                      placeholder="YYYYMMDD (숫자 8자리)"
-                      value={other.birth_date.replace(/-/g, '')}
-                      onChange={e => {
-                        const digits = e.target.value.replace(/\D/g, '').slice(0, 8);
-                        const formatted = digits.length === 8
-                          ? `${digits.slice(0, 4)}-${digits.slice(4, 6)}-${digits.slice(6, 8)}`
-                          : digits;
-                        setOther(o => ({ ...o, birth_date: formatted }));
-                      }}
-                      className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-text-primary text-[16px] placeholder-text-tertiary focus:border-cta/50 focus:outline-none transition"
-                    />
-                  </div>
-
-                  <div>
-                    <div className="flex items-center justify-between mb-1.5">
-                      <label className="text-[13px] font-medium text-text-tertiary block">
-                        출생 시간 (HHMM)
-                      </label>
-                      <label className="text-[13px] flex items-center gap-1 text-text-secondary cursor-pointer">
-                        <input
-                          type="checkbox"
-                          checked={otherHourUnknown}
-                          onChange={(e) => {
-                            const unknown = e.target.checked;
-                            setOtherHourUnknown(unknown);
-                            // 모름 체크 시 시간 클리어. 해제 시 빈 칸으로 둬 사용자가 직접 입력.
-                            if (unknown) setOther(o => ({ ...o, birth_time: '' }));
-                          }}
-                          className="accent-cta"
-                        />
-                        모름
-                      </label>
-                    </div>
-                    <input
-                      type="text"
-                      inputMode="numeric"
-                      maxLength={4}
-                      placeholder="HHMM (숫자 4자리, 24시 표기)"
-                      value={other.birth_time.replace(':', '')}
-                      onChange={e => {
-                        const digits = e.target.value.replace(/\D/g, '').slice(0, 4);
-                        const formatted = digits.length >= 3
-                          ? `${digits.slice(0, 2)}:${digits.slice(2)}`
-                          : digits;
-                        // 숫자를 다 지워도 모름은 자동 체크 안 됨 — otherHourUnknown 은 별도 state.
-                        setOther(o => ({ ...o, birth_time: formatted }));
-                      }}
-                      disabled={otherHourUnknown}
-                      className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-text-primary text-[16px] placeholder-text-tertiary focus:border-cta/50 focus:outline-none transition disabled:opacity-40"
-                    />
-                    {otherHourUnknown && (
-                      <p className="text-[12px] text-text-tertiary mt-1">
-                        시간을 모르면 시주(時柱)가 없는 삼주추명으로 분석됩니다.
-                      </p>
-                    )}
-                  </div>
-
-                  <div>
-                    <label className="text-[13px] font-medium text-text-tertiary mb-1.5 block">성별</label>
-                    <div className="grid grid-cols-2 gap-2">
-                      {(['male', 'female'] as const).map(g => (
-                        <button
-                          key={g}
-                          type="button"
-                          onClick={() => setOther(o => ({ ...o, gender: g }))}
-                          className={`py-2.5 rounded-xl text-[15px] font-medium border transition-all
-                            ${other.gender === g ? 'bg-cta/20 border-cta/50 text-cta' : 'bg-white/5 border-white/10 text-text-secondary hover:border-white/20'}`}
-                        >
-                          {g === 'male' ? '남성' : '여성'}
+                            <div className="flex-1 min-w-0">
+                              <p className={`text-[15px] font-semibold ${active ? 'text-cta' : 'text-text-primary'}`}>
+                                {p.name}
+                              </p>
+                              <p className="text-[12px] text-text-tertiary mt-0.5">
+                                {p.birth_date.replace(/-/g, '.')}
+                                {p.birth_time ? ` ${p.birth_time}` : ' (시간 모름)'}
+                                {' · '}
+                                {p.gender === 'male' ? '남' : '여'}
+                              </p>
+                            </div>
+                            {active && (
+                              <span className="text-[12px] px-2 py-0.5 rounded-full bg-cta/20 text-cta font-semibold flex-shrink-0">
+                                선택됨
+                              </span>
+                            )}
+                          </div>
                         </button>
-                      ))}
-                    </div>
+                      );
+                    })}
                   </div>
+                )}
 
-                  <div>
-                    <label className="text-[13px] font-medium text-text-tertiary mb-1.5 block">역법</label>
-                    <div className="grid grid-cols-2 gap-2">
-                      {(['solar', 'lunar'] as const).map(c => (
-                        <button
-                          key={c}
-                          type="button"
-                          onClick={() => setOther(o => ({ ...o, calendar_type: c }))}
-                          className={`py-2.5 rounded-xl text-[15px] font-medium border transition-all
-                            ${other.calendar_type === c ? 'bg-cta/20 border-cta/50 text-cta' : 'bg-white/5 border-white/10 text-text-secondary hover:border-white/20'}`}
-                        >
-                          {c === 'solar' ? '양력' : '음력'}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              )}
+                {/* 새 프로필 추가 — 본인 슬롯·정통사주·신년운세와 동일 패턴.
+                    SajuInputPage 로 라우팅해 저장 후 돌아오면 birth_profiles 에 추가되어 위 칩 리스트에 자동 노출. */}
+                <button
+                  type="button"
+                  onClick={() => router.push('/saju/input?mode=profile-only')}
+                  className="mt-3 w-full rounded-2xl border-2 border-dashed border-[var(--border-subtle)] hover:border-cta/40 p-4 flex items-center justify-center gap-2 text-text-tertiary hover:text-cta transition-all"
+                >
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
+                    <line x1="12" y1="5" x2="12" y2="19" />
+                    <line x1="5" y1="12" x2="19" y2="12" />
+                  </svg>
+                  <span className="text-sm font-medium">새 프로필 추가</span>
+                </button>
+              </div>
             </div>
 
             {error && (
@@ -1716,9 +1523,7 @@ export default function GunghapPage() {
                   </p>
                   {!archiveMeta && !isPetCategory && (
                     <p className="text-[12px] text-text-tertiary mt-0.5">
-                      {otherMode === 'profile'
-                        ? selectedOtherProfile?.birth_date?.replace(/-/g, '.')
-                        : other.birth_date?.replace(/-/g, '.')}
+                      {selectedOtherProfile?.birth_date?.replace(/-/g, '.')}
                     </p>
                   )}
                   {(archiveMeta ? archiveMeta.otherRole : otherRole) && (
