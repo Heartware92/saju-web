@@ -46,7 +46,15 @@ function parseClassification(raw: string, label: string): RelationClassification
       : label;
   const nuance = typeof obj.nuance === 'string' ? obj.nuance.trim().slice(0, 120) : '';
 
-  return { valid, category, normalizedLabel, nuance };
+  // 특수 섹션 3~5개 — 분류기가 라벨 결로 추천. 빈 배열·이상 응답이면 빈 배열로 폴백
+  // (dynamic generator 가 빈 배열도 안전 처리 — 공통 7개만으로도 풀이 가능).
+  const rawSpecial = Array.isArray(obj.specialSections) ? obj.specialSections : [];
+  const specialSections = rawSpecial
+    .filter((s): s is string => typeof s === 'string' && s.trim().length > 0)
+    .map((s) => s.trim().slice(0, 40))
+    .slice(0, 5);
+
+  return { valid, category, normalizedLabel, nuance, specialSections };
 }
 
 export async function POST(req: NextRequest) {
@@ -66,7 +74,7 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const result = await callAI(buildRelationClassifyPrompt(label), 256, {
+    const result = await callAI(buildRelationClassifyPrompt(label), 512, {
       systemPrompt:
         '당신은 관계 분류기입니다. 반드시 지정된 JSON 형식의 객체 하나로만 응답합니다.',
       temperature: 0,
