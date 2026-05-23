@@ -139,9 +139,10 @@ export default function ManageProfilesPage() {
       calendar_type: p.calendar_type ?? 'solar',
       birth_place: p.birth_place || 'seoul',
       memo: p.memo ?? '',
-      jobState: hasCustomJob ? '' : (p.job_state || '직장인'),
+      // null 인 프로필은 칩 미선택 상태로 노출 — 다시 저장해도 null 유지.
+      jobState: hasCustomJob ? '' : (p.job_state || ''),
       customJobState: hasCustomJob ? p.custom_job_state! : '',
-      loveState: hasCustomLove ? '' : (p.love_state || '연애 중'),
+      loveState: hasCustomLove ? '' : (p.love_state || ''),
       customLoveState: hasCustomLove ? p.custom_love_state! : '',
     });
   };
@@ -168,9 +169,9 @@ export default function ManageProfilesPage() {
       birth_place: editForm.birth_place,
       longitude,
       memo: editForm.memo.trim() || undefined,
-      job_state: customJobTrim ? '직접 입력' : (editForm.jobState || '직장인'),
+      job_state: customJobTrim ? '직접 입력' : (editForm.jobState || null),
       custom_job_state: customJobTrim || null,
-      love_state: customLoveTrim ? '직접 입력' : (editForm.loveState || '연애 중'),
+      love_state: customLoveTrim ? '직접 입력' : (editForm.loveState || null),
       custom_love_state: customLoveTrim || null,
     });
     if (ok) {
@@ -225,8 +226,10 @@ export default function ManageProfilesPage() {
               }`}
             >
               <div className="flex items-start gap-3">
-                <div className="w-10 h-10 rounded-full bg-[rgba(124,92,252,0.12)] flex items-center justify-center text-lg shrink-0">
-                  {p.gender === 'male' ? '👨' : '👩'}
+                <div className={`w-10 h-10 rounded-full flex items-center justify-center text-[13px] font-semibold shrink-0 ${
+                  p.gender === 'male' ? 'bg-sky-500/15 text-sky-300' : 'bg-pink-400/15 text-pink-300'
+                }`}>
+                  {p.gender === 'male' ? '남' : '여'}
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
@@ -386,7 +389,7 @@ export default function ManageProfilesPage() {
                             : 'bg-[rgba(255,255,255,0.04)] border-[var(--border-subtle)] text-text-secondary'
                         }`}
                       >
-                        {c === 'solar' ? '☀️ 양력' : '🌙 음력'}
+                        {c === 'solar' ? '양력' : '음력'}
                       </button>
                     ))}
                   </div>

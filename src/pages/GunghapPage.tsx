@@ -330,6 +330,7 @@ export default function GunghapPage() {
   // 상대방은 본인과 동일한 흐름 — 등록 birth_profiles 에서 선택.
   // 새 사람을 보고 싶으면 '새 프로필 추가' 로 birth_profile 만들어 와서 선택.
   const [otherProfileId, setOtherProfileId] = useState<string>('');
+  // archiveModalIsEntry 제거: 페이지 진입 시에만 자동 모달 → close 는 무조건 history.back.
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<string>('');
   const [error, setError] = useState<string>('');
@@ -358,9 +359,10 @@ export default function GunghapPage() {
   const [archiveLoading, setArchiveLoading] = useState(true);
   // 이전 궁합 결과 리스트 모달 — 택일·지정일과 동일 UX. 진입 시 기록 있으면 표시.
   const [showArchiveList, setShowArchiveList] = useState(false);
+  // 진입 모달은 페이지 첫 진입 시 자동 노출 — 닫으면 무조건 홈으로.
+  // (재진입 트리거가 사라지면서 archiveModalIsEntry state 도 제거 — 모든 close = 홈 복귀)
   // 모달이 '진입 모달'인지(true) 카테고리 화면에서 다시 연 것인지(false) 구분.
   // 진입 모달을 취소하면 궁합 화면이 아니라 직전 화면(홈)으로 돌아가야 한다.
-  const [archiveModalIsEntry, setArchiveModalIsEntry] = useState(true);
   const [forceNewReading, setForceNewReading] = useState(false);
 
   // ── 로딩 안전장치: 70초 초과 시 강제 해제 ──
@@ -396,6 +398,17 @@ export default function GunghapPage() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [otherProfileChoices.length, selectedProfile?.id]);
+
+  // 단계형 페이지 — native back/스와이프 가 step 단위로 동작하도록 history entry 추가.
+  // step='input' 진입 시 가짜 entry 를 push → native back 발생하면 popstate 로 category 복귀.
+  // (UI BackButton 은 handleGunghapBack 으로 별도 처리)
+  useEffect(() => {
+    if (step !== 'input' || typeof window === 'undefined') return;
+    window.history.pushState({ gunghapStep: 'input' }, '');
+    const onPop = () => setStep('category');
+    window.addEventListener('popstate', onPop);
+    return () => window.removeEventListener('popstate', onPop);
+  }, [step]);
 
   const isPetCategory = category === 'pet';
 
@@ -609,7 +622,6 @@ export default function GunghapPage() {
       // 진입 모달은 '진짜 첫 진입'(카테고리 스텝·jobId 없음)에서만 자동 표시.
       // ?jobId 결과 화면 위에 모달이 덮이지 않도록 차단.
       if (list.length > 0 && step === 'category' && !urlJobId) {
-        setArchiveModalIsEntry(true);
         setShowArchiveList(true);
       }
     }).catch(() => {}).finally(() => {
@@ -1112,12 +1124,10 @@ export default function GunghapPage() {
     }
   };
 
-  // 결과 리스트 모달 닫기 — 진입 모달이면 궁합 화면이 아니라 홈으로 빠진다.
-  // 카테고리 화면에서 다시 연 모달이면 카테고리 화면으로 복귀.
+  // 결과 리스트 모달 닫기 — 진입 모달만 남았으므로 항상 직전 화면(홈)으로.
+  // setShowArchiveList(false) 후 history.back 하면 카테고리 화면이 한 프레임 깜빡임 → 곧바로 back.
   const handleArchiveModalClose = () => {
-    if (archiveModalIsEntry && typeof window !== 'undefined') {
-      // 진입 모달 — 모달을 닫지 않고 곧바로 직전 화면(홈)으로.
-      // setShowArchiveList(false) 를 호출하면 언마운트 직전 카테고리 화면이 한 프레임 깜빡임.
+    if (typeof window !== 'undefined') {
       window.history.length > 1 ? window.history.back() : window.location.assign('/');
       return;
     }
@@ -1191,16 +1201,8 @@ export default function GunghapPage() {
         {/* ── STEP 1: 관계 유형 선택 ── */}
         {step === 'category' && (
           <motion.div key="category" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="px-5 space-y-5">
-            {/* 이전 궁합 결과 보기 — 기록 있을 때만, 리스트 모달 재호출 */}
-            {!isArchiveMode && archiveList.length > 0 && (
-              <button
-                type="button"
-                onClick={() => { setArchiveModalIsEntry(false); setShowArchiveList(true); }}
-                className="w-full py-3 rounded-2xl border border-cta/40 text-cta font-semibold text-[14px] hover:bg-cta/10 transition-all"
-              >
-                이전 궁합 결과 보기 ({archiveList.length})
-              </button>
-            )}
+            {/* '이전 궁합 결과 보기' 버튼은 제거 — 페이지 진입 시 archive 모달이 자동 노출되어 중복.
+                보관함 진입은 하단 네비의 [보관함] 탭으로 일원화. */}
             {CATEGORY_GROUPS.map(group => (
               <div key={group.groupLabel}>
                 <p className={`text-[13px] font-bold mb-2.5 uppercase tracking-wider ${group.groupColor}`}>
@@ -1369,8 +1371,10 @@ export default function GunghapPage() {
                             ${active ? 'bg-cta/15 border-cta/50' : 'bg-white/5 border-white/10 hover:border-white/20'}`}
                         >
                           <div className="flex items-center gap-3">
-                            <div className="w-9 h-9 rounded-full bg-[rgba(124,92,252,0.12)] flex items-center justify-center text-lg shrink-0">
-                              {p.gender === 'male' ? '👨' : '👩'}
+                            <div className={`w-9 h-9 rounded-full flex items-center justify-center text-[13px] font-semibold shrink-0 ${
+                              p.gender === 'male' ? 'bg-sky-500/15 text-sky-300' : 'bg-pink-400/15 text-pink-300'
+                            }`}>
+                              {p.gender === 'male' ? '남' : '여'}
                             </div>
                             <div className="flex-1 min-w-0">
                               <p className={`text-[15px] font-semibold ${active ? 'text-cta' : 'text-text-primary'}`}>

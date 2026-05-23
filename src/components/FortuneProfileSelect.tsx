@@ -159,8 +159,10 @@ export function FortuneProfileSelect({
               className="w-full text-left rounded-2xl bg-space-surface/60 border border-[var(--border-subtle)] p-4 hover:border-cta/50 transition-all active:scale-[0.98] disabled:opacity-60"
             >
               <div className="flex items-center gap-3">
-                <div className="w-11 h-11 rounded-full bg-[rgba(124,92,252,0.12)] flex items-center justify-center text-lg shrink-0">
-                  {profile.gender === 'male' ? '👨' : '👩'}
+                <div className={`w-11 h-11 rounded-full flex items-center justify-center text-[14px] font-semibold shrink-0 ${
+                  profile.gender === 'male' ? 'bg-sky-500/15 text-sky-300' : 'bg-pink-400/15 text-pink-300'
+                }`}>
+                  {profile.gender === 'male' ? '남' : '여'}
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">

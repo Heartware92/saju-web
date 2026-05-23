@@ -120,14 +120,14 @@ export interface BirthProfile {
   is_primary: boolean;
   memo?: string;
   /**
-   * 직업 상태 — 칩 또는 직접 입력. DB DEFAULT '직장인' 이라 항상 존재하지만
-   * INSERT 시 누락 가능하도록 optional 로 선언 (DB가 보장).
+   * 직업 상태 — 칩 또는 직접 입력. 마이그레이션 040 이후 nullable.
+   * 반려동물 등 직업 개념이 부적절한 프로필은 NULL 저장.
    */
-  job_state?: string;
+  job_state?: string | null;
   /** 칩 대신 직접 입력했을 때만 값. 칩 선택 시 NULL */
   custom_job_state?: string | null;
-  /** 연애 상태 — DB DEFAULT '연애 중' */
-  love_state?: string;
+  /** 연애 상태 — 마이그레이션 040 이후 nullable. */
+  love_state?: string | null;
   /** 칩 대신 직접 입력했을 때만 값 */
   custom_love_state?: string | null;
   created_at: string;

@@ -165,14 +165,15 @@ export default function SajuInputPage() {
       setJobState('')
     } else {
       setCustomJobState('')
-      setJobState(profile.job_state || '직장인')
+      // null 이면 칩 미선택 상태로 복원 — 다시 저장 시 null 유지.
+      setJobState(profile.job_state || '')
     }
     if (profile.custom_love_state && profile.custom_love_state.trim()) {
       setCustomLoveState(profile.custom_love_state)
       setLoveState('')
     } else {
       setCustomLoveState('')
-      setLoveState(profile.love_state || '연애 중')
+      setLoveState(profile.love_state || '')
     }
   }
 
@@ -192,9 +193,10 @@ export default function SajuInputPage() {
 
     const customJobTrim = customJobState.trim()
     const customLoveTrim = customLoveState.trim()
-    // 칩 미선택('') + 직접 입력 없으면 DB DEFAULT 값으로 fallback
-    const finalJobState = customJobTrim ? '직접 입력' : (jobState || '직장인')
-    const finalLoveState = customLoveTrim ? '직접 입력' : (loveState || '연애 중')
+    // 칩 미선택('') + 직접 입력 없으면 NULL 저장 — 반려동물 등 직업·연애 개념이
+    // 부적절한 프로필을 위해 마이그레이션 040 에서 컬럼을 nullable 로 변경.
+    const finalJobState = customJobTrim ? '직접 입력' : (jobState || null)
+    const finalLoveState = customLoveTrim ? '직접 입력' : (loveState || null)
 
     if (editingProfile) {
       await updateProfile(editingProfile.id, {
@@ -398,13 +400,13 @@ export default function SajuInputPage() {
               className={`${styles.toggleBtn} ${gender === 'male' ? styles.active : ''}`}
               onClick={() => setGender('male')}
             >
-              <span>👨</span> 남성
+              남성
             </button>
             <button
               className={`${styles.toggleBtn} ${gender === 'female' ? styles.active : ''}`}
               onClick={() => setGender('female')}
             >
-              <span>👩</span> 여성
+              여성
             </button>
           </div>
         </div>
@@ -417,13 +419,13 @@ export default function SajuInputPage() {
               className={`${styles.toggleBtn} ${calendarType === 'solar' ? styles.active : ''}`}
               onClick={() => setCalendarType('solar')}
             >
-              ☀️ 양력
+              양력
             </button>
             <button
               className={`${styles.toggleBtn} ${calendarType === 'lunar' ? styles.active : ''}`}
               onClick={() => setCalendarType('lunar')}
             >
-              🌙 음력
+              음력
             </button>
           </div>
         </div>
