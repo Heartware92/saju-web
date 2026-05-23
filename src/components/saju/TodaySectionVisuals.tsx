@@ -140,7 +140,7 @@ function IljinVisual({ report }: { report: TodayFortuneV3AIResult }) {
   ];
   return (
     <CardWrap accent={ganColor} title="오늘의 일진" titleSub={`${gz.hanja} · ${gz.gan}${gz.zhi}`}>
-      <p className="text-[11.5px] text-text-tertiary mb-2.5 leading-relaxed">
+      <p className="text-[13.5px] text-text-secondary mb-3 leading-relaxed">
         일진은 오늘 하루를 이끄는 두 기운이에요. 하늘 기운은 오늘의 분위기, 땅 기운은 그 분위기가 머무는 자리예요.
       </p>
       <div className="grid grid-cols-2 gap-2">
@@ -193,16 +193,16 @@ function IljinVisual({ report }: { report: TodayFortuneV3AIResult }) {
               return (
                 <div
                   key={i}
-                  className="flex items-start gap-2 px-2.5 py-1.5 rounded-md border"
+                  className="flex items-center gap-2.5 px-2.5 py-2 rounded-md border"
                   style={{ background: tone.bg, borderColor: tone.border }}
                 >
                   <span
-                    className="text-[12px] font-bold px-1.5 py-0.5 rounded shrink-0"
-                    style={{ background: tone.border, color: tone.text }}
+                    className="inline-flex items-center justify-center text-[13px] font-bold rounded shrink-0 leading-none"
+                    style={{ width: 26, height: 26, background: tone.border, color: tone.text }}
                   >
                     {parsed.kind === 'etc' ? '작용' : parsed.kind}
                   </span>
-                  <span className="text-[12.5px] text-text-secondary leading-snug">
+                  <span className="text-[13px] text-text-secondary leading-snug">
                     {parsed.desc || parsed.label}
                   </span>
                 </div>
