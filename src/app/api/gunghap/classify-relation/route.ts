@@ -38,15 +38,38 @@ function parseClassification(raw: string, label: string): RelationClassification
       : label;
   const nuance = typeof obj.nuance === 'string' ? obj.nuance.trim().slice(0, 120) : '';
 
-  // 특수 섹션 3~5개 — 분류기가 라벨 결로 추천. 빈 배열·이상 응답이면 빈 배열로 폴백
-  // (dynamic generator 가 빈 배열도 안전 처리 — 공통 7개만으로도 풀이 가능).
-  const rawSpecial = Array.isArray(obj.specialSections) ? obj.specialSections : [];
-  const specialSections = rawSpecial
+  // 분류기가 짠 ordered sections (9~12개) — 공통/특수 구분 없이 흐름 그대로 사용.
+  // 필수 슬롯 누락 시 보강해 본 풀이가 빈약해지지 않게 안전망.
+  const rawSections = Array.isArray(obj.sections) ? obj.sections : [];
+  let sections = rawSections
     .filter((s): s is string => typeof s === 'string' && s.trim().length > 0)
     .map((s) => s.trim().slice(0, 40))
-    .slice(0, 5);
+    .slice(0, 14);
 
-  return { valid, normalizedLabel, nuance, specialSections };
+  // 필수 슬롯 보강 — 분류기가 빠뜨려도 본 풀이 골격이 무너지지 않게 폴백
+  const REQUIRED = ['핵심 요약', '오행 상보 관계', '서로의 속마음'] as const;
+  for (const req of REQUIRED) {
+    if (!sections.includes(req)) {
+      // 핵심 요약은 첫 자리, 나머지는 중간에 끼움
+      if (req === '핵심 요약') sections.unshift(req);
+      else sections.splice(Math.floor(sections.length / 2), 0, req);
+    }
+  }
+
+  // sections 가 완전히 비었으면 (분류기 응답 망가짐) 최소 골격으로
+  if (sections.length === 0) {
+    sections = [
+      '핵심 요약',
+      '오행 상보 관계',
+      '마음의 결속·깊이',
+      '갈등·마찰 포인트',
+      '서로의 속마음',
+      '개운법·처방',
+      '이 관계의 미래·전망',
+    ];
+  }
+
+  return { valid, normalizedLabel, nuance, sections };
 }
 
 export async function POST(req: NextRequest) {
