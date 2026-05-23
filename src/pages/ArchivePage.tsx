@@ -14,6 +14,7 @@ import Link from 'next/link';
 import { Card } from '../components/ui/Card';
 import { sajuDB, tarotDB, supabase } from '../services/supabase';
 import { useUserStore } from '../store/useUserStore';
+import { useProfileStore } from '../store/useProfileStore';
 import { SAJU_CATEGORY_LABEL, TAROT_SPREAD_LABEL } from '../constants/adminLabels';
 import type { SajuRecord, TarotRecord } from '../types/credit';
 import { ShareBar } from '@/components/share/ShareBar';
@@ -79,14 +80,33 @@ function getSubCategoryLabel(record: SajuRecord): string | null {
   return null;
 }
 
-/** 보관함에 표시할 프로필 라벨 — 신규 컬럼(profile_name) 우선, 없으면 생일로 fallback. */
-function getProfileLabel(record: SajuRecord): string {
-  // 옛날 데이터는 profile_name 이 NULL — 생일을 짧게 표시
-  if (!record.profile_name) return (record.birth_date || '').replace(/-/g, '.');
-  // 궁합: 두 사람 모두 보이도록 — 상대 이름 우선, 없으면 생일 fallback
-  if (record.partner_name) return `${record.profile_name} × ${record.partner_name}`;
-  if (record.partner_birth_date) return `${record.profile_name} × ${record.partner_birth_date.replace(/-/g, '.')}`;
-  return record.profile_name;
+/**
+ * 보관함에 표시할 프로필 라벨.
+ * 우선순위:
+ *   1) record.profile_name (저장 시점 스냅샷 — 신규 record)
+ *   2) record.profile_id 로 현재 birth_profiles 매칭한 이름 (스냅샷 누락된 옛 record)
+ *   3) birth_date + gender 로 매칭 (job-based 흐름에서 profile_id 도 안 채워진 옛 record)
+ *   4) 생일 fallback
+ *
+ * 궁합 record 는 "본인 × 상대" 형식. 상대 이름이 없으면 상대 생일 fallback.
+ */
+function getProfileLabel(
+  record: SajuRecord,
+  profilesById: Map<string, string>,
+  profilesByBirth: Map<string, string>,
+): string {
+  let myLabel: string | null = record.profile_name ?? null;
+  if (!myLabel && record.profile_id) {
+    myLabel = profilesById.get(record.profile_id) ?? null;
+  }
+  if (!myLabel && record.birth_date) {
+    myLabel = profilesByBirth.get(`${record.birth_date}|${record.gender}`) ?? null;
+  }
+  if (!myLabel) return (record.birth_date || '').replace(/-/g, '.');
+
+  if (record.partner_name) return `${myLabel} × ${record.partner_name}`;
+  if (record.partner_birth_date) return `${myLabel} × ${record.partner_birth_date.replace(/-/g, '.')}`;
+  return myLabel;
 }
 
 /** 사주 카테고리 → 결과 페이지 URL. recordId 를 쿼리로 붙인다.
@@ -181,6 +201,19 @@ function getTarotRoute(record: TarotRecord): string {
 
 export default function ArchivePage() {
   const { user } = useUserStore();
+  // 옛 record 의 profile_name 이 NULL 일 때 profile_id 로 현재 이름을 매칭하기 위한 맵.
+  const { profiles, fetchProfiles } = useProfileStore();
+  const profilesById = useMemo(() => {
+    const m = new Map<string, string>();
+    for (const p of profiles) m.set(p.id, p.name);
+    return m;
+  }, [profiles]);
+  // birth_date+gender 매칭 — profile_id 도 NULL 인 옛 record 보강용.
+  const profilesByBirth = useMemo(() => {
+    const m = new Map<string, string>();
+    for (const p of profiles) m.set(`${p.birth_date}|${p.gender}`, p.name);
+    return m;
+  }, [profiles]);
   const [activeTab, setActiveTab] = useState<TabType>('saju');
   const [sajuRecords, setSajuRecords] = useState<SajuRecord[]>([]);
   const [tarotRecords, setTarotRecords] = useState<TarotRecord[]>([]);
@@ -216,6 +249,8 @@ export default function ArchivePage() {
 
   useEffect(() => {
     if (!user) return;
+    // 옛 record 백필용 — birth_profiles 도 같이 불러둔다 (캐시 있으면 skip).
+    void fetchProfiles({ userId: user.id });
     setLoading(true);
     setError(null);
     Promise.all([
@@ -231,7 +266,7 @@ export default function ArchivePage() {
         setError('기록을 불러오지 못했어요. 잠시 후 다시 시도해주세요.');
       })
       .finally(() => setLoading(false));
-  }, [user]);
+  }, [user, fetchProfiles]);
 
   // ── Realtime 구독 — 진행 중 잡이 완료/실패되면 보관함 카드 status 자동 갱신 ──
   // "완료되면 확인하세요" 모달 후 사용자가 보관함에 머물 때, 모래시계가 자동으로
@@ -359,7 +394,7 @@ export default function ArchivePage() {
                     ? '연도별 운세'
                     : SAJU_CATEGORY_LABEL[record.category] ?? record.category;
                   const color = SAJU_CATEGORY_COLOR[record.category] ?? '#94a3b8';
-                  const profileLabel = getProfileLabel(record);
+                  const profileLabel = getProfileLabel(record, profilesById, profilesByBirth);
                   // 칩 선택이 있는 카테고리(궁합·택일) — 어떤 칩을 봤는지
                   const subLabel = getSubCategoryLabel(record);
                   return (

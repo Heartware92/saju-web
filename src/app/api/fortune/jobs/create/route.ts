@@ -314,21 +314,33 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // ── 4. 프로필 매칭 (보관함 정렬용) ──
+    // ── 4. 프로필 매칭 (보관함 정렬·라벨용) ──
+    // 보관함은 profile_name 을 우선 라벨로 노출 (없으면 생일 fallback) — 모든 카테고리에서 채운다.
     let resolvedProfileId: string | null = body.profileId ?? null;
-    if (!resolvedProfileId) {
+    let resolvedProfileName: string | null = null;
+    if (resolvedProfileId) {
       const { data: profile } = await supabaseAdmin
         .from('birth_profiles')
-        .select('id')
+        .select('name')
+        .eq('id', resolvedProfileId)
+        .eq('user_id', userId)
+        .maybeSingle();
+      resolvedProfileName = profile?.name ?? null;
+    } else {
+      const { data: profile } = await supabaseAdmin
+        .from('birth_profiles')
+        .select('id, name')
         .eq('user_id', userId)
         .eq('birth_date', body.sourceBirth.birthDate)
         .eq('gender', body.sourceBirth.gender)
         .limit(1)
         .maybeSingle();
       resolvedProfileId = profile?.id ?? null;
+      resolvedProfileName = profile?.name ?? null;
     }
 
     // ── 5. saju_records INSERT (카테고리별 컬럼 분기) ──
+    // profile_id / profile_name — 보관함 라벨·정렬에 사용. 매칭 실패 시 둘 다 null.
     const insertRow: Record<string, unknown> = {
       user_id: userId,
       category: body.category,
@@ -342,6 +354,8 @@ export async function POST(request: NextRequest) {
       credit_used: policy.creditCost,
       is_detailed: true,
       status: 'pending',
+      profile_id: resolvedProfileId,
+      profile_name: resolvedProfileName,
     };
 
     if (body.category === 'traditional') {
