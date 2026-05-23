@@ -14,9 +14,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { callAI } from '@/lib/ai/aiClients';
 import {
   buildRelationClassifyPrompt,
-  GUNGHAP_RELATION_KINDS,
   type RelationClassification,
-  type GunghapRelationKind,
 } from '@/constants/prompts';
 
 const MAX_LABEL_LEN = 40;
@@ -33,12 +31,6 @@ function parseClassification(raw: string, label: string): RelationClassification
   }
 
   const valid = obj.valid === true;
-  const rawCategory = typeof obj.category === 'string' ? obj.category : 'general';
-  const category: GunghapRelationKind = GUNGHAP_RELATION_KINDS.includes(
-    rawCategory as GunghapRelationKind,
-  )
-    ? (rawCategory as GunghapRelationKind)
-    : 'general';
 
   const normalizedLabel =
     typeof obj.normalizedLabel === 'string' && obj.normalizedLabel.trim()
@@ -54,7 +46,7 @@ function parseClassification(raw: string, label: string): RelationClassification
     .map((s) => s.trim().slice(0, 40))
     .slice(0, 5);
 
-  return { valid, category, normalizedLabel, nuance, specialSections };
+  return { valid, normalizedLabel, nuance, specialSections };
 }
 
 export async function POST(req: NextRequest) {

@@ -5564,22 +5564,9 @@ ${myName}: ${myRole.trim() || '미지정'} / ${otherName}: ${otherRole.trim() ||
 // 사용자가 자유 텍스트로 입력한 관계를 LLM이 한 번 분류해 구조(category)와
 // 서술(normalizedLabel·nuance)을 분리한다. 키워드 매칭의 오분류를 대체.
 // ─────────────────────────────────────────────
-export type GunghapRelationKind =
-  | 'secret_crush' | 'som' | 'lover' | 'spouse' | 'ex_lover' | 'ex_spouse'
-  | 'soulmate' | 'rival' | 'friend' | 'mentor' | 'parent_child'
-  | 'sibling' | 'work' | 'business' | 'general';
-
-export const GUNGHAP_RELATION_KINDS: GunghapRelationKind[] = [
-  'secret_crush', 'som', 'lover', 'spouse', 'ex_lover', 'ex_spouse',
-  'soulmate', 'rival', 'friend', 'mentor', 'parent_child',
-  'sibling', 'work', 'business', 'general',
-];
-
 export interface RelationClassification {
   /** 입력이 "두 사람의 관계"로 해석 가능한가 (false면 본 풀이 진입 차단) */
   valid: boolean;
-  /** 분석 틀을 정하는 구조 카테고리 */
-  category: GunghapRelationKind;
   /** 화면·풀이용 정제 라벨 (8자 이내) */
   normalizedLabel: string;
   /** 사용자 입력 원문의 고유 뉘앙스 한 문장 — 풀이에 색을 입히는 용도 */
@@ -5598,14 +5585,8 @@ export function buildRelationClassifyPrompt(rawLabel: string): string {
 
 [판단 규칙]
 - valid: 입력이 "두 사람 사이의 관계"로 해석 가능하면 true. 관계가 아닌 것(음식·사물·장소·무의미한 문자열·기호 나열 등)이면 false.
-- category: 아래 15개 중 입력에 가장 가까운 관계 유형 1개를 고른다.
-  secret_crush(짝사랑) / som(썸·호감 단계) / lover(연인) / spouse(배우자·부부) /
-  ex_lover(헤어진 연인) / ex_spouse(이혼한 배우자) / soulmate(영혼의 단짝) /
-  rival(경쟁자·맞수) / friend(친구) / mentor(스승과 제자·선후배) /
-  parent_child(부모와 자녀) / sibling(형제·자매) / work(직장 동료·상사·부하) /
-  business(사업 동업자) / general(위 어디에도 안 맞는 기타 관계)
-- 표면 단어가 아니라 관계의 실제 의미로 판단한다. 예: "섹스파트너"는 단어에 '파트너'가 들어 있어도 사업(business)이 아니라 육체적 친밀함 중심의 연인(lover)이다.
-- 성적·민감하거나 가벼운 관계, 원수·채권추심처럼 적대적이거나 이해관계 중심인 관계도 모두 정상적인 관계 유형으로 분류한다. 거부하거나 회피하지 말 것.
+- 표면 단어가 아니라 관계의 실제 의미로 판단한다. 예: "섹스파트너"는 단어에 '파트너'가 들어 있어도 사업이 아니라 육체적 친밀함 중심의 관계.
+- 성적·민감하거나 가벼운 관계, 원수·채권추심처럼 적대적이거나 이해관계 중심인 관계도 모두 정상적인 관계로 인정한다. 거부하거나 회피하지 말 것.
 - normalizedLabel: 화면과 풀이에 쓸 정제된 관계명. 8자 이내 (예: "연인", "직장 상사", "오래된 친구", "원수", "채권 관계").
 - nuance: 사용자 입력 원문이 담은 고유한 뉘앙스를 한 문장으로 요약한다. 표현을 순화하지 말고 입력의 실제 결을 그대로 담는다. 예: "육체적 친밀함이 중심이고 정서적 약속은 가벼운 관계", "돈을 돌려받지 못해 적대적으로 추심하는 관계". valid가 false면 빈 문자열.
 - specialSections: 이 관계 결에서만 다뤄야 할 특수 섹션 제목 **3~5개**. 본 풀이는 아래 공통 7개 골격을 항상 포함하며, 거기에 너희가 정한 특수 섹션이 섞여 총 10~12개 ▶ 섹션이 된다. 공통과 겹치지 않게 라벨 고유의 결을 짚는 슬롯을 골라라.
@@ -5616,7 +5597,7 @@ export function buildRelationClassifyPrompt(rawLabel: string): string {
   각 제목은 10~22자 한국어 명사구. 일반적·뻔한 슬롯("기본 정보"·"두 사람 비교") 금지. valid가 false면 빈 배열.
 
 [출력 형식 — JSON 객체 하나만]
-{"valid": true, "category": "lover", "normalizedLabel": "연인", "nuance": "...", "specialSections": ["...", "...", "..."]}`;
+{"valid": true, "normalizedLabel": "연인", "nuance": "...", "specialSections": ["...", "...", "..."]}`;
 }
 
 // ─────────────────────────────────────────────
@@ -5650,7 +5631,6 @@ export const generateCustomDynamicGunghapPrompt = (
 - 사용자는 두 사람의 관계를 "${rawLabel}" 라고 직접 표현했습니다.
 - 정제 라벨(분석 틀의 결): ${c.normalizedLabel}
 - 이 관계의 뉘앙스: ${c.nuance}
-- 분류된 관계 결: ${c.category}
 
 [절대 규칙 ★★★]
 - Markdown·이모지 금지. 섹션 제목은 반드시 "▶ 제목" 형식으로만.

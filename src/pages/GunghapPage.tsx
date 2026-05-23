@@ -897,13 +897,10 @@ export default function GunghapPage() {
       }
 
       // 역할 컨텍스트 주입 + 제목/점수 요청 래핑.
-      // 직접 입력 dynamic 의 timeline 노출 여부는 분류된 카테고리 기준.
+      // 직접 입력은 timeline 노출 안 함 (관계 다양성상 "만남·연차" 흐름이 부적절).
       prompt = injectRoleContext(prompt, myName, myRole, otherName, otherRole);
-      const timelineCategory: GunghapCategory =
-        category === 'custom' && classifiedRelation && classifiedRelation.category !== 'general'
-          ? classifiedRelation.category
-          : category;
-      prompt = wrapWithTitleScore(prompt, TIMELINE_CATEGORIES.includes(timelineCategory));
+      const showTimeline = category !== 'custom' && TIMELINE_CATEGORIES.includes(category);
+      prompt = wrapWithTitleScore(prompt, showTimeline);
 
       // 백그라운드 잡 생성 — 차감·INSERT·archive 모두 서버. 결과는 useFortuneJob → 동기화 useEffect 가
       // parseGunghapHeader → setResult + setGunghapTitle/Score/Domain 으로 매핑.
