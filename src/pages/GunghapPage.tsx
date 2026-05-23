@@ -1359,17 +1359,11 @@ export default function GunghapPage() {
               </p>
             )}
 
-            <div className="flex gap-2 mt-3">
-              <button
-                onClick={() => setStep('category')}
-                className="px-5 py-3.5 rounded-2xl border border-white/15 text-text-secondary font-medium text-[16px] active:scale-[0.98] transition-all"
-              >
-                이전
-              </button>
+            <div className="mt-3">
               <button
                 disabled={!isOtherValid || loading}
                 onClick={handleAnalyze}
-                className="flex-1 py-3.5 rounded-2xl bg-cta text-white font-bold text-[17px] active:scale-[0.98] transition-all disabled:opacity-40"
+                className="w-full py-3.5 rounded-2xl bg-cta text-white font-bold text-[17px] active:scale-[0.98] transition-all disabled:opacity-40"
               >
                 {loading ? (
                   <span className="flex items-center justify-center gap-2">
