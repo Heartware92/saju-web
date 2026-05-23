@@ -909,7 +909,11 @@ export default function GunghapPage() {
 
       // 역할 컨텍스트 주입 + 제목/점수 요청 래핑.
       // 직접 입력은 timeline 노출 안 함 (관계 다양성상 "만남·연차" 흐름이 부적절).
-      prompt = injectRoleContext(prompt, myName, myRole, otherName, otherRole);
+      // pet 카테고리는 스킵 — 본문에 "{이름}(나)/{이름}(반려동물)" 부기를 강제 주입해
+      // 동물 관계에 어색한 라벨링이 생김. 펫 프롬프트가 자체 호칭 규칙을 이미 가짐.
+      if (category !== 'pet') {
+        prompt = injectRoleContext(prompt, myName, myRole, otherName, otherRole);
+      }
       const showTimeline = category !== 'custom' && TIMELINE_CATEGORIES.includes(category);
       prompt = wrapWithTitleScore(prompt, showTimeline);
 
