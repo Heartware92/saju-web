@@ -305,7 +305,6 @@ export default function GunghapPage() {
   const [customLabel, setCustomLabel] = useState('');
   // 직접 입력 관계 — 1차 분류 API 결과 (null = 미분류·폴백)
   const [classifiedRelation, setClassifiedRelation] = useState<RelationClassification | null>(null);
-  const [classifying, setClassifying] = useState(false);
   const [classifyError, setClassifyError] = useState('');
   const [myRole, setMyRole] = useState('');
   const [otherRole, setOtherRole] = useState('');
