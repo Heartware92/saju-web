@@ -911,7 +911,10 @@ export default function GunghapPage() {
       // 직접 입력은 timeline 노출 안 함 (관계 다양성상 "만남·연차" 흐름이 부적절).
       // pet 카테고리는 스킵 — 본문에 "{이름}(나)/{이름}(반려동물)" 부기를 강제 주입해
       // 동물 관계에 어색한 라벨링이 생김. 펫 프롬프트가 자체 호칭 규칙을 이미 가짐.
-      if (category !== 'pet') {
+      // custom 도 스킵 — AUTO_ROLES.custom 이 '나'/'상대' 기본값이라 본문에
+      // "허진우는 '나'로서, 임진아는 '상대'로서..." 같은 자기 동어반복 강제됨.
+      // 직접 입력은 라벨(섹스파트너·채무관계 등) 자체가 관계 결을 정의하므로 역할 블록 불필요.
+      if (category !== 'pet' && category !== 'custom') {
         prompt = injectRoleContext(prompt, myName, myRole, otherName, otherRole);
       }
       const showTimeline = category !== 'custom' && TIMELINE_CATEGORIES.includes(category);
@@ -1231,7 +1234,8 @@ export default function GunghapPage() {
                       {selectedProfile.birth_date} · {selectedProfile.gender === 'male' ? '남' : '여'}
                     </p>
                   </div>
-                  {(myRole.trim() || otherRole.trim()) && (
+                  {/* 직접 입력은 라벨 자체가 관계 결을 정의하므로 '나'/'상대' 자기 동어반복 역할 표시 숨김. */}
+                  {category !== 'custom' && (myRole.trim() || otherRole.trim()) && (
                     <div className="text-[11px] text-text-tertiary text-right shrink-0 leading-snug">
                       {myRole.trim() && <div className="whitespace-nowrap">내 역할: {myRole}</div>}
                       {otherRole.trim() && <div className="whitespace-nowrap">상대 역할: {otherRole}</div>}
