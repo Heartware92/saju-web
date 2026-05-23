@@ -32,6 +32,7 @@ import {
   generateSoulmateGunghapPrompt,
   generateRivalGunghapPrompt,
   generateMentorGunghapPrompt,
+  generatePetGunghapPrompt,
   injectRoleContext,
   generateCustomDynamicGunghapPrompt,
   type GunghapCategory,
@@ -640,43 +641,34 @@ export default function GunghapPage() {
     return selectedCat?.label ?? '';
   };
 
-  // STEP 1 → STEP 2 진행. custom 이면 먼저 관계 분류 API 를 1차 호출한다.
-  // 분류 실패·타임아웃 시엔 null 로 두고 진행 → handleAnalyze 가 키워드 매칭으로 폴백.
-  const handleCategoryNext = async () => {
-    if (category !== 'custom') {
-      setStep('input');
-      return;
-    }
-    const label = customLabel.trim();
-    if (!label) return;
-    // 이미 같은 라벨을 분류해 둔 경우 재호출 생략
-    if (classifiedRelation) {
-      setStep('input');
-      return;
-    }
-    setClassifying(true);
-    setClassifyError('');
+  // STEP 1 → STEP 2 진행. custom 인 경우에도 분류 API 는 호출하지 않고,
+  // STEP 2 의 "궁합 분석하기" 시점에 본 풀이와 함께 호출한다.
+  // (상대 정보 입력 안 하고 뒤로 가버리는 케이스에서 분류 호출 낭비 방지)
+  const handleCategoryNext = () => {
+    if (category === 'custom' && !customLabel.trim()) return;
+    setStep('input');
+  };
+
+  // 직접 입력 분류 API 호출 — handleAnalyze 안에서 본 풀이 직전에 사용.
+  // 성공: { valid:true, ... } 저장 → dynamic generator 로 사용
+  // valid:false: 인라인 에러 + STEP 1 복귀 → 비싼 본 풀이 차단
+  // API 실패: null 반환 → handleAnalyze 가 키워드 매칭 폴백
+  const classifyCustomLabel = async (
+    label: string,
+  ): Promise<RelationClassification | 'invalid' | null> => {
     try {
       const res = await fetch('/api/gunghap/classify-relation', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ label }),
       });
-      if (res.ok) {
-        const data: RelationClassification = await res.json();
-        if (!data.valid) {
-          setClassifyError('관계를 알아볼 수 있게 입력해 주세요. 예: 전생의 연인, 오래된 친구');
-          setClassifying(false);
-          return;
-        }
-        setClassifiedRelation(data);
-      }
-      // res 가 ok 가 아니면 classifiedRelation 은 null 유지 → 키워드 매칭 폴백
+      if (!res.ok) return null;
+      const data: RelationClassification = await res.json();
+      if (!data.valid) return 'invalid';
+      return data;
     } catch {
-      // 네트워크 실패 — 폴백으로 진행
+      return null;
     }
-    setClassifying(false);
-    setStep('input');
   };
 
   // ── 백그라운드 잡 생성 헬퍼 ──
@@ -814,13 +806,30 @@ export default function GunghapPage() {
       const otherName = otherBase.name;
       let prompt = '';
 
-      // 직접 입력 + 분류 성공 → 항상 dynamic 생성기.
-      // 섹션 제목·구성을 LLM 이 라벨 맥락으로 동적 생성 (사주아이 스타일).
+      // 직접 입력 — 본 풀이 직전에 분류 API 1차 호출.
+      // valid:false 면 인라인 에러로 STEP 1 복귀 (비싼 본 풀이 차단).
+      // API 실패 시엔 effectiveClassification null 유지 → 아래 switch default 의 키워드 매칭 폴백.
+      let effectiveClassification = classifiedRelation;
+      if (category === 'custom' && !effectiveClassification) {
+        const result = await classifyCustomLabel(customLabel.trim());
+        if (result === 'invalid') {
+          setClassifyError('관계를 알아볼 수 있게 입력해 주세요. 예: 전생의 연인, 오래된 친구');
+          setStep('category');
+          setLoading(false);
+          return;
+        }
+        if (result) {
+          effectiveClassification = result;
+          setClassifiedRelation(result);
+        }
+      }
+
+      // 직접 입력 + 분류 성공 → 항상 dynamic 생성기 (사주아이 스타일).
       // 분류 실패한 경우만 아래 switch default 의 키워드 매칭 fallback 으로 빠진다.
-      if (category === 'custom' && classifiedRelation) {
+      if (category === 'custom' && effectiveClassification) {
         prompt = generateCustomDynamicGunghapPrompt(
           myResult, otherResult, myName, otherName,
-          customLabel.trim(), classifiedRelation,
+          customLabel.trim(), effectiveClassification,
         );
       } else switch (category) {
         case 'secret_crush':
@@ -852,6 +861,9 @@ export default function GunghapPage() {
           break;
         case 'mentor':
           prompt = generateMentorGunghapPrompt(myResult, otherResult, myName, otherName);
+          break;
+        case 'pet':
+          prompt = generatePetGunghapPrompt(myResult, otherResult, myName, otherName);
           break;
         case 'parent_child':
           prompt = generateFamilyGunghapPrompt(myResult, otherResult, myName, otherName, '부모-자녀');
@@ -1168,10 +1180,10 @@ export default function GunghapPage() {
 
             <button
               onClick={handleCategoryNext}
-              disabled={(category === 'custom' && !customLabel.trim()) || classifying}
+              disabled={category === 'custom' && !customLabel.trim()}
               className="w-full py-3.5 rounded-2xl bg-cta text-white font-bold text-[17px] active:scale-[0.98] transition-all disabled:opacity-40"
             >
-              {classifying ? '관계 분석 중...' : '다음 — 상대 정보'}
+              다음 — 상대 정보
             </button>
           </motion.div>
         )}

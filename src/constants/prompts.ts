@@ -6666,111 +6666,123 @@ ${GUNGHAP_SECTION_FORMAT}
 };
 
 // ─────────────────────────────────────────────
-// 반려동물 궁합 — 특화 프롬프트 (사주는 주인만 실제 데이터, 동물은 상징 기운 매핑)
-// 재미 카테고리이지만 타당성 확보: 주인 사주 해석 기반 + 동물 종별 상징 기운으로 "같이 사는 케미"를 풀어낸다
+// 반려동물(보호자-반려) 궁합 — 일반 카테고리와 동일 흐름.
+// 반려동물도 birth_profile 로 등록해 사람과 동등하게 사주 풀이를 적용한다.
+// 9섹션 구조 (사주아이 reference 분석 후 8섹션 + "보호자와 반려동물 간의 결" 신설).
+// 톤: 명리 풀이 깊이는 일반 궁합과 동일, 일상 묘사(산책·간식·낮잠·체온 등)를 자연스럽게 녹임.
 // ─────────────────────────────────────────────
-
-export type PetSpecies = 'dog' | 'cat' | 'rabbit' | 'hamster' | 'bird' | 'turtle' | 'fish' | 'other';
-
-/** 동물 종별 상징 기운 매핑 — 명리학적 강제는 아니며, 전통 상징·민담·현대 정서 혼합 */
-export const PET_SPECIES_VIBE: Record<PetSpecies, {
-  label: string;
-  emoji: string;
-  elements: string[];   // 상징 오행 (1~2개)
-  keywords: string[];   // 기운 키워드 3개
-  note: string;         // 이 종이 주인에게 주는 에너지 한 줄
-}> = {
-  dog:     { label: '강아지', emoji: '🐶', elements: ['화','토'], keywords: ['활발','충성','따뜻함'],     note: '무조건적인 애정과 매일의 활력을 주는 작은 태양' },
-  cat:     { label: '고양이', emoji: '🐱', elements: ['금','수'], keywords: ['독립','신비','우아'],       note: '고요한 거리감 속에 숨은 깊은 신뢰의 별' },
-  rabbit:  { label: '토끼',   emoji: '🐰', elements: ['목','수'], keywords: ['섬세','조심','생명력'],    note: '조용한 봄기운을 품은 작은 달빛' },
-  hamster: { label: '햄스터', emoji: '🐹', elements: ['화','목'], keywords: ['빠름','호기심','귀여움'], note: '작지만 빛나는 에너지가 하루를 간지럽히는 별똥별' },
-  bird:    { label: '새',     emoji: '🐦', elements: ['화','금'], keywords: ['자유','영감','경쾌'],     note: '창공의 바람처럼 일상에 영감과 노래를 실어주는 존재' },
-  turtle:  { label: '거북이', emoji: '🐢', elements: ['수','토'], keywords: ['장수','묵묵함','안정'],   note: '조용한 강물처럼 흐르며 함께 나이 들어가는 동반자' },
-  fish:    { label: '물고기', emoji: '🐟', elements: ['수'],     keywords: ['흐름','고요','정화'],     note: '말없는 물의 기운으로 마음을 씻어주는 고요한 벗' },
-  other:   { label: '기타',   emoji: '🐾', elements: ['토'],     keywords: ['든든함','고유함','특별함'], note: '세상에 하나뿐인 고유한 기운을 가진 특별한 존재' },
-};
-
-/** UI용 성격 키워드 선택지 */
-export const PET_PERSONALITY_OPTIONS: string[] = [
-  '활발한', '조용한', '장난꾸러기', '겁이 많음', '애교가 많음',
-  '독립적', '먹보', '귀염둥이', '호기심 많음', '까다로움',
-];
-
-export interface PetInput {
-  name: string;
-  species: PetSpecies;
-  gender: 'male' | 'female' | 'unknown';
-  personalityKeywords: string[]; // 0~3개
-  birthDate?: string;   // YYYY-MM-DD (선택)
-  adoptionDate?: string; // YYYY-MM-DD (선택)
-}
 
 /**
  * 반려동물 궁합 프롬프트.
- * - 주인 사주는 실제 명리 데이터(buildPersonBlock 재사용)
- * - 반려동물 쪽은 종별 상징 기운 + 성격 키워드로 주입
- * - 출력 분량 700~900자 (다른 궁합보다 짧게, 가볍게)
- * - 첫 줄 은유 제목 / 섹션 4개 / 마지막 재미 해석 안내
+ * - 양 사주 모두 실제 명리 데이터 (보호자·반려 모두 birth_profile 등록).
+ * - 호칭: 보호자 = "${ownerName}님", 반려 = "${petName}이(가)" / "우리 ${petName}".
+ * - 총 분량 3,800~4,800자, 9섹션.
  */
 export const generatePetGunghapPrompt = (
   owner: SajuResult,
+  pet: SajuResult,
   ownerName: string,
-  pet: PetInput,
+  petName: string,
 ): string => {
-  const vibe = PET_SPECIES_VIBE[pet.species];
-  const speciesLine = `${vibe.label} ${vibe.emoji} · 상징 기운: ${vibe.elements.join('·')}오행 (${vibe.keywords.join('·')})`;
-  const genderLine = pet.gender === 'male' ? '수컷' : pet.gender === 'female' ? '암컷' : '성별 모름';
-  const personalityLine = pet.personalityKeywords.length > 0
-    ? pet.personalityKeywords.join('·')
-    : '특별히 표시된 키워드 없음';
-  const adoptionLine = pet.adoptionDate
-    ? `함께한 날: ${pet.adoptionDate} — 이 시기의 기운이 두 존재의 첫 연결을 상징합니다.`
-    : '함께한 날 정보 없음 — 언제 만났든 지금의 인연이 의미 있습니다.';
-  const birthLine = pet.birthDate
-    ? `${pet.name}의 생일: ${pet.birthDate}`
-    : `${pet.name}의 정확한 생일은 모름 (반려동물의 생시는 대부분 불명이라 자연스러운 일입니다)`;
+  const myEl = owner.pillars.day.ganElement;
+  const otherEl = pet.pillars.day.ganElement;
+  const elRel = twoPersonElRelation(myEl, otherEl, ownerName, petName);
 
-  return `당신은 사주명리 전문가이자 반려동물 라이프스타일 컨설턴트입니다.
-주인의 사주와 반려동물의 상징 기운을 엮어 두 존재의 '같이 사는 케미'를 따뜻하고 재미있게 풀어주세요.
+  // 보호자 양육 에너지 (인성·관성) / 반려 표현 에너지 (비겁·식상)
+  const ownerCounts = computeSipseongCounts(owner);
+  const petCounts = computeSipseongCounts(pet);
+  const ownerInseong = (ownerCounts['정인'] || 0) + (ownerCounts['편인'] || 0);
+  const ownerGwan = (ownerCounts['정관'] || 0) + (ownerCounts['편관'] || 0);
+  const petBijeop = (petCounts['비견'] || 0) + (petCounts['겁재'] || 0);
+  const petSiksang = (petCounts['식신'] || 0) + (petCounts['상관'] || 0);
+
+  // 오행 보완 — 보호자 결핍을 반려가 채워주는 자애 구조
+  const ownerMissing = Object.entries(owner.elementPercent).filter(([, v]) => v === 0).map(([k]) => k);
+  const complement = ownerMissing.filter(el => pet.elementPercent[el as keyof typeof pet.elementPercent] > 20);
+  const complementStr = complement.length > 0
+    ? `${ownerName}님의 결핍 오행(${complement.join('·')})을 ${petName}이 채워줌 — 자애로운 보완 구조`
+    : '오행 결핍 상호보완 없음 (보호자 사주가 비교적 균형)';
+
+  const crossInteractions = buildCrossJiziInteractions(owner, pet, ownerName, petName);
+  const ohaengCompare = buildOhaengCompare(owner, pet, ownerName, petName);
+
+  return `당신은 사주명리 전문가입니다. 보호자와 반려동물의 궁합을 아래 9개 섹션으로 풀이하세요.
+이 풀이는 사람-동물 관계이지만 양쪽 모두 실제 사주 데이터를 근거로 일반 궁합과 동등하게 깊이 분석합니다.
 
 [절대 규칙]
 - Markdown·이모지 금지. 섹션 제목은 "▶ 제목" 형식으로만.
-- 주인(${ownerName})의 사주 데이터는 실제 명리 기반으로 해석. 반려동물(${pet.name})의 기운은 종별 상징 매핑이며, "정통 사주가 아닌 재미 해석"임을 본문 1~2곳에 자연스럽게 녹일 것.
-- 출력은 첫 줄에 관계를 상징하는 은유 제목(7~14자)으로 시작. 대괄호·섹션 태그·식별자는 절대 출력하지 말 것.
-- 각 섹션 본문에 달·별·계절·자연 이미지 은유 1문장 이상 포함.
-- 친근한 말투 허용: "우리 ${pet.name}", "${pet.name}이(가) ~해줘요" 같은 따뜻한 호칭 사용.
-- 총 분량: 900~1,200자. 재미 카테고리이므로 과하게 심각하거나 장황하지 않게.
-- 예언·경고 어조 금지. 주인-반려동물의 일상 케미·케어 포인트에 집중.
-- 각 섹션 본문은 2~3문단으로 나누고 문단 사이 빈 줄 필수. 한 덩어리로 붙이지 말 것.
+- 수치·판정 변경 금지. 흐린 표현 2회 이하. 각 섹션 본문은 2~3문단으로 나누고 문단 사이 빈 줄 필수.
+- ★ 각 ▶ 섹션의 첫 줄은 반드시 은유 부제목(7~20자)만 단독 한 줄 출력. 마침표·'다/요/니다' 종결·'두 사람' 시작·명리 용어(오행/천간/지지)·숫자 시작 모두 금지. 명사구·체언 종결만 허용. 예: "잔잔한 호수 위의 첫눈" / "바람에 실려 온 불씨". 본문은 반드시 다음 줄부터.
+- 출력은 첫 줄에 관계를 상징하는 은유 제목(7~14자)으로 시작. 대괄호·섹션 태그·식별자는 절대 출력하지 말 것. 총 분량: 3,800~4,800자.
+- 모든 분석은 반드시 제공된 사주 데이터를 근거로 서술. 추상적·일반론 금지. 구체적 글자(천간·지지)와 오행 관계를 인용할 것.
+- 호칭: 보호자는 "${ownerName}님", 반려동물은 "${petName}이" 또는 "우리 ${petName}". "주인" 단어 대신 "보호자" 또는 이름 사용.
+- 친근하고 다정한 어조. 단 명리 근거(일간·신살·합·충)는 항상 명확히.
+- 양육·돌봄·산책·간식·낮잠·체온 같은 반려 일상 묘사를 사주 풀이와 자연스럽게 엮을 것.
+- "재미 해석"·"가볍게 봐달라" 같은 변명 금지. 정식 명리 풀이로 진행.
 
-[주인 ${ownerName} 사주]
+[${ownerName}님 사주]
 ${buildPersonBlock(owner, ownerName)}
 
-[반려동물 ${pet.name} 정보]
-${speciesLine}
-성별: ${genderLine}
-성격 키워드: ${personalityLine}
-종의 상징 메시지: ${vibe.note}
-${birthLine}
-${adoptionLine}
+[${petName} 사주]
+${buildPersonBlock(pet, petName)}
 
-${METAPHOR_SHORT_GUIDE}
+▶ 일간 오행 관계
+${elRel}
+
+▶ 두 사람 지지 합·충
+${crossInteractions}
+
+▶ 오행 분포 비교
+${ohaengCompare}
+
+▶ 양육·돌봄 에너지 분포
+${ownerName}님 인성: ${ownerInseong}개 / 관성: ${ownerGwan}개
+${petName} 비겁: ${petBijeop}개 / 식상: ${petSiksang}개
+${ownerInseong >= 3 ? '인성 강 — 본능적 돌봄 욕구 풍부' : ownerInseong === 0 ? '인성 부재 — 돌봄을 학습하며 깊어지는 보호자' : '인성 적정 — 균형 잡힌 돌봄'}
+${petBijeop >= 3 ? '비겁 강 — 자기 주관·고집 뚜렷한 반려' : petSiksang >= 3 ? '식상 강 — 표현·애교 풍부한 반려' : '비겁/식상 적정 — 차분한 결의 반려'}
+
+▶ 보완 구조
+${complementStr}
+
+▶ 용신 방향
+${owner.yongSinElement === pet.yongSinElement ? '동일 용신 — 같은 방향의 기운으로 함께 빛남' : '다른 용신 — 서로의 부족함을 채워주는 짝의 구조'}
+
+${GUNGHAP_RELATION_KB}
+${METAPHOR_KB}
 ${METAPHOR_TITLE_RULE}
 ${GUNGHAP_SECTION_FORMAT}
 
-[작성 지침 — 아래 4개 섹션을 순서대로 작성하세요]
+[작성 지침 — 아래 9개 섹션을 순서대로 작성하세요. 섹션 제목은 정확히 아래 그대로 사용]
 
-▶ 우리 ${pet.name}이(가) 당신에게 주는 에너지 (200~260자)
-주인(${ownerName})의 일간 오행과 ${pet.name}의 상징 기운(${vibe.elements.join('·')})이 만나 어떤 일상의 균형을 만드는지 풀어주세요. 주인의 부족한 오행을 ${pet.name}이 채워준다면 구체적으로. 주인의 신강신약과 ${pet.name}의 ${vibe.keywords[0]}·${vibe.keywords[1]} 기운이 어떻게 서로를 보완하는지 일상 장면 1개로 묘사. 성격 키워드(${personalityLine})가 있다면 그중 1개를 근거로 활용.
+▶ 핵심 요약 (320~400자)
+일간 오행 관계(${elRel})로 이 인연의 정체를 한마디로 선언. "${ownerName}님과 ${petName}의 인연은 ~한 결의 동행이에요"로 시작. 지지 합충(${crossInteractions})과 보완 구조(${complementStr})를 종합해 이 동행의 핵심 결을 묘사. 보호자가 ${petName}을 만나게 된 명리적 의미를 한 단락으로 풀고, 이 인연의 핵심 키워드 3개로 마무리.
 
-▶ 당신이 ${pet.name}에게 맞춰주면 좋은 부분 (180~240자)
-주인의 기질(격국·신강신약 기반)로 봤을 때 ${pet.name}에게 혹시 놓치기 쉬운 부분이 뭔지, 그리고 ${vibe.label} 종 특성상 ${pet.name}이 원하는 케어 포인트가 무엇인지 연결해서 풀어주세요. 일상에서 실천할 수 있는 구체 제안 2가지 포함 (예: 놀이 방식, 공간 배치, 교감 시간대).
+▶ 오행 상보 관계 (300~380자)
+두 사주의 오행 분포 비교(${ohaengCompare})를 근거로 ${ownerName}님이 부족한 오행을 ${petName}이 어떻게 채워주는지, 반대도 마찬가지로 서술하세요. 보완(${complementStr})이 실제 일상에서 드러나는 장면 2가지를 구체적으로: 보호자가 지치고 차가워질 때 ${petName}의 어떤 기운이 위로가 되는지, ${petName}이 안정·먹이·휴식이 필요할 때 보호자의 어떤 오행이 작용하는지. 두 사주가 함께 만드는 오행 순환이 가정의 분위기를 어떻게 만드는지 한 문장 마무리.
 
-▶ 함께할 때 빛나는 시간대와 활동 (150~200자)
-주인의 용신 오행을 근거로 ${pet.name}과 함께하면 좋은 시간대(오전/오후/저녁 중)와 활동(산책·실내놀이·간식·조용한 시간 등)을 구체적으로 추천. ${vibe.label}의 기본 리듬도 고려해 현실적으로.
+▶ 보호자와 반려동물 간의 결 (360~460자)
+이 섹션이 이 풀이의 정체성입니다. 두 사주의 일간·격국·신강신약·신살을 근거로 보호자와 반려의 결을 각각 한 단락씩 서술하세요.
+첫 단락 — ${ownerName}님의 보호자됨: 일간 오행과 인성·관성 분포(${ownerInseong}개/${ownerGwan}개)를 근거로 보호자의 결을 묘사. 헌신적/엄격한/자유로운/꼼꼼한 어떤 결인지, 일상에서 ${petName}을 돌볼 때 자연스럽게 드러나는 기질이 무엇인지 1~2가지 장면으로.
+둘째 단락 — ${petName}의 반려됨: 일간 오행과 비겁·식상 분포(${petBijeop}개/${petSiksang}개), 일지 신살을 근거로 반려의 결을 묘사. 독립적/애교 많은/예민한/대담한 어떤 결인지, ${ownerName}님 앞에서만 보여주는 특유의 모습 1가지를 묘사.
+셋째 단락 — 두 결의 만남: 위 두 기질이 보호자-반려의 관계 안에서 어떻게 맞물려 고유한 동행을 만드는지. "엄격한 보호자 + 자유분방한 반려" 처럼 결의 만남이 이 가정에서 만들어내는 정서 톤을 한 문장으로 선언.
 
-▶ 이 관계가 더 깊어지는 개운 팁 (160~220자)
-이 관계를 통해 주인이 얻는 정서적·운기적 선물을 한 문장으로. 이어서 관계를 오래 따뜻하게 유지하는 실용 팁 2가지 (예: 사진·기록 남기기, 함께하는 기념일 챙기기, 주기적 건강 체크). 마지막 줄에 "반려동물 궁합은 주인의 사주와 동물 상징 기운으로 엮은 재미 해석이에요" 같은 한 줄을 자연스럽게 녹여 마무리.
+▶ 소통·신뢰 (300~380자)
+두 사주의 천을귀인·태극귀인 등 길성과 일지 합 관계를 근거로 ${ownerName}님과 ${petName}이 말 없이도 통하는 명리적 이유를 풀어주세요. "${petName}이 무엇을 원하는지, 어디가 불편한지 ${ownerName}님이 본능적으로 알아채는 순간들"을 구체 장면으로 1~2가지 묘사. 반대로 ${ownerName}님이 일에 지쳐 들어왔을 때 ${petName}이 보내는 위로의 신호를 묘사. 두 사주 사이의 보이지 않는 영적 연결고리가 어떻게 작동하는지 한 단락으로.
+
+▶ 갈등·마찰 (320~400자)
+지지 충·살(${crossInteractions})과 격국상 부담 구조를 근거로 일상에서 반복될 수 있는 작은 갈등 패턴 2~3가지를 구체적으로 묘사하세요. 산책 거부·식습관 차이·낮잠 패턴 충돌·통제 vs 자유 같이 펫과의 실제 생활에서 일어나는 장면으로. 갈등이 미움에서 오는 게 아니라 "너무 아껴서 생기는 과잉 보호"·"서로의 리듬 차이"임을 짚어주세요. 각 패턴마다 처방 한 문장. 보호자가 ${petName}의 자유를 존중해야 할 지점도 1가지 짚을 것.
+
+▶ 애착 수준 (300~380자)
+일간 생관계와 일주 합, 홍염살·도화살 같은 매력 신살을 근거로 이 보호자-반려 사이의 정서적 애착 수준을 분석하세요. ${ownerName}님이 ${petName} 앞에서 무장해제되는 명리적 이유, ${petName}이 ${ownerName}님에게만 보여주는 특유의 애교·반응을 묘사. 단순히 "키우고 키워지는 관계"를 넘어 서로의 영혼을 위로하는 반려의 단계로 어떻게 나아가는지 한 단락.
+
+▶ 평생 동반자의 약속 (300~380자)
+정관·정인의 흐름과 관인상생 구조를 근거로 이 인연의 안정성과 책임의 결을 풀어주세요. 보호자가 ${petName}을 평생 책임지겠다는 의지가 명리 구조 어디에서 드러나는지 인용. 반려동물의 수명이 사람보다 짧은 현실을 한 번 인정하되, 그렇기에 함께하는 매 순간이 더 깊고 진해지는 명리적 의미를 따뜻하게 서술. 함께 나이 들어가는 과정에서 보호자가 얻는 성장 1가지.
+
+▶ 이 인연이 주는 선물 (300~380자)
+일간 자애 관계(보호자→반려 생관계 또는 그 반대)와 사주에 부족했던 정서를 채워주는 구조를 근거로, ${petName}이 ${ownerName}님 인생에 가져온 정서적 선물을 한 단락으로 풀어주세요. 사주에 ${complement.length > 0 ? complement.join('·') : '특정'} 기운이 부족했던 보호자에게 ${petName}이 어떤 봄바람이 되어주는지. 또 ${ownerName}님이 ${petName}에게 어떤 안식처를 제공하는지 반대 방향으로도 한 단락. 이 인연을 단순한 사육 관계로 환원할 수 없는 이유 — 명리적으로 왜 이 만남이 우연이 아닌 필연인지 마지막 한 문장.
+
+▶ 개운법·일상 처방 (300~380자)
+용신 오행 기반 실용 처방 4가지를 구체적으로 제시하세요. 1) 함께하면 좋은 활동·산책 시간대 (보호자 용신 오행 기반), 2) 가정 환경 보강 (식물·색·공간 배치), 3) 함께 챙기면 좋은 기념일·습관 (입양일·생일 등), 4) 절대 피해야 할 환경·습관 1가지. 마지막 한 문장으로 이 동행에 대한 따뜻한 응원을 남기되 명리 풀이의 격조를 유지하세요.
 
 `;
 };
