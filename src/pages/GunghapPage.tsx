@@ -1514,6 +1514,10 @@ export default function GunghapPage() {
                 {isPetCategory ? '반려동물 이름을 입력해주세요' : '상대 프로필을 선택해주세요'}
               </p>
             )}
+            {/* 임시 진단 — 비활성화 원인 추적용. 캡처 확인 후 제거 예정. */}
+            <p className="mt-1 text-[10px] text-text-tertiary/60 text-center font-mono">
+              [diag] cat={category} pet={String(isPetCategory)} name=&quot;{pet.name || '_'}&quot; valid={String(isOtherValid)} loading={String(loading)}
+            </p>
 
             <div className="flex gap-2 mt-3">
               <button
