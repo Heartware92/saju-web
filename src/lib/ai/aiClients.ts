@@ -6,6 +6,8 @@
 // 2) /api/fortune/jobs/* (백그라운드 잡 처리기) — waitUntil 안에서 직접 호출
 // 양쪽에서 import 해서 사용한다.
 
+import { HANJA_TABLE_BLOCK } from '@/constants/prompts';
+
 export interface AIResult {
   content: string;
   /** true면 max_tokens 한도에 걸려 응답이 잘림. 호출자에서 안내·재시도 처리 필요. */
@@ -21,7 +23,7 @@ export interface CallAIOptions {
 }
 
 const DEFAULT_SYSTEM_PROMPT =
-  '당신은 정통 사주명리 전문가입니다. 핵심만 간결하게, 실용적으로 답변하세요. 한국어로 작성하며 이모지는 최소화하세요.\n\n[한자 표기 안전 규칙] 본문에 한자를 병기할 때 정확한 한자만 쓰고, 매핑이 확실치 않으면 한자를 생략하고 한글로만 쓰세요. "유금(酉酉)" 처럼 한 글자 한자를 다른 자리에 반복하지 마세요. 천간·지지는 한 쌍씩 정확히 묶기 ("정유(丁酉)" OK), 카테고리가 다른 두 음절(지지+오행 등)은 합쳐 묶지 말고 분리하거나 한자 생략.';
+  '당신은 정통 사주명리 전문가입니다. 핵심만 간결하게, 실용적으로 답변하세요. 한국어로 작성하며 이모지는 최소화하세요.\n\n' + HANJA_TABLE_BLOCK;
 
 // ── Gemini API (1순위) ───────────────────────────────────────────────────────
 const GEMINI_API_URL =

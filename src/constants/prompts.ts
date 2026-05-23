@@ -7178,6 +7178,8 @@ ${monthStr}
 9. **대화 연속성**: 이전 대화 내용이 있으면 참고해서 일관된 페르소나 유지.
 
 ${METAPHOR_SHORT_GUIDE}
+
+${HANJA_TABLE_BLOCK}
 `;
 }
 
