@@ -1274,12 +1274,13 @@ export default function GunghapPage() {
             {profiles.length > 1 && (
               <div className="mb-4">
                 <p className="text-[13px] font-semibold text-text-secondary mb-2 uppercase tracking-wider">내 프로필</p>
-                <div className="flex gap-2 overflow-x-auto pb-1">
+                {/* 가로 스크롤 — flex-nowrap + 칩 shrink-0 으로 줄바꿈 차단. 5개 이상이면 옆으로 스와이프. */}
+                <div className="flex flex-nowrap gap-2 overflow-x-auto pb-1 -mx-1 px-1" style={{ scrollbarWidth: 'none' }}>
                   {profiles.map(p => (
                     <button
                       key={p.id}
                       onClick={() => setMyProfileId(p.id)}
-                      className={`flex-shrink-0 px-3.5 py-2 rounded-xl text-[15px] font-medium border transition-all
+                      className={`flex-shrink-0 whitespace-nowrap px-3.5 py-2 rounded-xl text-[15px] font-medium border transition-all
                         ${selectedProfile?.id === p.id ? 'bg-cta/20 border-cta/50 text-cta' : 'bg-white/5 border-white/10 text-text-secondary hover:border-white/20'}`}
                     >
                       {p.name}
@@ -1289,23 +1290,29 @@ export default function GunghapPage() {
               </div>
             )}
 
-            {/* 내 정보 요약 */}
+            {/* 내 정보 요약 — 카테고리 라벨은 위, 본인 정보는 아래로 분리해 줄바꿈 방지 */}
             {selectedProfile && (
-              <div className="mb-4 p-3 rounded-xl bg-white/5 border border-white/10 flex items-center gap-3">
-                <div className="w-8 h-8 rounded-full bg-cta/15 flex items-center justify-center text-[14px] font-bold text-cta shrink-0">1</div>
-                <div className={`px-3 py-1 rounded-full bg-gradient-to-br ${selectedCat.accent} text-[12px] font-semibold text-text-primary border border-white/15 flex-shrink-0`}>
-                  {getCategoryDisplayLabel()}
-                </div>
-                <div>
-                  <p className="text-[15px] font-bold text-text-primary">{selectedProfile.name}</p>
-                  <p className="text-[13px] text-text-secondary">{selectedProfile.birth_date} · {selectedProfile.gender === 'male' ? '남' : '여'}</p>
-                </div>
-                {(myRole.trim() || otherRole.trim()) && (
-                  <div className="ml-auto text-[12px] text-text-tertiary text-right">
-                    {myRole.trim() && <div>내 역할: {myRole}</div>}
-                    {otherRole.trim() && <div>상대 역할: {otherRole}</div>}
+              <div className="mb-4 p-3 rounded-xl bg-white/5 border border-white/10">
+                <div className="flex items-center gap-2 mb-2">
+                  <div className="w-7 h-7 rounded-full bg-cta/15 flex items-center justify-center text-[13px] font-bold text-cta shrink-0">1</div>
+                  <div className={`px-2.5 py-0.5 rounded-full bg-gradient-to-br ${selectedCat.accent} text-[12px] font-semibold text-text-primary border border-white/15 whitespace-nowrap`}>
+                    {getCategoryDisplayLabel()}
                   </div>
-                )}
+                </div>
+                <div className="flex items-center gap-3">
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[15px] font-bold text-text-primary truncate">{selectedProfile.name}</p>
+                    <p className="text-[12px] text-text-secondary truncate">
+                      {selectedProfile.birth_date} · {selectedProfile.gender === 'male' ? '남' : '여'}
+                    </p>
+                  </div>
+                  {(myRole.trim() || otherRole.trim()) && (
+                    <div className="text-[11px] text-text-tertiary text-right shrink-0 leading-snug">
+                      {myRole.trim() && <div className="whitespace-nowrap">내 역할: {myRole}</div>}
+                      {otherRole.trim() && <div className="whitespace-nowrap">상대 역할: {otherRole}</div>}
+                    </div>
+                  )}
+                </div>
               </div>
             )}
 
@@ -1349,70 +1356,150 @@ export default function GunghapPage() {
                 </div>
               </div>
 
-              {/* 본인 슬롯과 동일한 흐름 — 등록된 birth_profiles 중에서 선택. 새 사람은 '새 프로필 추가' 로. */}
-              <div>
-                <p className="text-[13px] font-medium text-text-tertiary mb-2">
-                  상대로 분석할 프로필을 선택하세요
-                </p>
-                {otherProfileChoices.length === 0 ? (
-                  <p className="text-[13px] text-text-tertiary py-2">
-                    선택 가능한 다른 프로필이 없어요. 아래 &lsquo;새 프로필 추가&rsquo;로 만들어 주세요.
-                  </p>
-                ) : (
-                  <div className="grid grid-cols-1 gap-2">
-                    {otherProfileChoices.map(p => {
-                      const active = selectedOtherProfile?.id === p.id;
-                      return (
-                        <button
-                          key={p.id}
-                          type="button"
-                          onClick={() => setOtherProfileId(p.id)}
-                          className={`p-3 rounded-xl border text-left transition-all active:scale-[0.98]
-                            ${active ? 'bg-cta/15 border-cta/50' : 'bg-white/5 border-white/10 hover:border-white/20'}`}
-                        >
-                          <div className="flex items-center gap-3">
-                            <div className={`w-9 h-9 rounded-full flex items-center justify-center text-[13px] font-semibold shrink-0 ${
-                              p.gender === 'male' ? 'bg-sky-500/15 text-sky-300' : 'bg-pink-400/15 text-pink-300'
-                            }`}>
-                              {p.gender === 'male' ? '남' : '여'}
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <p className={`text-[15px] font-semibold ${active ? 'text-cta' : 'text-text-primary'}`}>
-                                {p.name}
-                              </p>
-                              <p className="text-[12px] text-text-tertiary mt-0.5">
-                                {p.birth_date.replace(/-/g, '.')}
-                                {p.birth_time ? ` ${p.birth_time}` : ' (시간 모름)'}
-                                {' · '}
-                                {p.gender === 'male' ? '남' : '여'}
-                              </p>
-                            </div>
-                            {active && (
-                              <span className="text-[12px] px-2 py-0.5 rounded-full bg-cta/20 text-cta font-semibold flex-shrink-0">
-                                선택됨
-                              </span>
-                            )}
-                          </div>
-                        </button>
-                      );
-                    })}
+              {isPetCategory ? (
+                /* ── 반려동물 카테고리 — 종·이름·성격 키워드 입력 ── */
+                <div className="space-y-4">
+                  <div>
+                    <label className="text-[13px] font-medium text-text-tertiary mb-1.5 block">이름</label>
+                    <input
+                      type="text"
+                      value={pet.name}
+                      onChange={e => setPet(p => ({ ...p, name: e.target.value }))}
+                      placeholder="반려동물 이름"
+                      className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-text-primary text-[16px] placeholder-text-tertiary focus:border-cta/50 focus:outline-none transition"
+                    />
                   </div>
-                )}
 
-                {/* 새 프로필 추가 — 본인 슬롯·정통사주·신년운세와 동일 패턴.
-                    SajuInputPage 로 라우팅해 저장 후 돌아오면 birth_profiles 에 추가되어 위 칩 리스트에 자동 노출. */}
-                <button
-                  type="button"
-                  onClick={() => router.push('/saju/input?mode=profile-only')}
-                  className="mt-3 w-full rounded-2xl border-2 border-dashed border-[var(--border-subtle)] hover:border-cta/40 p-4 flex items-center justify-center gap-2 text-text-tertiary hover:text-cta transition-all"
-                >
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
-                    <line x1="12" y1="5" x2="12" y2="19" />
-                    <line x1="5" y1="12" x2="19" y2="12" />
-                  </svg>
-                  <span className="text-sm font-medium">새 프로필 추가</span>
-                </button>
-              </div>
+                  <div>
+                    <label className="text-[13px] font-medium text-text-tertiary mb-1.5 block">종</label>
+                    <div className="grid grid-cols-4 gap-2">
+                      {(Object.keys(PET_SPECIES_VIBE) as PetSpecies[]).map(s => (
+                        <button
+                          key={s}
+                          type="button"
+                          onClick={() => setPet(p => ({ ...p, species: s }))}
+                          className={`py-2 rounded-xl text-[13px] font-medium border transition-all
+                            ${pet.species === s ? 'bg-cta/20 border-cta/50 text-cta' : 'bg-white/5 border-white/10 text-text-secondary hover:border-white/20'}`}
+                        >
+                          {PET_SPECIES_VIBE[s].label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="text-[13px] font-medium text-text-tertiary mb-1.5 block">성별</label>
+                    <div className="grid grid-cols-3 gap-2">
+                      {(['male', 'female', 'unknown'] as const).map(g => (
+                        <button
+                          key={g}
+                          type="button"
+                          onClick={() => setPet(p => ({ ...p, gender: g }))}
+                          className={`py-2 rounded-xl text-[14px] font-medium border transition-all
+                            ${pet.gender === g ? 'bg-cta/20 border-cta/50 text-cta' : 'bg-white/5 border-white/10 text-text-secondary hover:border-white/20'}`}
+                        >
+                          {g === 'male' ? '수컷' : g === 'female' ? '암컷' : '모름'}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div>
+                    <div className="flex items-center justify-between mb-1.5">
+                      <label className="text-[13px] font-medium text-text-tertiary block">성격 (최대 3개, 선택)</label>
+                      <span className="text-[11px] text-text-tertiary">{pet.personalityKeywords.length}/3</span>
+                    </div>
+                    <div className="flex flex-wrap gap-1.5">
+                      {PET_PERSONALITY_OPTIONS.map(kw => {
+                        const active = pet.personalityKeywords.includes(kw);
+                        const full = pet.personalityKeywords.length >= 3 && !active;
+                        return (
+                          <button
+                            key={kw}
+                            type="button"
+                            disabled={full}
+                            onClick={() => setPet(p => ({
+                              ...p,
+                              personalityKeywords: active
+                                ? p.personalityKeywords.filter(k => k !== kw)
+                                : [...p.personalityKeywords, kw],
+                            }))}
+                            className={`px-3 py-1.5 rounded-full text-[12px] font-medium border transition-all
+                              ${active ? 'bg-cta/20 border-cta/50 text-cta'
+                              : full ? 'bg-white/5 border-white/10 text-text-tertiary opacity-40 cursor-not-allowed'
+                              : 'bg-white/5 border-white/10 text-text-secondary hover:border-white/20'}`}
+                          >
+                            {kw}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                /* ── 일반 카테고리 — 등록된 birth_profiles 중에서 선택 ── */
+                <div>
+                  <p className="text-[13px] font-medium text-text-tertiary mb-2">
+                    상대로 분석할 프로필을 선택하세요
+                  </p>
+                  {otherProfileChoices.length === 0 ? (
+                    <p className="text-[13px] text-text-tertiary py-2">
+                      선택 가능한 다른 프로필이 없어요. 아래 &lsquo;새 프로필 추가&rsquo;로 만들어 주세요.
+                    </p>
+                  ) : (
+                    <div className="grid grid-cols-1 gap-2">
+                      {otherProfileChoices.map(p => {
+                        const active = selectedOtherProfile?.id === p.id;
+                        return (
+                          <button
+                            key={p.id}
+                            type="button"
+                            onClick={() => setOtherProfileId(p.id)}
+                            className={`p-3 rounded-xl border text-left transition-all active:scale-[0.98]
+                              ${active ? 'bg-cta/15 border-cta/50' : 'bg-white/5 border-white/10 hover:border-white/20'}`}
+                          >
+                            <div className="flex items-center gap-3">
+                              <div className={`w-9 h-9 rounded-full flex items-center justify-center text-[13px] font-semibold shrink-0 ${
+                                p.gender === 'male' ? 'bg-sky-500/15 text-sky-300' : 'bg-pink-400/15 text-pink-300'
+                              }`}>
+                                {p.gender === 'male' ? '남' : '여'}
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <p className={`text-[15px] font-semibold truncate ${active ? 'text-cta' : 'text-text-primary'}`}>
+                                  {p.name}
+                                </p>
+                                <p className="text-[12px] text-text-tertiary mt-0.5 truncate">
+                                  {p.birth_date.replace(/-/g, '.')}
+                                  {p.birth_time ? ` ${p.birth_time}` : ' (시간 모름)'}
+                                </p>
+                              </div>
+                              {active && (
+                                <span className="text-[12px] px-2 py-0.5 rounded-full bg-cta/20 text-cta font-semibold flex-shrink-0">
+                                  선택됨
+                                </span>
+                              )}
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+
+                  {/* 새 프로필 추가 — 본인 슬롯·정통사주·신년운세와 동일 패턴.
+                      SajuInputPage 로 라우팅해 저장 후 돌아오면 birth_profiles 에 추가되어 위 칩 리스트에 자동 노출. */}
+                  <button
+                    type="button"
+                    onClick={() => router.push('/saju/input?mode=profile-only')}
+                    className="mt-3 w-full rounded-2xl border-2 border-dashed border-[var(--border-subtle)] hover:border-cta/40 p-4 flex items-center justify-center gap-2 text-text-tertiary hover:text-cta transition-all"
+                  >
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
+                      <line x1="12" y1="5" x2="12" y2="19" />
+                      <line x1="5" y1="12" x2="19" y2="12" />
+                    </svg>
+                    <span className="text-sm font-medium">새 프로필 추가</span>
+                  </button>
+                </div>
+              )}
             </div>
 
             {error && (
@@ -1421,7 +1508,14 @@ export default function GunghapPage() {
               </div>
             )}
 
-            <div className="flex gap-2 mt-5">
+            {/* 비활성 사유 — 사용자가 무엇이 부족한지 알 수 있게 */}
+            {!isOtherValid && !loading && (
+              <p className="mt-3 text-[12px] text-amber-300/80 text-center">
+                {isPetCategory ? '반려동물 이름을 입력해주세요' : '상대 프로필을 선택해주세요'}
+              </p>
+            )}
+
+            <div className="flex gap-2 mt-3">
               <button
                 onClick={() => setStep('category')}
                 className="px-5 py-3.5 rounded-2xl border border-white/15 text-text-secondary font-medium text-[16px] active:scale-[0.98] transition-all"
