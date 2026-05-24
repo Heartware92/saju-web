@@ -4,8 +4,8 @@
  * 마이페이지
  * - 프로필
  * - 크레딧 잔액 & 거래내역
- * - 사주/타로 분석 기록
  * - 구매 내역
+ * (분석 기록은 보관함 /archive 가 풀 기능으로 대체)
  */
 
 import React, { useEffect, useState } from 'react';
@@ -13,13 +13,13 @@ import { useRouter } from 'next/navigation';
 import { useUserStore } from '@/store/useUserStore';
 import { useCreditStore } from '@/store/useCreditStore';
 import { useProfileStore } from '@/store/useProfileStore';
-import { orderDB, sajuDB, auth, supabase } from '@/services/supabase';
+import { orderDB, auth, supabase } from '@/services/supabase';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { CreditBalance } from '@/features/credit/components/CreditBalance';
-import type { Order, SajuRecord, CreditTransaction } from '@/types/credit';
+import type { Order, CreditTransaction } from '@/types/credit';
 
-type TabType = 'profile' | 'credits' | 'records' | 'orders';
+type TabType = 'profile' | 'credits' | 'orders';
 
 export const MyPage: React.FC = () => {
   const router = useRouter();
@@ -28,7 +28,6 @@ export const MyPage: React.FC = () => {
 
   const [activeTab, setActiveTab] = useState<TabType>('profile');
   const [orders, setOrders] = useState<Order[]>([]);
-  const [sajuRecords, setSajuRecords] = useState<SajuRecord[]>([]);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -47,9 +46,6 @@ export const MyPage: React.FC = () => {
       } else if (activeTab === 'orders') {
         const orderList = await orderDB.getOrders(user.id);
         setOrders(orderList);
-      } else if (activeTab === 'records') {
-        const records = await sajuDB.getRecords(user.id);
-        setSajuRecords(records);
       }
     } catch (error) {
       console.error('Error loading data:', error);
@@ -73,7 +69,6 @@ export const MyPage: React.FC = () => {
   const tabs: { id: TabType; label: string }[] = [
     { id: 'profile', label: '프로필' },
     { id: 'credits', label: '크레딧 관리' },
-    { id: 'records', label: '분석 기록' },
     { id: 'orders', label: '구매 내역' }
   ];
 
@@ -110,7 +105,6 @@ export const MyPage: React.FC = () => {
         <div className="space-y-6">
           {activeTab === 'profile' && <ProfileTab user={user} onLogout={handleLogout} />}
           {activeTab === 'credits' && <CreditsTab moonBalance={moonBalance} transactions={transactions} loading={loading} />}
-          {activeTab === 'records' && <RecordsTab records={sajuRecords} loading={loading} />}
           {activeTab === 'orders' && <OrdersTab orders={orders} loading={loading} />}
         </div>
     </div>
@@ -503,54 +497,6 @@ const CreditsTab: React.FC<{
         )}
       </Card>
     </div>
-  );
-};
-
-/**
- * 분석 기록 탭
- */
-const RecordsTab: React.FC<{ records: SajuRecord[]; loading: boolean }> = ({ records, loading }) => {
-  return (
-    <Card>
-      <h2 className="text-lg font-bold text-text-primary mb-4">사주 분석 기록</h2>
-
-      {loading ? (
-        <div className="text-center py-6 text-text-secondary text-sm">로딩 중...</div>
-      ) : records.length === 0 ? (
-        <div className="text-center py-6 text-text-secondary text-sm">
-          아직 분석 기록이 없습니다.
-        </div>
-      ) : (
-        <div className="space-y-3">
-          {records.map((record) => (
-            <div key={record.id} className="border border-[var(--border-subtle)] rounded-xl p-3.5 hover:border-[var(--border-default)] transition-all">
-              <div className="flex items-start justify-between mb-2">
-                <div>
-                  <div className="font-bold text-text-primary text-sm">
-                    {new Date(record.birth_date).toLocaleDateString('ko-KR')}
-                  </div>
-                  <div className="text-xs text-text-tertiary">
-                    {record.gender === 'male' ? '남성' : '여성'}
-                    {record.birth_place && ` · ${record.birth_place}`}
-                  </div>
-                </div>
-                <div className="text-right">
-                  <div className="text-xs text-cta font-bold">
-                    {record.is_detailed ? '상세 해석' : '기본 해석'}
-                  </div>
-                  <div className="text-[13px] text-text-tertiary">
-                    {record.credit_used} 크레딧
-                  </div>
-                </div>
-              </div>
-              <div className="text-xs text-text-tertiary">
-                {new Date(record.created_at).toLocaleString('ko-KR')}
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-    </Card>
   );
 };
 
