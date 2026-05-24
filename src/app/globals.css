@@ -587,13 +587,20 @@ p, li, span, div, button, a {
 /* 듀스크 그라디언트 — root element(html) 의 background 는 viewport canvas 에
    직접 paint 되어 Safari async-scrolling compositor 합성을 거치지 않음.
    → fixed pseudo-element 방식에서 발생하던 스크롤 중 가로 tearing 완전 제거.
-   동시에 overscroll bounce(rubber band) 배경 색도 자동으로 해결. */
+   동시에 overscroll bounce(rubber band) 배경 색도 자동으로 해결.
+
+   background-attachment: fixed — root element 한정으로는 별도 compositor 레이어를
+   만들지 않고 viewport painting 의 일부로 처리되어 tearing 없음. body 나 다른 요소에
+   같은 속성을 쓰면 별도 GPU 레이어가 만들어져 tearing 이 되돌아오므로 반드시 html 에만 적용.
+   이 속성이 없으면 그라디언트가 document 전체 높이로 stretching 되어 긴 페이지에서
+   스크롤 시 배경이 점점 연해지는 현상 발생. */
 html {
   background-color: #1a1230;
   background-image:
     radial-gradient(ellipse at 50% 110%, rgba(232, 180, 216, 0.22) 0%, transparent 55%),
     radial-gradient(ellipse at 20% 10%, rgba(124, 92, 200, 0.14) 0%, transparent 50%),
     linear-gradient(180deg, #1a1230 0%, #2d1f4a 35%, #4a3968 70%, #7a5588 100%);
+  background-attachment: fixed;
   overscroll-behavior: none;
 }
 
