@@ -1727,20 +1727,20 @@ function MoreFortuneDreamCard({
                   border: '1px solid rgba(52,211,153,0.28)',
                 }}>
                   <div style={{
-                    fontSize: 24, fontWeight: 900,
+                    fontSize: 17, fontWeight: 900,
                     color: '#34D399',
-                    letterSpacing: '-0.02em',
-                    marginBottom: 14,
+                    letterSpacing: '-0.01em',
+                    marginBottom: 12,
                     fontFamily: 'var(--font-title)',
-                    lineHeight: 1.3,
+                    lineHeight: 1.4,
                   }}>
                     이렇게 하면 좋아요
                   </div>
                   <div style={{
-                    fontSize: 22, lineHeight: 1.85,
+                    fontSize: 15, lineHeight: 1.75,
                     color: 'var(--text-primary)',
                     fontFamily: 'var(--font-body)',
-                    fontWeight: 500,
+                    fontWeight: 400,
                   }} className="space-y-3">
                     {adviceParas.map((para, pi) => (
                       <p key={pi} className="whitespace-pre-line">{renderEmphasis(para)}</p>
@@ -1759,23 +1759,23 @@ function MoreFortuneDreamCard({
                   }}>
                     {adviceItems.map((it, ii) => (
                       <div key={ii} style={{
-                        padding: '16px 18px',
+                        padding: '14px 16px',
                         background: 'rgba(20,12,38,0.5)',
                         borderRadius: 12,
                         border: '1px solid rgba(255,255,255,0.06)',
                       }}>
                         <div style={{
-                          fontSize: 16, fontWeight: 800,
+                          fontSize: 13, fontWeight: 800,
                           color: 'var(--cta-primary)',
                           letterSpacing: '-0.01em',
-                          marginBottom: 8,
+                          marginBottom: 6,
                           fontFamily: 'var(--font-title)',
                           lineHeight: 1.3,
                         }}>
                           {it.key}
                         </div>
                         <div style={{
-                          fontSize: 19, fontWeight: 600,
+                          fontSize: 15, fontWeight: 600,
                           color: 'var(--text-primary)',
                           lineHeight: 1.5,
                           fontFamily: 'var(--font-body)',
@@ -1807,20 +1807,20 @@ function MoreFortuneDreamCard({
                   border: '1px solid rgba(248,113,113,0.28)',
                 }}>
                   <div style={{
-                    fontSize: 24, fontWeight: 900,
+                    fontSize: 17, fontWeight: 900,
                     color: '#F87171',
-                    letterSpacing: '-0.02em',
-                    marginBottom: 14,
+                    letterSpacing: '-0.01em',
+                    marginBottom: 12,
                     fontFamily: 'var(--font-title)',
-                    lineHeight: 1.3,
+                    lineHeight: 1.4,
                   }}>
                     주의할 점
                   </div>
                   <div style={{
-                    fontSize: 22, lineHeight: 1.85,
+                    fontSize: 15, lineHeight: 1.75,
                     color: 'var(--text-primary)',
                     fontFamily: 'var(--font-body)',
-                    fontWeight: 500,
+                    fontWeight: 400,
                   }} className="space-y-3">
                     {cautionParas.map((para, pi) => (
                       <p key={pi} className="whitespace-pre-line">{renderEmphasis(para)}</p>
