@@ -70,11 +70,11 @@ export const MyPage: React.FC = () => {
     }, 300);
   };
 
-  const tabs: { id: TabType; label: string; icon: string | React.ReactNode }[] = [
-    { id: 'profile', label: '프로필', icon: '👤' },
-    { id: 'credits', label: '크레딧 관리', icon: '🌙' },
-    { id: 'records', label: '분석 기록', icon: '📜' },
-    { id: 'orders', label: '구매 내역', icon: '🛒' }
+  const tabs: { id: TabType; label: string }[] = [
+    { id: 'profile', label: '프로필' },
+    { id: 'credits', label: '크레딧 관리' },
+    { id: 'records', label: '분석 기록' },
+    { id: 'orders', label: '구매 내역' }
   ];
 
   return (
@@ -92,8 +92,8 @@ export const MyPage: React.FC = () => {
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
               className={`
-                flex items-center gap-1.5 px-3 py-2 rounded-lg
-                whitespace-nowrap transition-all text-xs font-medium
+                flex items-center justify-center px-3 py-2 rounded-lg
+                whitespace-nowrap transition-all text-xs font-medium flex-1
                 ${
                   activeTab === tab.id
                     ? 'bg-cta text-white shadow-md shadow-cta/20'
@@ -101,7 +101,6 @@ export const MyPage: React.FC = () => {
                 }
               `}
             >
-              <span className="text-sm">{typeof tab.icon === 'string' ? tab.icon : tab.icon}</span>
               <span>{tab.label}</span>
             </button>
           ))}
