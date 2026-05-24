@@ -175,6 +175,7 @@ export default function Layout({ children }: LayoutProps) {
                   >
                     개인정보처리방침
                   </Link>
+                  {/* 오픈소스 라이선스 — 일시 숨김
                   <span className="text-[11px] text-text-tertiary/40">|</span>
                   <Link
                     href="/licenses"
@@ -183,6 +184,7 @@ export default function Layout({ children }: LayoutProps) {
                   >
                     오픈소스 라이선스
                   </Link>
+                  */}
                 </div>
                 {/* 사업자 필수 6항목 — PG 심사 표준 (상호·대표자·사업자번호·통신판매업·주소·전화) */}
                 <div className="flex flex-col items-center gap-0.5 text-[11px] leading-snug text-text-tertiary text-center px-2">
