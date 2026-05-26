@@ -10,8 +10,8 @@
  * 외자 이름·외자 성 등 경계 케이스는 표준 룰 적용 (한 글자만 있으면 0 으로 더해 처리).
  */
 
-import { lookupHanjaBySound, type HanjaCandidate } from '../lib/data/hanjaByKoreanSound';
-import { lookupSuri, type SuriEntry } from '../lib/data/numerology81';
+import { lookupHanjaBySound } from '../lib/data/hanjaByKoreanSound';
+import { lookupSuri, SURI_ELEMENT_KOREAN, type SuriEntry } from '../lib/data/numerology81';
 
 export interface FourGyeokResult {
   /** 각 한자의 획수 (이름 글자 순서대로) */
@@ -88,10 +88,11 @@ export function suri4GradeScore(result: FourGyeokResult): number {
 
 /**
  * 4격 결과를 prompt 주입용 텍스트로 포맷.
+ * 수리오행(끝자리 기준)도 함께 노출 — 용신 매칭 판정에 사용.
  */
 export function format4GyeokForPrompt(result: FourGyeokResult): string {
   const f = (label: string, area: string, g: { sum: number; entry: SuriEntry }) =>
-    `${label}(${area}) = ${g.sum}수 — ${g.entry.grade} ${g.entry.name}: ${g.entry.meaning}`;
+    `${label}(${area}) = ${g.sum}수 [수리오행 ${SURI_ELEMENT_KOREAN[g.entry.element]}] — ${g.entry.grade} ${g.entry.name}: ${g.entry.meaning}`;
   return [
     f('원격', '초년운',         result.won),
     f('형격', '중년·주운',       result.hyeong),

@@ -12,6 +12,7 @@
 import type { JSX } from 'react';
 import { lookupHanjaBySound, type HanjaCandidate } from '../../lib/data/hanjaByKoreanSound';
 import { calc4Gyeok } from '../../utils/numerology';
+import { SURI_ELEMENT_KOREAN } from '../../lib/data/numerology81';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 색 매핑
@@ -240,7 +241,271 @@ export function JaWonVisual({
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// 3) 사주와의 조화 — 좋은점·보완점 2단 박스 (간단 신호)
+// 0) 종합 점수 카드 (summary 섹션용)
+//    4축(음령·자원·수리오행·81수리) 등급칩 + 종합 별점.
+//    한글 모드는 음령만, 한자 모드는 4축 전체 표시.
+// ─────────────────────────────────────────────────────────────────────────────
+type AxisGrade = '보강' | '중립' | '거스름' | '미분석';
+const GRADE_BADGE: Record<AxisGrade, { bg: string; fg: string; border: string; label: string }> = {
+  '보강':   { bg: 'rgba(52,211,153,0.10)',  fg: '#34D399', border: 'rgba(52,211,153,0.40)', label: '보강' },
+  '중립':   { bg: 'rgba(203,213,225,0.10)', fg: '#CBD5E1', border: 'rgba(203,213,225,0.40)', label: '중립' },
+  '거스름': { bg: 'rgba(248,113,113,0.10)', fg: '#F87171', border: 'rgba(248,113,113,0.40)', label: '거스름' },
+  '미분석': { bg: 'rgba(148,163,184,0.06)', fg: '#94A3B8', border: 'rgba(148,163,184,0.25)', label: '한자 필요' },
+};
+
+function gradeFromElements(elements: string[], yongSinEl: string, giSinEl?: string): AxisGrade {
+  const hasYong = !!yongSinEl && elements.includes(yongSinEl);
+  const hasGi = !!giSinEl && elements.includes(giSinEl);
+  if (hasYong && !hasGi) return '보강';
+  if (hasGi && !hasYong) return '거스름';
+  return '중립';
+}
+
+function gradeFromSuriElements(suriEls: string[], yongSinEl: string, giSinEl?: string): AxisGrade {
+  if (suriEls.length === 0) return '미분석';
+  const yongHits = yongSinEl ? suriEls.filter(e => e === yongSinEl).length : 0;
+  const giHits = giSinEl ? suriEls.filter(e => e === giSinEl).length : 0;
+  if (yongHits >= 2 && yongHits > giHits) return '보강';
+  if (giHits >= 2 && giHits > yongHits) return '거스름';
+  if (yongHits > giHits) return '보강';
+  if (giHits > yongHits) return '거스름';
+  return '중립';
+}
+
+function gradeFromSuriGrades(grades: string[]): AxisGrade {
+  if (grades.length === 0) return '미분석';
+  const goodCount = grades.filter(g => g === '대길' || g === '길').length;
+  const badCount = grades.filter(g => g === '흉' || g === '대흉').length;
+  if (goodCount >= 3) return '보강';
+  if (badCount >= 2) return '거스름';
+  if (goodCount > badCount) return '보강';
+  if (badCount > goodCount) return '거스름';
+  return '중립';
+}
+
+function gradeToScore(g: AxisGrade): number {
+  if (g === '보강') return 2;
+  if (g === '중립') return 1;
+  if (g === '거스름') return 0;
+  return -1; // 미분석은 평균에서 제외
+}
+
+export function SummaryScoreVisual({
+  yongSinEl,
+  giSinEl,
+  eumElements,
+  jawonElements,
+  hanjas,
+  sounds,
+}: {
+  yongSinEl: string;
+  giSinEl?: string;
+  eumElements: string[];
+  jawonElements: string[];
+  hanjas: Array<{ char: string; meaning: string; radical: string; strokes: number; jawon: string }>;
+  sounds: string[];
+}) {
+  const isHanjaMode = hanjas.length > 0;
+  const suri = isHanjaMode ? calc4Gyeok(hanjas.map(h => h.char), sounds) : null;
+
+  const eumGrade = gradeFromElements(eumElements, yongSinEl, giSinEl);
+  const jawonGrade = isHanjaMode ? gradeFromElements(jawonElements, yongSinEl, giSinEl) : '미분석' as AxisGrade;
+  const suriElGrade = suri
+    ? gradeFromSuriElements(
+        [suri.won, suri.hyeong, suri.i, suri.jeong].map(g => SURI_ELEMENT_KOREAN[g.entry.element] ?? ''),
+        yongSinEl,
+        giSinEl,
+      )
+    : '미분석' as AxisGrade;
+  const suriGyeokGrade = suri
+    ? gradeFromSuriGrades([suri.won, suri.hyeong, suri.i, suri.jeong].map(g => g.entry.grade))
+    : '미분석' as AxisGrade;
+
+  // 종합 별점 (5점 만점) — 분석 가능한 축의 평균
+  const scores = [eumGrade, jawonGrade, suriElGrade, suriGyeokGrade].map(gradeToScore).filter(s => s >= 0);
+  const avg = scores.length > 0 ? scores.reduce((a, b) => a + b, 0) / scores.length : 1;
+  const stars = Math.round(avg * 2.5); // 0~2 → 0~5
+
+  const axes: Array<{ label: string; sub: string; grade: AxisGrade }> = [
+    { label: '음령',   sub: '한글 발음', grade: eumGrade },
+    { label: '자원',   sub: '한자 부수', grade: jawonGrade },
+    { label: '수리오행', sub: '4격 끝자리', grade: suriElGrade },
+    { label: '81수리',  sub: '4격 길흉',  grade: suriGyeokGrade },
+  ];
+
+  return (
+    <div
+      className="rounded-2xl p-4 border mb-3"
+      style={{
+        background: 'linear-gradient(135deg, rgba(20,12,38,0.65) 0%, rgba(124,92,252,0.10) 50%, rgba(20,12,38,0.55) 100%)',
+        borderColor: 'rgba(124,92,252,0.30)',
+      }}
+    >
+      {/* 종합 별점 */}
+      <div className="flex flex-col items-center mb-3">
+        <span className="text-[12px] text-text-tertiary mb-1" style={{ fontFamily: 'var(--font-body)' }}>
+          4축 종합
+        </span>
+        <div className="flex gap-1">
+          {[0, 1, 2, 3, 4].map(i => (
+            <span
+              key={i}
+              className="text-[18px] leading-none"
+              style={{ color: i < stars ? '#FBBF24' : 'rgba(255,255,255,0.18)' }}
+            >
+              ★
+            </span>
+          ))}
+        </div>
+      </div>
+
+      {/* 4축 등급칩 */}
+      <div className="grid grid-cols-4 gap-2">
+        {axes.map((a, i) => {
+          const badge = GRADE_BADGE[a.grade];
+          return (
+            <div
+              key={i}
+              className="rounded-xl p-2 flex flex-col items-center justify-center border"
+              style={{ background: 'rgba(255,255,255,0.03)', borderColor: 'rgba(255,255,255,0.08)' }}
+            >
+              <span
+                className="text-[12px] font-bold mb-0.5"
+                style={{ color: 'var(--text-primary)', fontFamily: 'var(--font-title)' }}
+              >
+                {a.label}
+              </span>
+              <span className="text-[10px] text-text-tertiary mb-1.5" style={{ fontFamily: 'var(--font-body)' }}>
+                {a.sub}
+              </span>
+              <span
+                className="text-[11px] font-bold px-2 py-0.5 rounded-md"
+                style={{
+                  background: badge.bg,
+                  color: badge.fg,
+                  border: `1px solid ${badge.border}`,
+                }}
+              >
+                {badge.label}
+              </span>
+            </div>
+          );
+        })}
+      </div>
+
+      {!isHanjaMode && (
+        <p
+          className="text-[12px] text-text-tertiary text-center mt-2 leading-[1.6]"
+          style={{ fontFamily: 'var(--font-body)' }}
+        >
+          한자 정보를 더하면 자원·수리오행·81수리까지 분석돼요
+        </p>
+      )}
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 3a) 강점 박스 (strength 섹션용) — 사주 매칭 기반 자동 추출
+// ─────────────────────────────────────────────────────────────────────────────
+function buildStrengthSignals(
+  yongSinEl: string,
+  eumElements: string[],
+  jawonElements: string[],
+): string[] {
+  const out: string[] = [];
+  if (eumElements.includes(yongSinEl)) out.push(`음령에 용신 ${yongSinEl} 포함\n발음이 사주 보강`);
+  if (jawonElements.length > 0 && jawonElements.includes(yongSinEl)) {
+    out.push(`한자 자원에 용신 ${yongSinEl} 포함\n부수가 사주 보강`);
+  }
+  if (out.length === 0) out.push('직접적 용신 매칭은 없으나 다른 영역에서 보강');
+  return out;
+}
+
+function buildShadowSignals(
+  giSinEl: string | undefined,
+  eumElements: string[],
+  jawonElements: string[],
+): string[] {
+  const out: string[] = [];
+  if (giSinEl && eumElements.includes(giSinEl)) {
+    out.push(`음령에 기신 ${giSinEl} 포함\n발음에서 마찰 가능`);
+  }
+  if (giSinEl && jawonElements.length > 0 && jawonElements.includes(giSinEl)) {
+    out.push(`한자 자원에 기신 ${giSinEl} 포함\n부수에서 거스름`);
+  }
+  if (out.length === 0) out.push('치명적 기신 매칭은 없어 큰 부담 없음');
+  return out;
+}
+
+export function StrengthVisual({
+  yongSinEl,
+  eumElements,
+  jawonElements,
+}: {
+  yongSinEl: string;
+  eumElements: string[];
+  jawonElements: string[];
+}) {
+  const signals = buildStrengthSignals(yongSinEl, eumElements, jawonElements);
+  return (
+    <div
+      className="rounded-2xl p-4 border mb-3"
+      style={{ background: 'rgba(52,211,153,0.06)', borderColor: 'rgba(52,211,153,0.30)' }}
+    >
+      <div className="flex items-center gap-2 mb-3">
+        <span className="text-[15px] font-bold" style={{ color: '#34D399' }}>이름의 강점 신호</span>
+      </div>
+      <ul className="space-y-2">
+        {signals.map((p, i) => (
+          <li
+            key={i}
+            className="text-[15px] text-text-secondary leading-[1.7] tracking-[-0.005em] whitespace-pre-line"
+            style={{ fontFamily: 'var(--font-body)' }}
+          >
+            {p}
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+export function ShadowVisual({
+  giSinEl,
+  eumElements,
+  jawonElements,
+}: {
+  giSinEl?: string;
+  eumElements: string[];
+  jawonElements: string[];
+}) {
+  const signals = buildShadowSignals(giSinEl, eumElements, jawonElements);
+  return (
+    <div
+      className="rounded-2xl p-4 border mb-3"
+      style={{ background: 'rgba(248,113,113,0.06)', borderColor: 'rgba(248,113,113,0.30)' }}
+    >
+      <div className="flex items-center gap-2 mb-3">
+        <span className="text-[15px] font-bold" style={{ color: '#F87171' }}>주의 신호</span>
+      </div>
+      <ul className="space-y-2">
+        {signals.map((c, i) => (
+          <li
+            key={i}
+            className="text-[15px] text-text-secondary leading-[1.7] tracking-[-0.005em] whitespace-pre-line"
+            style={{ fontFamily: 'var(--font-body)' }}
+          >
+            {c}
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 3) [레거시] 사주와의 조화 — 좋은점·보완점 2단 박스. archive 모드에서만 사용.
 // ─────────────────────────────────────────────────────────────────────────────
 export function HarmonyVisual({
   yongSinEl,
@@ -319,9 +584,14 @@ export function HarmonyVisual({
 export function NumerologyVisual({
   chars,
   sounds,
+  yongSinEl,
+  giSinEl,
 }: {
   chars: string[]; // 한자
   sounds: string[]; // 한국 음
+  /** 사주 용신 오행 (한글: '목'/'화'/'토'/'금'/'수') — 수리오행 매칭 강조용 */
+  yongSinEl?: string;
+  giSinEl?: string;
 }) {
   const result = calc4Gyeok(chars, sounds);
   if (!result) return null;
@@ -364,7 +634,7 @@ export function NumerologyVisual({
               <span className="text-[10px] text-text-tertiary mt-0.5">{it.area}</span>
             </div>
 
-            {/* 우측: 등급 배지 + 한자 명칭 + 의미 */}
+            {/* 우측: 등급 배지 + 한자 명칭 + 수리오행 칩 + 의미 */}
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 mb-1.5 flex-wrap">
                 <span
@@ -373,6 +643,27 @@ export function NumerologyVisual({
                 >
                   {it.data.entry.grade}
                 </span>
+                {(() => {
+                  const elKor = SURI_ELEMENT_KOREAN[it.data.entry.element];
+                  const elColor = ELEMENT_COLOR[elKor] ?? '#CBD5E1';
+                  const isYong = elKor === yongSinEl;
+                  const isGi = elKor === giSinEl;
+                  return (
+                    <span
+                      className="text-[11px] font-bold px-1.5 py-0.5 rounded-md inline-flex items-center gap-1"
+                      style={{
+                        background: ELEMENT_BG[elKor] ?? 'rgba(255,255,255,0.04)',
+                        color: elColor,
+                        border: `1px solid ${elColor}55`,
+                      }}
+                      title={isYong ? '사주 용신 보강' : isGi ? '사주 기신 — 주의' : '수리오행'}
+                    >
+                      수리 {elKor}
+                      {isYong && <span style={{ color: '#34D399' }}>·용신</span>}
+                      {isGi && <span style={{ color: '#F87171' }}>·기신</span>}
+                    </span>
+                  );
+                })()}
                 <span
                   className="text-[14px] font-bold"
                   style={{ color: 'var(--text-primary)', fontFamily: 'var(--font-title)' }}

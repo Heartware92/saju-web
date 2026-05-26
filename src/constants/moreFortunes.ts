@@ -124,8 +124,11 @@ export const MORE_FORTUNE_CONFIGS: Record<MoreFortuneId, MoreFortuneConfig> = {
     shortDesc: '이름·사주 조화',
     longDesc: '한글 초성의 음령오행을 분석해 내 이름이 사주 용신을 돕는지 거스르는지 진단하고, 한자를 입력하면 부수 기반 자원오행까지 교차 분석해 필명·닉네임 방향을 제안해드려요.',
     ctaButton: '내 이름 풀이 보기',
-    // 한글만 2,000 / 한자 포함 2,500 — fortuneService 에서 hanjaName 유무로 분기
-    maxTokens: 2000,
+    // 7섹션 풀버전 — 5달 운세 동급 분량 (자녀·출산운 2000~2600자 / 학업 1450~1900자 기준).
+    // 한글모드 약 1,700~2,100자 / 한자모드 약 2,200~2,800자.
+    // fortuneService.buildNameFortunePrompt 에서 hanjaName 유무로 1.25배(한글) / 1.5배(한자) 가산.
+    // 한자모드 본문 + 마커 + 4격 표시 + 은유줄 합산해 안전 마진 두고 5500.
+    maxTokens: 5500,
     needsNameInput: true,
   },
   dream: {

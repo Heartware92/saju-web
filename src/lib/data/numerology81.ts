@@ -15,6 +15,7 @@
  */
 
 export type SuriGrade = '대길' | '길' | '평' | '흉' | '대흉';
+export type SuriElement = '木' | '火' | '土' | '金' | '水';
 
 export interface SuriEntry {
   /** 1~81 */
@@ -24,9 +25,19 @@ export interface SuriEntry {
   name: string;
   /** 한국어 의미 한 줄 */
   meaning: string;
+  /**
+   * 수리오행(數理五行) — 81수의 끝자리로 부여하는 오행.
+   *   1·2→木, 3·4→火, 5·6→土, 7·8→金, 9·0→水
+   * 전통 작명학에서 4격(원·형·이·정) 각각의 수가 어떤 오행 기운을 띠는지 판정해
+   * 사주 용신과의 매칭을 본다.
+   */
+  element: SuriElement;
 }
 
-export const NUMEROLOGY_81: Record<number, SuriEntry> = {
+/** raw 데이터 — element 는 lookupSuri 에서 자동 부여 */
+type SuriRow = Omit<SuriEntry, 'element'>;
+
+export const NUMEROLOGY_81: Record<number, SuriRow> = {
   1:  { num: 1,  grade: '대길', name: '太極之數', meaning: '만물의 시작 — 강한 의지와 명예·성공' },
   2:  { num: 2,  grade: '대흉', name: '分離之數', meaning: '분리와 고독 — 결단력 부족' },
   3:  { num: 3,  grade: '대길', name: '福德之數', meaning: '명예와 부 — 지도자의 결' },
@@ -121,8 +132,27 @@ export function normalize81(n: number): number {
 }
 
 /**
- * 수에 매핑된 길흉 엔트리 반환.
+ * 81 수의 끝자리로 수리오행 결정. 1·2→木, 3·4→火, 5·6→土, 7·8→金, 9·0→水
+ */
+export function suriElementOf(num: number): SuriElement {
+  const last = num % 10;
+  if (last === 1 || last === 2) return '木';
+  if (last === 3 || last === 4) return '火';
+  if (last === 5 || last === 6) return '土';
+  if (last === 7 || last === 8) return '金';
+  return '水';
+}
+
+/**
+ * 수에 매핑된 길흉 엔트리 반환 — 수리오행 자동 부여.
  */
 export function lookupSuri(n: number): SuriEntry {
-  return NUMEROLOGY_81[normalize81(n)];
+  const norm = normalize81(n);
+  const base = NUMEROLOGY_81[norm];
+  return { ...base, element: suriElementOf(norm) };
 }
+
+/** 수리오행 한자 → 한글 변환 ('木' → '목') */
+export const SURI_ELEMENT_KOREAN: Record<SuriElement, string> = {
+  '木': '목', '火': '화', '土': '토', '金': '금', '水': '수',
+};

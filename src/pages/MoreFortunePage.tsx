@@ -73,9 +73,11 @@ import type { HanjaCandidate } from '@/lib/data/hanjaByKoreanSound';
 import {
   EumRyeongVisual,
   JaWonVisual,
-  HarmonyVisual,
   NumerologyVisual,
   AdviceVisual,
+  StrengthVisual,
+  ShadowVisual,
+  SummaryScoreVisual,
   resolveHanjasForVisual,
   extractBullets,
 } from '@/components/saju/NameSectionVisuals';
@@ -1374,11 +1376,12 @@ function MoreFortuneResultCard({
 }) {
   // 옛 record 호환 + 안전망 — 마커가 본문에 그대로 노출되던 사고 차단.
   // (1) 옛 단일 마커 [name]/[name_old]/[legacy]
-  // (2) 새 6 섹션 마커도 strip (parseMarkerSections 가 매칭 실패해 fallback 으로 들어온 경우)
+  // (2) 신규 7섹션 마커: summary/meaning/four_axis/strength/shadow/preserve/rename
+  // (3) 레거시 6섹션 마커도 함께 strip (archive 풀이 호환): eum_ryeong/ja_won/harmony/numerology/advice
   // 대소문자·공백·콜론 변형까지 모두 흡수.
   const cleanText = text
     .replace(/\r/g, '')
-    .replace(/^[\s*#▶■·•\-]*\[\s*(?:name|name_old|legacy|summary|eum_ryeong|ja_won|harmony|numerology|advice)\s*\][\s*#:：]*$/gmi, '')
+    .replace(/^[\s*#▶■·•\-]*\[\s*(?:name|name_old|legacy|summary|meaning|four_axis|strength|shadow|preserve|rename|eum_ryeong|ja_won|harmony|numerology|advice)\s*\][\s*#:：]*$/gmi, '')
     .replace(/\n{3,}/g, '\n\n')
     .trim();
 
@@ -1944,27 +1947,51 @@ function MoreFortuneSectionedCard({
           // 본문 안 잔여 카테고리 마커 strip → extractMetaphor 로 [은유] 마커 + 부제 추출
           const stripped = raw.replace(markerStripPattern, '').replace(/\n{3,}/g, '\n\n').trim();
           const { metaphorTitle, bodyText } = extractMetaphor(stripped);
-          // name 카테고리: 섹션별 시각 컴포넌트 + 본문에서 불릿 분리 (advice 만)
+          // name 카테고리: 섹션별 시각 컴포넌트 (7섹션)
+          // 레거시 6섹션 키로 저장된 archive 풀이는 parseNameSections 단계에서
+          // four_axis/strength/preserve 등 새 키로 매핑되므로 여기서는 새 키만 다룬다.
           const nameVisualNode = category === 'name' && nameVisualContext ? (() => {
             const ctx = nameVisualContext;
             switch (key) {
-              case 'eum_ryeong':
-                return <EumRyeongVisual chars={ctx.chars} elements={ctx.elements} yongSinEl={ctx.yongSinEl} giSinEl={ctx.giSinEl} />;
-              case 'ja_won':
-                return ctx.hanjas.length > 0 ? <JaWonVisual hanjas={ctx.hanjas} /> : null;
-              case 'harmony':
-                return <HarmonyVisual yongSinEl={ctx.yongSinEl} giSinEl={ctx.giSinEl} eumElements={ctx.elements} jawonElements={ctx.jawonElements} />;
-              case 'numerology':
-                return ctx.hanjas.length > 0 ? <NumerologyVisual chars={ctx.hanjas.map(h => h.char)} sounds={ctx.sounds} /> : null;
+              case 'summary':
+                return (
+                  <SummaryScoreVisual
+                    yongSinEl={ctx.yongSinEl}
+                    giSinEl={ctx.giSinEl}
+                    eumElements={ctx.elements}
+                    jawonElements={ctx.jawonElements}
+                    hanjas={ctx.hanjas}
+                    sounds={ctx.sounds}
+                  />
+                );
+              case 'meaning':
+                // 한자 모드는 JaWonVisual (글자별 한자 의미 카드)
+                // 한글 모드는 EumRyeongVisual (한글 초성 음령오행 카드)로 빈 자리 채움
+                return ctx.hanjas.length > 0
+                  ? <JaWonVisual hanjas={ctx.hanjas} />
+                  : <EumRyeongVisual chars={ctx.chars} elements={ctx.elements} yongSinEl={ctx.yongSinEl} giSinEl={ctx.giSinEl} />;
+              case 'four_axis':
+                return (
+                  <>
+                    <EumRyeongVisual chars={ctx.chars} elements={ctx.elements} yongSinEl={ctx.yongSinEl} giSinEl={ctx.giSinEl} />
+                    {ctx.hanjas.length > 0 && (
+                      <NumerologyVisual chars={ctx.hanjas.map(h => h.char)} sounds={ctx.sounds} yongSinEl={ctx.yongSinEl} giSinEl={ctx.giSinEl} />
+                    )}
+                  </>
+                );
+              case 'strength':
+                return <StrengthVisual yongSinEl={ctx.yongSinEl} eumElements={ctx.elements} jawonElements={ctx.jawonElements} />;
+              case 'shadow':
+                return <ShadowVisual giSinEl={ctx.giSinEl} eumElements={ctx.elements} jawonElements={ctx.jawonElements} />;
               default:
                 return null;
             }
           })() : null;
 
-          // advice 본문에서 불릿 추출 → AdviceVisual 로 카드 변환
+          // preserve/rename 본문에서 불릿 추출 → AdviceVisual 카드
           let renderBody: string = bodyText;
           let nameAdviceBullets: string[] = [];
-          if (category === 'name' && key === 'advice') {
+          if (category === 'name' && (key === 'preserve' || key === 'rename')) {
             const ex = extractBullets(bodyText);
             nameAdviceBullets = ex.bullets;
             renderBody = ex.rest;
@@ -1992,14 +2019,18 @@ function MoreFortuneSectionedCard({
             >
               {nameVisualNode}
               {childrenVisualNode}
-              {category === 'name' && key === 'advice' && nameAdviceBullets.length > 0 && (
+              {category === 'name'
+                && (key === 'preserve' || key === 'rename')
+                && nameAdviceBullets.length > 0 && (
                 <AdviceVisual bullets={nameAdviceBullets} />
               )}
               <div className="text-[17px] text-text-secondary leading-[1.85] tracking-[-0.005em] space-y-3">
                 {(() => {
                   // 단락 분리 + 단락 안에서 "- " "· " 같은 불릿 라인은 별도 리스트로 렌더
-                  // name+advice 는 위에서 AdviceVisual 로 분리했으므로 renderBody 사용
-                  const sourceText = (category === 'name' && key === 'advice') ? renderBody : bodyText;
+                  // name+preserve/rename 은 위에서 AdviceVisual 로 분리했으므로 renderBody 사용
+                  const sourceText = (category === 'name'
+                    && (key === 'preserve' || key === 'rename'))
+                    ? renderBody : bodyText;
                   const paras = sourceText.split(/\n\n+/).map(p => p.trim()).filter(Boolean);
                   return paras.map((para, pi) => {
                     const lines = para.split('\n');
