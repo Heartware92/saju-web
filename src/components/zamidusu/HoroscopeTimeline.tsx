@@ -1,27 +1,29 @@
 'use client';
 
 /**
- * 유년·유월 시기 예측 타임라인.
+ * 유년·유월 시기 예측 타임라인 + 라인 차트.
  *
  * 자운파 색채 — 자미두수 정통 시기 단위(대한·유년·유월·유일)를
  * 사용자가 즉시 알아보는 연도/월 라벨로 시각화.
  *
- * 각 시점:
- *  - 사화 4개 비행 (록·권·과·기 별)
- *  - 종합 점수 게이지 (사화 polarity 가중) — 신년운세 ScoreGauge 스타일 통일
+ * 각 시점 구성:
  *  - 천간·지지 라벨
+ *  - 사화 4개 비행 (록·권·과·기 별)
+ *  - 종합 점수 게이지 + 등급 라벨
+ *  - 유월에는 짧은 한줄 의미 라벨 (사용자가 카드만 보고 의미 즉시 파악 가능하도록)
+ *  - 부드러운 곡선 라인 차트 (정통사주 LifetimeFortuneChart 스타일)
  *
- * 데이터 소스: engine/zamidusu/horoscope.ts
+ * 헤더 스타일: DaehanTimeline과 동일한 "X(漢) — Y" 형식 (4px 사이드바 + serif 18px + 부제)
  */
 
 import type { YearlyHoroscope, MonthlyHoroscope } from '../../engine/zamidusu/horoscope';
 import { MAJOR_STARS_META } from '../../engine/zamidusu/knowledge';
 
 const MUTAGEN_COLOR: Record<string, string> = {
-  록: '#fbbf24', // 금
-  권: '#a78bfa', // 보라
-  과: '#34d399', // 초록
-  기: '#f87171', // 빨강
+  록: '#fbbf24',
+  권: '#a78bfa',
+  과: '#34d399',
+  기: '#f87171',
 };
 
 function MutagenChip({ type, star }: { type: '록' | '권' | '과' | '기'; star: string }) {
@@ -39,9 +41,8 @@ function MutagenChip({ type, star }: { type: '록' | '권' | '과' | '기'; star
 }
 
 /**
- * 시기별 종합 점수 산출 — 사화 4개 비행 별의 polarity 가중 합.
- * 록·권·과는 + (별이 길성일수록 강한 +), 기는 - (별이 길성일수록 강한 -).
- * 범위: 0~100, 기본 50.
+ * 시기별 종합 점수 — 사화 4개 비행 별의 polarity 가중 합.
+ * 범위 0~100, 기본 50.
  */
 function calcWindowScore(mutagen: { 록: string; 권: string; 과: string; 기: string }): number {
   const polW = (star: string): number => {
@@ -70,7 +71,31 @@ function scoreLabel(score: number): string {
   return '흉';
 }
 
-/** 점수 게이지 막대 — 신년운세 ScoreGauge 스타일 통일 */
+/**
+ * 사용자 친화 한 줄 의미 라벨 — 점수 등급 + 가장 두드러진 사화 별 키워드 조합.
+ * 유월 카드 안에 작게 노출해 "이 달이 어떤 달인지" 즉시 전달.
+ */
+function makeWindowMeaning(mutagen: { 록: string; 권: string; 과: string; 기: string }, score: number): string {
+  if (score < 45) {
+    const giStar = mutagen.기;
+    const meta = MAJOR_STARS_META[giStar];
+    if (meta) return `${meta.keywords[0]} 영역 주의`;
+    return '주의 흐름';
+  }
+  if (score >= 60) {
+    const rokStar = mutagen.록;
+    const rokMeta = MAJOR_STARS_META[rokStar];
+    if (rokMeta) return `${rokMeta.keywords[0]} 흐름 좋음`;
+    return '길운 흐름';
+  }
+  // 평이 — 화권 별 키워드로 색채만 알림
+  const gwonStar = mutagen.권;
+  const gwonMeta = MAJOR_STARS_META[gwonStar];
+  if (gwonMeta) return `${gwonMeta.keywords[0]} 활성화`;
+  return '평이한 흐름';
+}
+
+/** 점수 게이지 막대 */
 function ScoreBar({ score, size = 'md' }: { score: number; size?: 'sm' | 'md' }) {
   const color = scoreColor(score);
   const label = scoreLabel(score);
@@ -90,23 +115,216 @@ function ScoreBar({ score, size = 'md' }: { score: number; size?: 'sm' | 'md' })
   );
 }
 
-interface YearlyProps {
-  horoscopes: YearlyHoroscope[];
+/**
+ * 헤더 — DaehanTimeline과 동일 디자인 (4px 사이드바 + 18px serif + 부제).
+ * 운흐름 wrapper 안에서 sub-section 헤더로 사용 가능.
+ */
+function SectionHeader({ title, subtitle }: { title: string; subtitle: string }) {
+  return (
+    <>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
+        <span
+          style={{
+            display: 'inline-block',
+            width: 4,
+            height: 20,
+            borderRadius: 2,
+            background: 'var(--cta-primary)',
+          }}
+        />
+        <div
+          style={{
+            fontSize: 18,
+            fontWeight: 700,
+            color: 'var(--text-primary)',
+            fontFamily: 'var(--font-serif)',
+            letterSpacing: '-0.01em',
+          }}
+        >
+          {title}
+        </div>
+      </div>
+      <div
+        style={{
+          fontSize: 13,
+          color: 'var(--text-tertiary)',
+          lineHeight: 1.6,
+          marginBottom: 14,
+          paddingLeft: 12,
+        }}
+      >
+        {subtitle}
+      </div>
+    </>
+  );
 }
 
-export function YearlyTimeline({ horoscopes }: YearlyProps) {
-  if (horoscopes.length === 0) return null;
+// ============================================
+// 라인 차트 — 정통사주 LifetimeFortuneChart 스타일
+// ============================================
+
+interface ChartPoint {
+  label: string;     // x축 라벨 (예: "2026", "5월")
+  score: number;     // 0~100
+  isCurrent?: boolean;
+}
+
+/**
+ * 부드러운 곡선 라인 차트 — Catmull-Rom → Bezier 변환.
+ * 정통사주 LifetimeFortuneChart 동일 알고리즘.
+ */
+function smoothPath(pts: { x: number; y: number }[]): string {
+  if (pts.length < 2) return '';
+  const segs: string[] = [`M${pts[0].x.toFixed(1)},${pts[0].y.toFixed(1)}`];
+  for (let i = 0; i < pts.length - 1; i++) {
+    const p0 = pts[i - 1] ?? pts[i];
+    const p1 = pts[i];
+    const p2 = pts[i + 1];
+    const p3 = pts[i + 2] ?? p2;
+    const t = 0.5;
+    const c1x = p1.x + ((p2.x - p0.x) / 6) * t;
+    const c1y = p1.y + ((p2.y - p0.y) / 6) * t;
+    const c2x = p2.x - ((p3.x - p1.x) / 6) * t;
+    const c2y = p2.y - ((p3.y - p1.y) / 6) * t;
+    segs.push(
+      `C${c1x.toFixed(1)},${c1y.toFixed(1)} ${c2x.toFixed(1)},${c2y.toFixed(1)} ${p2.x.toFixed(1)},${p2.y.toFixed(1)}`,
+    );
+  }
+  return segs.join(' ');
+}
+
+function FortuneLineChart({ points, title }: { points: ChartPoint[]; title?: string }) {
+  if (points.length < 2) return null;
+  const W = Math.max(320, points.length * 60);
+  const H = 140;
+  const PAD_L = 28;
+  const PAD_R = 16;
+  const PAD_T = 18;
+  const PAD_B = 28;
+  const PLOT_W = W - PAD_L - PAD_R;
+  const PLOT_H = H - PAD_T - PAD_B;
+
+  const xOf = (i: number) => PAD_L + (i / (points.length - 1)) * PLOT_W;
+  const yOf = (score: number) => PAD_T + (1 - score / 100) * PLOT_H;
+
+  const smoothPts = points.map((p, i) => ({ x: xOf(i), y: yOf(p.score) }));
+  const linePath = smoothPath(smoothPts);
+  const areaPath = `${linePath} L${smoothPts[smoothPts.length - 1].x.toFixed(1)},${(PAD_T + PLOT_H).toFixed(1)} L${smoothPts[0].x.toFixed(1)},${(PAD_T + PLOT_H).toFixed(1)} Z`;
+
   return (
-    <div className="rounded-2xl bg-space-surface border border-[var(--border-subtle)] p-5">
-      <h3 className="text-base font-bold text-text-primary mb-1" style={{ fontFamily: 'var(--font-serif)' }}>
-        유년(流年) 시기 예측
-      </h3>
-      <p className="text-xs text-text-tertiary mb-4">
-        연도별 사화 비행 + 종합 점수 — 그 해의 주된 흐름
-      </p>
+    <div style={{ overflowX: 'auto', marginBottom: 14 }}>
+      <svg width={W} height={H} style={{ display: 'block' }}>
+        <defs>
+          <linearGradient id="fortuneArea" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="#FBBF24" stopOpacity="0.4" />
+            <stop offset="100%" stopColor="#FBBF24" stopOpacity="0" />
+          </linearGradient>
+          <linearGradient id="fortuneLine" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0%" stopColor="#F87171" />
+            <stop offset="50%" stopColor="#FBBF24" />
+            <stop offset="100%" stopColor="#34D399" />
+          </linearGradient>
+        </defs>
+
+        {/* 점수 0/50/100 가이드 라인 */}
+        {[0, 50, 100].map((v) => (
+          <line
+            key={v}
+            x1={PAD_L}
+            x2={W - PAD_R}
+            y1={yOf(v)}
+            y2={yOf(v)}
+            stroke="rgba(255,255,255,0.06)"
+            strokeWidth="1"
+            strokeDasharray={v === 50 ? '4 4' : ''}
+          />
+        ))}
+
+        {/* 영역 */}
+        <path d={areaPath} fill="url(#fortuneArea)" />
+        {/* 라인 */}
+        <path d={linePath} fill="none" stroke="url(#fortuneLine)" strokeWidth="2.5" strokeLinecap="round" />
+
+        {/* 각 포인트 */}
+        {smoothPts.map((pt, i) => {
+          const p = points[i];
+          const color = scoreColor(p.score);
+          const isCurrent = !!p.isCurrent;
+          return (
+            <g key={i}>
+              {isCurrent && (
+                <circle cx={pt.x} cy={pt.y} r="8" fill={color} opacity="0.2" />
+              )}
+              <circle
+                cx={pt.x}
+                cy={pt.y}
+                r={isCurrent ? 5 : 3.5}
+                fill={color}
+                stroke={isCurrent ? '#fff' : 'none'}
+                strokeWidth={isCurrent ? 1.5 : 0}
+              />
+              <text
+                x={pt.x}
+                y={pt.y - (isCurrent ? 14 : 10)}
+                textAnchor="middle"
+                fontSize={isCurrent ? '11' : '10'}
+                fontWeight="700"
+                fill={color}
+              >
+                {p.score}
+              </text>
+              <text
+                x={pt.x}
+                y={H - 10}
+                textAnchor="middle"
+                fontSize="11"
+                fill={isCurrent ? 'var(--text-primary)' : 'var(--text-tertiary)'}
+                fontWeight={isCurrent ? '700' : '500'}
+              >
+                {p.label}
+              </text>
+            </g>
+          );
+        })}
+      </svg>
+      {title && (
+        <div className="text-[11px] text-text-tertiary text-center mt-1">{title}</div>
+      )}
+    </div>
+  );
+}
+
+// ============================================
+// 유년 / 유월 컴포넌트
+// ============================================
+
+interface YearlyProps {
+  horoscopes: YearlyHoroscope[];
+  /** wrapper 안 sub-section으로 쓸 때 헤더 생략 */
+  embedded?: boolean;
+}
+
+export function YearlyTimeline({ horoscopes, embedded = false }: YearlyProps) {
+  if (horoscopes.length === 0) return null;
+  const points: ChartPoint[] = horoscopes.map((y, i) => ({
+    label: `${y.year}`,
+    score: calcWindowScore(y.mutagen),
+    isCurrent: i === 0,
+  }));
+
+  const Wrapper: React.ElementType = embedded ? 'div' : 'div';
+  const wrapperClass = embedded
+    ? 'pt-4 border-t border-[var(--border-subtle)] mt-4'
+    : 'rounded-2xl bg-space-surface border border-[var(--border-subtle)] p-5';
+
+  return (
+    <Wrapper className={wrapperClass}>
+      <SectionHeader title="유년(流年) — 1년 단위의 흐름" subtitle="올해부터 5개년 — 그 해의 주된 사화와 점수" />
+      <FortuneLineChart points={points} title="5개년 운 흐름" />
       <div className="space-y-4">
         {horoscopes.map((y) => {
           const score = calcWindowScore(y.mutagen);
+          const meaning = makeWindowMeaning(y.mutagen, score);
           return (
             <div key={y.year} className="pb-4 border-b border-[var(--border-subtle)] last:border-b-0 last:pb-0">
               <div className="flex items-start gap-3 mb-2">
@@ -115,11 +333,16 @@ export function YearlyTimeline({ horoscopes }: YearlyProps) {
                   <div className="text-[11px] text-text-tertiary">{y.approxAge}세</div>
                   <div className="text-[11px] text-cta mt-0.5">{y.heavenlyStem}{y.earthlyBranch}</div>
                 </div>
-                <div className="flex-1 flex flex-wrap gap-1.5">
-                  <MutagenChip type="록" star={y.mutagen.록} />
-                  <MutagenChip type="권" star={y.mutagen.권} />
-                  <MutagenChip type="과" star={y.mutagen.과} />
-                  <MutagenChip type="기" star={y.mutagen.기} />
+                <div className="flex-1">
+                  <div className="text-[12px] text-text-secondary mb-1.5 font-medium" style={{ wordBreak: 'keep-all' }}>
+                    {meaning}
+                  </div>
+                  <div className="flex flex-wrap gap-1.5">
+                    <MutagenChip type="록" star={y.mutagen.록} />
+                    <MutagenChip type="권" star={y.mutagen.권} />
+                    <MutagenChip type="과" star={y.mutagen.과} />
+                    <MutagenChip type="기" star={y.mutagen.기} />
+                  </div>
                 </div>
               </div>
               <ScoreBar score={score} />
@@ -127,33 +350,57 @@ export function YearlyTimeline({ horoscopes }: YearlyProps) {
           );
         })}
       </div>
-    </div>
+    </Wrapper>
   );
 }
 
 interface MonthlyProps {
   year: number;
   horoscopes: MonthlyHoroscope[];
+  /** wrapper 안 sub-section으로 쓸 때 헤더 생략 */
+  embedded?: boolean;
 }
 
-export function MonthlyTimeline({ year, horoscopes }: MonthlyProps) {
+export function MonthlyTimeline({ year, horoscopes, embedded = false }: MonthlyProps) {
   if (horoscopes.length === 0) return null;
+  const points: ChartPoint[] = horoscopes.map((m) => ({
+    label: `${m.month}월`,
+    score: calcWindowScore(m.mutagen),
+    isCurrent: m.month === new Date().getMonth() + 1,
+  }));
+
+  const wrapperClass = embedded
+    ? 'pt-4 border-t border-[var(--border-subtle)] mt-4'
+    : 'rounded-2xl bg-space-surface border border-[var(--border-subtle)] p-5';
+
   return (
-    <div className="rounded-2xl bg-space-surface border border-[var(--border-subtle)] p-5">
-      <h3 className="text-base font-bold text-text-primary mb-1" style={{ fontFamily: 'var(--font-serif)' }}>
-        유월(流月) 시기 예측 · {year}년
-      </h3>
-      <p className="text-xs text-text-tertiary mb-4">
-        월별 사화 비행 + 점수 — 즉각 의사결정 단위
-      </p>
+    <div className={wrapperClass}>
+      <SectionHeader title={`유월(流月) — 1달 단위의 변화 · ${year}년`} subtitle="달마다 사화 비행과 점수 — 즉각 의사결정 단위" />
+      <FortuneLineChart points={points} title={`${year}년 12개월 흐름`} />
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
         {horoscopes.map((m) => {
           const score = calcWindowScore(m.mutagen);
+          const meaning = makeWindowMeaning(m.mutagen, score);
+          const isCurrent = m.month === new Date().getMonth() + 1;
           return (
-            <div key={m.month} className="rounded-lg bg-space-deep p-2.5">
-              <div className="flex items-baseline justify-between mb-1.5">
+            <div
+              key={m.month}
+              className="rounded-lg p-2.5"
+              style={{
+                background: isCurrent ? 'rgba(167,139,250,0.12)' : 'var(--space-deep, #0f0a2e)',
+                border: isCurrent ? '1px solid rgba(167,139,250,0.40)' : '1px solid transparent',
+              }}
+            >
+              <div className="flex items-baseline justify-between mb-1">
                 <div className="text-sm font-bold text-text-primary">{m.month}월</div>
                 <div className="text-[10px] text-cta">{m.heavenlyStem}{m.earthlyBranch}</div>
+              </div>
+              {/* 의미 라벨 — 사용자가 카드 보고 즉시 이해 */}
+              <div
+                className="text-[11px] text-text-secondary font-medium mb-1.5"
+                style={{ wordBreak: 'keep-all' }}
+              >
+                {meaning}
               </div>
               <div className="flex flex-wrap gap-1 mb-1.5">
                 <MutagenChip type="록" star={m.mutagen.록} />
@@ -166,6 +413,66 @@ export function MonthlyTimeline({ year, horoscopes }: MonthlyProps) {
           );
         })}
       </div>
+    </div>
+  );
+}
+
+// ============================================
+// 운흐름 그룹 wrapper — 대한·유년·유월 묶음
+// ============================================
+
+interface FlowGroupProps {
+  daehanNode: React.ReactNode;
+  yearlyHoroscopes: YearlyHoroscope[];
+  monthlyYear: number;
+  monthlyHoroscopes: MonthlyHoroscope[];
+}
+
+/**
+ * 운 흐름 통합 섹션 — 대한(10년) → 유년(1년) → 유월(1달) 정통 순서.
+ * 하나의 큰 카드 안에 3개 sub-section으로 묶어 사용자가 시기 흐름을 한 흐름으로 인지하게.
+ */
+export function FlowGroup({ daehanNode, yearlyHoroscopes, monthlyYear, monthlyHoroscopes }: FlowGroupProps) {
+  return (
+    <div className="rounded-2xl bg-space-surface border border-[var(--border-subtle)] p-5">
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+        <span
+          style={{
+            display: 'inline-block',
+            width: 4,
+            height: 22,
+            borderRadius: 2,
+            background: 'var(--cta-primary)',
+          }}
+        />
+        <div
+          style={{
+            fontSize: 19,
+            fontWeight: 700,
+            color: 'var(--text-primary)',
+            fontFamily: 'var(--font-serif)',
+            letterSpacing: '-0.01em',
+          }}
+        >
+          운의 흐름 — 대한 · 유년 · 유월
+        </div>
+      </div>
+      <p style={{ fontSize: 12, color: 'var(--text-tertiary)', marginBottom: 18, paddingLeft: 12 }}>
+        10년 단위(대한) → 1년 단위(유년) → 1달 단위(유월)의 정통 시기 흐름
+      </p>
+
+      {/* 대한 */}
+      <div>{daehanNode}</div>
+
+      {/* 유년 */}
+      {yearlyHoroscopes.length > 0 && (
+        <YearlyTimeline horoscopes={yearlyHoroscopes} embedded />
+      )}
+
+      {/* 유월 */}
+      {monthlyHoroscopes.length > 0 && (
+        <MonthlyTimeline year={monthlyYear} horoscopes={monthlyHoroscopes} embedded />
+      )}
     </div>
   );
 }

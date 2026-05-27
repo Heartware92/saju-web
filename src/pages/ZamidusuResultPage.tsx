@@ -49,7 +49,7 @@ import { DaehanTimeline } from '../components/zamidusu/DaehanTimeline';
 import { CharacterCard } from '../components/zamidusu/CharacterCard';
 import { GekkukList } from '../components/zamidusu/GekkukBadge';
 import { MbtiAxesChart } from '../components/zamidusu/MbtiAxesChart';
-import { YearlyTimeline, MonthlyTimeline } from '../components/zamidusu/HoroscopeTimeline';
+import { YearlyTimeline, MonthlyTimeline, FlowGroup } from '../components/zamidusu/HoroscopeTimeline';
 import { getYearlyHoroscopes, getMonthlyHoroscopes } from '../engine/zamidusu/horoscope';
 import {
   calcCoreScores,
@@ -1565,23 +1565,16 @@ export default function ZamidusuResultPage() {
             <MutagenCards placements={mutagenPlacements} />
           </div>
         )}
+        {/* 운의 흐름 — 대한 · 유년 · 유월 하나의 섹션 그룹으로 묶음
+            (자미두수 정통 시기 순서: 10년 → 1년 → 1달) */}
         {daehanSegments.length > 0 && (
           <div className={styles.section}>
-            <DaehanTimeline segments={daehanSegments} currentAge={currentAge} />
-          </div>
-        )}
-
-        {/* 유년(流年) 5개년 시기 예측 — 자운파 색채. 대한 다음 정통 순서 */}
-        {yearlyHoroscopes.length > 0 && (
-          <div className={styles.section}>
-            <YearlyTimeline horoscopes={yearlyHoroscopes} />
-          </div>
-        )}
-
-        {/* 유월(流月) — 올해 12개월 시기 예측 — 즉각 위험 회피 */}
-        {monthlyHoroscopes.length > 0 && (
-          <div className={styles.section}>
-            <MonthlyTimeline year={currentYearForMonthly} horoscopes={monthlyHoroscopes} />
+            <FlowGroup
+              daehanNode={<DaehanTimeline segments={daehanSegments} currentAge={currentAge} />}
+              yearlyHoroscopes={yearlyHoroscopes}
+              monthlyYear={currentYearForMonthly}
+              monthlyHoroscopes={monthlyHoroscopes}
+            />
           </div>
         )}
 
