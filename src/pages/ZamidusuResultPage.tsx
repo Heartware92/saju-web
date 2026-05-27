@@ -48,7 +48,6 @@ import { MutagenCards } from '../components/zamidusu/MutagenCards';
 import { DaehanTimeline } from '../components/zamidusu/DaehanTimeline';
 import { CharacterCard } from '../components/zamidusu/CharacterCard';
 import { GekkukList } from '../components/zamidusu/GekkukBadge';
-import { MbtiAxesChart } from '../components/zamidusu/MbtiAxesChart';
 import { YearlyTimeline, MonthlyTimeline } from '../components/zamidusu/HoroscopeTimeline';
 import { getYearlyHoroscopes, getMonthlyHoroscopes, type YearlyHoroscope, type MonthlyHoroscope } from '../engine/zamidusu/horoscope';
 import {
@@ -506,8 +505,17 @@ function renderSectionDataCards(
       return <MutagenGridCards chart={chart} />;
     case 'interactions':
       return <InteractionsCards chart={chart} />;
-    case 'daehan':
-      return <DaehanTable chart={chart} currentAge={currentAge} />;
+    case 'daehan': {
+      // 대한 — DaehanTimeline 시각 + DaehanTable (한 섹션에서 보여줌)
+      const ageForCalc = currentAge ?? 0;
+      const segs = calcDaehanTimeline(chart, ageForCalc);
+      return (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+          {segs.length > 0 && <DaehanTimeline segments={segs} currentAge={ageForCalc} />}
+          <DaehanTable chart={chart} currentAge={currentAge} />
+        </div>
+      );
+    }
     case 'sohan':
       // 정통 자미두수 4단위(대한·유년·유월·유일)에 맞춰 sohan 키를 유년·유월 시각으로 재사용.
       // 라벨도 "유년·유월 — 가까운 시기 흐름"으로 변경 (prompts.ts ZAMIDUSU_SECTION_LABELS).
@@ -1215,12 +1223,7 @@ export default function ZamidusuResultPage() {
           </div>
         )}
 
-        {/* MBTI식 4축 성향 정량 그래프 */}
-        <div className={styles.section}>
-          <MbtiAxesChart palaces={chart.palaces} />
-        </div>
-
-        {/* 영역별 인사이트 텍스트 카드는 제거 (2026-05-27 사용자 결정)
+{/* 영역별 인사이트 텍스트 카드는 제거 (2026-05-27 사용자 결정)
             이유: 위쪽 시각 카드(CorePalaceScores·MutagenCards·FlowGroup)에서
             영역별 점수가 이미 시각화되고, 아래 AI 풀이 12 섹션에서 영역별
             깊이 풀이가 나오므로 중간의 짧은 텍스트 요약 카드는 중복.
@@ -1543,12 +1546,8 @@ export default function ZamidusuResultPage() {
             <MutagenCards placements={mutagenPlacements} />
           </div>
         )}
-        {daehanSegments.length > 0 && (
-          <div className={styles.section}>
-            <DaehanTimeline segments={daehanSegments} currentAge={currentAge} />
-          </div>
-        )}
-        {/* 유년·유월 시각은 AI 풀이 [sohan] 섹션 안으로 통합됨 (사용자 결정 2026-05-27) */}
+        {/* 대한·유년·유월 시각은 모두 AI 풀이 섹션 안으로 통합됨 (사용자 결정 2026-05-27)
+            대한 → [daehan] 섹션 안, 유년·유월 → [sohan] 섹션 안 */}
 
         {/* AI 풀이 — 섹션별 은유 헤드라인으로 카드화 */}
         {ZAMIDUSU_SECTION_KEYS.map((key, idx) => {
