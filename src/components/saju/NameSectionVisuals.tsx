@@ -534,10 +534,10 @@ function buildStrengthSignals(
       .map((c, i) => (eumElements[i] === yongSinEl ? c : null))
       .filter((c): c is string => !!c);
     out.push({
-      headline: `음령에 용신 ${yongSinEl} 깃듦`,
+      headline: `이름 발음에 용신 ${yongSinEl} 오행이 들어있어요`,
       detail: matchingChars.length > 0
-        ? `"${matchingChars.join('·')}" 글자가 발음에서 사주 용신을 받쳐줘요.`
-        : `한글 발음이 사주 용신을 보강해요.`,
+        ? `"${matchingChars.join('·')}" 글자의 한글 초성이 ${yongSinEl} 오행이라 부를 때마다 사주의 부족한 기운을 보태줘요.`
+        : `한글 발음이 사주에서 가장 필요한 ${yongSinEl} 오행을 보강해요.`,
     });
   }
 
@@ -546,8 +546,8 @@ function buildStrengthSignals(
     const matching = hanjas.filter(h => h.jawon === yongSinEl);
     if (matching.length > 0) {
       out.push({
-        headline: `자원오행에 용신 ${yongSinEl} 깃듦`,
-        detail: `한자 "${matching.map(h => h.char).join('·')}"의 부수가 사주 용신을 보태요.`,
+        headline: `한자 부수에 용신 ${yongSinEl} 오행이 들어있어요`,
+        detail: `한자 "${matching.map(h => h.char).join('·')}"의 부수가 ${yongSinEl} 오행이라 사주의 부족한 기운을 한자 차원에서도 받쳐줘요.`,
       });
     }
   }
@@ -556,8 +556,8 @@ function buildStrengthSignals(
   const eumDistinct = new Set(eumElements.filter(Boolean)).size;
   if (eumDistinct >= 3) {
     out.push({
-      headline: `음령 ${eumDistinct}오행 분포`,
-      detail: `한 기운에 쏠리지 않고 여러 영역의 결을 골고루 품은 이름이에요.`,
+      headline: `이름 발음에 ${eumDistinct}가지 오행이 골고루 깔려요`,
+      detail: `한 기운에 쏠리지 않고 여러 영역의 결을 균형 있게 품은 이름이에요. 어느 한 영역으로 치우치지 않아 다양한 상황에 안정적으로 흐르기 좋아요.`,
     });
   }
 
@@ -571,17 +571,17 @@ function buildStrengthSignals(
 
     if (dominant && ELEMENT_STRENGTH_NUANCE[dominant]) {
       out.push({
-        headline: `음령에 ${dominant} 기운이 우세`,
-        detail: `한글 발음에 ${ELEMENT_STRENGTH_NUANCE[dominant]}의 결이 깊이 깔려 있어요. 이 결이 이름을 부를 때마다 본인의 일상에 스며들어요.`,
+        headline: `이름 발음에 ${dominant} 기운이 우세해요`,
+        detail: `한글 초성을 5오행으로 봤을 때 ${dominant} 오행이 가장 많이 깔려 있어요. 이는 ${ELEMENT_STRENGTH_NUANCE[dominant]}의 결을 일상에 스며들게 해줘요.`,
       });
     }
 
     out.push({
       headline: yongSinEl
-        ? `사주 용신 ${yongSinEl} 직접 매칭은 약해요`
-        : '이름의 깊은 강점은 본문에서 자세히 다뤄요',
+        ? `사주를 보태주는 ${yongSinEl} 오행 글자는 없어요`
+        : '이름의 깊은 강점은 본문에서 다뤘어요',
       detail: yongSinEl
-        ? `이름 자체엔 용신 ${yongSinEl} 오행이 직접 들어가지 않았어요. 본문 풀이에서 이름과 사주의 미세한 결을 짚어드렸고, 보완을 원하시면 호명·필명·서명·SNS 닉네임에 ${yongSinEl} 오행 글자를 더해 일상에서 채울 수 있어요.`
+        ? `사주에서 가장 보강이 필요한 오행은 ${yongSinEl}이지만, 이 이름의 발음·한자 부수·획수 어디에도 ${yongSinEl} 오행 글자가 들어있지 않아요. 본문에서 이름과 사주의 미세한 결을 풀어드렸고, 보완을 원하시면 호명·필명·서명·SNS 닉네임에 ${yongSinEl} 오행 글자를 한 글자 더해서 일상에서 채울 수 있어요.`
         : '시각 카드는 4축의 직접 매칭만 자동 추출해요. 위 본문 풀이에 사주와 이름이 어떻게 어울리는지 결을 자세히 풀어드렸어요.',
     });
   }
@@ -607,10 +607,10 @@ function buildShadowSignals(
       .map((c, i) => (eumElements[i] === giSinEl ? c : null))
       .filter((c): c is string => !!c);
     out.push({
-      headline: `음령에 기신 ${giSinEl} 포함`,
+      headline: `이름 발음에 기신 ${giSinEl} 오행이 들어있어요`,
       detail: matchingChars.length > 0
-        ? `"${matchingChars.join('·')}" 글자가 사주 기신 오행을 자극해 발음에서 마찰이 생겨요.`
-        : `발음에서 사주 기신을 자극하는 결이 있어요.`,
+        ? `"${matchingChars.join('·')}" 글자의 한글 초성이 ${giSinEl} 오행이라 부를 때마다 사주에서 주의해야 할 기운을 자극해 마찰이 생길 수 있어요.`
+        : `한글 발음이 사주에서 주의해야 할 ${giSinEl} 오행을 자극해 마찰이 생길 수 있어요.`,
     });
   }
 
@@ -619,8 +619,8 @@ function buildShadowSignals(
     const matching = hanjas.filter(h => h.jawon === giSinEl);
     if (matching.length > 0) {
       out.push({
-        headline: `자원오행에 기신 ${giSinEl} 포함`,
-        detail: `한자 "${matching.map(h => h.char).join('·')}"의 부수가 사주 흐름을 거슬러요.`,
+        headline: `한자 부수에 기신 ${giSinEl} 오행이 들어있어요`,
+        detail: `한자 "${matching.map(h => h.char).join('·')}"의 부수가 ${giSinEl} 오행이라 사주의 주의 영역을 한자 차원에서도 자극해요.`,
       });
     }
   }
@@ -635,8 +635,8 @@ function buildShadowSignals(
   );
   if (maxEntry && maxEntry[1] >= 3) {
     out.push({
-      headline: `음령이 ${maxEntry[0]} 한 기운에 치우침`,
-      detail: `한 영역만 강하게 흐르고 다른 영역의 결은 부족해요.`,
+      headline: `이름 발음이 ${maxEntry[0]} 한 기운에 치우쳐 있어요`,
+      detail: `초성 ${maxEntry[1]}개가 모두 ${maxEntry[0]} 오행이라 한 영역만 강하게 흐르고 다른 영역의 결은 부족해요. 균형이 한쪽으로 쏠려 보일 수 있어요.`,
     });
   }
 
@@ -645,7 +645,7 @@ function buildShadowSignals(
     out.push({
       headline: '사주와 큰 마찰은 없어요',
       detail: giSinEl
-        ? `이름 자체에 사주 기신 ${giSinEl} 오행이 직접 들어가지 않아 발음·부수 양쪽 모두 큰 충돌은 없는 흐름이에요.`
+        ? `사주에서 가장 주의해야 할 오행은 ${giSinEl}이지만, 다행히 이 이름의 발음·한자 부수 어디에도 ${giSinEl} 오행 글자가 들어있지 않아 큰 충돌은 없는 흐름이에요.`
         : '시각 카드 기준 직접 자극되는 자리는 없어요. 큰 부담 없이 흐르는 이름이에요.',
     });
     out.push({
@@ -803,6 +803,74 @@ export function HarmonyVisual({
           ))}
         </ul>
       </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 4a) 수리오행 — 4격 끝자리 오행만 작은 칩으로 (NumerologyVisual 의 81수리 4격
+//     큰 카드와 분리해서 four_axis 섹션의 "수리오행 파티션" 에 사용)
+// ─────────────────────────────────────────────────────────────────────────────
+export function SuriElementVisual({
+  chars,
+  sounds,
+  yongSinEl,
+  giSinEl,
+}: {
+  chars: string[];
+  sounds: string[];
+  yongSinEl?: string;
+  giSinEl?: string;
+}) {
+  const result = calc4Gyeok(chars, sounds);
+  if (!result) return null;
+  const items = [
+    { label: '원격', area: '초년',         data: result.won },
+    { label: '형격', area: '중년',         data: result.hyeong },
+    { label: '이격', area: '사회',         data: result.i },
+    { label: '정격', area: '평생',         data: result.jeong },
+  ];
+  return (
+    <div className="grid grid-cols-4 gap-2 mb-3">
+      {items.map((it, i) => {
+        const elKor = SURI_ELEMENT_KOREAN[it.data.entry.element] ?? '';
+        const color = ELEMENT_COLOR[elKor] ?? '#CBD5E1';
+        const bg = ELEMENT_BG[elKor] ?? 'rgba(255,255,255,0.04)';
+        const isYong = !!yongSinEl && elKor === yongSinEl;
+        const isGi = !!giSinEl && elKor === giSinEl;
+        return (
+          <div
+            key={i}
+            className="rounded-xl p-2.5 flex flex-col items-center border"
+            style={{ background: bg, borderColor: `${color}55` }}
+          >
+            <span
+              className="text-[13px] font-bold mb-0.5"
+              style={{ color: 'var(--text-primary)', fontFamily: 'var(--font-title)' }}
+            >
+              {it.label}
+            </span>
+            <span className="text-[10px] text-text-tertiary mb-1.5">{it.area}</span>
+            <span
+              className="text-[16px] font-bold"
+              style={{ color, fontFamily: 'var(--font-serif)' }}
+            >
+              {elKor || '?'}
+            </span>
+            {(isYong || isGi) && (
+              <span
+                className="text-[10px] font-bold mt-1 px-1.5 py-0.5 rounded"
+                style={{
+                  color: isYong ? '#34D399' : '#F87171',
+                  background: isYong ? 'rgba(52,211,153,0.12)' : 'rgba(248,113,113,0.12)',
+                }}
+              >
+                {isYong ? '용신' : '기신'}
+              </span>
+            )}
+          </div>
+        );
+      })}
     </div>
   );
 }

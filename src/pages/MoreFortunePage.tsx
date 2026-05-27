@@ -77,6 +77,7 @@ import {
   EumRyeongVisual,
   JaWonVisual,
   NumerologyVisual,
+  SuriElementVisual,
   AdviceVisual,
   StrengthVisual,
   ShadowVisual,
@@ -974,11 +975,23 @@ export default function MoreFortunePage({ category }: Props) {
           </>
         )}
 
-        {/* 보관함 재생 모드: 저장된 꿈 텍스트만 표시 */}
-        {category === 'dream' && isArchiveMode && dreamText && (
-          <div className={styles.section}>
-            <h2 style={{ fontSize: 14, marginBottom: 8 }}>당신이 적은 꿈</h2>
-            <p style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.7, margin: 0, whiteSpace: 'pre-line' }}>
+        {/* 결과 페이지 상단: 사용자가 적은 꿈 — 일반 모드·보관함 모드 모두 노출 */}
+        {category === 'dream' && result && dreamText && (
+          <div className={styles.section} style={{
+            background: 'rgba(124,92,252,0.08)',
+            border: '1px solid rgba(124,92,252,0.25)',
+          }}>
+            <div style={{
+              fontSize: 12, fontWeight: 700, letterSpacing: '0.04em',
+              color: 'var(--text-tertiary)', marginBottom: 8,
+              textTransform: 'uppercase',
+            }}>당신이 적은 꿈</div>
+            <p style={{
+              fontSize: 15, color: 'var(--text-secondary)',
+              lineHeight: 1.7, margin: 0, whiteSpace: 'pre-line',
+              wordBreak: 'keep-all',
+              fontFamily: 'var(--font-body)',
+            }}>
               {dreamText}
             </p>
           </div>
@@ -2014,8 +2027,12 @@ function MoreFortuneSectionedCard({
   const markerInlinePattern: RegExp | null = category === 'name'
     ? new RegExp(`\\[(${keys.join('|')})\\]`, 'g')
     : null;
+  // ★ lookahead 예외:
+  //  - 은유|metaphor: extractMetaphor 가 metaphorTitle 로 추출
+  //  - axis_eum|axis_jawon|axis_suri|axis_81: four_axis 섹션 4 파티션 sub-marker.
+  //    split 키로 사용되어야 하므로 unwrap 금지.
   const nameBracketUnwrapPattern: RegExp | null = category === 'name'
-    ? /\[(?!은유|metaphor)([^\]\n]{1,30})\]/g
+    ? /\[(?!은유|metaphor|axis_eum|axis_jawon|axis_suri|axis_81)([^\]\n]{1,30})\]/g
     : null;
 
   return (
@@ -2065,20 +2082,14 @@ function MoreFortuneSectionedCard({
                   />
                 );
               case 'meaning':
-                // 한자 모드는 JaWonVisual (글자별 한자 의미 카드)
-                // 한글 모드는 EumRyeongVisual (한글 초성 음령오행 카드)로 빈 자리 채움
-                return ctx.hanjas.length > 0
-                  ? <JaWonVisual hanjas={ctx.hanjas} />
-                  : <EumRyeongVisual chars={ctx.chars} elements={ctx.elements} yongSinEl={ctx.yongSinEl} giSinEl={ctx.giSinEl} />;
+                // ★ 옵션 B (2026-05-27) — meaning 섹션은 시각 없음. 자원오행 시각(JaWonVisual)은
+                //   four_axis 의 axis_jawon 파티션으로 이동. 한자 모드도 한글 모드도 시각 없음.
+                //   meaning 섹션은 한자/한글의 "뜻" 본문에 집중.
+                return null;
               case 'four_axis':
-                return (
-                  <>
-                    <EumRyeongVisual chars={ctx.chars} elements={ctx.elements} yongSinEl={ctx.yongSinEl} giSinEl={ctx.giSinEl} />
-                    {ctx.hanjas.length > 0 && (
-                      <NumerologyVisual chars={ctx.hanjas.map(h => h.char)} sounds={ctx.sounds} yongSinEl={ctx.yongSinEl} giSinEl={ctx.giSinEl} />
-                    )}
-                  </>
-                );
+                // ★ 옵션 B (2026-05-27) — 4축을 4 파티션으로 분리해 (시각 + 본문) 짝지움.
+                //   nameVisualNode 는 null 반환 (시각은 본문 옆에 alternating 으로 렌더 — 아래 four_axis 전용 분기 참조).
+                return null;
               case 'strength':
                 return (
                   <StrengthVisual
@@ -2140,24 +2151,106 @@ function MoreFortuneSectionedCard({
                 && nameAdviceBullets.length > 0 && (
                 <AdviceVisual bullets={nameAdviceBullets} />
               )}
-              {/* 정통사주(SajuResultPage:641)·실시간 운세(TodayFortunePage:1126) 와 동일 패턴:
-                 단락 \n\n 단위 split + <p whitespace-pre-line>. wordBreak 미지정(default normal)
-                 으로 한국어 글자 단위 자동 wrap → 모바일에서 줄 길이 균등.
-                 name+preserve/rename 은 위에서 AdviceVisual 로 불릿을 분리해 renderBody 사용. */}
-              <div className="text-[17px] text-text-secondary leading-[1.85] tracking-[-0.005em] space-y-3">
-                {(() => {
-                  const sourceText = (category === 'name'
-                    && (key === 'preserve' || key === 'rename'))
-                    ? renderBody : bodyText;
-                  return sourceText.split(/\n\n+/).map((para, pi) => {
-                    const trimmed = para.trim();
-                    if (!trimmed) return null;
-                    return (
-                      <p key={pi} className="whitespace-pre-line">{trimmed}</p>
-                    );
-                  });
-                })()}
-              </div>
+              {category === 'name' && key === 'four_axis' && nameVisualContext ? (
+                /* ★ four_axis 4 파티션 alternating 렌더 (옵션 B, 2026-05-27)
+                   본문을 [axis_eum] [axis_jawon] [axis_suri] [axis_81] sub-marker 로 split.
+                   각 파티션마다 (시각 카드 + 본문 단락) 짝지움. 한글 모드는 자원·수리·81수리
+                   파티션 시각이 null → 본문(분석 불가 안내)만 표시. */
+                (() => {
+                  const ctx = nameVisualContext;
+                  const isHanja = ctx.hanjas.length > 0;
+                  const segs = bodyText.split(/\[(axis_eum|axis_jawon|axis_suri|axis_81)\]/);
+                  const parts: Record<'axis_eum' | 'axis_jawon' | 'axis_suri' | 'axis_81', string> = {
+                    axis_eum: '', axis_jawon: '', axis_suri: '', axis_81: '',
+                  };
+                  // sub-marker 누락 fallback — 전체 본문을 axis_eum 에 몰아넣음
+                  if (segs.length <= 1) {
+                    parts.axis_eum = bodyText.trim();
+                  } else {
+                    for (let i = 1; i < segs.length; i += 2) {
+                      const k = segs[i] as keyof typeof parts;
+                      if (k in parts) parts[k] = (segs[i + 1] ?? '').trim();
+                    }
+                  }
+
+                  const hanjaChars = ctx.hanjas.map(h => h.char);
+                  const partitions: Array<{
+                    key: keyof typeof parts;
+                    label: string;
+                    visual: React.ReactNode | null;
+                  }> = [
+                    {
+                      key: 'axis_eum',
+                      label: '음령오행',
+                      visual: <EumRyeongVisual chars={ctx.chars} elements={ctx.elements} yongSinEl={ctx.yongSinEl} giSinEl={ctx.giSinEl} />,
+                    },
+                    {
+                      key: 'axis_jawon',
+                      label: '자원오행',
+                      visual: isHanja ? <JaWonVisual hanjas={ctx.hanjas} /> : null,
+                    },
+                    {
+                      key: 'axis_suri',
+                      label: '수리오행',
+                      visual: isHanja ? <SuriElementVisual chars={hanjaChars} sounds={ctx.sounds} yongSinEl={ctx.yongSinEl} giSinEl={ctx.giSinEl} /> : null,
+                    },
+                    {
+                      key: 'axis_81',
+                      label: '81수리 4격',
+                      visual: isHanja ? <NumerologyVisual chars={hanjaChars} sounds={ctx.sounds} yongSinEl={ctx.yongSinEl} giSinEl={ctx.giSinEl} /> : null,
+                    },
+                  ];
+
+                  return (
+                    <div className="space-y-5">
+                      {partitions.map((p) => {
+                        const text = parts[p.key];
+                        if (!text && !p.visual) return null;
+                        return (
+                          <div key={p.key}>
+                            {/* 파티션 라벨 */}
+                            <div
+                              className="text-[15px] font-bold mb-2 pl-0.5"
+                              style={{ color: 'var(--text-primary)', fontFamily: 'var(--font-title)' }}
+                            >
+                              {p.label}
+                            </div>
+                            {/* 시각 카드 (있을 때) */}
+                            {p.visual}
+                            {/* 본문 단락 */}
+                            {text && (
+                              <div className="text-[17px] text-text-secondary leading-[1.85] tracking-[-0.005em] space-y-3">
+                                {text.split(/\n\n+/).map((para, pi) => {
+                                  const trimmed = para.trim();
+                                  if (!trimmed) return null;
+                                  return <p key={pi} className="whitespace-pre-line">{trimmed}</p>;
+                                })}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  );
+                })()
+              ) : (
+                /* 일반 섹션 — 정통사주(SajuResultPage:641)·실시간 운세(TodayFortunePage:1126) 동일 패턴.
+                   단락 \n\n split + <p whitespace-pre-line>. wordBreak 미지정(default normal). */
+                <div className="text-[17px] text-text-secondary leading-[1.85] tracking-[-0.005em] space-y-3">
+                  {(() => {
+                    const sourceText = (category === 'name'
+                      && (key === 'preserve' || key === 'rename'))
+                      ? renderBody : bodyText;
+                    return sourceText.split(/\n\n+/).map((para, pi) => {
+                      const trimmed = para.trim();
+                      if (!trimmed) return null;
+                      return (
+                        <p key={pi} className="whitespace-pre-line">{trimmed}</p>
+                      );
+                    });
+                  })()}
+                </div>
+              )}
             </SectionCollapsible>
           );
         })}
