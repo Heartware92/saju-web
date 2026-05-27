@@ -154,52 +154,23 @@ function ColorSwatch({ name, css }: { name: string; css: string }) {
   );
 }
 
-/** 단일 나침반 SVG - LuckyVisualCard 와 동일 스펙. */
-function CompassSVG({ direction }: { direction: string }) {
-  const deg = DIRECTION_DEG[direction] ?? null;
-  // 등록되지 않은 방향 또는 '중앙' → 회색 디스크 + 라벨만
-  if (deg === null || deg === -1) {
-    return (
-      <div className="flex flex-col items-center gap-1">
-        <div className="w-[64px] h-[64px] rounded-full border border-white/20 flex items-center justify-center bg-white/5">
-          <span className="text-[14px] font-bold text-text-secondary text-center px-1 break-keep" style={{ fontFamily: 'var(--font-title)' }}>
-            {direction || '중앙'}
-          </span>
-        </div>
-      </div>
-    );
-  }
-  const labels = [
-    { text: '북', x: 32, y: 9 }, { text: '동', x: 57, y: 34 },
-    { text: '남', x: 32, y: 59 }, { text: '서', x: 7, y: 34 },
-  ];
-  return (
-    <div className="flex flex-col items-center gap-1">
-      <svg width="64" height="64" viewBox="0 0 64 64">
-        <circle cx="32" cy="32" r="30" fill="rgba(255,255,255,0.04)" stroke="rgba(255,255,255,0.15)" strokeWidth="1" />
-        <line x1="32" y1="4" x2="32" y2="60" stroke="rgba(255,255,255,0.08)" strokeWidth="1" />
-        <line x1="4" y1="32" x2="60" y2="32" stroke="rgba(255,255,255,0.08)" strokeWidth="1" />
-        {labels.map(l => (
-          <text key={l.text} x={l.x} y={l.y} textAnchor="middle" dominantBaseline="middle"
-            fontSize="8" fill="rgba(255,255,255,0.35)" fontFamily="var(--font-sans)">{l.text}</text>
-        ))}
-        <g transform={`rotate(${deg}, 32, 32)`}>
-          <polygon points="32,6 29,32 35,32" fill="var(--color-cta, #8B6914)" opacity="0.9" />
-          <polygon points="32,58 29,32 35,32" fill="rgba(255,255,255,0.18)" />
-        </g>
-        <circle cx="32" cy="32" r="3" fill="white" opacity="0.7" />
-      </svg>
-      <span className="text-[12px] text-text-tertiary whitespace-nowrap">{direction}</span>
-    </div>
-  );
-}
-
-/** 다중 방향이면 나침반 N개 가로 정렬 */
-function CompassGroup({ directions }: { directions: string[] }) {
+/** 방향 칩 — 단순 텍스트 칩 (CompassSVG는 모바일 dark theme 에서 안 보이는 사고 + 여백 큼) */
+function CompassGroup({ directions, tone = 'good' }: { directions: string[]; tone?: 'good' | 'bad' }) {
   if (directions.length === 0) return null;
+  const color = tone === 'good' ? '#86EFAC' : '#F87171';
+  const bg = tone === 'good' ? 'rgba(134,239,172,0.10)' : 'rgba(248,113,113,0.10)';
+  const border = tone === 'good' ? 'rgba(134,239,172,0.35)' : 'rgba(248,113,113,0.35)';
   return (
-    <div className="flex flex-wrap items-start justify-center gap-x-4 gap-y-3">
-      {directions.map((d, i) => <CompassSVG key={`${d}-${i}`} direction={d} />)}
+    <div className="flex flex-wrap gap-2">
+      {directions.map((d, i) => (
+        <span
+          key={`${d}-${i}`}
+          className="px-3 py-1.5 rounded-md text-[15px] font-bold border"
+          style={{ color, background: bg, borderColor: border, fontFamily: 'var(--font-title)' }}
+        >
+          {d}
+        </span>
+      ))}
     </div>
   );
 }
@@ -473,21 +444,26 @@ function AdviceCard({ advice }: { advice: { body: string; items: DreamAdviceItem
 
   return (
     <div className="flex flex-col gap-3">
-      {/* 1) 나침반들 — 좌측 정렬 라벨 (LabelValueCard·ChipWrapCard와 일관) */}
+      {/* 1) 길한 방향 — 라벨 좌·칩 우 한 줄 가로 정렬 */}
       {directions.length > 0 && (
-        <div className="rounded-xl p-3 bg-white/5 border border-white/10">
-          <div className="text-[13px] text-text-tertiary mb-2">길한 방향</div>
-          <CompassGroup directions={directions} />
+        <div className="rounded-xl px-3 py-2.5 bg-white/5 border border-white/10 flex items-center gap-3">
+          <div className="text-[13px] text-text-tertiary flex-shrink-0">길한 방향</div>
+          <div className="flex-1 flex justify-end">
+            <CompassGroup directions={directions} />
+          </div>
         </div>
       )}
 
-      {/* 2) 색상 스와치 — 좌측 정렬 라벨 통일 */}
+      {/* 2) 색상 스와치 — 라벨 좌·스와치 우 한 줄 가로 정렬 (여백 압축) */}
       {colors.length > 0 && (
-        <div className="rounded-xl p-3 bg-white/5 border border-white/10">
-          <div className="text-[13px] text-text-tertiary mb-2">행운 색상</div>
-          <div className="flex flex-wrap gap-4">
+        <div className="rounded-xl px-3 py-2.5 bg-white/5 border border-white/10 flex items-center gap-3">
+          <div className="text-[13px] text-text-tertiary flex-shrink-0">행운 색상</div>
+          <div className="flex flex-wrap gap-2 flex-1 justify-end">
             {colors.slice(0, 4).map((c, i) => (
-              <ColorSwatch key={`${c.name}-${i}`} name={c.name} css={c.css} />
+              <div key={`${c.name}-${i}`} className="flex items-center gap-1.5">
+                <div className="w-6 h-6 rounded-md border border-white/15" style={{ background: c.css }} />
+                <span className="text-[13px] text-text-secondary">{c.name}</span>
+              </div>
             ))}
           </div>
         </div>
@@ -545,25 +521,30 @@ function CautionBox({ caution }: { caution: { body: string; items: DreamAdviceIt
 
   return (
     <div className="flex flex-col gap-3">
-      {/* 1) 나침반들 — 좌측 정렬 라벨 */}
+      {/* 1) 조심할 방향 — 라벨 좌·칩 우 한 줄 가로 정렬 */}
       {directions.length > 0 && (
-        <div className="rounded-xl p-3 border" style={{
+        <div className="rounded-xl px-3 py-2.5 border flex items-center gap-3" style={{
           background: 'rgba(248,113,113,0.04)', borderColor: 'rgba(248,113,113,0.28)',
         }}>
-          <div className="text-[13px] text-text-tertiary mb-2">조심할 방향</div>
-          <CompassGroup directions={directions} />
+          <div className="text-[13px] text-text-tertiary flex-shrink-0">조심할 방향</div>
+          <div className="flex-1 flex justify-end">
+            <CompassGroup directions={directions} tone="bad" />
+          </div>
         </div>
       )}
 
-      {/* 2) 피해야 할 색 — 좌측 정렬 라벨 */}
+      {/* 2) 피해야 할 색 — 라벨 좌·스와치 우 한 줄 가로 정렬 (여백 압축) */}
       {colors.length > 0 && (
-        <div className="rounded-xl p-3 border" style={{
+        <div className="rounded-xl px-3 py-2.5 border flex items-center gap-3" style={{
           background: 'rgba(248,113,113,0.04)', borderColor: 'rgba(248,113,113,0.28)',
         }}>
-          <div className="text-[13px] text-text-tertiary mb-2">조심할 색</div>
-          <div className="flex flex-wrap gap-4">
+          <div className="text-[13px] text-text-tertiary flex-shrink-0">조심할 색</div>
+          <div className="flex flex-wrap gap-2 flex-1 justify-end">
             {colors.slice(0, 4).map((c, i) => (
-              <ColorSwatch key={`${c.name}-${i}`} name={c.name} css={c.css} />
+              <div key={`${c.name}-${i}`} className="flex items-center gap-1.5">
+                <div className="w-6 h-6 rounded-md border border-white/15" style={{ background: c.css }} />
+                <span className="text-[13px] text-text-secondary">{c.name}</span>
+              </div>
             ))}
           </div>
         </div>
