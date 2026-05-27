@@ -410,16 +410,16 @@ export default function MoreFortunePage({ category }: Props) {
     if (effectiveJobId) return;  // 가이드 4.10 — ?jobId 진입 시 cacheGate skip
     if (isLegacy) return;
     if (searchParams?.get('fresh') === '1') return;
+    // dream·name 은 입력값에 따라 결과가 완전히 달라지므로 archive 자동 복원 모달 띄우지 않음.
+    // 사용자가 보관함에서 직접 진입할 때만(isArchiveMode=true) archive 사용 — "다른 풀이 보기" 클릭 시
+    // 모달이 튀어나오던 사고 차단.
+    if (category === 'dream' || category === 'name') return;
 
-    // 카테고리가 saju 의존인 경우만 캐시 검사 (dream 은 텍스트 기반이라 별도)
-    if (saju && category !== 'dream') {
+    // 카테고리가 saju 의존인 경우만 캐시 검사 (dream/name 은 위에서 early return)
+    if (saju) {
       const sk = sajuKey(saju);
-      // name 등 입력 의존 카테고리는 입력값 미정 시 단순 sk 만으로도 시도
-      const guessKey = category === 'name' ? null : sk;
-      if (guessKey) {
-        const cached = useReportCacheStore.getState().getReport<string>(`more:${category}` as const, guessKey);
-        if (cached?.data) return; // silent — useEffect 303 가 setResult 처리
-      }
+      const cached = useReportCacheStore.getState().getReport<string>(`more:${category}` as const, sk);
+      if (cached?.data) return; // silent — useEffect 303 가 setResult 처리
     }
 
     let cancelled = false;

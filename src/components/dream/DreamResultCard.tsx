@@ -387,35 +387,49 @@ function SijinChart({ timing, timeBandId }: { timing: string; timeBandId?: strin
   return (
     <div className="flex flex-col gap-4">
       <div className="rounded-2xl p-4 bg-white/5 border border-white/10">
-        <div className="flex gap-1 items-end mb-2.5" style={{ height: 110 }}>
+        {/*
+          막대 — grid 12col + 직접 px 계산.
+          이전: motion height '%' 가 부모 height % 계산 실패해 모두 minHeight 12로 떨어지던 버그.
+          현재: 영험도별로 16/40/64/88/112px 명확히 분리.
+        */}
+        <div className="grid items-end mb-2" style={{
+          gridTemplateColumns: 'repeat(12, 1fr)', gap: 4, height: 112,
+        }}>
           {SIJIN_RULES.map((s, i) => {
             const isUser = i === userSijinIdx;
-            const heightPct = (s.weight / 5) * 100;
-            // 영험도별 색상 강화 — 1-2도 잘 보이도록 명도 ↑
-            const barColor = s.weight >= 4 ? '#FBBF24'           // 최고: 금색
-              : s.weight >= 3 ? '#A78BFA'                         // 중상: 보라
-              : s.weight >= 2 ? 'rgba(167,139,250,0.55)'         // 중: 연보라
-              : 'rgba(167,139,250,0.30)';                         // 하: 흐린보라 (이전 0.18에서 ↑)
+            const heightPx = 16 + (s.weight - 1) * 24;  // 1→16, 2→40, 3→64, 4→88, 5→112
+            const barColor = s.weight >= 4 ? '#FBBF24'
+              : s.weight >= 3 ? '#A78BFA'
+              : s.weight >= 2 ? 'rgba(167,139,250,0.60)'
+              : 'rgba(167,139,250,0.35)';
             return (
-              <div key={s.id} style={{ flex: 1 }} className="flex flex-col items-center gap-1.5">
-                <motion.div
-                  initial={{ height: 0 }}
-                  animate={{ height: `${heightPct}%` }}
-                  transition={{ duration: 0.6, delay: 0.05 * i, ease: 'easeOut' }}
-                  style={{
-                    width: '100%',
-                    minHeight: 12,  // 영험도 1이라도 최소 보이도록
-                    background: isUser ? 'linear-gradient(180deg, #FCE8B2, #FBBF24)' : barColor,
-                    borderRadius: '4px 4px 0 0',
-                    boxShadow: isUser ? '0 0 14px rgba(252,232,178,0.7)' : 'none',
-                  }}
-                />
-                <span className="text-[13px] leading-none" style={{
-                  fontWeight: isUser ? 800 : 600,
-                  color: isUser ? '#FCE8B2' : 'var(--text-secondary)',
-                  fontFamily: 'var(--font-title)',
-                }}>{s.label.charAt(0)}</span>
-              </div>
+              <motion.div
+                key={s.id}
+                initial={{ height: 0 }}
+                animate={{ height: heightPx }}
+                transition={{ duration: 0.6, delay: 0.05 * i, ease: 'easeOut' }}
+                style={{
+                  width: '100%',
+                  background: isUser ? 'linear-gradient(180deg, #FCE8B2, #FBBF24)' : barColor,
+                  borderRadius: '4px 4px 0 0',
+                  boxShadow: isUser ? '0 0 14px rgba(252,232,178,0.7)' : 'none',
+                }}
+              />
+            );
+          })}
+        </div>
+        {/* 라벨 행 — 별도 grid 12col 로 정확히 위 막대와 정렬 */}
+        <div className="grid mb-2.5" style={{
+          gridTemplateColumns: 'repeat(12, 1fr)', gap: 4,
+        }}>
+          {SIJIN_RULES.map((s, i) => {
+            const isUser = i === userSijinIdx;
+            return (
+              <span key={s.id} className="text-[13px] text-center leading-none" style={{
+                fontWeight: isUser ? 800 : 600,
+                color: isUser ? '#FCE8B2' : 'var(--text-secondary)',
+                fontFamily: 'var(--font-title)',
+              }}>{s.label.charAt(0)}</span>
             );
           })}
         </div>
