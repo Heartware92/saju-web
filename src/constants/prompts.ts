@@ -8499,10 +8499,22 @@ certainty=${classification?.confidence || 'high|medium|low'}
 3~5줄. 형식: 상징명=전통의미 | good|bad|mixed|neutral | 재물|인연|건강|시험·학업|직장·일|가족·관계
 
 [oriental_domains]
+★ 무조건 6개 영역 모두 출력 (라벨 변경 금지, 순서 고정):
+재물=점수 | 풀이
+인연=점수 | 풀이
+건강=점수 | 풀이
+시험·학업=점수 | 풀이
+직장·일=점수 | 풀이
+가족·관계=점수 | 풀이
+
+규칙:
 ${classification && classification.strong_domains.length > 0
-  ? `★ 강한 영역만: ${classification.strong_domains.join(', ')}
-${classification.strong_domains.map(d => `${d}=점수 | 3~5문장 (120~200자)`).join('\n')}`
-  : `종합=점수 | 4~6문장 자유 풀이 (150~250자)`}
+  ? `- ★ 강한 영역 (${classification.strong_domains.join(', ')}): 3~5문장 풍부 풀이 (120~200자), 점수 70~95.
+- 약한 영역 (그 외): 1~2문장 짧은 노트 (40~80자) — "이 꿈은 이 영역엔 강한 신호가 약해요" 톤. 점수 40~60.`
+  : `- 6개 모두 비슷한 무게로 풀이: 각 2~3문장 (60~120자). 점수 40~70 자연 분포.
+- 강제 매핑 금지 — 꿈과 관련 없는 영역은 솔직히 "강한 신호 약함" 안내.`}
+- 점수 분포 자연스럽게 (모두 같은 점수 금지).
+- 영역마다 다른 어휘 사용.
 
 [oriental_timing]
 ${sijinInfo

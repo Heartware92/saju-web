@@ -4,7 +4,7 @@
  * 꿈해몽 결과 카드 V4 — 가로 2탭 (동양적 풀이 / 서양적 풀이) + 11섹션
  *
  * 본문 스타일은 다른 운세풀이 (AdviceCard / LuckyVisualCard / SajuResultPage) 와 완전 일치:
- *   - 본문 텍스트: `text-[17px] text-text-secondary leading-[1.85] tracking-[-0.005em]`
+ *   - 본문 텍스트: `text-[16px] text-text-secondary leading-[1.75] tracking-[-0.005em]`
  *   - 카드 배경: `bg-white/5 border border-white/10`
  *   - 라벨: `text-[13px] text-text-tertiary` + 값: `text-[16px] text-text-primary font-semibold`
  *   - 칩: `text-[14px] px-2.5 py-1 rounded-md bg-white/8 border border-white/10`
@@ -101,7 +101,7 @@ function BodyParagraphs({ text }: { text: string; boxed?: boolean }) {
   return (
     <div className="flex flex-col gap-3">
       {paras.map((p, i) => (
-        <p key={i} className="text-[17px] text-text-secondary leading-[1.85] tracking-[-0.005em] whitespace-pre-line break-keep">
+        <p key={i} className="text-[16px] text-text-secondary leading-[1.75] tracking-[-0.005em] whitespace-pre-line break-keep">
           {p}
         </p>
       ))}
@@ -475,7 +475,7 @@ function AdviceCard({ advice }: { advice: { body: string; items: DreamAdviceItem
     <div className="flex flex-col gap-3">
       {/* 1) 나침반들 — 방향 N개 각자 표시 (LuckyVisualCard 단일 나침반이 아닌 다중 표시) */}
       {directions.length > 0 && (
-        <div className="rounded-2xl py-4 px-3 bg-white/5 border border-white/10">
+        <div className="rounded-xl p-3 bg-white/5 border border-white/10">
           <div className="text-[12px] text-text-tertiary text-center mb-3">길한 방향</div>
           <CompassGroup directions={directions} />
         </div>
@@ -483,7 +483,7 @@ function AdviceCard({ advice }: { advice: { body: string; items: DreamAdviceItem
 
       {/* 2) 색상 스와치 — 별도 카드 (나침반과 row 합치지 않음, 모바일 가독성) */}
       {colors.length > 0 && (
-        <div className="rounded-2xl p-3 bg-white/5 border border-white/10">
+        <div className="rounded-xl p-3 bg-white/5 border border-white/10">
           <div className="text-[12px] text-text-tertiary text-center mb-3">행운 색상</div>
           <div className="flex flex-wrap justify-center gap-4">
             {colors.slice(0, 4).map((c, i) => (
@@ -542,7 +542,7 @@ function CautionBox({ caution }: { caution: { body: string; items: DreamAdviceIt
     <div className="flex flex-col gap-3">
       {/* 1) 나침반들 — 피해야 할 방향 N개 각자 표시 */}
       {directions.length > 0 && (
-        <div className="rounded-2xl py-4 px-3 border" style={{
+        <div className="rounded-xl p-3 border" style={{
           background: 'rgba(248,113,113,0.04)', borderColor: 'rgba(248,113,113,0.28)',
         }}>
           <div className="text-[12px] text-text-tertiary text-center mb-3">조심할 방향</div>
@@ -552,7 +552,7 @@ function CautionBox({ caution }: { caution: { body: string; items: DreamAdviceIt
 
       {/* 2) 피해야 할 색 — 별도 카드 */}
       {colors.length > 0 && (
-        <div className="rounded-2xl p-3 border" style={{
+        <div className="rounded-xl p-3 border" style={{
           background: 'rgba(248,113,113,0.04)', borderColor: 'rgba(248,113,113,0.28)',
         }}>
           <div className="text-[12px] text-text-tertiary text-center mb-3">조심할 색</div>
