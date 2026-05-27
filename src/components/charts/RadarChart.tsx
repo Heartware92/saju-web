@@ -14,6 +14,10 @@ interface RadarChartProps {
   fillColor?: string;
   strokeColor?: string;
   className?: string;
+  /** 라벨(영역명) 폰트 크기 — 기본 15 */
+  labelFontSize?: number;
+  /** 점수 폰트 크기 — 기본 17 */
+  scoreFontSize?: number;
 }
 
 function polarToXY(cx: number, cy: number, r: number, angleDeg: number) {
@@ -34,11 +38,14 @@ export function RadarChart({
   fillColor = 'rgba(139,92,246,0.25)',
   strokeColor = 'rgba(139,92,246,0.8)',
   className = '',
+  labelFontSize = 15,
+  scoreFontSize = 17,
 }: RadarChartProps) {
   const n = domains.length;
   if (n < 3) return null;
 
-  const pad = 62;
+  // 큰 폰트일 때 라벨이 차트 영역과 겹치지 않도록 pad와 labelR을 폰트 기준으로 조정
+  const pad = Math.max(62, labelFontSize * 4.5);
   const cx = pad + size / 2;
   const cy = pad + size / 2;
   const maxR = size * 0.32;
@@ -111,22 +118,26 @@ export function RadarChart({
         {domains.map((d, i) => {
           const { x, y } = polarToXY(cx, cy, labelR, (360 / n) * i);
           const anchor = x < cx - 4 ? 'end' : x > cx + 4 ? 'start' : 'middle';
-          const dy = y < cy - 10 ? -2 : y > cy + 10 ? 12 : 4;
+          // 폰트가 커지면 위쪽 라벨 안전 거리 확보, 아래쪽도 정렬 유지
+          const topOffset = -Math.round(labelFontSize * 0.3);
+          const bottomOffset = Math.round(labelFontSize * 0.8);
+          const dy = y < cy - 10 ? topOffset : y > cy + 10 ? bottomOffset : Math.round(labelFontSize * 0.3);
+          const scoreDy = Math.round(labelFontSize * 1.25);
           return (
             <g key={`label-${i}`}>
               <text
                 x={x} y={y + dy}
                 textAnchor={anchor}
-                fontSize={15}
+                fontSize={labelFontSize}
                 fontWeight={600}
                 fill="rgba(255,255,255,0.85)"
               >
                 {d.label}
               </text>
               <text
-                x={x} y={y + dy + 19}
+                x={x} y={y + dy + scoreDy}
                 textAnchor={anchor}
-                fontSize={17}
+                fontSize={scoreFontSize}
                 fontWeight={800}
                 fill={d.color || strokeColor}
               >

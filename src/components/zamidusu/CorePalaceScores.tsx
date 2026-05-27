@@ -53,12 +53,14 @@ export function CorePalaceScores({ cores, overall }: CorePalaceScoresProps) {
           alignItems: 'stretch',
         }}
       >
-        <div style={{ position: 'relative', alignSelf: 'center', width: '100%', maxWidth: 280 }}>
+        <div style={{ position: 'relative', alignSelf: 'center', width: '100%', maxWidth: 560 }}>
           <RadarChart
             domains={domains}
-            size={240}
+            size={460}
             fillColor="rgba(167,139,250,0.22)"
             strokeColor="rgba(167,139,250,0.85)"
+            labelFontSize={28}
+            scoreFontSize={32}
           />
           <div
             style={{
@@ -70,11 +72,11 @@ export function CorePalaceScores({ cores, overall }: CorePalaceScoresProps) {
               pointerEvents: 'none',
             }}
           >
-            <div style={{ fontSize: 11, color: 'var(--text-tertiary)', fontWeight: 600, letterSpacing: 1 }}>종합</div>
-            <div style={{ fontSize: 26, fontWeight: 800, color: overallColor, fontFamily: 'var(--font-serif)', lineHeight: 1.2 }}>
+            <div style={{ fontSize: 14, color: 'var(--text-tertiary)', fontWeight: 600, letterSpacing: 1 }}>종합</div>
+            <div style={{ fontSize: 48, fontWeight: 800, color: overallColor, fontFamily: 'var(--font-serif)', lineHeight: 1.2 }}>
               {overall}
             </div>
-            <div style={{ fontSize: 11, color: overallColor, fontWeight: 700 }}>{overallGrade}</div>
+            <div style={{ fontSize: 14, color: overallColor, fontWeight: 700 }}>{overallGrade}</div>
           </div>
         </div>
 
