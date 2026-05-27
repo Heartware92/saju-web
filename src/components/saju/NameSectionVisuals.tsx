@@ -837,8 +837,11 @@ export function NumerologyVisual({
               <span className="text-[10px] text-text-tertiary mt-0.5">{it.area}</span>
             </div>
 
-            {/* 우측: 등급 배지 + 한자 명칭 + 수리오행 칩 + 의미 */}
+            {/* 우측: 칩 줄 (등급·수리) + 명칭 줄 (한자·한글) + 의미 줄
+               ★ 좁은 박스에서 "한자명 (한글)" 이 칩 옆에 같이 wrap 되면서 "(건창수)"
+                 같이 괄호만 떨어져 보이던 문제. 명칭을 칩 줄에서 분리해 별도 줄로 둠. */}
             <div className="flex-1 min-w-0">
+              {/* 첫째 줄 — 등급 칩 + 수리오행 칩 */}
               <div className="flex items-center gap-2 mb-1.5 flex-wrap">
                 <span
                   className="text-[12px] font-bold px-2 py-0.5 rounded-md"
@@ -853,7 +856,7 @@ export function NumerologyVisual({
                   const isGi = elKor === giSinEl;
                   return (
                     <span
-                      className="text-[11px] font-bold px-1.5 py-0.5 rounded-md inline-flex items-center gap-1"
+                      className="text-[11px] font-bold px-1.5 py-0.5 rounded-md inline-flex items-center gap-1 whitespace-nowrap"
                       style={{
                         background: ELEMENT_BG[elKor] ?? 'rgba(255,255,255,0.04)',
                         color: elColor,
@@ -867,21 +870,25 @@ export function NumerologyVisual({
                     </span>
                   );
                 })()}
+              </div>
+              {/* 둘째 줄 — 한자명 + 한글 풀이 (좁은 박스에서도 함께 wrap 자연스럽게) */}
+              <div className="mb-1.5 leading-snug">
                 <span
-                  className="text-[14px] font-bold"
+                  className="text-[15px] font-bold mr-1.5"
                   style={{ color: 'var(--text-primary)', fontFamily: 'var(--font-title)' }}
                 >
                   {it.data.entry.name}
                 </span>
                 {SURI_NAME_KOREAN[it.data.entry.name] && (
                   <span
-                    className="text-[12px] text-text-tertiary"
+                    className="text-[12px] text-text-tertiary whitespace-nowrap"
                     style={{ fontFamily: 'var(--font-body)', letterSpacing: '-0.005em' }}
                   >
                     ({SURI_NAME_KOREAN[it.data.entry.name]})
                   </span>
                 )}
               </div>
+              {/* 셋째 줄 — 의미 본문 */}
               <p
                 className="text-[14px] text-text-secondary leading-[1.7] tracking-[-0.005em]"
                 style={{ fontFamily: 'var(--font-body)' }}
@@ -904,32 +911,35 @@ export function AdviceVisual({ bullets }: { bullets: string[] }): JSX.Element | 
   if (bullets.length === 0) return null;
   return (
     <div className="mb-2">
-      <VisualCaption
-        title="실천 가이드"
-        desc="본문에서 추출한 실천 항목입니다."
-      />
-    <div className="space-y-2">
-      {bullets.map((b, i) => (
-        <div
-          key={i}
-          className="rounded-xl p-4 bg-white/[0.04] border border-white/10"
-        >
-          {/* 번호 칩 — 한 줄 단독 (상단). 본문은 그 아래 전체 너비로 흘려 들여쓰기 회피 */}
+      {/* 헤더만 표시 (desc 제거 — "본문에서 추출한 실천 항목입니다" 문구 빠짐) */}
+      <div
+        className="text-[16px] font-bold mb-3 pl-0.5"
+        style={{ color: 'var(--text-primary)', fontFamily: 'var(--font-title)', letterSpacing: '0.01em' }}
+      >
+        실천 가이드
+      </div>
+      <div className="space-y-2">
+        {bullets.map((b, i) => (
           <div
-            className="inline-flex items-center justify-center text-[13px] font-bold text-cta mb-2 px-2.5 py-0.5 rounded-md"
-            style={{ background: 'rgba(124,92,252,0.15)', border: '1px solid rgba(124,92,252,0.40)' }}
+            key={i}
+            className="rounded-xl p-4 bg-white/[0.04] border border-white/10"
           >
-            {i + 1}
+            {/* 번호 칩 — 한 줄 단독 (상단). 본문은 그 아래 전체 너비로 흘려 들여쓰기 회피 */}
+            <div
+              className="inline-flex items-center justify-center text-[13px] font-bold text-cta mb-2 px-2.5 py-0.5 rounded-md"
+              style={{ background: 'rgba(124,92,252,0.15)', border: '1px solid rgba(124,92,252,0.40)' }}
+            >
+              {i + 1}
+            </div>
+            <div
+              className="text-[17px] text-text-secondary leading-[1.75] tracking-[-0.005em]"
+              style={{ fontFamily: 'var(--font-body)' }}
+            >
+              {b}
+            </div>
           </div>
-          <div
-            className="text-[17px] text-text-secondary leading-[1.75] tracking-[-0.005em]"
-            style={{ fontFamily: 'var(--font-body)' }}
-          >
-            {b}
-          </div>
-        </div>
-      ))}
-    </div>
+        ))}
+      </div>
     </div>
   );
 }

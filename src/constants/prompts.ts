@@ -8031,7 +8031,7 @@ export const NAME_SECTION_LABELS: Record<NameSectionKey, string> = {
   summary:   '종합 평가',
   meaning:   '이름의 뜻',
   four_axis: '4축 진단 (음령·자원·수리·81수리)',
-  strength:  '살아나는 면 (이 이름의 강점)',
+  strength:  '이 이름의 강점',
   shadow:    '놓치기 쉬운 그늘 (약점·주의)',
   preserve:  '현 이름 살리는 법',
   rename:    '개명을 고려한다면',
