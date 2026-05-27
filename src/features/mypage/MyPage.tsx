@@ -17,6 +17,7 @@ import { orderDB, auth, supabase } from '@/services/supabase';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { CreditBalance } from '@/features/credit/components/CreditBalance';
+import { ChangePhoneModal } from '@/features/mypage/ChangePhoneModal';
 import type { Order, CreditTransaction } from '@/types/credit';
 
 type TabType = 'profile' | 'credits' | 'orders';
@@ -118,7 +119,12 @@ const ProfileTab: React.FC<{ user: any; onLogout: () => void }> = ({ user, onLog
   const router = useRouter();
   const [showPwModal, setShowPwModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [showPhoneModal, setShowPhoneModal] = useState(false);
+  // user_metadata.phone 은 supabase 가 갱신해도 useUserStore 캐시가 안 바뀔 수 있어
+  // 변경 직후 화면 즉시 반영을 위해 로컬 오버라이드 보관
+  const [phoneOverride, setPhoneOverride] = useState<string | null>(null);
   const isSocialLogin = user?.app_metadata?.provider && user.app_metadata.provider !== 'email';
+  const phone = phoneOverride ?? (user?.user_metadata?.phone as string | undefined) ?? null;
 
   return (
     <>
@@ -140,11 +146,20 @@ const ProfileTab: React.FC<{ user: any; onLogout: () => void }> = ({ user, onLog
 
           <div className="flex items-center justify-between py-3 border-b border-[var(--border-subtle)]">
             <span className="text-text-secondary text-sm">휴대폰 번호</span>
-            <span className="font-medium text-text-primary text-sm">
-              {user?.user_metadata?.phone
-                ? user.user_metadata.phone.replace(/(\d{3})(\d{3,4})(\d{4})/, '$1-$2-$3')
-                : '-'}
-            </span>
+            <div className="flex items-center gap-2">
+              <span className="font-medium text-text-primary text-sm">
+                {phone
+                  ? phone.replace(/(\d{3})(\d{3,4})(\d{4})/, '$1-$2-$3')
+                  : '-'}
+              </span>
+              <button
+                type="button"
+                onClick={() => setShowPhoneModal(true)}
+                className="text-xs px-2.5 py-1 rounded-md border border-[var(--border-default)] text-cta hover:bg-space-elevated transition-colors"
+              >
+                변경
+              </button>
+            </div>
           </div>
 
           <div className="flex items-center justify-between py-3 border-b border-[var(--border-subtle)]">
@@ -181,6 +196,22 @@ const ProfileTab: React.FC<{ user: any; onLogout: () => void }> = ({ user, onLog
       </Card>
 
       {showPwModal && <ChangePasswordModal onClose={() => setShowPwModal(false)} />}
+      {showPhoneModal && (
+        <ChangePhoneModal
+          currentPhone={phone}
+          onClose={() => setShowPhoneModal(false)}
+          onChanged={(newPhone) => {
+            setPhoneOverride(newPhone);
+            setShowPhoneModal(false);
+            // 백그라운드에서 user 객체 동기화 (탭 이동 후에도 일관성 유지)
+            supabase.auth.getUser().then(({ data }) => {
+              if (data?.user) {
+                useUserStore.setState({ user: data.user });
+              }
+            }).catch(() => {});
+          }}
+        />
+      )}
       {showDeleteModal && (
         <DeleteAccountModal
           email={user?.email || ''}
