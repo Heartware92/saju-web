@@ -419,43 +419,43 @@ export default function ArchivePage() {
                               aria-hidden="true"
                             />
                             <div className="flex-1 min-w-0 pr-7">
-                              <div className="flex items-center gap-2 mb-1">
+                              <div className="flex items-center gap-2 mb-1.5">
                                 <h3
-                                  className="text-sm font-bold truncate flex-shrink-0"
+                                  className="text-base font-bold truncate flex-shrink-0"
                                   style={{ color }}
                                 >
                                   {categoryLabel}
                                 </h3>
                                 {subLabel && (
                                   <span
-                                    className="text-[10px] font-semibold px-1.5 py-[1px] rounded flex-shrink min-w-0 truncate"
+                                    className="text-[12px] font-semibold px-1.5 py-[2px] rounded flex-shrink min-w-0 truncate"
                                     style={{ color, backgroundColor: `${color}1f`, border: `1px solid ${color}55` }}
                                   >
                                     {subLabel}
                                   </span>
                                 )}
                                 {record.is_detailed && (
-                                  <span className="text-[10px] text-cta border border-cta/40 px-1.5 py-[1px] rounded flex-shrink-0">상세</span>
+                                  <span className="text-[11px] text-cta border border-cta/40 px-1.5 py-[2px] rounded flex-shrink-0">상세</span>
                                 )}
                               </div>
                               {/* 누구의 풀이인지 — profile_name (없으면 생일 fallback) */}
-                              <p className="text-[12px] text-text-secondary truncate mb-1">
+                              <p className="text-sm text-text-secondary truncate mb-1">
                                 {profileLabel}
                               </p>
                               {/* 백그라운드 잡 상태 배지 — 진행 중/실패만 노출 (done 은 표시 X) */}
                               {(record.status === 'pending' || record.status === 'processing') && (
-                                <span className="inline-flex items-center gap-1.5 text-[11px] text-amber-300 bg-amber-500/10 border border-amber-500/30 rounded px-1.5 py-0.5 mt-0.5">
+                                <span className="inline-flex items-center gap-1.5 text-[12px] text-amber-300 bg-amber-500/10 border border-amber-500/30 rounded px-1.5 py-0.5 mt-0.5">
                                   <span className="w-2.5 h-2.5 border-2 border-amber-300 border-t-transparent rounded-full animate-spin" />
                                   풀이 준비 중…
                                 </span>
                               )}
                               {record.status === 'failed' && (
-                                <span className="inline-flex items-center gap-1 text-[11px] text-red-300 bg-red-500/10 border border-red-500/30 rounded px-1.5 py-0.5 mt-0.5">
+                                <span className="inline-flex items-center gap-1 text-[12px] text-red-300 bg-red-500/10 border border-red-500/30 rounded px-1.5 py-0.5 mt-0.5">
                                   실패 · 자동 환불됨
                                 </span>
                               )}
                             </div>
-                            <span className="text-[10px] text-text-tertiary flex-shrink-0 whitespace-nowrap mt-1">
+                            <span className="text-[12px] text-text-tertiary flex-shrink-0 whitespace-nowrap mt-1">
                               {formatDate(record.created_at)}
                             </span>
                           </div>
@@ -516,14 +516,14 @@ export default function ArchivePage() {
                               aria-hidden="true"
                             />
                             <div className="flex-1 min-w-0 pr-7">
-                              <h3 className="text-sm font-bold text-[#a5b4fc] truncate mb-1">
+                              <h3 className="text-base font-bold text-[#a5b4fc] truncate mb-1.5">
                                 {spreadLabel}
                               </h3>
-                              <p className="text-[12px] text-text-secondary truncate">
+                              <p className="text-sm text-text-secondary truncate">
                                 {record.question || '질문 없음'}
                               </p>
                             </div>
-                            <span className="text-[10px] text-text-tertiary flex-shrink-0 whitespace-nowrap mt-1">
+                            <span className="text-[12px] text-text-tertiary flex-shrink-0 whitespace-nowrap mt-1">
                               {formatDate(record.created_at)}
                             </span>
                           </div>

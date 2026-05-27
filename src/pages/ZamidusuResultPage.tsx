@@ -46,6 +46,11 @@ import { StarChart } from '../components/zamidusu/StarChart';
 import { CorePalaceScores } from '../components/zamidusu/CorePalaceScores';
 import { MutagenCards } from '../components/zamidusu/MutagenCards';
 import { DaehanTimeline } from '../components/zamidusu/DaehanTimeline';
+import { CharacterCard } from '../components/zamidusu/CharacterCard';
+import { GekkukList } from '../components/zamidusu/GekkukBadge';
+import { MbtiAxesChart } from '../components/zamidusu/MbtiAxesChart';
+import { YearlyTimeline, MonthlyTimeline } from '../components/zamidusu/HoroscopeTimeline';
+import { getYearlyHoroscopes, getMonthlyHoroscopes } from '../engine/zamidusu/horoscope';
 import {
   calcCoreScores,
   calcMutagenPlacements,
@@ -719,6 +724,31 @@ export default function ZamidusuResultPage() {
     return chart ? buildZamidusuReading(chart) : null;
   }, [chart]);
 
+  // 유년(流年) 5개년 — 자운파 시기 예측 (올해부터 +4년)
+  const yearlyHoroscopes = useMemo(() => {
+    if (!birthInput || !chart) return [];
+    const currentYear = new Date().getFullYear();
+    const years = [currentYear, currentYear + 1, currentYear + 2, currentYear + 3, currentYear + 4];
+    try {
+      return getYearlyHoroscopes(birthInput, years);
+    } catch (e) {
+      console.error('[zamidusu] yearly horoscope failed', e);
+      return [];
+    }
+  }, [birthInput, chart]);
+
+  // 유월(流月) — 올해 12개월 — 즉각 위험 회피용
+  const currentYearForMonthly = new Date().getFullYear();
+  const monthlyHoroscopes = useMemo(() => {
+    if (!birthInput || !chart) return [];
+    try {
+      return getMonthlyHoroscopes(birthInput, currentYearForMonthly);
+    } catch (e) {
+      console.error('[zamidusu] monthly horoscope failed', e);
+      return [];
+    }
+  }, [birthInput, chart, currentYearForMonthly]);
+
   // ── 보관함 DB 확인 → AI 호출 (순차 실행) ──
   // 보관함 체크를 먼저 완료한 뒤, 기존 풀이가 없을 때만 AI 호출
   const aiStartedRef = useRef(false);
@@ -1152,6 +1182,83 @@ export default function ZamidusuResultPage() {
             onSelect={(idx) => setSelectedPalace(selectedPalace === idx ? null : idx)}
           />
         </div>
+
+        {/* 격국(格局) — 자동 판정된 명반의 격국 */}
+        {reading && reading.gekkuks.length > 0 && (
+          <div className={styles.section}>
+            <h2 style={{ textAlign: 'center', marginBottom: 14, fontSize: 18 }}>나의 격국</h2>
+            <GekkukList gekkuks={reading.gekkuks} />
+          </div>
+        )}
+
+        {/* 봉신연의 캐릭터 카드 — 14주성 의인화 */}
+        {reading && reading.characterCards.length > 0 && (
+          <div className={styles.section}>
+            <h2 style={{ textAlign: 'center', marginBottom: 14, fontSize: 18 }}>당신 안의 봉신연의 인물</h2>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              {reading.characterCards.map((cc) => (
+                <CharacterCard key={`${cc.palace}-${cc.starName}`} data={cc} />
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* MBTI식 4축 성향 정량 그래프 */}
+        <div className={styles.section}>
+          <MbtiAxesChart palaces={chart.palaces} />
+        </div>
+
+        {/* 유년(流年) 5개년 시기 예측 — 자운파 색채 */}
+        {yearlyHoroscopes.length > 0 && (
+          <div className={styles.section}>
+            <YearlyTimeline horoscopes={yearlyHoroscopes} />
+          </div>
+        )}
+
+        {/* 유월(流月) — 올해 12개월 시기 예측 — 즉각 위험 회피 */}
+        {monthlyHoroscopes.length > 0 && (
+          <div className={styles.section}>
+            <MonthlyTimeline year={currentYearForMonthly} horoscopes={monthlyHoroscopes} />
+          </div>
+        )}
+
+        {/* 영역별 모듈 (재물·직업·연애·건강·대인관계) — 청월당 7장 벤치마크 */}
+        {reading && reading.domainBundles.length > 0 && (
+          <div className={styles.section}>
+            <h2 style={{ textAlign: 'center', marginBottom: 14, fontSize: 18 }}>영역별 인사이트</h2>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              {reading.domainBundles
+                .filter((b) => b.id !== 'overview' && b.id !== 'timing' && b.insights.length > 0)
+                .map((bundle) => (
+                  <div
+                    key={bundle.id}
+                    style={{
+                      padding: '16px 18px',
+                      borderRadius: 14,
+                      background: 'rgba(139, 92, 246, 0.10)',
+                      border: '1px solid rgba(139, 92, 246, 0.30)',
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 8 }}>
+                      <span style={{ fontSize: 16, fontWeight: 700, color: 'var(--text-primary)', fontFamily: 'var(--font-serif)' }}>
+                        {bundle.title}
+                      </span>
+                      <span style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>
+                        {bundle.subtitle}
+                      </span>
+                    </div>
+                    <ul style={{ margin: 0, paddingLeft: 16, display: 'flex', flexDirection: 'column', gap: 6 }}>
+                      {bundle.insights.map((ins, i) => (
+                        <li key={i} style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.6 }}>
+                          {ins}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                ))}
+            </div>
+          </div>
+        )}
 
         {/* 선택된 궁 상세 — 모달 오버레이 */}
         <AnimatePresence>

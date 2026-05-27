@@ -17,7 +17,7 @@
 
 import { motion } from 'framer-motion';
 import type { ZamidusuPalace } from '../../engine/zamidusu';
-import { BRANCH_GRID_POSITIONS } from '../../engine/zamidusu';
+import { PALACE_GRID_POSITIONS } from '../../engine/zamidusu';
 
 interface StarChartProps {
   palaces: ZamidusuPalace[];
@@ -64,7 +64,7 @@ function starColor(palace: ZamidusuPalace): string {
 
 export function StarChart({ palaces, soul, fiveElementsClass, selectedIndex, onSelect }: StarChartProps) {
   const palaceWithPos = palaces.map(p => {
-    const pos = BRANCH_GRID_POSITIONS[p.earthlyBranch];
+    const pos = PALACE_GRID_POSITIONS[p.name];
     if (!pos) return null;
     const { x, y } = gridToXY(pos.row, pos.col);
     return { palace: p, x, y };
@@ -194,7 +194,7 @@ export function StarChart({ palaces, soul, fiveElementsClass, selectedIndex, onS
                 {palace.heavenlyStem}{palace.earthlyBranch}
               </text>
 
-              {/* 주성 이름 (최대 2개) */}
+              {/* 주성 이름 (최대 2개) — brightness 첫 글자(묘·왕·득·이·평·불·함) + 사화 표기 */}
               {palace.majorStars.slice(0, 2).map((s, si) => (
                 <text
                   key={`${palace.index}-s-${si}`}
@@ -205,7 +205,11 @@ export function StarChart({ palaces, soul, fiveElementsClass, selectedIndex, onS
                   fontSize="14"
                   fontWeight="700"
                 >
-                  {s.name}{s.mutagen ? `·${s.mutagen.slice(0, 1)}` : ''}
+                  {s.name}
+                  {s.brightness ? (
+                    <tspan dx="2" fontSize="10" fillOpacity="0.7">·{s.brightness.charAt(0)}</tspan>
+                  ) : null}
+                  {s.mutagen ? `·${s.mutagen.charAt(0)}` : ''}
                 </text>
               ))}
             </g>
@@ -228,6 +232,13 @@ export function StarChart({ palaces, soul, fiveElementsClass, selectedIndex, onS
             <span className="inline-block w-4 h-4 rounded-full bg-[#6B7280] opacity-60" />
             공궁
           </span>
+        </div>
+        {/* 묘왕도(廟旺度) 색범례 — 별 강약 7단계 (강 → 약) */}
+        <div className="mt-3 flex flex-wrap justify-center gap-x-3 gap-y-1 text-[12px] text-text-tertiary">
+          <span><strong className="text-[#FBBF24]">묘</strong>·<strong className="text-[#FBBF24]">왕</strong> 강</span>
+          <span className="opacity-70">득·이</span>
+          <span className="opacity-50">평</span>
+          <span className="opacity-40">불·함 약</span>
         </div>
         <p className="text-[13px] text-text-secondary text-center mt-3">
           별을 눌러 자세히 볼 수 있어요

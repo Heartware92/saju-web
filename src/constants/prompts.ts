@@ -3106,6 +3106,7 @@ ${hasLove ? `★ 연애 상태(${loveLabel}) 반영 — 결혼·이별·만남·
  */
 import type { ZamidusuResult } from '../engine/zamidusu';
 import { collectKnowledge } from '../engine/zamidusu/knowledge';
+import { detectGekkuk } from '../engine/zamidusu/gekkuk';
 
 // 자미두수 결과 섹션 키 — 결과 페이지에서 파싱해 카드별 렌더
 // 12 섹션 (구 8 → 신 12): 명궁 영역을 주성/보조성/신궁 3개로 분리,
@@ -3168,6 +3169,22 @@ export const generateZamidusuPrompt = (z: ZamidusuResult): string => {
     return `- ${r.name}: ${r.domain} — ${r.focus}`;
   }).join('\n');
 
+  // 봉신연의 캐릭터 매칭 — 14주성 의인화 (별 본의를 인물 일화로 전달)
+  const characterDesc = knowledge.majorStars
+    .filter(({ meta }) => !!meta.fenshen)
+    .map(({ palace, meta }) =>
+      `- ${palace}의 ${meta.name}: 봉신연의 ${meta.fenshen.name}(${meta.fenshen.hanja}) — ${meta.fenshen.role}. ${meta.fenshen.anecdote} [정수: ${meta.fenshen.trait}]`
+    )
+    .join('\n') || '(캐릭터 매칭 데이터 없음)';
+
+  // 격국(格局) 자동 판정 — 14주성 조합 패턴
+  const gekkuks = detectGekkuk(z);
+  const gekkukDesc = gekkuks.length > 0
+    ? gekkuks.map((g) =>
+        `- ${g.name}(${g.hanja}) [${g.tier === 'top' ? '최상격' : g.tier === 'high' ? '상격' : g.tier === 'mid' ? '중격' : '특수격'}]: ${g.description} | 강점: ${g.positive} | 유의: ${g.caution}`
+      ).join('\n')
+    : '(특별한 격국 없음 — 표준 명반)';
+
   return `당신은 자미두수(紫微斗數) 전문가입니다. 아래 명반을 바탕으로 ${z.gender === '남' ? '한 남성' : '한 여성'}의 인생 별자리를 읽어줍니다.
 
 [의뢰인 명반 기본 정보]
@@ -3191,6 +3208,12 @@ ${minorDesc}
 
 ▣ 12궁 역할
 ${palaceRoleDesc}
+
+▣ 봉신연의(封神演義) 캐릭터 매칭 — 14주성 의인화 (별 본의를 인물 일화로 풀이)
+${characterDesc}
+
+▣ 격국(格局) 자동 판정 — 14주성 조합 패턴
+${gekkukDesc}
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 [자미두수 전용 은유 — 반드시 활용]
@@ -3233,6 +3256,8 @@ ${METAPHOR_SHORT_GUIDE}
 7) **단락 나눔 필수**: 각 섹션 본문은 의미 단위로 2~4개의 단락으로 나누어 쓰세요. 단락 사이에는 반드시 빈 줄 한 줄(연속 줄바꿈 두 번)을 넣으세요. 한 단락은 2~4문장이 적당합니다. 길게 한 덩어리로 쓰지 말 것.
 8) **출력 형식**: 아래 12개 섹션을 [key] 델리미터로 구분. 각 섹션은 "[key]" 줄 뒤 빈 줄 없이 바로 본문 시작. 마커 이전 텍스트는 없어야 함.
 9) **별 본의는 위 지식베이스 그대로 활용**. 임의 창작·변형 금지. 사용자 인생 상황에 어떻게 적용되는지만 추가.
+10) **봉신연의 캐릭터 활용**: [main_star]·[helper_stars] 섹션에서 명궁 주성에 매칭된 봉신연의 인물 일화를 1-2문장으로 자연스럽게 녹여 사용자 몰입을 높이세요. 인물 일화는 위 ▣ 봉신연의 캐릭터 매칭에 적힌 anecdote 그대로 활용 (창작·변형 금지).
+11) **격국 명시**: 위 ▣ 격국 자동 판정에 격국이 있으면 [overview] 첫 단락에 격국 이름(한자 병기) + 한 줄 설명을 반드시 포함. "특별한 격국 없음" 이면 명시 안 해도 됨.
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 [섹션 지침 — 12 섹션 / 총 5700~7400자]

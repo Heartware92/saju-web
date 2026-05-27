@@ -11,7 +11,10 @@ import {
   MINOR_STARS_META,
   MUTAGEN_META,
   PALACE_ROLE_META,
+  type FengShenCharacter,
+  type GekkukMeta,
 } from './knowledge';
+import { detectGekkuk } from './gekkuk';
 
 export interface StarDetail {
   name: string;
@@ -31,18 +34,67 @@ export interface PalaceReading {
   summary: string;         // 한 문장 요약
 }
 
+/**
+ * 봉신연의 캐릭터 카드 — 명궁/주요 궁 주성의 의인화 정보.
+ * UI에서 캐릭터 서사 카드로 노출.
+ */
+export interface CharacterCard {
+  palace: string;
+  starName: string;
+  character: FengShenCharacter;
+}
+
+/**
+ * 영역별 풀이 묶음 — 청월당 7장 구조 벤치마크.
+ * 12궁을 사용자 의사결정 영역(재물·직업·연애·건강·대인관계)으로
+ * 재포장해서 사용자가 자기 관심 영역만 빠르게 볼 수 있도록 한다.
+ */
+export interface DomainBundle {
+  /** 영역 식별자 */
+  id: 'overview' | 'wealth' | 'career' | 'love' | 'health' | 'relations' | 'timing';
+  /** 영역 표시 라벨 */
+  title: string;
+  /** 영역 부제/한 줄 설명 */
+  subtitle: string;
+  /** 영역에 포함되는 12궁 풀이들 (timing 영역은 비어있음) */
+  palaces: PalaceReading[];
+  /** 영역에서 자동 도출된 인사이트 (사화·살성·회조 기반) */
+  insights: string[];
+}
+
 export interface ZamidusuReading {
   profileHeadline: string;           // "제왕의 상 · 자미 + 좌보 보좌"
   coreStars: StarDetail[];           // 명궁의 주성
   helperStars: { name: string; effect: string }[];  // 명궁의 6길성
   mutagens: { type: string; star: string; palace: string; effect: string; positive: string; caution: string }[];
+  /** 격국 — detectGekkuk으로 자동 판정된 명반의 격국 (여러 개 가능) */
+  gekkuks: GekkukMeta[];
+  /** 봉신연의 캐릭터 카드 — 명궁 주성 위주, 영역별 주요 궁 주성도 포함 */
+  characterCards: CharacterCard[];
   domainSummaries: { palace: string; text: string }[]; // 주요 궁 요약
+  /** 영역별 풀이 묶음 — 청월당식 7장 구조 (overview·wealth·career·love·health·relations·timing) */
+  domainBundles: DomainBundle[];
   advice: string[];
   warnings: string[];
   palaceReadings: PalaceReading[];
 }
 
 const KEY_PALACES = ['명궁', '재백궁', '관록궁', '부처궁', '천이궁', '복덕궁'];
+
+/**
+ * 영역(domain) → 12궁 매핑.
+ * 청월당 7장 구조와 동일. 자녀궁은 직업의 부하·후배·창작물,
+ * 전택궁은 재물의 자산·부동산으로 현대적 재해석.
+ */
+const DOMAIN_PALACE_MAP: Record<DomainBundle['id'], { title: string; subtitle: string; palaces: string[] }> = {
+  overview: { title: '명반 분석', subtitle: '나의 본질·격국·14주성 캐릭터', palaces: ['명궁'] },
+  wealth:   { title: '재물운',   subtitle: '돈을 다루는 성향과 자산 흐름',  palaces: ['재백궁', '전택궁'] },
+  career:   { title: '직업운',   subtitle: '일하는 방식과 커리어 방향',     palaces: ['관록궁', '자녀궁'] },
+  love:     { title: '연애운',   subtitle: '배우자·연인과의 관계',           palaces: ['부처궁'] },
+  health:   { title: '건강운',   subtitle: '몸·마음의 강약과 위험 시기',    palaces: ['복덕궁', '질액궁'] },
+  relations:{ title: '대인관계운', subtitle: '가족·친구·동료와의 관계',     palaces: ['형제궁', '천이궁', '노복궁', '부모궁'] },
+  timing:   { title: '운흐름',    subtitle: '대한·유년·유월의 시기 예측',  palaces: [] },
+};
 
 function starsToDetails(stars: ZamidusuPalace['majorStars']): StarDetail[] {
   return stars
@@ -164,12 +216,79 @@ export function buildZamidusuReading(chart: ZamidusuResult): ZamidusuReading {
   if (warnings.length === 0) warnings.push('특별한 사화기 위협 없음 — 평소의 리듬 유지');
   if (advice.length === 0) advice.push('균형 잡힌 명반 — 여러 분야에서 무난한 성취');
 
+  // 격국 자동 판정
+  const gekkuks = detectGekkuk(chart);
+
+  // 봉신연의 캐릭터 카드 — 명궁 주성 + 신궁(다르면) 주성 + 영역별 핵심 궁 주성
+  const characterCards: CharacterCard[] = [];
+  const addedKeys = new Set<string>(); // 중복 방지 (같은 별이 여러 궁에 등장 시 한 번만)
+  const collectCardsFromPalace = (palaceName: string) => {
+    const p = chart.palaces.find((x) => x.name === palaceName);
+    if (!p) return;
+    p.majorStars.forEach((s) => {
+      const meta = MAJOR_STARS_META[s.name];
+      if (!meta || !meta.fenshen) return;
+      if (addedKeys.has(s.name)) return;
+      addedKeys.add(s.name);
+      characterCards.push({ palace: palaceName, starName: s.name, character: meta.fenshen });
+    });
+  };
+  // 우선순위: 명궁 → 신궁(다른 궁이면) → 재백·관록·부처
+  collectCardsFromPalace('명궁');
+  const sinPalace = chart.palaces.find((p) => p.isBodyPalace);
+  if (sinPalace && sinPalace.name !== '명궁') collectCardsFromPalace(sinPalace.name);
+  ['재백궁', '관록궁', '부처궁'].forEach(collectCardsFromPalace);
+
+  // 영역별 풀이 묶음 — 청월당 7장 구조
+  const palaceReadingByName = new Map(palaceReadings.map((pr) => [pr.name, pr]));
+  const domainBundles: DomainBundle[] = (Object.entries(DOMAIN_PALACE_MAP) as [DomainBundle['id'], typeof DOMAIN_PALACE_MAP['overview']][])
+    .map(([id, conf]) => {
+      const palaces = conf.palaces
+        .map((name) => palaceReadingByName.get(name))
+        .filter((x): x is PalaceReading => !!x);
+
+      // 영역별 인사이트 — 해당 궁에 들어선 사화 + 살성 회조 자동 도출
+      const insights: string[] = [];
+      palaces.forEach((pr) => {
+        const muHits = mutagens.filter((m) => m.palace === pr.name);
+        muHits.forEach((m) => {
+          insights.push(`${pr.name}의 ${m.type}(${m.star}) — ${m.effect}`);
+        });
+        const sals = pr.minorStars.filter((s) => s.category === '4흉성');
+        if (sals.length > 0) {
+          insights.push(`${pr.name}에 살성 ${sals.map((s) => s.name).join('·')} — 변동·갈등 주의`);
+        }
+        const gils = pr.minorStars.filter((s) => s.category === '6길성');
+        if (gils.length >= 2) {
+          insights.push(`${pr.name}에 6길성 ${gils.slice(0, 3).map((s) => s.name).join('·')} 회조 — 귀인의 도움`);
+        }
+      });
+
+      // overview에는 격국 인사이트 추가
+      if (id === 'overview' && gekkuks.length > 0) {
+        gekkuks.slice(0, 2).forEach((g) => {
+          insights.push(`${g.name}(${g.hanja}) — ${g.description}`);
+        });
+      }
+
+      return {
+        id,
+        title: conf.title,
+        subtitle: conf.subtitle,
+        palaces,
+        insights,
+      };
+    });
+
   return {
     profileHeadline,
     coreStars,
     helperStars,
     mutagens,
+    gekkuks,
+    characterCards,
     domainSummaries,
+    domainBundles,
     advice,
     warnings,
     palaceReadings,
