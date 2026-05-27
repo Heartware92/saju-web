@@ -2181,9 +2181,18 @@ const ORIENTAL_CAUTION_KEYS = new Set([
 
 const DOMAIN_ORDER = ['재물', '인연', '건강', '시험·학업', '직장·일', '가족·관계'] as const;
 
+/**
+ * V4 마커 매칭 — LLM이 가끔 underscore를 빼거나 공백·하이픈으로 변형해서 출력하는 사고
+ * (예: [westernselfwork], [western self work], [western-self-work])를 모두 인식.
+ * key의 `_`를 `[_\s-]?`로 치환해 관대하게 매칭.
+ */
+function flexKeyPattern(key: string): string {
+  return key.replace(/_/g, '[_\\s-]?');
+}
 function extractV4Section(raw: string, key: string): string {
-  const others = V4_KEYS.filter(k => k !== key).join('|');
-  const re = new RegExp(`\\[${key}\\]\\s*([\\s\\S]*?)(?=\\[(?:${others})\\]|$)`);
+  const othersFlex = V4_KEYS.filter(k => k !== key).map(flexKeyPattern).join('|');
+  const keyFlex = flexKeyPattern(key);
+  const re = new RegExp(`\\[${keyFlex}\\]\\s*([\\s\\S]*?)(?=\\[(?:${othersFlex})\\]|$)`, 'i');
   const m = raw.match(re);
   return m ? m[1].trim() : '';
 }
@@ -2200,8 +2209,8 @@ function getKV(text: string, key: string): string {
  */
 export const parseDreamV4 = (raw: string): DreamV4Result | null => {
   if (!raw) return null;
-  // V4 마커가 하나도 없으면 legacy 응답
-  if (!raw.includes('[oriental_diagnosis]') && !raw.includes('[western_diagnosis]')) return null;
+  // V4 마커가 하나도 없으면 legacy 응답 — underscore 변형도 인식 (oriental_diagnosis / orientaldiagnosis 등)
+  if (!/\[oriental[_\s-]?diagnosis\]/i.test(raw) && !/\[western[_\s-]?diagnosis\]/i.test(raw)) return null;
 
   // ── 동양 ────────────────────────────────────────────
   const odBody = extractV4Section(raw, 'oriental_diagnosis');

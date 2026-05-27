@@ -878,22 +878,24 @@ export default function MoreFortunePage({ category }: Props) {
         animate={{ opacity: 1, y: 0 }}
         className={styles.content}
       >
-        {/* 소개 카드 */}
-        <div
-          className={styles.section}
-          style={{
-            background: 'linear-gradient(135deg, rgba(139,92,246,0.10), rgba(236,72,153,0.06))',
-            border: '1px solid rgba(139,92,246,0.25)',
-          }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
-            <span style={{ display: 'inline-block', width: 4, height: 22, borderRadius: 2, background: 'var(--cta-primary)' }} />
-            <h2 style={{ margin: 0, fontSize: 18, fontWeight: 700 }}>{cfg.title}</h2>
+        {/* 소개 카드 — 입력 화면에서만 노출. 결과가 나온 뒤에는 카테고리 안내가 불필요. */}
+        {!result && (
+          <div
+            className={styles.section}
+            style={{
+              background: 'linear-gradient(135deg, rgba(139,92,246,0.10), rgba(236,72,153,0.06))',
+              border: '1px solid rgba(139,92,246,0.25)',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+              <span style={{ display: 'inline-block', width: 4, height: 22, borderRadius: 2, background: 'var(--cta-primary)' }} />
+              <h2 style={{ margin: 0, fontSize: 18, fontWeight: 700 }}>{cfg.title}</h2>
+            </div>
+            <p style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.75, margin: 0 }}>
+              {cfg.longDesc}
+            </p>
           </div>
-          <p style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.75, margin: 0 }}>
-            {cfg.longDesc}
-          </p>
-        </div>
+        )}
 
         {/* 입력·버튼 영역 — 결과가 나오면 숨겨서 결과만 보이도록 (보관함 모드는 이 블록을 건너뜀) */}
         {!result && !isArchiveMode && (

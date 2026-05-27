@@ -3,25 +3,11 @@
 /**
  * 꿈해몽 결과 카드 V4 — 가로 2탭 (동양적 풀이 / 서양적 풀이) + 11섹션
  *
- * 동양 탭 (6 섹션):
- *   1. 어떤 꿈인가요   — 길흉 게이지 + 라벨 칩 + 근거
- *   2. 꿈 속 상징      — 상징 카드 그리드
- *   3. 다가올 일       — 6 도메인 막대
- *   4. 꿈꾼 때의 의미  — 시진 영험도 그래프 (시각 입력 시)
- *   5. 이렇게 해보세요 — 처방 본문 + "키:값" 그리드
- *   6. 조심할 점       — 좌측 띠 박스
- *
- * 서양 탭 (5 섹션):
- *   1. 이 꿈의 정체           — 임상 유형 배지 + 기능 가설
- *   2. 마음 깊은 곳의 신호    — Freud 표면↔잠재 대비
- *   3. 꿈 속 등장인물의 의미  — Jung archetype 카드
- *   4. 지금 삶과의 거울       — Continuity 메시지 박스
- *   5. 스스로 해볼 수 있는 작업 — Gestalt 1인칭 워크 / IRT 다시쓰기
- *
- * 디자인:
- *   - SectionCollapsible 의 cosmic burst 펼침 애니메이션 그대로 차용
- *   - 신년운세·정통사주의 폰트·색상·간격 토큰 동일시
- *   - 옛 record (legacy 6마커) 는 fallback으로 옛 카드 렌더링
+ * 본문 스타일은 다른 운세풀이 (AdviceCard / LuckyVisualCard / SajuResultPage) 와 완전 일치:
+ *   - 본문 텍스트: `text-[17px] text-text-secondary leading-[1.85] tracking-[-0.005em]`
+ *   - 카드 배경: `bg-white/5 border border-white/10`
+ *   - 라벨: `text-[13px] text-text-tertiary` + 값: `text-[16px] text-text-primary font-semibold`
+ *   - 칩: `text-[14px] px-2.5 py-1 rounded-md bg-white/8 border border-white/10`
  */
 
 import { motion, AnimatePresence } from 'framer-motion';
@@ -46,30 +32,167 @@ import type {
 } from '../../services/fortuneService';
 
 // ════════════════════════════════════════════════════════════════════
-// 색상 토큰 (신년운세 GRADE_COLOR 와 일치)
+// 색상 토큰
 // ════════════════════════════════════════════════════════════════════
 const POLARITY_COLOR: Record<DreamPolarityLabel, string> = {
-  '대길': '#34D399',
-  '길':   '#86EFAC',
-  '중길': '#FBBF24',
-  '평':   '#CBD5E1',
-  '중흉': '#FB923C',
-  '흉':   '#F87171',
-  '':     '#CBD5E1',
+  '대길': '#34D399', '길': '#86EFAC', '중길': '#FBBF24',
+  '평': '#CBD5E1', '중흉': '#FB923C', '흉': '#F87171', '': '#CBD5E1',
 };
-
 const SYM_POLARITY_COLOR: Record<DreamSymbolCardData['polarity'], string> = {
-  good:    '#34D399',
-  bad:     '#F87171',
-  mixed:   '#FBBF24',
-  neutral: '#CBD5E1',
+  good: '#34D399', bad: '#F87171', mixed: '#FBBF24', neutral: '#CBD5E1',
 };
 const SYM_POLARITY_LABEL: Record<DreamSymbolCardData['polarity'], string> = {
-  good:    '길',
-  bad:     '흉',
-  mixed:   '혼재',
-  neutral: '중립',
+  good: '길', bad: '흉', mixed: '혼재', neutral: '중립',
 };
+
+// LuckyVisualCard 와 동일 색상 매핑 — advice "색" 값 추출 시 사용
+const COLOR_CSS: Record<string, string> = {
+  '초록': '#22c55e', '연두': '#84cc16', '민트': '#10b981', '청록': '#14b8a6',
+  '빨강': '#ef4444', '주황': '#f97316', '핑크': '#ec4899', '붉은': '#ef4444',
+  '노랑': '#eab308', '황금': '#facc15', '금색': '#fbbf24', '황토': '#b45309', '갈색': '#92400e',
+  '베이지': '#d4a574', '흰색': '#f1f5f9', '하얀': '#f1f5f9', '화이트': '#f1f5f9',
+  '은색': '#94a3b8', '실버': '#94a3b8', '그레이': '#64748b', '회색': '#64748b',
+  '파랑': '#3b82f6', '하늘색': '#0ea5e9', '네이비': '#1e3a8a', '검정': '#1e293b', '블랙': '#1e293b',
+  '보라': '#8b5cf6', '자주': '#9333ea',
+};
+// 방향 → 나침반 각도 (북=0)
+const DIRECTION_DEG: Record<string, number> = {
+  '북': 0, '북동': 45, '동': 90, '남동': 135,
+  '남': 180, '남서': 225, '서': 270, '북서': 315,
+  '북쪽': 0, '북동쪽': 45, '동쪽': 90, '남동쪽': 135,
+  '남쪽': 180, '남서쪽': 225, '서쪽': 270, '북서쪽': 315,
+  '중앙': -1,
+};
+
+// "황금색, 갈색" → [{name, css}] 추출
+function parseColors(value: string): { name: string; css: string }[] {
+  return value
+    .split(/[,、，·\s/]+/)
+    .map(s => s.trim())
+    .filter(Boolean)
+    .slice(0, 4)
+    .map(name => {
+      const key = Object.keys(COLOR_CSS).find(k => name.includes(k));
+      return { name, css: key ? COLOR_CSS[key] : '#9ca3af' };
+    });
+}
+// "서쪽, 북서" → ['서쪽', '북서']
+function parseDirections(value: string): string[] {
+  return value.split(/[,、，·\s/]+/).map(s => s.trim()).filter(Boolean).slice(0, 3);
+}
+// 칩으로 풀어쓸 값 ("주변 사람들과 식사, 작은 선물 나누기" → [...])
+function parseChips(value: string): string[] {
+  return value.split(/[,、，·]+/).map(s => s.trim()).filter(Boolean).slice(0, 6);
+}
+
+// ════════════════════════════════════════════════════════════════════
+// 공통 작은 부품 — 다른 운세풀이와 동일 스펙
+// ════════════════════════════════════════════════════════════════════
+
+/** 본문 단락 — text-[17px] text-text-secondary leading-[1.85] tracking-[-0.005em] */
+function BodyParagraphs({ text }: { text: string }) {
+  const paras = text.split(/\n\n+/).map(p => p.trim()).filter(Boolean);
+  if (paras.length === 0) return null;
+  return (
+    <div className="flex flex-col gap-3">
+      {paras.map((p, i) => (
+        <p key={i} className="text-[17px] text-text-secondary leading-[1.85] tracking-[-0.005em] whitespace-pre-line break-keep">
+          {p}
+        </p>
+      ))}
+    </div>
+  );
+}
+
+/** 라벨-값 카드 — LuckyVisualCard 의 행운 숫자/시간대 카드와 동일 스펙 */
+function LabelValueCard({ label, value, big }: { label: string; value: string; big?: boolean }) {
+  return (
+    <div className="rounded-xl p-3 bg-white/5 border border-white/10">
+      <div className="text-[13px] text-text-tertiary mb-1.5">{label}</div>
+      <div
+        className={big ? "text-[20px] font-bold text-text-primary leading-snug tracking-wider" : "text-[16px] text-text-primary font-semibold leading-snug"}
+        style={big ? { fontFamily: 'var(--font-serif)' } : undefined}
+      >
+        {value}
+      </div>
+    </div>
+  );
+}
+
+/** 칩 wrap 카드 — LuckyVisualCard 의 보석/활동 카드와 동일 스펙 */
+function ChipWrapCard({ label, items }: { label: string; items: string[] }) {
+  if (items.length === 0) return null;
+  return (
+    <div className="rounded-xl p-3 bg-white/5 border border-white/10">
+      <div className="text-[13px] text-text-tertiary mb-2">{label}</div>
+      <div className="flex flex-wrap gap-1.5">
+        {items.map((item, i) => (
+          <span
+            key={`${item}-${i}`}
+            className="text-[14px] text-text-primary font-medium px-2.5 py-1 rounded-md bg-white/8 border border-white/10"
+          >
+            {item}
+          </span>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/** 색상 스와치 - LuckyVisualCard 와 동일 */
+function ColorSwatch({ name, css }: { name: string; css: string }) {
+  return (
+    <div className="flex flex-col items-center gap-1.5">
+      <div className="w-10 h-10 rounded-xl border border-white/15 shadow-inner" style={{ background: css }} />
+      <span className="text-[13px] text-text-tertiary">{name}</span>
+    </div>
+  );
+}
+
+/** 나침반 SVG - LuckyVisualCard 와 동일. 다중 방향 평균 각도. */
+function CompassSVG({ directions }: { directions: string[] }) {
+  const degs = directions.map(d => DIRECTION_DEG[d] ?? null).filter((x): x is number => x !== null);
+  if (degs.length === 0 || degs.every(d => d === -1)) {
+    return (
+      <div className="flex flex-col items-center gap-1">
+        <div className="w-[72px] h-[72px] rounded-full border border-white/20 flex items-center justify-center bg-white/5">
+          <span className="text-[22px] font-bold text-text-primary" style={{ fontFamily: 'var(--font-serif)' }}>中</span>
+        </div>
+        <span className="text-[13px] text-text-tertiary">중앙이 길합니다</span>
+      </div>
+    );
+  }
+  // 평균(원형 평균 — sin/cos 평균)
+  const validDegs = degs.filter(d => d !== -1);
+  const avgDeg = (() => {
+    const sin = validDegs.reduce((s, d) => s + Math.sin(d * Math.PI / 180), 0) / validDegs.length;
+    const cos = validDegs.reduce((s, d) => s + Math.cos(d * Math.PI / 180), 0) / validDegs.length;
+    return ((Math.atan2(sin, cos) * 180 / Math.PI) + 360) % 360;
+  })();
+  const labels = [
+    { text: '북', x: 36, y: 11 }, { text: '동', x: 64, y: 39 },
+    { text: '남', x: 36, y: 67 }, { text: '서', x: 8, y: 39 },
+  ];
+  return (
+    <div className="flex flex-col items-center gap-1">
+      <svg width="72" height="72" viewBox="0 0 72 72">
+        <circle cx="36" cy="36" r="34" fill="rgba(255,255,255,0.04)" stroke="rgba(255,255,255,0.15)" strokeWidth="1" />
+        <line x1="36" y1="4" x2="36" y2="68" stroke="rgba(255,255,255,0.08)" strokeWidth="1" />
+        <line x1="4" y1="36" x2="68" y2="36" stroke="rgba(255,255,255,0.08)" strokeWidth="1" />
+        {labels.map(l => (
+          <text key={l.text} x={l.x} y={l.y} textAnchor="middle" dominantBaseline="middle"
+            fontSize="9" fill="rgba(255,255,255,0.35)" fontFamily="var(--font-sans)">{l.text}</text>
+        ))}
+        <g transform={`rotate(${avgDeg}, 36, 36)`}>
+          <polygon points="36,6 32.5,36 39.5,36" fill="var(--color-cta, #8B6914)" opacity="0.9" />
+          <polygon points="36,66 32.5,36 39.5,36" fill="rgba(255,255,255,0.18)" />
+        </g>
+        <circle cx="36" cy="36" r="3.5" fill="white" opacity="0.7" />
+      </svg>
+      <span className="text-[13px] text-text-tertiary">{directions.join(' · ')}</span>
+    </div>
+  );
+}
 
 // ════════════════════════════════════════════════════════════════════
 // 시각 컴포넌트 — 동양 탭
@@ -79,37 +202,27 @@ function PolarityScoreCard({ diag }: { diag: DreamV4Result['oriental_diagnosis']
   const color = POLARITY_COLOR[diag.polarity] || '#CBD5E1';
   const tagList = diag.label.split(/\s*[·•]\s*/).filter(Boolean);
   return (
-    <div style={{
-      padding: '16px 18px',
-      borderRadius: 14,
+    <div className="rounded-2xl p-4 border" style={{
       background: `linear-gradient(135deg, rgba(20,12,38,0.6), ${color}12)`,
-      border: `1px solid ${color}55`,
+      borderColor: `${color}55`,
     }}>
-      {/* 점수 + 등급 */}
-      <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 12 }}>
-        <span style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
+      <div className="flex items-baseline justify-between mb-3">
+        <span className="flex items-baseline gap-1.5">
           <span style={{
             fontSize: 38, fontWeight: 800, lineHeight: 1,
-            fontFamily: 'var(--font-serif)',
-            color,
+            fontFamily: 'var(--font-serif)', color,
             textShadow: `0 0 18px ${color}55`,
           }}>{diag.score}</span>
-          <span style={{ fontSize: 14, color: 'var(--text-tertiary)' }}>점</span>
+          <span className="text-[14px] text-text-tertiary">점</span>
         </span>
         {diag.polarity && (
-          <span style={{
-            fontSize: 15, fontWeight: 800,
-            padding: '4px 12px', borderRadius: 10,
-            background: `${color}22`, color, border: `1px solid ${color}55`,
+          <span className="text-[15px] font-extrabold px-3 py-1 rounded-lg border" style={{
+            background: `${color}22`, color, borderColor: `${color}55`,
             fontFamily: 'var(--font-title)',
           }}>{diag.polarity}몽</span>
         )}
       </div>
-      {/* 점수 막대 */}
-      <div style={{
-        height: 10, borderRadius: 99, overflow: 'hidden',
-        background: 'rgba(255,255,255,0.06)', marginBottom: 14,
-      }}>
+      <div className="h-2.5 rounded-full overflow-hidden mb-3.5" style={{ background: 'rgba(255,255,255,0.06)' }}>
         <motion.div
           initial={{ width: 0 }}
           animate={{ width: `${Math.max(4, diag.score)}%` }}
@@ -121,39 +234,27 @@ function PolarityScoreCard({ diag }: { diag: DreamV4Result['oriental_diagnosis']
           }}
         />
       </div>
-      {/* 태그 칩 */}
       {tagList.length > 0 && (
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: diag.reason ? 12 : 0 }}>
+        <div className="flex flex-wrap gap-1.5 mb-3">
           {tagList.map((tag, i) => (
-            <span key={i} style={{
-              padding: '4px 12px', borderRadius: 99,
-              fontSize: 13, fontWeight: 700,
-              color, background: 'rgba(255,255,255,0.04)',
-              border: `1px solid ${color}55`,
+            <span key={i} className="px-3 py-1 rounded-full text-[13px] font-bold border" style={{
+              color, background: 'rgba(255,255,255,0.04)', borderColor: `${color}55`,
               fontFamily: 'var(--font-title)',
             }}>{tag}</span>
           ))}
         </div>
       )}
-      {/* 근거 본문 */}
-      {diag.reason && (
-        <p style={{
-          margin: 0, fontSize: 16, lineHeight: 1.85,
-          color: 'var(--text-secondary)',
-          fontFamily: 'var(--font-body)',
-          wordBreak: 'keep-all',
-        }}>{diag.reason}</p>
-      )}
+      {diag.reason && <BodyParagraphs text={diag.reason} />}
     </div>
   );
 }
 
 function SymbolCardGrid({ symbols }: { symbols: DreamSymbolCardData[] }) {
   if (symbols.length === 0) {
-    return <p style={{ fontSize: 14, color: 'var(--text-tertiary)' }}>매칭된 상징이 없어요.</p>;
+    return <p className="text-[14px] text-text-tertiary">매칭된 상징이 없어요.</p>;
   }
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+    <div className="flex flex-col gap-2.5">
       {symbols.map((s, i) => {
         const color = SYM_POLARITY_COLOR[s.polarity];
         const polLabel = SYM_POLARITY_LABEL[s.polarity];
@@ -164,52 +265,42 @@ function SymbolCardGrid({ symbols }: { symbols: DreamSymbolCardData[] }) {
             initial={{ opacity: 0, x: -8 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ delay: i * 0.05, duration: 0.35 }}
-            style={{
-              padding: '14px 16px', borderRadius: 12,
-              background: `${color}10`,
-              border: `1px solid ${color}40`,
-            }}
+            className="rounded-xl p-3.5 border"
+            style={{ background: `${color}10`, borderColor: `${color}40` }}
           >
-            {/* 좌: 이름 / 우상단: 길흉·도메인 칩 (기호 없이) */}
-            <div style={{
-              display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between',
-              gap: 10, marginBottom: 10, flexWrap: 'nowrap',
-            }}>
-              <span style={{
-                fontSize: 17, fontWeight: 800,
-                fontFamily: 'var(--font-title)',
-                color: 'var(--text-primary)',
-                letterSpacing: '-0.01em',
-                flex: 1, minWidth: 0,
-                wordBreak: 'keep-all',
-              }}>{s.name}</span>
-              <div style={{
-                display: 'flex', gap: 4, flexShrink: 0,
-                alignItems: 'center',
-              }}>
-                <span style={{
-                  fontSize: 11, fontWeight: 700,
-                  padding: '3px 9px', borderRadius: 6,
-                  color, background: `${color}20`,
-                  whiteSpace: 'nowrap',
-                }}>{polLabel}</span>
+            {/* grid: 좌 이름 1fr / 우 칩 그룹 auto (각 칩은 동일 minWidth로 정렬) */}
+            <div className="grid grid-cols-[1fr_auto] items-start gap-2 mb-2">
+              <span className="text-[17px] font-extrabold text-text-primary leading-tight break-keep"
+                style={{ fontFamily: 'var(--font-title)', letterSpacing: '-0.01em' }}>
+                {s.name}
+              </span>
+              <div className="flex gap-1.5 flex-shrink-0">
+                <span
+                  className="text-[11px] font-bold rounded-md text-center"
+                  style={{
+                    color, background: `${color}20`,
+                    minWidth: 36, padding: '3px 8px',
+                    fontFamily: 'var(--font-title)',
+                  }}>
+                  {polLabel}
+                </span>
                 {domain && (
-                  <span style={{
-                    fontSize: 11, fontWeight: 600,
-                    padding: '3px 9px', borderRadius: 6,
-                    color: domain.color, background: `${domain.color}15`,
-                    border: `1px solid ${domain.color}40`,
-                    whiteSpace: 'nowrap',
-                  }}>{domain.id}</span>
+                  <span
+                    className="text-[11px] font-semibold rounded-md text-center border"
+                    style={{
+                      color: domain.color, background: `${domain.color}15`,
+                      borderColor: `${domain.color}40`,
+                      minWidth: 76, padding: '3px 8px',
+                      fontFamily: 'var(--font-title)',
+                    }}>
+                    {domain.id}
+                  </span>
                 )}
               </div>
             </div>
-            <p style={{
-              margin: 0, fontSize: 14, lineHeight: 1.7,
-              color: 'var(--text-secondary)',
-              fontFamily: 'var(--font-body)',
-              wordBreak: 'keep-all',
-            }}>{s.meaning}</p>
+            <p className="text-[15px] text-text-secondary leading-[1.8] tracking-[-0.005em] break-keep m-0">
+              {s.meaning}
+            </p>
           </motion.div>
         );
       })}
@@ -219,7 +310,7 @@ function SymbolCardGrid({ symbols }: { symbols: DreamSymbolCardData[] }) {
 
 function DomainBarsCard({ domains }: { domains: DreamDomainScore[] }) {
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+    <div className="flex flex-col gap-4">
       {domains.map((d, i) => {
         const meta = DOMAIN_TAGS.find(t => t.id === d.label);
         const color = meta?.color || '#A78BFA';
@@ -230,27 +321,15 @@ function DomainBarsCard({ domains }: { domains: DreamDomainScore[] }) {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: i * 0.05 }}
           >
-            <div style={{
-              display: 'flex', alignItems: 'baseline', justifyContent: 'space-between',
-              marginBottom: 6,
-            }}>
-              <span style={{
-                fontSize: 15, fontWeight: 700,
-                color: 'var(--text-primary)',
-                fontFamily: 'var(--font-title)',
-              }}>
+            <div className="flex items-baseline justify-between mb-1.5">
+              <span className="text-[15px] font-bold text-text-primary" style={{ fontFamily: 'var(--font-title)' }}>
                 {d.label}
               </span>
-              <span style={{
-                fontSize: 14, fontWeight: 800,
-                color, fontFamily: 'var(--font-serif)',
-              }}>{d.score}</span>
+              <span className="text-[14px] font-extrabold" style={{ color, fontFamily: 'var(--font-serif)' }}>
+                {d.score}
+              </span>
             </div>
-            <div style={{
-              height: 6, borderRadius: 99,
-              background: 'rgba(255,255,255,0.06)',
-              overflow: 'hidden', marginBottom: 4,
-            }}>
+            <div className="h-1.5 rounded-full overflow-hidden mb-2" style={{ background: 'rgba(255,255,255,0.06)' }}>
               <motion.div
                 initial={{ width: 0 }}
                 animate={{ width: `${Math.max(3, d.score)}%` }}
@@ -263,12 +342,9 @@ function DomainBarsCard({ domains }: { domains: DreamDomainScore[] }) {
               />
             </div>
             {d.note && (
-              <p style={{
-                margin: 0, fontSize: 14, lineHeight: 1.75,
-                color: 'var(--text-secondary)',
-                fontFamily: 'var(--font-body)',
-                wordBreak: 'keep-all',
-              }}>{d.note}</p>
+              <p className="text-[15px] text-text-secondary leading-[1.8] tracking-[-0.005em] break-keep m-0">
+                {d.note}
+              </p>
             )}
           </motion.div>
         );
@@ -278,7 +354,6 @@ function DomainBarsCard({ domains }: { domains: DreamDomainScore[] }) {
 }
 
 function SijinChart({ timing, timeBandId }: { timing: string; timeBandId?: string }) {
-  // 사용자 시각이 어느 시진에 매핑되는지 (TIME_BANDS 의 hour → SIJIN_RULES 인덱스)
   const band = TIME_BANDS.find(b => b.id === timeBandId);
   const userSijinIdx = (() => {
     if (!band || band.hour < 0) return -1;
@@ -298,193 +373,166 @@ function SijinChart({ timing, timeBandId }: { timing: string; timeBandId?: strin
   })();
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-      {/* 12지시 영험도 막대 그래프 */}
-      <div>
-        <div style={{
-          display: 'flex', gap: 4, alignItems: 'flex-end',
-          height: 100, marginBottom: 10,
-        }}>
+    <div className="flex flex-col gap-4">
+      <div className="rounded-2xl p-4 bg-white/5 border border-white/10">
+        <div className="flex gap-1 items-end mb-2.5" style={{ height: 100 }}>
           {SIJIN_RULES.map((s, i) => {
             const isUser = i === userSijinIdx;
             const heightPct = (s.weight / 5) * 100;
             const barColor = s.weight >= 4 ? '#FBBF24' : s.weight >= 3 ? '#A78BFA' : 'rgba(255,255,255,0.18)';
             return (
-              <div key={s.id} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
+              <div key={s.id} style={{ flex: 1 }} className="flex flex-col items-center gap-1.5">
                 <motion.div
                   initial={{ height: 0 }}
                   animate={{ height: `${heightPct}%` }}
                   transition={{ duration: 0.6, delay: 0.05 * i, ease: 'easeOut' }}
                   style={{
                     width: '100%',
-                    background: isUser
-                      ? 'linear-gradient(180deg, #FCE8B2, #FBBF24)'
-                      : barColor,
+                    background: isUser ? 'linear-gradient(180deg, #FCE8B2, #FBBF24)' : barColor,
                     borderRadius: '4px 4px 0 0',
                     boxShadow: isUser ? '0 0 14px rgba(252,232,178,0.7)' : 'none',
                   }}
                 />
-                <span style={{
-                  fontSize: 13, fontWeight: isUser ? 800 : 600,
+                <span className="text-[13px] leading-none" style={{
+                  fontWeight: isUser ? 800 : 600,
                   color: isUser ? '#FCE8B2' : 'var(--text-secondary)',
                   fontFamily: 'var(--font-title)',
-                  lineHeight: 1,
                 }}>{s.label.charAt(0)}</span>
               </div>
             );
           })}
         </div>
-        <div style={{
-          fontSize: 12, color: 'var(--text-tertiary)',
-          textAlign: 'center', fontFamily: 'var(--font-body)',
-          letterSpacing: '0.02em',
-        }}>
+        <div className="text-[12px] text-text-tertiary text-center">
           12 시진 영험도 — 막대 높이는 정몽(正夢) 가능성
         </div>
       </div>
-      {/* 시진 본문 — 자미두수·신년운세 본문 폰트와 동일 (var(--font-body) 16px) */}
-      {timing && (
-        <div style={{
-          padding: '16px 18px',
-          background: 'rgba(252,232,178,0.06)',
-          border: '1px solid rgba(252,232,178,0.20)',
-          borderRadius: 12,
-        }}>
-          {timing.split(/\n\n+/).map((p, i) => (
-            <p key={i} style={{
-              margin: i === 0 ? 0 : '12px 0 0 0',
-              fontSize: 16, lineHeight: 1.85,
-              color: 'var(--text-primary)',
-              fontFamily: 'var(--font-body)',
-              wordBreak: 'keep-all',
-              letterSpacing: '-0.005em',
-            }}>{p}</p>
-          ))}
-        </div>
-      )}
+      {timing && <BodyParagraphs text={timing} />}
     </div>
   );
 }
 
+/** AdviceCard — LuckyVisualCard 패턴 차용. AI가 자유 텍스트로 준 키-값을 시각화. */
 function AdviceCard({ advice }: { advice: { body: string; items: DreamAdviceItem[] } }) {
-  const paras = advice.body.split(/\n\n+/).map(p => p.trim()).filter(Boolean);
-  // 다른 운세풀이(자미두수·신년운세) 스타일에 맞춰 — 시각 데이터(처방 칩) 상단, 본문 하단.
+  // 키별 추출
+  const get = (key: string) => advice.items.find(it => it.key === key)?.value || '';
+  const colorVal = get('색');
+  const dirVal = get('방향');
+  const numVal = get('숫자');
+  const timeVal = get('시간');
+  const activityVal = get('활동');
+  const foodVal = get('음식');
+  const gemVal = get('보석');
+  const otherItems = advice.items.filter(it =>
+    !['색', '방향', '숫자', '시간', '활동', '음식', '보석'].includes(it.key)
+  );
+
+  const colors = colorVal ? parseColors(colorVal) : [];
+  const directions = dirVal ? parseDirections(dirVal) : [];
+
+  const hasCompassRow = colors.length > 0 || directions.length > 0;
+
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-      {/* 1) 처방 칩 (시각 데이터) — 상단 */}
-      {advice.items.length > 0 && (
-        <div style={{
-          padding: 14,
-          background: 'rgba(52,211,153,0.06)',
-          border: '1px solid rgba(52,211,153,0.28)',
-          borderRadius: 12,
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))',
-          gap: 10,
-        }}>
-          {advice.items.map((it, i) => (
-            <div key={i} style={{
-              padding: '12px 14px',
-              background: 'rgba(20,12,38,0.5)',
-              borderRadius: 10,
-              border: '1px solid rgba(255,255,255,0.06)',
-            }}>
-              <div style={{
-                fontSize: 12, fontWeight: 800,
-                color: '#34D399',
-                marginBottom: 4,
-                fontFamily: 'var(--font-title)',
-                letterSpacing: '-0.01em',
-              }}>{it.key}</div>
-              <div style={{
-                fontSize: 14, fontWeight: 600,
-                color: 'var(--text-primary)',
-                lineHeight: 1.5,
-                fontFamily: 'var(--font-body)',
-                wordBreak: 'keep-all',
-              }}>{it.value}</div>
+    <div className="flex flex-col gap-3">
+      {/* 1) 나침반 + 색상 스와치 — LuckyVisualCard 와 동일 레이아웃 */}
+      {hasCompassRow && (
+        <div className="flex items-center justify-around py-3 px-2 rounded-2xl bg-white/5 border border-white/10">
+          {directions.length > 0 && <CompassSVG directions={directions} />}
+          {directions.length > 0 && colors.length > 0 && <div className="w-px h-16 bg-white/10" />}
+          {colors.length > 0 && (
+            <div className="flex flex-col items-center gap-2">
+              <span className="text-[12px] text-text-tertiary mb-0.5">행운 색상</span>
+              <div className="flex gap-3">
+                {colors.slice(0, 3).map((c, i) => (
+                  <ColorSwatch key={`${c.name}-${i}`} name={c.name} css={c.css} />
+                ))}
+              </div>
             </div>
+          )}
+        </div>
+      )}
+
+      {/* 2) 숫자 + 시간대 — 2 col 카드 */}
+      {(numVal || timeVal) && (
+        <div className="grid grid-cols-2 gap-2">
+          {numVal ? <LabelValueCard label="행운 숫자" value={numVal} big /> : <div />}
+          {timeVal ? <LabelValueCard label="유리한 시간대" value={timeVal} /> : <div />}
+        </div>
+      )}
+
+      {/* 3) 칩 wrap 카드들 */}
+      {gemVal && <ChipWrapCard label="행운 보석" items={parseChips(gemVal)} />}
+      {activityVal && <ChipWrapCard label="추천 활동" items={parseChips(activityVal)} />}
+      {foodVal && <ChipWrapCard label="추천 음식" items={parseChips(foodVal)} />}
+
+      {/* 4) 기타 항목 (액막이·환경·보호 등) — 2col 카드 */}
+      {otherItems.length > 0 && (
+        <div className="grid grid-cols-2 gap-2">
+          {otherItems.slice(0, 4).map((it, i) => (
+            <LabelValueCard key={i} label={it.key} value={it.value} />
           ))}
         </div>
       )}
-      {/* 2) 본문 풀이 — 하단. 자미두수·신년운세 본문 폰트(16px SUIT)와 동일. */}
-      {paras.length > 0 && (
-        <div>
-          {paras.map((p, i) => (
-            <p key={i} style={{
-              margin: i === 0 ? 0 : '12px 0 0 0',
-              fontSize: 16, lineHeight: 1.85,
-              color: 'var(--text-secondary)',
-              fontFamily: 'var(--font-body)',
-              wordBreak: 'keep-all',
-              letterSpacing: '-0.005em',
-            }}>{p}</p>
-          ))}
-        </div>
-      )}
+
+      {/* 5) 본문 풀이 — 다른 운세 본문과 동일 스펙 */}
+      <BodyParagraphs text={advice.body} />
     </div>
   );
 }
 
+/** CautionBox — AdviceCard와 동일 패턴. "조심할 *" 키를 시각화. */
 function CautionBox({ caution }: { caution: { body: string; items: DreamAdviceItem[] } }) {
-  const paras = caution.body.split(/\n\n+/).map(p => p.trim()).filter(Boolean);
-  if (paras.length === 0 && caution.items.length === 0) {
-    return <p style={{ fontSize: 14, color: 'var(--text-tertiary)' }}>주의할 점은 특별히 없어요.</p>;
+  if (!caution.body && caution.items.length === 0) {
+    return <p className="text-[14px] text-text-tertiary">주의할 점은 특별히 없어요.</p>;
   }
-  // AdviceCard와 동일 패턴 — 시각 데이터(회피 칩) 상단, 본문 하단.
+  const get = (key: string) => caution.items.find(it => it.key === key)?.value || '';
+  const colorVal = get('조심할 색');
+  const dirVal = get('조심할 방향');
+  const timeVal = get('조심할 시간');
+  const activityVal = get('조심할 활동');
+  const personVal = get('조심할 사람');
+  const foodVal = get('피해야 할 음식');
+  const placeVal = get('피해야 할 장소');
+
+  const colors = colorVal ? parseColors(colorVal) : [];
+  const directions = dirVal ? parseDirections(dirVal) : [];
+  const hasCompassRow = colors.length > 0 || directions.length > 0;
+
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-      {/* 1) 회피 칩 (시각 데이터) — 상단 */}
-      {caution.items.length > 0 && (
-        <div style={{
-          padding: 14,
-          background: 'rgba(248,113,113,0.06)',
-          border: '1px solid rgba(248,113,113,0.28)',
-          borderRadius: 12,
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))',
-          gap: 10,
-        }}>
-          {caution.items.map((it, i) => (
-            <div key={i} style={{
-              padding: '12px 14px',
-              background: 'rgba(20,12,38,0.5)',
-              borderRadius: 10,
-              border: '1px solid rgba(255,255,255,0.06)',
-            }}>
-              <div style={{
-                fontSize: 12, fontWeight: 800,
-                color: '#F87171',
-                marginBottom: 4,
-                fontFamily: 'var(--font-title)',
-                letterSpacing: '-0.01em',
-              }}>{it.key}</div>
-              <div style={{
-                fontSize: 14, fontWeight: 600,
-                color: 'var(--text-primary)',
-                lineHeight: 1.5,
-                fontFamily: 'var(--font-body)',
-                wordBreak: 'keep-all',
-              }}>{it.value}</div>
+    <div className="flex flex-col gap-3">
+      {/* 1) 나침반 + 색상 — caution 톤 (붉은 테두리) */}
+      {hasCompassRow && (
+        <div className="flex items-center justify-around py-3 px-2 rounded-2xl border"
+          style={{ background: 'rgba(248,113,113,0.04)', borderColor: 'rgba(248,113,113,0.28)' }}>
+          {directions.length > 0 && <CompassSVG directions={directions} />}
+          {directions.length > 0 && colors.length > 0 && <div className="w-px h-16 bg-white/10" />}
+          {colors.length > 0 && (
+            <div className="flex flex-col items-center gap-2">
+              <span className="text-[12px] text-text-tertiary mb-0.5">피해야 할 색</span>
+              <div className="flex gap-3">
+                {colors.slice(0, 3).map((c, i) => (
+                  <ColorSwatch key={`${c.name}-${i}`} name={c.name} css={c.css} />
+                ))}
+              </div>
             </div>
-          ))}
+          )}
         </div>
       )}
-      {/* 2) 본문 풀이 — 하단. 좌측 띠 제거, 자미두수·신년운세 본문 폰트와 동일. */}
-      {paras.length > 0 && (
-        <div>
-          {paras.map((p, i) => (
-            <p key={i} style={{
-              margin: i === 0 ? 0 : '12px 0 0 0',
-              fontSize: 16, lineHeight: 1.85,
-              color: 'var(--text-secondary)',
-              fontFamily: 'var(--font-body)',
-              wordBreak: 'keep-all',
-              letterSpacing: '-0.005em',
-            }}>{p}</p>
-          ))}
+
+      {/* 2) 시간 + 사람 / 활동 — 2col 카드 */}
+      {(timeVal || personVal) && (
+        <div className="grid grid-cols-2 gap-2">
+          {timeVal ? <LabelValueCard label="조심할 시간" value={timeVal} /> : <div />}
+          {personVal ? <LabelValueCard label="조심할 사람" value={personVal} /> : <div />}
         </div>
       )}
+
+      {/* 3) 칩 wrap 카드들 */}
+      {activityVal && <ChipWrapCard label="피해야 할 활동" items={parseChips(activityVal)} />}
+      {foodVal && <ChipWrapCard label="피해야 할 음식" items={parseChips(foodVal)} />}
+      {placeVal && <ChipWrapCard label="피해야 할 장소" items={parseChips(placeVal)} />}
+
+      {/* 4) 본문 풀이 — 좌측 띠 없이 평면 (사용자 요청) */}
+      <BodyParagraphs text={caution.body} />
     </div>
   );
 }
@@ -500,126 +548,76 @@ function ClinicalDiagnosisCard({ diag }: { diag: DreamV4Result['western_diagnosi
     : diag.intensity === 'medium' ? '#FBBF24'
     : diag.intensity === 'low' ? '#34D399' : '#CBD5E1';
   return (
-    <div style={{
-      padding: '16px 18px', borderRadius: 14,
+    <div className="rounded-2xl p-4 border" style={{
       background: `linear-gradient(135deg, rgba(20,12,38,0.6), ${color}12)`,
-      border: `1px solid ${color}55`,
+      borderColor: `${color}55`,
     }}>
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 12 }}>
+      <div className="flex flex-wrap gap-2 mb-3">
         {clinical && (
-          <span style={{
-            padding: '6px 14px', borderRadius: 10,
-            fontSize: 15, fontWeight: 800,
-            color, background: `${color}22`,
-            border: `1px solid ${color}55`,
+          <span className="text-[15px] font-extrabold px-3.5 py-1.5 rounded-lg border" style={{
+            color, background: `${color}22`, borderColor: `${color}55`,
             fontFamily: 'var(--font-title)',
           }}>{clinical.ko}</span>
         )}
         {diag.intensity && (
-          <span style={{
-            padding: '6px 12px', borderRadius: 10,
-            fontSize: 13, fontWeight: 700,
-            color: intensityColor, background: `${intensityColor}15`,
-            border: `1px solid ${intensityColor}40`,
+          <span className="text-[13px] font-bold px-3 py-1.5 rounded-lg border" style={{
+            color: intensityColor, background: `${intensityColor}15`, borderColor: `${intensityColor}40`,
             fontFamily: 'var(--font-title)',
           }}>강도 {diag.intensity === 'high' ? '강' : diag.intensity === 'medium' ? '중' : '약'}</span>
         )}
       </div>
       {clinical?.desc && (
-        <p style={{
-          margin: '0 0 10px 0', fontSize: 13, lineHeight: 1.6,
-          color: 'var(--text-tertiary)',
-          fontFamily: 'var(--font-body)',
-        }}>{clinical.desc}</p>
+        <p className="text-[14px] text-text-tertiary leading-relaxed mb-2.5 break-keep">{clinical.desc}</p>
       )}
-      {diag.reason && (
-        <p style={{
-          margin: 0, fontSize: 16, lineHeight: 1.85,
-          color: 'var(--text-secondary)',
-          fontFamily: 'var(--font-body)',
-          wordBreak: 'keep-all',
-        }}>{diag.reason}</p>
-      )}
+      {diag.reason && <BodyParagraphs text={diag.reason} />}
     </div>
   );
 }
 
 function LatentDiptychCard({ latent }: { latent: DreamV4Result['western_latent'] }) {
   const workLabel: Record<string, string> = {
-    condensation: '응축',
-    displacement: '전치',
-    symbolization: '형상화',
-    secondary_revision: '2차 가공',
+    condensation: '응축', displacement: '전치',
+    symbolization: '형상화', secondary_revision: '2차 가공',
   };
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-      <div style={{
-        display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10,
-      }}>
-        <div style={{
-          padding: '14px 16px', borderRadius: 12,
-          background: 'rgba(168,139,250,0.08)',
-          border: '1px solid rgba(168,139,250,0.30)',
+    <div className="flex flex-col gap-3">
+      <div className="grid grid-cols-2 gap-2.5">
+        <div className="rounded-xl p-3.5 border" style={{
+          background: 'rgba(168,139,250,0.08)', borderColor: 'rgba(168,139,250,0.30)',
         }}>
-          <div style={{
-            fontSize: 12, fontWeight: 800,
-            color: '#A78BFA', marginBottom: 6,
-            fontFamily: 'var(--font-title)',
-          }}>표면 (manifest)</div>
-          <p style={{
-            margin: 0, fontSize: 14, lineHeight: 1.6,
-            color: 'var(--text-primary)',
-            fontFamily: 'var(--font-body)',
-            wordBreak: 'keep-all',
-          }}>{latent.surface || '—'}</p>
+          <div className="text-[12px] font-extrabold mb-1.5" style={{ color: '#A78BFA', fontFamily: 'var(--font-title)' }}>
+            표면 (manifest)
+          </div>
+          <p className="text-[14px] text-text-primary leading-relaxed break-keep m-0">{latent.surface || '—'}</p>
         </div>
-        <div style={{
-          padding: '14px 16px', borderRadius: 12,
-          background: 'rgba(232,164,144,0.08)',
-          border: '1px solid rgba(232,164,144,0.30)',
+        <div className="rounded-xl p-3.5 border" style={{
+          background: 'rgba(232,164,144,0.08)', borderColor: 'rgba(232,164,144,0.30)',
         }}>
-          <div style={{
-            fontSize: 12, fontWeight: 800,
-            color: '#E8A490', marginBottom: 6,
-            fontFamily: 'var(--font-title)',
-          }}>잠재 (latent)</div>
-          <p style={{
-            margin: 0, fontSize: 14, lineHeight: 1.6,
-            color: 'var(--text-primary)',
-            fontFamily: 'var(--font-body)',
-            wordBreak: 'keep-all',
-          }}>{latent.latent || '—'}</p>
+          <div className="text-[12px] font-extrabold mb-1.5" style={{ color: '#E8A490', fontFamily: 'var(--font-title)' }}>
+            잠재 (latent)
+          </div>
+          <p className="text-[14px] text-text-primary leading-relaxed break-keep m-0">{latent.latent || '—'}</p>
         </div>
       </div>
       {latent.work && workLabel[latent.work] && (
-        <div style={{ display: 'flex', justifyContent: 'center' }}>
-          <span style={{
-            padding: '4px 14px', borderRadius: 99,
-            fontSize: 12, fontWeight: 700,
-            color: '#FCE8B2', background: 'rgba(252,232,178,0.10)',
-            border: '1px solid rgba(252,232,178,0.30)',
+        <div className="flex justify-center">
+          <span className="px-3.5 py-1 rounded-full text-[12px] font-bold border" style={{
+            color: '#FCE8B2', background: 'rgba(252,232,178,0.10)', borderColor: 'rgba(252,232,178,0.30)',
             fontFamily: 'var(--font-title)',
           }}>꿈 작업: {workLabel[latent.work]}</span>
         </div>
       )}
-      {latent.body && (
-        <p style={{
-          margin: 0, fontSize: 16, lineHeight: 1.85,
-          color: 'var(--text-secondary)',
-          fontFamily: 'var(--font-body)',
-          wordBreak: 'keep-all',
-        }}>{latent.body}</p>
-      )}
+      {latent.body && <BodyParagraphs text={latent.body} />}
     </div>
   );
 }
 
 function ArchetypeCardGrid({ items }: { items: DreamArchetypeCard[] }) {
   if (items.length === 0) {
-    return <p style={{ fontSize: 14, color: 'var(--text-tertiary)' }}>분석할 등장인물·동물이 또렷하지 않아요.</p>;
+    return <p className="text-[14px] text-text-tertiary">분석할 등장인물·동물이 또렷하지 않아요.</p>;
   }
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+    <div className="flex flex-col gap-2.5">
       {items.map((it, i) => {
         const meta = ARCHETYPE_LABELS[it.archetype as ArchetypeId];
         const color = meta?.color || '#A78BFA';
@@ -629,44 +627,35 @@ function ArchetypeCardGrid({ items }: { items: DreamArchetypeCard[] }) {
             initial={{ opacity: 0, x: -8 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ delay: i * 0.06 }}
-            style={{
-              padding: '14px 16px', borderRadius: 12,
-              background: `${color}10`,
-              border: `1px solid ${color}40`,
-            }}
+            className="rounded-xl p-3.5 border"
+            style={{ background: `${color}10`, borderColor: `${color}40` }}
           >
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8, flexWrap: 'wrap' }}>
-              <span style={{
-                fontSize: 16, fontWeight: 800,
-                color: 'var(--text-primary)',
-                fontFamily: 'var(--font-title)',
-                letterSpacing: '-0.01em',
-              }}>{it.target}</span>
+            <div className="grid grid-cols-[1fr_auto] items-start gap-2 mb-2">
+              <span className="text-[16px] font-extrabold text-text-primary leading-tight break-keep"
+                style={{ fontFamily: 'var(--font-title)', letterSpacing: '-0.01em' }}>
+                {it.target}
+              </span>
               {meta && (
-                <span style={{
-                  fontSize: 11, fontWeight: 700,
-                  padding: '2px 10px', borderRadius: 99,
-                  color, background: `${color}20`,
-                  border: `1px solid ${color}50`,
-                  fontFamily: 'var(--font-title)',
-                }}>{meta.ko}</span>
+                <span
+                  className="text-[11px] font-bold rounded-full text-center border"
+                  style={{
+                    color, background: `${color}20`, borderColor: `${color}50`,
+                    minWidth: 64, padding: '3px 10px',
+                    fontFamily: 'var(--font-title)',
+                  }}>
+                  {meta.ko}
+                </span>
               )}
             </div>
             {it.note && (
-              <p style={{
-                margin: '0 0 6px 0', fontSize: 14, lineHeight: 1.7,
-                color: 'var(--text-secondary)',
-                fontFamily: 'var(--font-body)',
-                wordBreak: 'keep-all',
-              }}>{it.note}</p>
+              <p className="text-[15px] text-text-secondary leading-[1.8] tracking-[-0.005em] break-keep mb-1.5">
+                {it.note}
+              </p>
             )}
             {meta?.desc && (
-              <p style={{
-                margin: 0, fontSize: 12, lineHeight: 1.5,
-                color: 'var(--text-tertiary)',
-                fontFamily: 'var(--font-body)',
-                wordBreak: 'keep-all',
-              }}>{meta.desc}</p>
+              <p className="text-[12px] text-text-tertiary leading-[1.6] break-keep m-0">
+                {meta.desc}
+              </p>
             )}
           </motion.div>
         );
@@ -677,51 +666,34 @@ function ArchetypeCardGrid({ items }: { items: DreamArchetypeCard[] }) {
 
 function MirrorBlock({ text }: { text: string }) {
   if (!text) return null;
-  const paras = text.split(/\n\n+/).map(p => p.trim()).filter(Boolean);
   return (
-    <div style={{
-      padding: '16px 18px', borderRadius: 12,
-      background: 'rgba(96,165,250,0.06)',
-      border: '1px solid rgba(96,165,250,0.28)',
+    <div className="rounded-2xl p-4 border" style={{
+      background: 'rgba(96,165,250,0.06)', borderColor: 'rgba(96,165,250,0.28)',
     }}>
-      {paras.map((p, i) => (
-        <p key={i} style={{
-          margin: i === 0 ? 0 : '10px 0 0 0',
-          fontSize: 16, lineHeight: 1.85,
-          color: 'var(--text-primary)',
-          fontFamily: 'var(--font-body)',
-          wordBreak: 'keep-all',
-        }}>{p}</p>
-      ))}
+      <BodyParagraphs text={text} />
     </div>
   );
 }
 
 function SelfWorkCard({ text }: { text: string }) {
-  if (!text) return null;
-  const paras = text.split(/\n\n+/).map(p => p.trim()).filter(Boolean);
   return (
-    <div style={{
-      padding: '18px 20px', borderRadius: 14,
+    <div className="rounded-2xl p-4 border" style={{
       background: 'linear-gradient(135deg, rgba(124,92,252,0.10), rgba(252,232,178,0.06))',
-      border: '1px solid rgba(124,92,252,0.30)',
+      borderColor: 'rgba(124,92,252,0.30)',
     }}>
-      <div style={{
-        fontSize: 13, fontWeight: 800,
-        color: '#FCE8B2', marginBottom: 10,
+      <div className="text-[13px] font-extrabold mb-2.5 uppercase" style={{
+        color: '#FCE8B2', letterSpacing: '0.04em',
         fontFamily: 'var(--font-title)',
-        letterSpacing: '0.04em',
-        textTransform: 'uppercase',
-      }}>스스로 해보는 작업</div>
-      {paras.map((p, i) => (
-        <p key={i} style={{
-          margin: i === 0 ? 0 : '10px 0 0 0',
-          fontSize: 16, lineHeight: 1.85,
-          color: 'var(--text-primary)',
-          fontFamily: 'var(--font-body)',
-          wordBreak: 'keep-all',
-        }}>{p}</p>
-      ))}
+      }}>
+        스스로 해보는 작업
+      </div>
+      {text ? (
+        <BodyParagraphs text={text} />
+      ) : (
+        <p className="text-[15px] text-text-tertiary leading-[1.85] tracking-[-0.005em] break-keep m-0">
+          이 섹션은 풀이 응답이 누락된 것 같아요. 새로 풀이를 받아보시면 자기 통합 워크 가이드가 채워집니다.
+        </p>
+      )}
     </div>
   );
 }
@@ -733,7 +705,6 @@ function SelfWorkCard({ text }: { text: string }) {
 interface Props {
   title: string;
   result: DreamV4Result;
-  /** 사용자가 입력한 시간대 ID (시진 그래프 마커용) — 옛 record면 undefined */
   timeBandId?: string;
 }
 
@@ -754,22 +725,14 @@ export function DreamResultCard({ title, result, timeBandId }: Props) {
       {/* 카드 헤더 */}
       <div className="flex items-center gap-2 mb-3 pl-1">
         <span className="inline-block w-1 h-5 rounded-full bg-cta" />
-        <div
-          className="text-[17px] font-bold text-text-primary tracking-tight"
-          style={{ fontFamily: 'var(--font-title)' }}
-        >
+        <div className="text-[17px] font-bold text-text-primary tracking-tight" style={{ fontFamily: 'var(--font-title)' }}>
           {title}
         </div>
       </div>
 
       {/* 2탭 스위치 */}
-      <div style={{
-        display: 'grid', gridTemplateColumns: '1fr 1fr',
-        gap: 8, marginBottom: 14,
-        padding: 4,
-        background: 'rgba(20,12,38,0.55)',
-        borderRadius: 14,
-        border: '1px solid var(--border-subtle)',
+      <div className="grid grid-cols-2 gap-2 mb-3.5 p-1 rounded-2xl border" style={{
+        background: 'rgba(20,12,38,0.55)', borderColor: 'var(--border-subtle)',
       }}>
         <TabButton active={tab === 'oriental'} onClick={() => setTab('oriental')} label="동양적 풀이" sub="주공해몽·민속" />
         <TabButton active={tab === 'western'} onClick={() => setTab('western')} label="서양적 풀이" sub="프로이트·융" />
@@ -798,7 +761,7 @@ export function DreamResultCard({ title, result, timeBandId }: Props) {
               <DomainBarsCard domains={result.oriental_domains} />
             </SectionCollapsible>
 
-            <SectionCollapsible title="꿈꾼 때의 의미" enterDelay={0.18}>
+            <SectionCollapsible title="꿈꾼 시간에 대한 해석" enterDelay={0.18}>
               <SijinChart timing={result.oriental_timing} timeBandId={timeBandId} />
             </SectionCollapsible>
 
