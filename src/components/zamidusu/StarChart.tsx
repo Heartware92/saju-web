@@ -108,14 +108,29 @@ export function StarChart({ palaces, soul, fiveElementsClass, selectedIndex, onS
     : undefined;
 
   // 사화 비행 — 명궁 출발, 4개 사화 별이 좌한 궁으로 곡선
+  // 사화는 14주성 + 4보좌(좌보·우필·문창·문곡)에 떨어질 수 있으므로 둘 다 스캔
+  // 명궁에 사화 별이 있으면 self-flight (출발=도착) → 명궁 자체에 표식만 + 곡선 생략
   const myeongPos = posOf('명궁');
-  const mutagenFlights: Array<{ type: '화록' | '화권' | '화과' | '화기'; star: string; to: { x: number; y: number }; toPalace: string }> = [];
+  const myeongName = palaceWithPos.find((p) => p.palace.name === '명궁')?.palace.name;
+  const mutagenFlights: Array<{
+    type: '화록' | '화권' | '화과' | '화기';
+    star: string;
+    to: { x: number; y: number };
+    toPalace: string;
+    isSelfMyeong: boolean;
+  }> = [];
   if (myeongPos) {
     palaceWithPos.forEach(({ palace, x, y }) => {
-      if (palace.name === '명궁') return;
-      palace.majorStars.forEach((s) => {
+      const stars = [...palace.majorStars, ...palace.minorStars];
+      stars.forEach((s) => {
         if (s.mutagen && (s.mutagen === '화록' || s.mutagen === '화권' || s.mutagen === '화과' || s.mutagen === '화기')) {
-          mutagenFlights.push({ type: s.mutagen, star: s.name, to: { x, y }, toPalace: palace.name });
+          mutagenFlights.push({
+            type: s.mutagen,
+            star: s.name,
+            to: { x, y },
+            toPalace: palace.name,
+            isSelfMyeong: palace.name === myeongName,
+          });
         }
       });
     });
@@ -247,52 +262,103 @@ export function StarChart({ palaces, soul, fiveElementsClass, selectedIndex, onS
           );
         })()}
 
-        {/* 사화 비행 — 명궁 출발 4개 곡선 */}
-        {showMutagenFlow && myeongPos && mutagenFlights.map((f, i) => {
-          // Quadratic bezier — 중심을 향해 살짝 휘게
-          const mx = (myeongPos.x + f.to.x) / 2;
-          const my = (myeongPos.y + f.to.y) / 2;
-          // 중심으로 끌어당기는 곡률
-          const cx = mx + (CENTER - mx) * 0.4;
-          const cy = my + (CENTER - my) * 0.4;
-          const color = MUTAGEN_COLOR[f.type];
-          // 라벨 위치 — 곡선 중간점
-          const labelX = (myeongPos.x + cx + f.to.x) / 3;
-          const labelY = (myeongPos.y + cy + f.to.y) / 3;
+        {/* 사화 비행 — 명궁 출발 4개 곡선. 명궁 self-flight는 명궁 위 색칩으로 표시 */}
+        {showMutagenFlow && myeongPos && (() => {
+          // self-flight (명궁 자체에 사화)와 외부 비행을 분리
+          const selfFlights = mutagenFlights.filter((f) => f.isSelfMyeong);
+          const outFlights = mutagenFlights.filter((f) => !f.isSelfMyeong);
           return (
-            <g key={`mu-${i}`}>
-              <motion.path
-                d={`M${myeongPos.x},${myeongPos.y} Q${cx},${cy} ${f.to.x},${f.to.y}`}
-                fill="none"
-                stroke={color}
-                strokeWidth="1.5"
-                strokeDasharray="3 3"
-                initial={{ pathLength: 0, opacity: 0 }}
-                animate={{ pathLength: 1, opacity: 0.85 }}
-                transition={{ duration: 0.7, delay: i * 0.1, ease: 'easeOut' }}
-              />
-              {/* 화살촉 (도착) */}
-              <circle cx={f.to.x} cy={f.to.y} r="3.5" fill={color} stroke="#fff" strokeWidth="0.8" />
-              {/* 라벨 (예: 화록·태음) */}
-              <rect
-                x={labelX - 22} y={labelY - 8}
-                width="44" height="14" rx="3"
-                fill={`${color}33`}
-                stroke={color}
-                strokeWidth="0.5"
-              />
-              <text
-                x={labelX} y={labelY + 2}
-                textAnchor="middle"
-                fontSize="9"
-                fontWeight="700"
-                fill={color}
-              >
-                {f.type.replace('화', '')}·{f.star}
-              </text>
-            </g>
+            <>
+              {outFlights.map((f, i) => {
+                const mx = (myeongPos.x + f.to.x) / 2;
+                const my = (myeongPos.y + f.to.y) / 2;
+                const cx = mx + (CENTER - mx) * 0.4;
+                const cy = my + (CENTER - my) * 0.4;
+                const color = MUTAGEN_COLOR[f.type];
+                const labelX = (myeongPos.x + cx + f.to.x) / 3;
+                const labelY = (myeongPos.y + cy + f.to.y) / 3;
+                return (
+                  <g key={`mu-${i}`}>
+                    <motion.path
+                      d={`M${myeongPos.x},${myeongPos.y} Q${cx},${cy} ${f.to.x},${f.to.y}`}
+                      fill="none"
+                      stroke={color}
+                      strokeWidth="1.8"
+                      strokeDasharray="4 3"
+                      initial={{ pathLength: 0, opacity: 0 }}
+                      animate={{ pathLength: 1, opacity: 0.9 }}
+                      transition={{ duration: 0.7, delay: i * 0.1, ease: 'easeOut' }}
+                    />
+                    <circle cx={f.to.x} cy={f.to.y} r="4" fill={color} stroke="#fff" strokeWidth="0.8" />
+                    <rect
+                      x={labelX - 26} y={labelY - 8}
+                      width="52" height="14" rx="3"
+                      fill={`${color}44`}
+                      stroke={color}
+                      strokeWidth="0.5"
+                    />
+                    <text
+                      x={labelX} y={labelY + 2}
+                      textAnchor="middle"
+                      fontSize="9.5"
+                      fontWeight="700"
+                      fill={color}
+                    >
+                      {f.type.replace('화', '')}·{f.star}
+                    </text>
+                  </g>
+                );
+              })}
+              {/* 명궁 self-flight — 명궁 위에 색칩으로 표시 (4사화 한 줄로 정렬) */}
+              {selfFlights.length > 0 && (
+                <g>
+                  {selfFlights.map((f, i) => {
+                    const color = MUTAGEN_COLOR[f.type];
+                    const cellSize = VIEWBOX / 4;
+                    // 명궁 셀 상단에 4칩 수평 정렬
+                    const chipW = 28;
+                    const chipGap = 4;
+                    const totalW = selfFlights.length * chipW + (selfFlights.length - 1) * chipGap;
+                    const startX = myeongPos.x - totalW / 2 + chipW / 2 + i * (chipW + chipGap);
+                    const chipY = myeongPos.y - cellSize / 2 + 8;
+                    return (
+                      <g key={`self-${i}`}>
+                        <rect
+                          x={startX - chipW / 2} y={chipY - 7}
+                          width={chipW} height={14} rx="3"
+                          fill={`${color}55`}
+                          stroke={color}
+                          strokeWidth="0.8"
+                        />
+                        <text
+                          x={startX} y={chipY + 3}
+                          textAnchor="middle"
+                          fontSize="9.5"
+                          fontWeight="700"
+                          fill={color}
+                        >
+                          {f.type.replace('화', '')}·{f.star}
+                        </text>
+                      </g>
+                    );
+                  })}
+                </g>
+              )}
+              {/* 사화 비행 결과가 0이면 안내 */}
+              {mutagenFlights.length === 0 && (
+                <text
+                  x={CENTER} y={CENTER + 70}
+                  textAnchor="middle"
+                  fontSize="11"
+                  fill="#FBBF24"
+                  fontWeight="600"
+                >
+                  이 명반엔 사화 변동이 표시되지 않습니다
+                </text>
+              )}
+            </>
           );
-        })}
+        })()}
 
         {/* 중심 원 — 명주·오행국 표기 */}
         <circle cx={CENTER} cy={CENTER} r="64" fill="rgba(20,12,38,0.85)" stroke="rgba(139,92,246,0.35)" strokeWidth="1.5" />
