@@ -1976,15 +1976,21 @@ function MoreFortuneSectionedCard({
     : category === 'personality' ? PERSONALITY_SECTION_LABELS as Record<string, string>
     : NAME_SECTION_LABELS as Record<string, string>;
 
-  // 본문 잔여 섹션 마커 strip 패턴 — 두 단계 방어
+  // 본문 잔여 섹션 마커 strip 패턴 — 세 단계 방어
   //  (1) 줄 단독 마커: 섹션 분리 후에도 본문 첫/끝에 남는 [aptitude] 등 strip (전 카테고리)
   //  (2) 인라인 마커: AI 가 본문에 "[rename]에서 안내" 같이 직접 적는 사고 차단
   //      ★ name 카테고리에만 적용. study/children/personality 의 키는
   //        aptitude·strengths·outside_view·meaning 등 일반 영문이라 사용자 입력·
   //        본문 인용 안에 우연히 등장한 영문 라벨까지 strip 하는 부작용을 회피.
+  //  (3) 임의 대괄호 강조 표기 unwrap: name 본문에 LLM 이 누출하는
+  //      [대길수] [형격] [수리오행 목] 같은 강조 대괄호를 풀어서 안의 텍스트만 남김.
+  //      한국어 본문에 30자 이내 대괄호가 의도적으로 들어갈 일은 거의 없으므로 안전.
   const markerLinePattern = new RegExp(`^\\s*\\[(${keys.join('|')})\\]\\s*$`, 'gm');
   const markerInlinePattern: RegExp | null = category === 'name'
     ? new RegExp(`\\[(${keys.join('|')})\\]`, 'g')
+    : null;
+  const nameBracketUnwrapPattern: RegExp | null = category === 'name'
+    ? /\[([^\]\n]{1,30})\]/g
     : null;
 
   return (
@@ -2002,12 +2008,10 @@ function MoreFortuneSectionedCard({
           const raw = (sections[key] || '').trim();
           if (!raw) return null;
           // 본문 안 잔여 카테고리 마커 strip → extractMetaphor 로 [은유] 마커 + 부제 추출
-          const stripped = (markerInlinePattern
-            ? raw.replace(markerLinePattern, '').replace(markerInlinePattern, '')
-            : raw.replace(markerLinePattern, '')
-          )
-            .replace(/\n{3,}/g, '\n\n')
-            .trim();
+          let preStripped = raw.replace(markerLinePattern, '');
+          if (markerInlinePattern) preStripped = preStripped.replace(markerInlinePattern, '');
+          if (nameBracketUnwrapPattern) preStripped = preStripped.replace(nameBracketUnwrapPattern, '$1');
+          const stripped = preStripped.replace(/\n{3,}/g, '\n\n').trim();
           const { metaphorTitle, bodyText } = extractMetaphor(stripped);
           // name 카테고리: 섹션별 시각 컴포넌트 (7섹션)
           // 레거시 6섹션 키로 저장된 archive 풀이는 parseNameSections 단계에서
