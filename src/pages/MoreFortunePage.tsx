@@ -1055,10 +1055,18 @@ export default function MoreFortunePage({ category }: Props) {
           <div style={{ padding: '0 16px' }}>
             <ResultFooterActions
               redo={
-                !isArchiveMode && (category === 'name' || category === 'dream')
+                // dream·name 카테고리는 입력 선택 화면이 있으므로 보관함에서도 "다른 N 풀이받기" 노출.
+                // 보관함이면 router.push 로 새 URL 진입 (handleRedo 의 manualMode 가 입력 화면 복귀).
+                (category === 'name' || category === 'dream')
                   ? {
                       label: category === 'name' ? '다른 이름 풀이받기' : '다른 꿈 풀이받기',
-                      onClick: handleRedo,
+                      onClick: () => {
+                        if (isArchiveMode) {
+                          router.push(`/saju/more/${category}`);
+                        } else {
+                          handleRedo();
+                        }
+                      },
                     }
                   : undefined
               }

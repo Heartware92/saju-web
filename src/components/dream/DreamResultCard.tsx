@@ -89,17 +89,29 @@ function parseChips(value: string): string[] {
 // 공통 작은 부품 — 다른 운세풀이와 동일 스펙
 // ════════════════════════════════════════════════════════════════════
 
-/** 본문 단락 — text-[17px] text-text-secondary leading-[1.85] tracking-[-0.005em] */
-function BodyParagraphs({ text }: { text: string }) {
+/**
+ * 본문 단락 — text-[17px] text-text-secondary leading-[1.85] tracking-[-0.005em].
+ * `boxed`면 부드러운 박스로 감쌈 (지금 삶과의 거울·자기 워크 등 본문 단독 섹션 통일).
+ */
+function BodyParagraphs({ text, boxed }: { text: string; boxed?: boolean }) {
   const paras = text.split(/\n\n+/).map(p => p.trim()).filter(Boolean);
   if (paras.length === 0) return null;
-  return (
+  const content = (
     <div className="flex flex-col gap-3">
       {paras.map((p, i) => (
         <p key={i} className="text-[17px] text-text-secondary leading-[1.85] tracking-[-0.005em] whitespace-pre-line break-keep">
           {p}
         </p>
       ))}
+    </div>
+  );
+  if (!boxed) return content;
+  return (
+    <div className="rounded-2xl p-4 border" style={{
+      background: 'rgba(255,255,255,0.04)',
+      borderColor: 'rgba(255,255,255,0.10)',
+    }}>
+      {content}
     </div>
   );
 }
@@ -375,11 +387,15 @@ function SijinChart({ timing, timeBandId }: { timing: string; timeBandId?: strin
   return (
     <div className="flex flex-col gap-4">
       <div className="rounded-2xl p-4 bg-white/5 border border-white/10">
-        <div className="flex gap-1 items-end mb-2.5" style={{ height: 100 }}>
+        <div className="flex gap-1 items-end mb-2.5" style={{ height: 110 }}>
           {SIJIN_RULES.map((s, i) => {
             const isUser = i === userSijinIdx;
             const heightPct = (s.weight / 5) * 100;
-            const barColor = s.weight >= 4 ? '#FBBF24' : s.weight >= 3 ? '#A78BFA' : 'rgba(255,255,255,0.18)';
+            // 영험도별 색상 강화 — 1-2도 잘 보이도록 명도 ↑
+            const barColor = s.weight >= 4 ? '#FBBF24'           // 최고: 금색
+              : s.weight >= 3 ? '#A78BFA'                         // 중상: 보라
+              : s.weight >= 2 ? 'rgba(167,139,250,0.55)'         // 중: 연보라
+              : 'rgba(167,139,250,0.30)';                         // 하: 흐린보라 (이전 0.18에서 ↑)
             return (
               <div key={s.id} style={{ flex: 1 }} className="flex flex-col items-center gap-1.5">
                 <motion.div
@@ -388,6 +404,7 @@ function SijinChart({ timing, timeBandId }: { timing: string; timeBandId?: strin
                   transition={{ duration: 0.6, delay: 0.05 * i, ease: 'easeOut' }}
                   style={{
                     width: '100%',
+                    minHeight: 12,  // 영험도 1이라도 최소 보이도록
                     background: isUser ? 'linear-gradient(180deg, #FCE8B2, #FBBF24)' : barColor,
                     borderRadius: '4px 4px 0 0',
                     boxShadow: isUser ? '0 0 14px rgba(252,232,178,0.7)' : 'none',
@@ -406,7 +423,7 @@ function SijinChart({ timing, timeBandId }: { timing: string; timeBandId?: strin
           12 시진 영험도 — 막대 높이는 정몽(正夢) 가능성
         </div>
       </div>
-      {timing && <BodyParagraphs text={timing} />}
+      {timing && <BodyParagraphs text={timing} boxed />}
     </div>
   );
 }
@@ -473,8 +490,8 @@ function AdviceCard({ advice }: { advice: { body: string; items: DreamAdviceItem
         </div>
       )}
 
-      {/* 5) 본문 풀이 — 다른 운세 본문과 동일 스펙 */}
-      <BodyParagraphs text={advice.body} />
+      {/* 5) 본문 풀이 — 다른 운세 본문과 동일 스펙 + 박스 통일 */}
+      <BodyParagraphs text={advice.body} boxed />
     </div>
   );
 }
@@ -531,8 +548,8 @@ function CautionBox({ caution }: { caution: { body: string; items: DreamAdviceIt
       {foodVal && <ChipWrapCard label="피해야 할 음식" items={parseChips(foodVal)} />}
       {placeVal && <ChipWrapCard label="피해야 할 장소" items={parseChips(placeVal)} />}
 
-      {/* 4) 본문 풀이 — 좌측 띠 없이 평면 (사용자 요청) */}
-      <BodyParagraphs text={caution.body} />
+      {/* 4) 본문 풀이 — 박스 통일 (다른 섹션과 일관) */}
+      <BodyParagraphs text={caution.body} boxed />
     </div>
   );
 }
@@ -666,34 +683,19 @@ function ArchetypeCardGrid({ items }: { items: DreamArchetypeCard[] }) {
 
 function MirrorBlock({ text }: { text: string }) {
   if (!text) return null;
-  return (
-    <div className="rounded-2xl p-4 border" style={{
-      background: 'rgba(96,165,250,0.06)', borderColor: 'rgba(96,165,250,0.28)',
-    }}>
-      <BodyParagraphs text={text} />
-    </div>
-  );
+  // 다른 본문(timing/advice/caution/self_work)과 통일된 박스 스펙 — BodyParagraphs boxed 사용
+  return <BodyParagraphs text={text} boxed />;
 }
 
 function SelfWorkCard({ text }: { text: string }) {
+  if (text) return <BodyParagraphs text={text} boxed />;
   return (
     <div className="rounded-2xl p-4 border" style={{
-      background: 'linear-gradient(135deg, rgba(124,92,252,0.10), rgba(252,232,178,0.06))',
-      borderColor: 'rgba(124,92,252,0.30)',
+      background: 'rgba(255,255,255,0.04)', borderColor: 'rgba(255,255,255,0.10)',
     }}>
-      <div className="text-[13px] font-extrabold mb-2.5 uppercase" style={{
-        color: '#FCE8B2', letterSpacing: '0.04em',
-        fontFamily: 'var(--font-title)',
-      }}>
-        스스로 해보는 작업
-      </div>
-      {text ? (
-        <BodyParagraphs text={text} />
-      ) : (
-        <p className="text-[15px] text-text-tertiary leading-[1.85] tracking-[-0.005em] break-keep m-0">
-          이 섹션은 풀이 응답이 누락된 것 같아요. 새로 풀이를 받아보시면 자기 통합 워크 가이드가 채워집니다.
-        </p>
-      )}
+      <p className="text-[15px] text-text-tertiary leading-[1.85] tracking-[-0.005em] break-keep m-0">
+        이 섹션은 풀이 응답이 누락된 것 같아요. 새로 풀이를 받아보시면 자기 통합 워크 가이드가 채워집니다.
+      </p>
     </div>
   );
 }
@@ -734,8 +736,8 @@ export function DreamResultCard({ title, result, timeBandId }: Props) {
       <div className="grid grid-cols-2 gap-2 mb-3.5 p-1 rounded-2xl border" style={{
         background: 'rgba(20,12,38,0.55)', borderColor: 'var(--border-subtle)',
       }}>
-        <TabButton active={tab === 'oriental'} onClick={() => setTab('oriental')} label="동양적 풀이" sub="주공해몽·민속" />
-        <TabButton active={tab === 'western'} onClick={() => setTab('western')} label="서양적 풀이" sub="프로이트·융" />
+        <TabButton active={tab === 'oriental'} onClick={() => setTab('oriental')} label="동양적 풀이" />
+        <TabButton active={tab === 'western'} onClick={() => setTab('western')} label="서양적 풀이" />
       </div>
 
       {/* 탭 컨텐츠 */}
@@ -809,16 +811,16 @@ export function DreamResultCard({ title, result, timeBandId }: Props) {
 }
 
 function TabButton({
-  active, onClick, label, sub,
+  active, onClick, label,
 }: {
-  active: boolean; onClick: () => void; label: string; sub: string;
+  active: boolean; onClick: () => void; label: string;
 }) {
   return (
     <button
       type="button"
       onClick={onClick}
       style={{
-        padding: '12px 10px',
+        padding: '16px 10px',
         borderRadius: 10,
         border: 'none',
         background: active
@@ -829,14 +831,13 @@ function TabButton({
         transition: 'all 0.2s',
         textAlign: 'center',
         WebkitTapHighlightColor: 'transparent',
+        fontSize: 17,
+        fontWeight: 800,
+        letterSpacing: '-0.01em',
+        fontFamily: 'var(--font-title)',
       }}
     >
-      <div style={{
-        fontSize: 15, fontWeight: 800,
-        marginBottom: 2, letterSpacing: '-0.01em',
-        fontFamily: 'var(--font-title)',
-      }}>{label}</div>
-      <div style={{ fontSize: 11, opacity: 0.7, fontWeight: 500 }}>{sub}</div>
+      {label}
     </button>
   );
 }

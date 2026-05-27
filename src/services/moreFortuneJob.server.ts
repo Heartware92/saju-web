@@ -14,7 +14,7 @@ const DEFAULT_MAX_TOKENS: Record<MoreFortuneCategory, number> = {
   children: 5000,
   personality: 5000,
   name: 6000,
-  dream: 10000,
+  dream: 14000,  // V4 11섹션 + 본문 분량 풍부화 (2026-05-27)
 };
 const DEFAULT_MIN_LENGTH: Record<MoreFortuneCategory, number> = {
   study: 500,
