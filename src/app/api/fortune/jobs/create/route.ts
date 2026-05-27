@@ -272,7 +272,14 @@ export async function POST(request: NextRequest) {
     const moreCats: MoreFortuneCategory[] = ['study', 'children', 'personality', 'name', 'dream'];
     if (moreCats.includes(body.category as MoreFortuneCategory)) {
       const moreBody = body as MoreFortuneJobBody;
-      if (!moreBody.prompt || moreBody.prompt.length < 50) {
+      // dream 카테고리는 3-pass — 서버가 dreamInput으로 직접 호출.
+      // prompt 길이 검증 대신 dreamInput.dreamText 검증.
+      if (moreBody.category === 'dream') {
+        const dreamText = moreBody.dreamInput?.dreamText?.trim() || '';
+        if (dreamText.length < 5) {
+          return NextResponse.json({ error: '꿈 내용을 5자 이상 적어주세요.' }, { status: 400 });
+        }
+      } else if (!moreBody.prompt || moreBody.prompt.length < 50) {
         return NextResponse.json({ error: `${policy.reason} prompt 가 비어있어요.` }, { status: 400 });
       }
     }
