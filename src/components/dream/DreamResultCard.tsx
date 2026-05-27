@@ -144,7 +144,7 @@ function ChipWrapCard({ label, items }: { label: string; items: string[] }) {
   );
 }
 
-/** 색상 스와치 - LuckyVisualCard 와 동일 */
+/** 색상 스와치 — LuckyVisualCard 코드 1:1 카피 (40x40, rounded-xl, shadow-inner) */
 function ColorSwatch({ name, css }: { name: string; css: string }) {
   return (
     <div className="flex flex-col items-center gap-1.5">
@@ -154,23 +154,42 @@ function ColorSwatch({ name, css }: { name: string; css: string }) {
   );
 }
 
-/** 방향 칩 — 단순 텍스트 칩 (CompassSVG는 모바일 dark theme 에서 안 보이는 사고 + 여백 큼) */
-function CompassGroup({ directions, tone = 'good' }: { directions: string[]; tone?: 'good' | 'bad' }) {
-  if (directions.length === 0) return null;
-  const color = tone === 'good' ? '#86EFAC' : '#F87171';
-  const bg = tone === 'good' ? 'rgba(134,239,172,0.10)' : 'rgba(248,113,113,0.10)';
-  const border = tone === 'good' ? 'rgba(134,239,172,0.35)' : 'rgba(248,113,113,0.35)';
+/** 단일 나침반 SVG — LuckyVisualCard 코드 1:1 카피 (72x72) */
+function CompassSVG({ deg, direction }: { deg: number; direction: string }) {
+  if (deg === -1) {
+    return (
+      <div className="flex flex-col items-center gap-1">
+        <div className="w-[72px] h-[72px] rounded-full border border-white/20 flex items-center justify-center bg-white/5">
+          <span className="text-[22px] font-bold text-text-primary" style={{ fontFamily: 'var(--font-serif)' }}>中</span>
+        </div>
+        <span className="text-[13px] text-text-tertiary">중앙이 길합니다</span>
+      </div>
+    );
+  }
+  const labels = [
+    { text: '북', x: 36, y: 11 },
+    { text: '동', x: 64, y: 39 },
+    { text: '남', x: 36, y: 67 },
+    { text: '서', x: 8, y: 39 },
+  ];
+  const dirShort = direction.replace('쪽', '');
   return (
-    <div className="flex flex-wrap gap-2">
-      {directions.map((d, i) => (
-        <span
-          key={`${d}-${i}`}
-          className="px-3 py-1.5 rounded-md text-[15px] font-bold border"
-          style={{ color, background: bg, borderColor: border, fontFamily: 'var(--font-title)' }}
-        >
-          {d}
-        </span>
-      ))}
+    <div className="flex flex-col items-center gap-1">
+      <svg width="72" height="72" viewBox="0 0 72 72">
+        <circle cx="36" cy="36" r="34" fill="rgba(255,255,255,0.04)" stroke="rgba(255,255,255,0.15)" strokeWidth="1" />
+        <line x1="36" y1="4" x2="36" y2="68" stroke="rgba(255,255,255,0.08)" strokeWidth="1" />
+        <line x1="4" y1="36" x2="68" y2="36" stroke="rgba(255,255,255,0.08)" strokeWidth="1" />
+        {labels.map(l => (
+          <text key={l.text} x={l.x} y={l.y} textAnchor="middle" dominantBaseline="middle"
+            fontSize="9" fill="rgba(255,255,255,0.35)" fontFamily="var(--font-sans)">{l.text}</text>
+        ))}
+        <g transform={`rotate(${deg}, 36, 36)`}>
+          <polygon points="36,6 32.5,36 39.5,36" fill="var(--color-cta, #8B6914)" opacity="0.9" />
+          <polygon points="36,66 32.5,36 39.5,36" fill="rgba(255,255,255,0.18)" />
+        </g>
+        <circle cx="36" cy="36" r="3.5" fill="white" opacity="0.7" />
+      </svg>
+      <span className="text-[13px] text-text-tertiary">{dirShort}쪽이 길합니다</span>
     </div>
   );
 }
@@ -444,28 +463,32 @@ function AdviceCard({ advice }: { advice: { body: string; items: DreamAdviceItem
 
   return (
     <div className="flex flex-col gap-3">
-      {/* 1) 길한 방향 — 라벨 좌·칩 우 한 줄 가로 정렬 */}
-      {directions.length > 0 && (
-        <div className="rounded-xl px-3 py-2.5 bg-white/5 border border-white/10 flex items-center gap-3">
-          <div className="text-[13px] text-text-tertiary flex-shrink-0">길한 방향</div>
-          <div className="flex-1 flex justify-end">
-            <CompassGroup directions={directions} />
-          </div>
+      {/* 1) 나침반 + 색상 — LuckyVisualCard 코드 1:1 카피 (한 row, 가운데 구분선) */}
+      {(directions.length > 0 || colors.length > 0) && (
+        <div className="flex items-center justify-around py-3 px-2 rounded-2xl bg-white/5 border border-white/10">
+          {directions.length > 0 && (
+            <CompassSVG
+              deg={DIRECTION_DEG[directions[0]] ?? 0}
+              direction={directions[0]}
+            />
+          )}
+          {directions.length > 0 && colors.length > 0 && <div className="w-px h-16 bg-white/10" />}
+          {colors.length > 0 && (
+            <div className="flex flex-col items-center gap-2">
+              <span className="text-[12px] text-text-tertiary mb-0.5">행운 색상</span>
+              <div className="flex gap-3">
+                {colors.slice(0, 3).map((c, i) => (
+                  <ColorSwatch key={`${c.name}-${i}`} name={c.name} css={c.css} />
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       )}
-
-      {/* 2) 색상 스와치 — 라벨 좌·스와치 우 한 줄 가로 정렬 (여백 압축) */}
-      {colors.length > 0 && (
-        <div className="rounded-xl px-3 py-2.5 bg-white/5 border border-white/10 flex items-center gap-3">
-          <div className="text-[13px] text-text-tertiary flex-shrink-0">행운 색상</div>
-          <div className="flex flex-wrap gap-2 flex-1 justify-end">
-            {colors.slice(0, 4).map((c, i) => (
-              <div key={`${c.name}-${i}`} className="flex items-center gap-1.5">
-                <div className="w-6 h-6 rounded-md border border-white/15" style={{ background: c.css }} />
-                <span className="text-[13px] text-text-secondary">{c.name}</span>
-              </div>
-            ))}
-          </div>
+      {/* 다중 방향 부가 표기 (첫 번째는 나침반에 표시, 나머지는 텍스트로) */}
+      {directions.length > 1 && (
+        <div className="text-[13px] text-text-tertiary text-center -mt-1">
+          그 외 길한 방향: {directions.slice(1).join(', ')}
         </div>
       )}
 
@@ -521,32 +544,33 @@ function CautionBox({ caution }: { caution: { body: string; items: DreamAdviceIt
 
   return (
     <div className="flex flex-col gap-3">
-      {/* 1) 조심할 방향 — 라벨 좌·칩 우 한 줄 가로 정렬 */}
-      {directions.length > 0 && (
-        <div className="rounded-xl px-3 py-2.5 border flex items-center gap-3" style={{
+      {/* 1) 조심할 방향 + 색 — LuckyVisualCard 패턴 (한 row, 가운데 구분선, caution 톤) */}
+      {(directions.length > 0 || colors.length > 0) && (
+        <div className="flex items-center justify-around py-3 px-2 rounded-2xl border" style={{
           background: 'rgba(248,113,113,0.04)', borderColor: 'rgba(248,113,113,0.28)',
         }}>
-          <div className="text-[13px] text-text-tertiary flex-shrink-0">조심할 방향</div>
-          <div className="flex-1 flex justify-end">
-            <CompassGroup directions={directions} tone="bad" />
-          </div>
+          {directions.length > 0 && (
+            <CompassSVG
+              deg={DIRECTION_DEG[directions[0]] ?? 0}
+              direction={directions[0]}
+            />
+          )}
+          {directions.length > 0 && colors.length > 0 && <div className="w-px h-16 bg-white/10" />}
+          {colors.length > 0 && (
+            <div className="flex flex-col items-center gap-2">
+              <span className="text-[12px] text-text-tertiary mb-0.5">조심할 색</span>
+              <div className="flex gap-3">
+                {colors.slice(0, 3).map((c, i) => (
+                  <ColorSwatch key={`${c.name}-${i}`} name={c.name} css={c.css} />
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       )}
-
-      {/* 2) 피해야 할 색 — 라벨 좌·스와치 우 한 줄 가로 정렬 (여백 압축) */}
-      {colors.length > 0 && (
-        <div className="rounded-xl px-3 py-2.5 border flex items-center gap-3" style={{
-          background: 'rgba(248,113,113,0.04)', borderColor: 'rgba(248,113,113,0.28)',
-        }}>
-          <div className="text-[13px] text-text-tertiary flex-shrink-0">조심할 색</div>
-          <div className="flex flex-wrap gap-2 flex-1 justify-end">
-            {colors.slice(0, 4).map((c, i) => (
-              <div key={`${c.name}-${i}`} className="flex items-center gap-1.5">
-                <div className="w-6 h-6 rounded-md border border-white/15" style={{ background: c.css }} />
-                <span className="text-[13px] text-text-secondary">{c.name}</span>
-              </div>
-            ))}
-          </div>
+      {directions.length > 1 && (
+        <div className="text-[13px] text-text-tertiary text-center -mt-1">
+          그 외 조심할 방향: {directions.slice(1).join(', ')}
         </div>
       )}
 
