@@ -127,7 +127,7 @@ function VisualCaption({ title, desc }: { title: string; desc: string }) {
       </div>
       <div
         className="text-[14px] text-text-secondary leading-[1.65]"
-        style={{ fontFamily: 'var(--font-body)', wordBreak: 'keep-all', overflowWrap: 'break-word' }}
+        style={{ fontFamily: 'var(--font-body)' }}
       >
         {desc}
       </div>
@@ -469,7 +469,7 @@ export function SummaryScoreVisual({
       {/* 등급 의미 안내 — 한 줄에 컬러 키 + 설명 (모바일 좁은 폭에서 줄바꿈 자연스럽게) */}
       <div
         className="mt-3 pt-3 space-y-1.5 text-[13px] text-text-secondary leading-[1.55] border-t"
-        style={{ borderColor: 'rgba(255,255,255,0.08)', fontFamily: 'var(--font-body)', wordBreak: 'keep-all' }}
+        style={{ borderColor: 'rgba(255,255,255,0.08)', fontFamily: 'var(--font-body)' }}
       >
         <div className="flex items-baseline gap-2">
           <span className="font-bold text-[14px] shrink-0" style={{ color: '#34D399' }}>보강</span>
@@ -653,7 +653,7 @@ export function StrengthVisual({
           <li
             key={i}
             className="leading-[1.65] tracking-[-0.005em]"
-            style={{ fontFamily: 'var(--font-body)', wordBreak: 'keep-all', overflowWrap: 'break-word' }}
+            style={{ fontFamily: 'var(--font-body)' }}
           >
             <div className="text-[16px] font-bold text-text-primary mb-1">{s.headline}</div>
             <div className="text-[15px] text-text-secondary">{s.detail}</div>
@@ -691,7 +691,7 @@ export function ShadowVisual({
           <li
             key={i}
             className="leading-[1.65] tracking-[-0.005em]"
-            style={{ fontFamily: 'var(--font-body)', wordBreak: 'keep-all', overflowWrap: 'break-word' }}
+            style={{ fontFamily: 'var(--font-body)' }}
           >
             <div className="text-[16px] font-bold text-text-primary mb-1">{s.headline}</div>
             <div className="text-[15px] text-text-secondary">{s.detail}</div>
@@ -923,7 +923,7 @@ export function AdviceVisual({ bullets }: { bullets: string[] }): JSX.Element | 
           </div>
           <div
             className="text-[17px] text-text-secondary leading-[1.75] tracking-[-0.005em]"
-            style={{ fontFamily: 'var(--font-body)', wordBreak: 'keep-all', overflowWrap: 'break-word' }}
+            style={{ fontFamily: 'var(--font-body)' }}
           >
             {b}
           </div>

@@ -325,6 +325,9 @@ export default function MoreFortunePage({ category }: Props) {
   useEffect(() => {
     if (!recordId) return;
     let cancelled = false;
+    // ★ fetch 시작 즉시 loading=true. 안 그러면 fetch 동안 빈 페이지/잔여 카드가
+    //   잠깐 노출되어 "이전 페이지가 깜빡" 사고 발생 (사용자 보고).
+    setLoading(true);
     sajuDB.getRecordById(recordId)
       .then((record) => {
         if (cancelled) return;
@@ -878,8 +881,11 @@ export default function MoreFortunePage({ category }: Props) {
         animate={{ opacity: 1, y: 0 }}
         className={styles.content}
       >
-        {/* 소개 카드 — 입력 화면에서만 노출. 결과가 나온 뒤에는 카테고리 안내가 불필요. */}
-        {!result && (
+        {/* 소개 카드 — 입력 화면에서만 노출. 결과가 나온 뒤에는 카테고리 안내가 불필요.
+           ★ archive 모드는 record fetch 동안 result 가 잠깐 null 상태인데, 그때 소개 카드가
+             "이전 페이지" 처럼 깜빡 보이던 사고 차단. archive 진입은 보관함 풀이 재생 의도라
+             소개 카드 자체 노출 불필요. */}
+        {!result && !isArchiveMode && (
           <div
             className={styles.section}
             style={{
@@ -2128,53 +2134,20 @@ function MoreFortuneSectionedCard({
                 && nameAdviceBullets.length > 0 && (
                 <AdviceVisual bullets={nameAdviceBullets} />
               )}
-              <div
-                className="text-[17px] text-text-secondary leading-[1.85] tracking-[-0.005em] space-y-3"
-                style={{ wordBreak: 'keep-all', overflowWrap: 'break-word' }}
-              >
+              {/* 정통사주(SajuResultPage:641)·실시간 운세(TodayFortunePage:1126) 와 동일 패턴:
+                 단락 \n\n 단위 split + <p whitespace-pre-line>. wordBreak 미지정(default normal)
+                 으로 한국어 글자 단위 자동 wrap → 모바일에서 줄 길이 균등.
+                 name+preserve/rename 은 위에서 AdviceVisual 로 불릿을 분리해 renderBody 사용. */}
+              <div className="text-[17px] text-text-secondary leading-[1.85] tracking-[-0.005em] space-y-3">
                 {(() => {
-                  // 단락 분리 + 단락 안에서 "- " "· " 같은 불릿 라인은 별도 리스트로 렌더.
-                  //  ★ 같은 단락 안 단일 \n (LLM 이 의미 단위로 짧게 끊은 줄) 은 모두 공백 1개로
-                  //    합쳐 한 흐름으로 흘림. 모바일에서 어절 단위 들쭉날쭉 줄바꿈 회피.
-                  //  name+preserve/rename 은 위에서 AdviceVisual 로 분리했으므로 renderBody 사용.
                   const sourceText = (category === 'name'
                     && (key === 'preserve' || key === 'rename'))
                     ? renderBody : bodyText;
-                  const paras = sourceText.split(/\n\n+/).map(p => p.trim()).filter(Boolean);
-                  return paras.map((para, pi) => {
-                    const lines = para.split('\n');
-                    const items: { type: 'text' | 'bullet'; content: string }[] = [];
-                    for (const line of lines) {
-                      // \r 제거 + 다중 공백 → 단일 공백 정제
-                      const t = line.replace(/\r/g, '').trim().replace(/\s+/g, ' ');
-                      if (!t) continue;
-                      const m = t.match(/^[-·•∙]\s*(.+)$/);
-                      if (m) {
-                        items.push({ type: 'bullet', content: m[1].trim() });
-                      } else {
-                        // 이전 항목이 text 면 같은 텍스트 블록으로 합침 (단일 공백 연결)
-                        if (items.length > 0 && items[items.length - 1].type === 'text') {
-                          items[items.length - 1].content += ' ' + t;
-                        } else {
-                          items.push({ type: 'text', content: t });
-                        }
-                      }
-                    }
+                  return sourceText.split(/\n\n+/).map((para, pi) => {
+                    const trimmed = para.trim();
+                    if (!trimmed) return null;
                     return (
-                      <div key={pi} className="space-y-2.5">
-                        {items.map((it, ii) =>
-                          it.type === 'bullet' ? (
-                            <div key={ii} className="flex items-start gap-2 pl-1">
-                              <span className="text-text-tertiary shrink-0 mt-[6px] leading-none">·</span>
-                              <span className="flex-1">{it.content}</span>
-                            </div>
-                          ) : (
-                            // whitespace-pre-line 제거 — items 합치는 로직에서 \n 모두 공백화 했으므로
-                            // pre-line 효과 불필요. 자동 wrap 만 동작해 깔끔하게 흐름.
-                            <p key={ii}>{it.content}</p>
-                          )
-                        )}
-                      </div>
+                      <p key={pi} className="whitespace-pre-line">{trimmed}</p>
                     );
                   });
                 })()}
