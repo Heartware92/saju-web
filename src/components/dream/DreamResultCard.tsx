@@ -302,7 +302,7 @@ function SymbolCardGrid({ symbols }: { symbols: DreamSymbolCardData[] }) {
                 )}
               </div>
             </div>
-            <p className="text-[15px] text-text-secondary leading-[1.8] tracking-[-0.005em] break-keep m-0">
+            <p className="text-[15px] text-text-secondary leading-[1.8] tracking-[-0.005em] break-all m-0">
               {s.meaning}
             </p>
           </motion.div>
@@ -315,7 +315,7 @@ function SymbolCardGrid({ symbols }: { symbols: DreamSymbolCardData[] }) {
 function DomainBarsCard({ domains }: { domains: DreamDomainScore[] }) {
   if (domains.length === 0) {
     return (
-      <p className="text-[14px] text-text-tertiary leading-[1.7] break-keep">
+      <p className="text-[14px] text-text-tertiary leading-[1.7] break-all">
         이 꿈은 특정 영역(재물·인연·건강·시험·일·관계)에 강한 신호가 보이지 않아요.
         일상의 잔상이거나 내면의 감정 흐름에 가까운 꿈으로 보입니다.
       </p>
@@ -354,7 +354,7 @@ function DomainBarsCard({ domains }: { domains: DreamDomainScore[] }) {
               />
             </div>
             {d.note && (
-              <p className="text-[15px] text-text-secondary leading-[1.8] tracking-[-0.005em] break-keep m-0">
+              <p className="text-[15px] text-text-secondary leading-[1.8] tracking-[-0.005em] break-all m-0">
                 {d.note}
               </p>
             )}
@@ -626,7 +626,7 @@ function ClinicalDiagnosisCard({ diag }: { diag: DreamV4Result['western_diagnosi
         )}
       </div>
       {clinical?.desc && (
-        <p className="text-[14px] text-text-tertiary leading-relaxed mb-2.5 break-keep">{clinical.desc}</p>
+        <p className="text-[14px] text-text-tertiary leading-relaxed mb-2.5 break-all">{clinical.desc}</p>
       )}
       {diag.reason && <BodyParagraphs text={diag.reason} />}
     </div>
@@ -647,7 +647,7 @@ function LatentDiptychCard({ latent }: { latent: DreamV4Result['western_latent']
           <div className="text-[12px] font-extrabold mb-1.5" style={{ color: '#A78BFA', fontFamily: 'var(--font-title)' }}>
             표면 (manifest)
           </div>
-          <p className="text-[14px] text-text-primary leading-relaxed break-keep m-0">{latent.surface || '—'}</p>
+          <p className="text-[14px] text-text-primary leading-relaxed break-all m-0">{latent.surface || '—'}</p>
         </div>
         <div className="rounded-xl p-3.5 border" style={{
           background: 'rgba(232,164,144,0.08)', borderColor: 'rgba(232,164,144,0.30)',
@@ -655,7 +655,7 @@ function LatentDiptychCard({ latent }: { latent: DreamV4Result['western_latent']
           <div className="text-[12px] font-extrabold mb-1.5" style={{ color: '#E8A490', fontFamily: 'var(--font-title)' }}>
             잠재 (latent)
           </div>
-          <p className="text-[14px] text-text-primary leading-relaxed break-keep m-0">{latent.latent || '—'}</p>
+          <p className="text-[14px] text-text-primary leading-relaxed break-all m-0">{latent.latent || '—'}</p>
         </div>
       </div>
       {latent.work && workLabel[latent.work] && (
@@ -707,12 +707,12 @@ function ArchetypeCardGrid({ items }: { items: DreamArchetypeCard[] }) {
               )}
             </div>
             {it.note && (
-              <p className="text-[15px] text-text-secondary leading-[1.8] tracking-[-0.005em] break-keep mb-1.5">
+              <p className="text-[15px] text-text-secondary leading-[1.8] tracking-[-0.005em] break-all mb-1.5">
                 {it.note}
               </p>
             )}
             {meta?.desc && (
-              <p className="text-[12px] text-text-tertiary leading-[1.6] break-keep m-0">
+              <p className="text-[12px] text-text-tertiary leading-[1.6] break-all m-0">
                 {meta.desc}
               </p>
             )}
@@ -736,7 +736,7 @@ function SelfWorkCard({ text }: { text: string }) {
       padding: '14px 12px',
       background: 'rgba(255,255,255,0.04)', borderColor: 'rgba(255,255,255,0.10)',
     }}>
-      <p className="text-[15px] text-text-tertiary leading-[1.85] tracking-[-0.005em] break-keep m-0">
+      <p className="text-[15px] text-text-tertiary leading-[1.85] tracking-[-0.005em] break-all m-0">
         이 섹션은 풀이 응답이 누락된 것 같아요. 새로 풀이를 받아보시면 자기 통합 워크 가이드가 채워집니다.
       </p>
     </div>
