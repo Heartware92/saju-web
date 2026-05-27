@@ -78,6 +78,7 @@ import {
   JaWonVisual,
   NumerologyVisual,
   SuriElementVisual,
+  EumYangVisual,
   AdviceVisual,
   StrengthVisual,
   ShadowVisual,
@@ -183,10 +184,12 @@ export default function MoreFortunePage({ category }: Props) {
         return '';
       })(),
       jawonElements: hanjas.map(h => h.jawon).filter(Boolean),
+      sajuElementCount: saju?.elementCount,
+      dayMasterElement: saju?.dayMasterElement ?? '',
     };
   // saju 객체 자체가 매 렌더 새로 생기더라도 핵심 필드만 보고 stale 회피
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [category, koreanName, charMeanings, selectedHanjas, saju?.yongSinElement, saju?.giSin, saju?.dayMasterElement]);
+  }, [category, koreanName, charMeanings, selectedHanjas, saju?.yongSinElement, saju?.giSin, saju?.dayMasterElement, saju?.elementCount]);
 
   // 꿈 해몽 전용 state — DreamInputPanel에서 onChange로 주입
   // dreamInputResetKey: "다른 꿈 풀이받기" 클릭 시 패널을 강제 remount 해 입력 초기화
@@ -1997,6 +2000,8 @@ function MoreFortuneSectionedCard({
     yongSinEl: string;
     giSinEl: string;
     jawonElements: string[];
+    sajuElementCount?: { 목: number; 화: number; 토: number; 금: number; 수: number };
+    dayMasterElement?: string;
   } | null;
   childrenSaju?: SajuResult | null;
 }) {
@@ -2029,10 +2034,10 @@ function MoreFortuneSectionedCard({
     : null;
   // ★ lookahead 예외:
   //  - 은유|metaphor: extractMetaphor 가 metaphorTitle 로 추출
-  //  - axis_eum|axis_jawon|axis_suri|axis_81: four_axis 섹션 4 파티션 sub-marker.
+  //  - axis_eum|axis_jawon|axis_suri|axis_81|axis_eumyang: four_axis 섹션 5 파티션 sub-marker.
   //    split 키로 사용되어야 하므로 unwrap 금지.
   const nameBracketUnwrapPattern: RegExp | null = category === 'name'
-    ? /\[(?!은유|metaphor|axis_eum|axis_jawon|axis_suri|axis_81)([^\]\n]{1,30})\]/g
+    ? /\[(?!은유|metaphor|axis_eum|axis_jawon|axis_suri|axis_81|axis_eumyang)([^\]\n]{1,30})\]/g
     : null;
 
   return (
@@ -2079,6 +2084,8 @@ function MoreFortuneSectionedCard({
                     jawonElements={ctx.jawonElements}
                     hanjas={ctx.hanjas}
                     sounds={ctx.sounds}
+                    sajuElementCount={ctx.sajuElementCount}
+                    dayMasterElement={ctx.dayMasterElement}
                   />
                 );
               case 'meaning':
@@ -2159,9 +2166,9 @@ function MoreFortuneSectionedCard({
                 (() => {
                   const ctx = nameVisualContext;
                   const isHanja = ctx.hanjas.length > 0;
-                  const segs = bodyText.split(/\[(axis_eum|axis_jawon|axis_suri|axis_81)\]/);
-                  const parts: Record<'axis_eum' | 'axis_jawon' | 'axis_suri' | 'axis_81', string> = {
-                    axis_eum: '', axis_jawon: '', axis_suri: '', axis_81: '',
+                  const segs = bodyText.split(/\[(axis_eum|axis_jawon|axis_suri|axis_81|axis_eumyang)\]/);
+                  const parts: Record<'axis_eum' | 'axis_jawon' | 'axis_suri' | 'axis_81' | 'axis_eumyang', string> = {
+                    axis_eum: '', axis_jawon: '', axis_suri: '', axis_81: '', axis_eumyang: '',
                   };
                   // sub-marker 누락 fallback — 전체 본문을 axis_eum 에 몰아넣음
                   if (segs.length <= 1) {
@@ -2209,6 +2216,13 @@ function MoreFortuneSectionedCard({
                       subLabel: '인생 4단계 길흉으로 보기',
                       accent: '#A78BFA',
                       visual: isHanja ? <NumerologyVisual chars={hanjaChars} sounds={ctx.sounds} yongSinEl={ctx.yongSinEl} giSinEl={ctx.giSinEl} hideCaptionTitle /> : null,
+                    },
+                    {
+                      key: 'axis_eumyang',
+                      label: '수리 음양',
+                      subLabel: '한자 획수 홀짝으로 보기',
+                      accent: '#FB923C',
+                      visual: isHanja ? <EumYangVisual hanjas={ctx.hanjas} hideCaptionTitle /> : null,
                     },
                   ];
                   const visiblePartitions = partitions.filter(p => parts[p.key] || p.visual);

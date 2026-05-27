@@ -357,6 +357,42 @@ function computeStarRating(grades: AxisGrade[]): {
   return { stars, bonusCount, neutralCount, penaltyCount, analyzedCount: valid.length };
 }
 
+/**
+ * 4축 등급 → 100점 정량 점수 + 종합 등급 안내.
+ *
+ * 점수 매핑 (축당 25점 만점):
+ *   보강 = 25 / 중립 = 15 / 거스름 = 5 / 미분석 = 12.5 (중간값)
+ *
+ * 종합 등급:
+ *   85~100: 매우 좋음
+ *   70~84:  좋음
+ *   55~69:  나쁘지 않음
+ *   40~54:  보통
+ *   0~39:   주의
+ */
+/**
+ * 축당 20점 (5축 × 20점 = 100점 만점, 청월당 스타일).
+ *   보강 = 20 / 중립 = 12 / 거스름 = 4 / 미분석 = 10 (중간값)
+ */
+const SCORE_PER_GRADE: Record<AxisGrade, number> = {
+  '보강':   20,
+  '중립':   12,
+  '거스름': 4,
+  '미분석': 10,
+};
+type OverallTier = { label: string; color: string; bg: string; border: string };
+function computeScore(grades: AxisGrade[]): { score: number; tier: OverallTier; axisScores: number[] } {
+  const axisScores = grades.map(g => SCORE_PER_GRADE[g]);
+  const score = Math.round(axisScores.reduce((s, v) => s + v, 0));
+  let tier: OverallTier;
+  if (score >= 85)      tier = { label: '매우 좋음', color: '#34D399', bg: 'rgba(52,211,153,0.14)',  border: 'rgba(52,211,153,0.45)' };
+  else if (score >= 70) tier = { label: '좋음',     color: '#86EFAC', bg: 'rgba(134,239,172,0.12)', border: 'rgba(134,239,172,0.40)' };
+  else if (score >= 55) tier = { label: '나쁘지 않음', color: '#FCD34D', bg: 'rgba(252,211,77,0.12)',  border: 'rgba(252,211,77,0.40)' };
+  else if (score >= 40) tier = { label: '보통',     color: '#CBD5E1', bg: 'rgba(203,213,225,0.12)', border: 'rgba(203,213,225,0.40)' };
+  else                  tier = { label: '주의',     color: '#F87171', bg: 'rgba(248,113,113,0.12)', border: 'rgba(248,113,113,0.40)' };
+  return { score, tier, axisScores };
+}
+
 export function SummaryScoreVisual({
   yongSinEl,
   giSinEl,
@@ -364,6 +400,8 @@ export function SummaryScoreVisual({
   jawonElements,
   hanjas,
   sounds,
+  sajuElementCount,
+  dayMasterElement,
 }: {
   yongSinEl: string;
   giSinEl?: string;
@@ -371,6 +409,8 @@ export function SummaryScoreVisual({
   jawonElements: string[];
   hanjas: Array<{ char: string; meaning: string; radical: string; strokes: number; jawon: string }>;
   sounds: string[];
+  sajuElementCount?: { 목: number; 화: number; 토: number; 금: number; 수: number };
+  dayMasterElement?: string;
 }) {
   const isHanjaMode = hanjas.length > 0;
   const suri = isHanjaMode ? calc4Gyeok(hanjas.map(h => h.char), sounds) : null;
@@ -387,16 +427,28 @@ export function SummaryScoreVisual({
   const suriGyeokGrade = suri
     ? gradeFromSuriGrades([suri.won, suri.hyeong, suri.i, suri.jeong].map(g => g.entry.grade))
     : '미분석' as AxisGrade;
+  // 음양 등급 — 한자 획수 홀짝 분포 균형
+  const eumyangGrade: AxisGrade = (() => {
+    if (!isHanjaMode) return '미분석';
+    const yang = hanjas.filter(h => h.strokes % 2 === 1).length;
+    const eum = hanjas.length - yang;
+    if (yang === hanjas.length || eum === hanjas.length) return '거스름';
+    if (Math.abs(yang - eum) <= Math.max(1, Math.floor(hanjas.length / 2))) return '보강';
+    return '중립';
+  })();
 
   const axes: Array<{ label: string; sub: string; grade: AxisGrade }> = [
     { label: '음령',   sub: '한글 발음', grade: eumGrade },
     { label: '자원',   sub: '한자 부수', grade: jawonGrade },
     { label: '수리',   sub: '수리오행',  grade: suriElGrade },
     { label: '81수리', sub: '4격 길흉',  grade: suriGyeokGrade },
+    { label: '음양',   sub: '획수 홀짝', grade: eumyangGrade },
   ];
 
   // 종합 별점 + 점수 근거 — 사용자가 별의 출처를 직접 보고 납득하도록
   const rating = computeStarRating(axes.map(a => a.grade));
+  // 100점 정량 점수 + 종합 등급 (청월당 스타일)
+  const { score, tier, axisScores } = computeScore(axes.map(a => a.grade));
 
   return (
     <div
@@ -406,39 +458,150 @@ export function SummaryScoreVisual({
         borderColor: 'rgba(124,92,252,0.30)',
       }}
     >
-      {/* 종합 별점 */}
-      <div className="flex flex-col items-center mb-4">
-        <span className="text-[14px] font-semibold text-text-secondary mb-2" style={{ fontFamily: 'var(--font-body)' }}>
-          4축 종합
-        </span>
-        <div className="flex gap-1.5 mb-2">
-          {[0, 1, 2, 3, 4].map(i => (
+      {/* 종합 점수 카드 — 큰 숫자 + 등급 칩 + 별점 */}
+      <div
+        className="rounded-2xl p-4 mb-3 border flex items-center gap-4"
+        style={{
+          background: `linear-gradient(135deg, ${tier.bg} 0%, rgba(20,12,38,0.4) 100%)`,
+          borderColor: tier.border,
+        }}
+      >
+        {/* 큰 점수 */}
+        <div className="flex flex-col items-center shrink-0">
+          <div className="flex items-baseline gap-0.5 leading-none">
             <span
-              key={i}
-              className="text-[22px] leading-none"
-              style={{ color: i < rating.stars ? '#FBBF24' : 'rgba(255,255,255,0.18)' }}
+              className="text-[42px] font-bold leading-none"
+              style={{ color: tier.color, fontFamily: 'var(--font-serif)' }}
             >
-              ★
+              {score}
             </span>
-          ))}
-        </div>
-        {rating.analyzedCount > 0 ? (
+            <span
+              className="text-[16px] font-semibold leading-none"
+              style={{ color: tier.color, opacity: 0.7 }}
+            >
+              /100
+            </span>
+          </div>
           <span
-            className="text-[14px] text-text-secondary leading-tight text-center"
+            className="text-[10px] text-text-tertiary mt-1"
             style={{ fontFamily: 'var(--font-body)' }}
           >
-            보강 {rating.bonusCount} · 중립 {rating.neutralCount} · 거스름 {rating.penaltyCount}
-            <span className="ml-1 opacity-60">(분석 {rating.analyzedCount}축)</span>
+            4축 종합 점수
           </span>
-        ) : (
-          <span className="text-[14px] text-text-secondary leading-tight" style={{ fontFamily: 'var(--font-body)' }}>
-            분석 가능한 축이 없어 중간값으로 표시
+        </div>
+        {/* 등급 + 별점 + 분포 */}
+        <div className="flex flex-col flex-1 min-w-0 gap-1.5">
+          <span
+            className="text-[15px] font-bold px-2.5 py-1 rounded-md self-start"
+            style={{
+              color: tier.color,
+              background: tier.bg,
+              border: `1px solid ${tier.border}`,
+              fontFamily: 'var(--font-title)',
+            }}
+          >
+            {tier.label}
           </span>
-        )}
+          <div className="flex gap-0.5">
+            {[0, 1, 2, 3, 4].map(i => (
+              <span
+                key={i}
+                className="text-[16px] leading-none"
+                style={{ color: i < rating.stars ? '#FBBF24' : 'rgba(255,255,255,0.18)' }}
+              >
+                ★
+              </span>
+            ))}
+          </div>
+          {rating.analyzedCount > 0 ? (
+            <span
+              className="text-[12px] text-text-secondary leading-tight"
+              style={{ fontFamily: 'var(--font-body)' }}
+            >
+              보강 {rating.bonusCount} · 중립 {rating.neutralCount} · 거스름 {rating.penaltyCount}
+            </span>
+          ) : (
+            <span className="text-[12px] text-text-secondary leading-tight" style={{ fontFamily: 'var(--font-body)' }}>
+              한자 정보가 없어 음령만 분석돼요
+            </span>
+          )}
+        </div>
       </div>
 
-      {/* 4축 등급칩 — 박스 좁아도 줄바꿈 방지 (whitespace-nowrap) */}
-      <div className="grid grid-cols-4 gap-1.5">
+      {/* 사주 오행 분포 — 청월당 스타일 5칸 그리드 (용신·기신·일주 강조) */}
+      {sajuElementCount && (
+        <div
+          className="rounded-xl p-3 mb-3 border"
+          style={{ background: 'rgba(255,255,255,0.03)', borderColor: 'rgba(255,255,255,0.08)' }}
+        >
+          <div className="flex items-baseline justify-between mb-2">
+            <span
+              className="text-[13px] font-bold"
+              style={{ color: 'var(--text-primary)', fontFamily: 'var(--font-title)' }}
+            >
+              내 사주 오행 분포
+            </span>
+            <span className="text-[11px] text-text-tertiary" style={{ fontFamily: 'var(--font-body)' }}>
+              이 이름이 보태야 할 결
+            </span>
+          </div>
+          <div className="grid grid-cols-5 gap-1.5">
+            {(['목', '화', '토', '금', '수'] as const).map((el) => {
+              const cnt = sajuElementCount[el] ?? 0;
+              const color = ELEMENT_COLOR[el];
+              const bg = ELEMENT_BG[el];
+              const isYong = el === yongSinEl;
+              const isGi = el === giSinEl;
+              const isDay = el === dayMasterElement;
+              return (
+                <div
+                  key={el}
+                  className="flex flex-col items-center justify-center rounded-lg px-1 py-2 border"
+                  style={{
+                    background: bg,
+                    borderColor: isYong
+                      ? 'rgba(52,211,153,0.5)'
+                      : isGi
+                        ? 'rgba(248,113,113,0.5)'
+                        : `${color}55`,
+                    boxShadow: isYong ? '0 0 8px rgba(52,211,153,0.18)' : 'none',
+                  }}
+                >
+                  <span
+                    className="text-[15px] font-bold leading-tight"
+                    style={{ color, fontFamily: 'var(--font-serif)' }}
+                  >
+                    {el}
+                  </span>
+                  <span
+                    className="text-[15px] font-bold leading-tight mt-0.5"
+                    style={{ color: 'var(--text-primary)', fontFamily: 'var(--font-serif)' }}
+                  >
+                    {cnt}
+                  </span>
+                  <span
+                    className="text-[9px] font-bold mt-0.5 leading-none whitespace-nowrap"
+                    style={{
+                      color: isYong
+                        ? '#34D399'
+                        : isGi
+                          ? '#F87171'
+                          : isDay
+                            ? '#FBBF24'
+                            : 'transparent',
+                    }}
+                  >
+                    {isYong ? '용신' : isGi ? '기신' : isDay ? '일주' : '·'}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* 5축 등급칩 + 축별 점수 — 박스 좁아도 줄바꿈 방지 (whitespace-nowrap) */}
+      <div className="grid grid-cols-5 gap-1.5">
         {axes.map((a, i) => {
           const badge = GRADE_BADGE[a.grade];
           return (
@@ -454,13 +617,13 @@ export function SummaryScoreVisual({
                 {a.label}
               </span>
               <span
-                className="text-[11px] text-text-tertiary mb-2 text-center leading-tight whitespace-nowrap"
+                className="text-[11px] text-text-tertiary mb-1 text-center leading-tight whitespace-nowrap"
                 style={{ fontFamily: 'var(--font-body)' }}
               >
                 {a.sub}
               </span>
               <span
-                className="text-[12px] font-bold px-1.5 py-0.5 rounded-md whitespace-nowrap"
+                className="text-[12px] font-bold px-1.5 py-0.5 rounded-md whitespace-nowrap mb-1"
                 style={{
                   background: badge.bg,
                   color: badge.fg,
@@ -468,6 +631,12 @@ export function SummaryScoreVisual({
                 }}
               >
                 {badge.label}
+              </span>
+              <span
+                className="text-[11px] font-semibold whitespace-nowrap"
+                style={{ color: 'var(--text-secondary)', fontFamily: 'var(--font-body)', opacity: 0.85 }}
+              >
+                {axisScores[i] % 1 === 0 ? axisScores[i] : axisScores[i].toFixed(1)}<span className="opacity-50">/20</span>
               </span>
             </div>
           );
@@ -883,6 +1052,75 @@ export function SuriElementVisual({
         );
       })}
     </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 4b) 수리 음양 — 한자 획수 홀짝 = 양/음 배열 + 균형 평가
+// ─────────────────────────────────────────────────────────────────────────────
+export function EumYangVisual({
+  hanjas,
+  hideCaptionTitle = false,
+}: {
+  hanjas: Array<{ char: string; strokes: number }>;
+  hideCaptionTitle?: boolean;
+}) {
+  if (hanjas.length === 0) return null;
+  const items = hanjas.map(h => ({ char: h.char, strokes: h.strokes, eumyang: h.strokes % 2 === 1 ? '양' : '음' as '양' | '음' }));
+  const yangCount = items.filter(i => i.eumyang === '양').length;
+  const eumCount = items.length - yangCount;
+  const balanced = Math.abs(yangCount - eumCount) <= Math.max(1, Math.floor(items.length / 2));
+  const verdict = items.length === 0
+    ? { label: '분석 불가', color: '#94A3B8', bg: 'rgba(148,163,184,0.10)', border: 'rgba(148,163,184,0.30)' }
+    : yangCount === items.length
+      ? { label: '양 편중', color: '#F87171', bg: 'rgba(248,113,113,0.10)', border: 'rgba(248,113,113,0.30)' }
+      : eumCount === items.length
+        ? { label: '음 편중', color: '#3B82F6', bg: 'rgba(59,130,246,0.10)', border: 'rgba(59,130,246,0.30)' }
+        : balanced
+          ? { label: '음양 균형', color: '#34D399', bg: 'rgba(52,211,153,0.10)', border: 'rgba(52,211,153,0.30)' }
+          : { label: '한쪽 우세', color: '#FCD34D', bg: 'rgba(252,211,77,0.10)', border: 'rgba(252,211,77,0.30)' };
+
+  return (
+    <div className="mb-3 space-y-3">
+      <VisualCaption
+        title="수리 음양"
+        desc="한자 획수의 홀짝으로 음양을 봐요. 홀수=양(밝음·움직임), 짝수=음(고요·안정). 두 결이 어우러질 때 균형이 좋아요."
+        hideTitle={hideCaptionTitle}
+      />
+      {/* 한자별 양/음 칩 */}
+      <div className="flex flex-wrap gap-2 justify-center">
+        {items.map((it, i) => {
+          const isYang = it.eumyang === '양';
+          const color = isYang ? '#F59E0B' : '#60A5FA';
+          const bg = isYang ? 'rgba(245,158,11,0.10)' : 'rgba(96,165,250,0.10)';
+          return (
+            <div
+              key={i}
+              className="flex flex-col items-center justify-center px-3 py-2.5 rounded-xl border"
+              style={{ background: bg, borderColor: `${color}55`, minWidth: 60 }}
+            >
+              <span className="text-[22px] font-bold leading-tight" style={{ color: 'var(--text-primary)', fontFamily: 'var(--font-serif)' }}>{it.char}</span>
+              <span className="text-[11px] text-text-tertiary mt-0.5">{it.strokes}획</span>
+              <span className="text-[13px] font-bold mt-0.5" style={{ color }}>{it.eumyang}</span>
+            </div>
+          );
+        })}
+      </div>
+      {/* 음양 분포 + 종합 평가 */}
+      <div className="rounded-xl p-3 bg-white/[0.03] border border-white/10 flex items-center justify-between gap-3">
+        <div className="flex items-center gap-3 text-[13px] text-text-secondary" style={{ fontFamily: 'var(--font-body)' }}>
+          <span><span className="font-bold" style={{ color: '#F59E0B' }}>양</span> {yangCount}</span>
+          <span className="text-text-tertiary">·</span>
+          <span><span className="font-bold" style={{ color: '#60A5FA' }}>음</span> {eumCount}</span>
+        </div>
+        <span
+          className="text-[12px] font-bold px-2 py-1 rounded-md whitespace-nowrap"
+          style={{ background: verdict.bg, color: verdict.color, border: `1px solid ${verdict.border}` }}
+        >
+          {verdict.label}
+        </span>
+      </div>
     </div>
   );
 }
