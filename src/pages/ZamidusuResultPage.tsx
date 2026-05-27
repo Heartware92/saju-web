@@ -495,16 +495,25 @@ function renderSectionDataCards(
       return myeong ? <HelperStarsChips palace={myeong} /> : null;
     case 'body_palace':
       return <BodyPalaceCard chart={chart} />;
-    case 'relations':
-      return <PalaceGroup chart={chart} names={['부처궁', '자녀궁', '형제궁', '노복궁', '부모궁']} />;
+    // 영역별 분리 (2026-05-27 사용자 재구성)
     case 'wealth':
-      return <PalaceGroup chart={chart} names={['재백궁', '관록궁', '전택궁']} />;
+      return <PalaceGroup chart={chart} names={['재백궁', '전택궁']} />;
+    case 'career':
+      return <PalaceGroup chart={chart} names={['관록궁', '자녀궁']} />;
+    case 'love':
+      return <PalaceGroup chart={chart} names={['부처궁']} />;
     case 'body_mind':
-      return <PalaceGroup chart={chart} names={['질액궁', '복덕궁', '천이궁']} />;
+      return <PalaceGroup chart={chart} names={['질액궁', '복덕궁']} />;
+    case 'relations':
+      return <PalaceGroup chart={chart} names={['형제궁', '노복궁', '천이궁', '부모궁']} />;
     case 'mutagen':
-      return <MutagenGridCards chart={chart} />;
-    case 'interactions':
-      return <InteractionsCards chart={chart} />;
+      // 사화 + 합·충·삼방사정 회조 함께 표시 (interactions 흡수)
+      return (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+          <MutagenGridCards chart={chart} />
+          <InteractionsCards chart={chart} />
+        </div>
+      );
     case 'daehan': {
       // 대한 — DaehanTimeline 시각 + DaehanTable (한 섹션에서 보여줌)
       const ageForCalc = currentAge ?? 0;

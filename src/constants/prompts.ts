@@ -8359,6 +8359,191 @@ export interface DreamPromptOptions {
  *
  * 사주·생년월일은 사용하지 않음 (시각 입력만 결합).
  */
+// ════════════════════════════════════════════════════════════════════
+// 3-Pass V5 (2026-05-27) — 1차 분류기 + 2차 동양 + 3차 서양 (병렬)
+// ════════════════════════════════════════════════════════════════════
+
+export interface DreamClassification {
+  primary_kind: '태몽' | '예지몽' | '심리몽' | '일상몽' | '악몽' | '반복몽' | '영몽' | '혼재';
+  confidence: 'high' | 'medium' | 'low';
+  polarity_hint: '대길' | '길' | '중길' | '평' | '중흉' | '흉';
+  strong_domains: string[];
+  key_signals: string[];
+  clinical_hint: 'ordinary' | 'vivid' | 'lucid' | 'nightmare' | 'recurring' | 'threat_sim' | 'continuity' | 'sleep_paralysis' | 'false_awakening';
+  is_taemong_alert: boolean;
+  is_clinical_alert: boolean;
+}
+
+/** 1차 호출 — 꿈 분류기 (JSON mode). 풀이 X, 메타만. */
+export const generateDreamClassifierPrompt = (
+  dreamText: string,
+  options: DreamPromptOptions = {},
+): string => {
+  const trimmed = (dreamText || '').trim().slice(0, 1000);
+  const matches = matchDreamSymbols(trimmed, 6);
+  const symbolsBlock = buildMatchedSymbolsBlock(matches);
+  const sijinInfo = buildSijinBlock(options.timeBandId);
+  const repeatingNote = options.isRepeating ? '\n- 반복해서 꾸는 꿈 (recurring 가능성↑)' : '';
+
+  return `당신은 꿈 분류 전문가입니다. 사용자의 꿈을 분석해 핵심 메타를 JSON으로만 출력하세요. 풀이는 금지.
+
+[사용자가 꾼 꿈]
+${trimmed || '(내용 미입력)'}
+${sijinInfo ? `\n[꿈꾼 시각] ${sijinInfo.label} — 영험도 ${sijinInfo.weight}/5` : ''}${repeatingNote}
+
+${symbolsBlock}
+
+[분류 룰]
+- primary_kind: 태몽(임신·동물·과일·품에안김) / 예지몽(새벽·생생·구체 미래) / 심리몽(고민 반영) / 일상몽(평범 단편) / 악몽(공포·도망) / 반복몽 / 영몽(조상·신령) / 혼재
+- polarity_hint: 상징 폴라리티 + 감정. 역몽(피·똥·죽음·불)은 길몽
+- strong_domains: 재물/인연/건강/시험·학업/직장·일/가족·관계 중 명확한 신호만 1~3개. 신호 없으면 빈 배열 — 강제 매핑 금지
+- key_signals: 사용자 단어·장면·감정 핵심 3~6개
+- is_taemong_alert: 임신 신호 1개+ 시 true (단명·요절·기형 가드레일)
+- is_clinical_alert: PTSD·자해·심한 트라우마 키워드 시 true
+
+[★ JSON 만 출력]
+{
+  "primary_kind": "...",
+  "confidence": "high|medium|low",
+  "polarity_hint": "...",
+  "strong_domains": ["..."],
+  "key_signals": ["..."],
+  "clinical_hint": "...",
+  "is_taemong_alert": false,
+  "is_clinical_alert": false
+}`;
+};
+
+/** 2차 호출 — 동양 6 섹션. */
+export const generateDreamOrientalPrompt = (
+  dreamText: string,
+  options: DreamPromptOptions = {},
+  classification?: DreamClassification | null,
+): string => {
+  const trimmed = (dreamText || '').trim().slice(0, 1000);
+  const matches = matchDreamSymbols(trimmed, 6);
+  const symbolsBlock = buildMatchedSymbolsBlock(matches);
+  const reverseNotes = REVERSE_DREAM_NOTES.map((n, i) => `${i + 1}. ${n}`).join('\n');
+  const sijinInfo = buildSijinBlock(options.timeBandId);
+  const repeatingNote = options.isRepeating ? '\n[반복] 무게 ↑' : '';
+  const timingBlock = sijinInfo
+    ? `\n[꿈꾼 시각] ${sijinInfo.label} — 영험도 ${sijinInfo.weight}/5\n${sijinInfo.note}`
+    : '\n[꿈꾼 시각] 미입력';
+
+  const classBlock = classification ? `\n[★ 1차 분류 — 일관되게 풀이]
+- 꿈 종류: ${classification.primary_kind} (${classification.confidence})
+- 길흉: ${classification.polarity_hint}
+- 강한 영역: ${classification.strong_domains.length > 0 ? classification.strong_domains.join(', ') : '(없음)'}
+- 핵심 신호: ${classification.key_signals.join(', ')}
+${classification.is_taemong_alert ? '- ★ 태몽 가드레일 — "단명·요절·기형·유산" 절대 금지\n' : ''}` : '';
+
+  return `당신은 한국 전통 주공해몽·민속 해몽 35년 전문가입니다. 동양 6 섹션만 출력 (서양 절대 금지).
+
+[꿈] ${trimmed || '(미입력)'}
+${timingBlock}${repeatingNote}
+${classBlock}
+${symbolsBlock}
+
+${buildContextRulesBlock()}
+${buildEmotionRulesBlock()}
+
+[역몽] ${reverseNotes}
+
+[★ 6 마커 출력. 첫 줄이 [oriental_diagnosis]]
+
+[oriental_diagnosis]
+label=${classification?.primary_kind || '꿈종류'}·${classification?.polarity_hint || '길흉'}몽
+kind=${classification?.primary_kind || '태몽|일상몽|영몽|잡몽|혼재'}
+polarity=${classification?.polarity_hint || '대길|길|중길|평|중흉|흉'}
+score=0~100
+certainty=${classification?.confidence || 'high|medium|low'}
+근거: 2~3문장 (사용자 단어 1회+ 인용)
+
+[oriental_symbols]
+3~5줄. 형식: 상징명=전통의미 | good|bad|mixed|neutral | 재물|인연|건강|시험·학업|직장·일|가족·관계
+
+[oriental_domains]
+${classification && classification.strong_domains.length > 0
+  ? `★ 강한 영역만: ${classification.strong_domains.join(', ')}
+${classification.strong_domains.map(d => `${d}=점수 | 3~5문장 (120~200자)`).join('\n')}`
+  : `종합=점수 | 4~6문장 자유 풀이 (150~250자)`}
+
+[oriental_timing]
+${sijinInfo
+  ? '5~7문장 (250~400자). 시진 의미·영험도·노트 인용·해석 무게·실질 단서.'
+  : '"꿈꾼 시각을 알려주시면 시진 영험도까지 결합해 더 정밀하게 풀어드릴 수 있어요." 한두 줄.'}
+
+[oriental_advice]
+본문 6~9문장 (450~650자). 격려 톤. 1주~1달 실천 2~3 + 음양오행 근거.
+빈 줄.
+"키: 값" 4~6개. 화이트리스트: 색 / 방향 / 시간 / 숫자 / 활동 / 보석 / 음식 / 액막이 / 환경 / 보호
+
+[oriental_caution]
+본문 6~8문장 (350~500자). 경고 톤. 함정 2~3 + 피해야 할 행동 2~3.
+빈 줄.
+"키: 값" 3~5개. 화이트리스트: 조심할 시간 / 조심할 방향 / 조심할 색 / 조심할 활동 / 조심할 사람 / 피해야 할 음식 / 피해야 할 장소
+
+[공통] Markdown·이모지 금지. 사용자 단어 모든 섹션 1회+ 인용. 단정·놀라게 하는 표현 금지.
+${classification?.is_taemong_alert ? '★ 태몽 따뜻한 톤만.\n' : ''}서양 섹션 (latent·archetypes·mirror·self_work) 절대 출력 금지.`;
+};
+
+/** 3차 호출 — 서양 5 섹션. */
+export const generateDreamWesternPrompt = (
+  dreamText: string,
+  options: DreamPromptOptions = {},
+  classification?: DreamClassification | null,
+): string => {
+  const trimmed = (dreamText || '').trim().slice(0, 1000);
+  const matches = matchDreamSymbols(trimmed, 6);
+  const symbolsBlock = buildMatchedSymbolsBlock(matches);
+  const sijinInfo = buildSijinBlock(options.timeBandId);
+  const repeatingNote = options.isRepeating ? '\n[반복] recurring + 미해결 과제' : '';
+
+  const classBlock = classification ? `\n[★ 1차 분류 — 임상 일관]
+- 임상: ${classification.clinical_hint}
+- 길흉: ${classification.polarity_hint}
+- 신호: ${classification.key_signals.join(', ')}
+${classification.is_clinical_alert ? '- ★ 임상 위험 — "전문 상담 권합니다" 끝줄 필수\n' : ''}` : '';
+
+  return `당신은 프로이트·융·게슈탈트·dream science 임상심리 박사입니다. 서양 5 섹션만 출력 (동양 절대 금지).
+
+[꿈] ${trimmed || '(미입력)'}
+${sijinInfo ? `\n[꿈꾼 시각] ${sijinInfo.label}` : ''}${repeatingNote}
+${classBlock}
+${symbolsBlock}
+
+[★ 5 마커 출력. 첫 줄이 [western_diagnosis]]
+
+[western_diagnosis]
+clinical=${classification?.clinical_hint || 'ordinary|vivid|lucid|nightmare|recurring|threat_sim|continuity|sleep_paralysis|false_awakening'}
+function=continuity|threat_sim|memory_consolidation|emotion_processing
+intensity=low|medium|high
+근거: 2~3문장 (dream science 관점)
+
+[western_latent]
+표면=꿈 표면 (30~80자)
+잠재=무의식 위장한 진짜 의미 (30~80자)
+작동=condensation | displacement | symbolization | secondary_revision
+
+빈 줄.
+5~7문장 (300~450자). Freud 용어 2~3개 (한국어 부연). 사용자 입력 구체 장면 인용.
+
+[western_archetypes]
+2~4줄. 대상명=archetype | 풀이 (25~50자)
+매핑: 동성·위협=shadow / 이성·매혹=anima(남)·animus(여) / 노인=wise_elder / 아기=inner_child / 가면·유명인=persona / 만다라·빛=self / 트릭스터=trickster
+
+[western_mirror]
+6~9문장 (350~500자). Continuity + 보상. 일상·관계·고민 가설 2~3 + 메시지 + 사용자 단어 2회+ + 동시성 + 결론.
+
+[western_self_work]
+${classification?.clinical_hint === 'nightmare' || classification?.clinical_hint === 'recurring'
+  ? `IRT 다시쓰기 6~9문장 (350~500자): 부정적 결말 → 안전 결말 단계(1·2·3) + 낮 5분씩 2~3주 시각화 + 효과.`
+  : `게슈탈트 1인칭 워크 6~9문장 (350~500자): 대상 선택+통합가치 / "나는 [그 ○○]이다…" 대본 3~5줄 / 환경·시기 / 변화 / 격려.`}
+${classification?.is_clinical_alert ? '\n★ 본문 마지막 "혼자 다루기 어려우면 전문 상담을 권합니다" 한 줄 필수.' : ''}
+
+[공통] Markdown·이모지 금지. 사용자 단어 모든 섹션 1회+. 학문 용어는 한국어 부연. 동양 섹션 (oriental_*) 절대 출력 금지.`;
+};
+
 export const generateDreamInterpretationPrompt = (
   dreamText: string,
   options: DreamPromptOptions = {},

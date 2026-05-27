@@ -579,22 +579,25 @@ export interface ZamidusuAIResult {
   archivedRecordId?: string;
 }
 
+// 2026-05-27 영역별 13 섹션 재구성
 const ZAMIDUSU_KEYS: ZamidusuSectionKey[] = [
   'overview', 'main_star', 'helper_stars', 'body_palace',
-  'relations', 'wealth', 'body_mind', 'mutagen',
-  'interactions', 'daehan', 'sohan', 'advice',
+  'wealth', 'career', 'love', 'body_mind', 'relations',
+  'mutagen', 'daehan', 'sohan', 'advice',
 ];
 
 export function parseZamidusuSections(raw: string): Partial<Record<ZamidusuSectionKey, string>> {
   const out: Partial<Record<ZamidusuSectionKey, string>> = {};
-  const re = /^\s*\[(overview|main_star|helper_stars|body_palace|relations|wealth|body_mind|mutagen|interactions|daehan|sohan|advice|core)\]\s*$/m;
+  const re = /^\s*\[(overview|main_star|helper_stars|body_palace|wealth|career|love|body_mind|relations|mutagen|daehan|sohan|advice|interactions|core)\]\s*$/m;
   const parts = raw.split(re);
-  // parts: ['', 'overview', '본문...', 'main_star', '본문...', ...]
   for (let i = 1; i < parts.length; i += 2) {
-    const key = parts[i] as ZamidusuSectionKey;
+    const key = parts[i];
     const body = (parts[i + 1] ?? '').trim();
-    // 'core' 는 구버전 호환 — main_star 로 매핑 (옛 archive 데이터 그대로 표시 가능)
-    const normalizedKey = (key as string) === 'core' ? ('main_star' as ZamidusuSectionKey) : key;
+    // 호환성: 'core' → 'main_star', 'interactions' → 'mutagen' 흡수
+    let normalizedKey: ZamidusuSectionKey;
+    if (key === 'core') normalizedKey = 'main_star';
+    else if (key === 'interactions') normalizedKey = 'mutagen';
+    else normalizedKey = key as ZamidusuSectionKey;
     if (ZAMIDUSU_KEYS.includes(normalizedKey) && body) {
       out[normalizedKey] = body;
     }
@@ -610,15 +613,15 @@ export const getZamidusuReading = async (
   try {
     const prompt = generateZamidusuPrompt(z);
 
-    // 2-pass 분할 (12 섹션):
-    //   1차 (명궁 영역 + 외부 관계·재물): overview·main_star·helper_stars·body_palace·relations·wealth (6)
-    //   2차 (몸·마음 + 사화·시간·조언):  body_mind·mutagen·interactions·daehan·sohan·advice (6)
-    const pass1Prompt = prompt + '\n\n★ 이번 응답에서는 [overview] [main_star] [helper_stars] [body_palace] [relations] [wealth] 6개 섹션만 출력하세요. 나머지 6개는 다음 호출에서 작성합니다. 각 섹션의 분량 지침을 충실히 따라 깊이 있게 작성하세요.';
+    // 2-pass 분할 (13 섹션, 2026-05-27 영역별 재구성):
+    //   1차 (명궁 4 + 재물·직업·연애): overview·main_star·helper_stars·body_palace·wealth·career·love (7)
+    //   2차 (건강·관계·정통·조언): body_mind·relations·mutagen·daehan·sohan·advice (6)
+    const pass1Prompt = prompt + '\n\n★ 이번 응답에서는 [overview] [main_star] [helper_stars] [body_palace] [wealth] [career] [love] 7개 섹션만 출력하세요. 나머지 6개는 다음 호출에서 작성합니다. 각 섹션의 분량 지침을 충실히 따라 깊이 있게 작성하세요.';
     const pass1Content = await callGPT(pass1Prompt, 8000);
     const pass1Sections = parseZamidusuSections(pass1Content);
 
     const pass2Prompt = prompt
-      + '\n\n★ 이번 응답에서는 [body_mind] [mutagen] [interactions] [daehan] [sohan] [advice] 6개 섹션만 출력하세요. [overview] [main_star] [helper_stars] [body_palace] [relations] [wealth]는 이미 완료되었습니다. 각 섹션의 분량 지침을 충실히 따라 깊이 있게 작성하세요.'
+      + '\n\n★ 이번 응답에서는 [body_mind] [relations] [mutagen] [daehan] [sohan] [advice] 6개 섹션만 출력하세요. [overview] [main_star] [helper_stars] [body_palace] [wealth] [career] [love]는 이미 완료되었습니다. 각 섹션의 분량 지침을 충실히 따라 깊이 있게 작성하세요.'
       + `\n\n[이미 작성된 1차 내용 — 참고만, 출력하지 말 것]\n${pass1Content}`;
     const pass2Content = await callGPT(pass2Prompt, 8000);
     const pass2Sections = parseZamidusuSections(pass2Content);
@@ -2096,7 +2099,41 @@ export const parseDreamAction = (raw: string): { body: string; items: { key: str
 // ════════════════════════════════════════════════════════════════════
 // 꿈해몽 V4 파서 — 11 마커 (동양 6 + 서양 5)
 // 2026-05-27 재설계: 가로 2탭 / 동·서양 별도 진단 / 시진 영험도 결합
+// V5 (3-pass): 1차 분류기 + 2차 동양 + 3차 서양 분리 호출 — 같은 파서 재사용
 // ════════════════════════════════════════════════════════════════════
+
+/** 1차 분류기 JSON 응답 파서 */
+export interface ParsedDreamClassification {
+  primary_kind: string;
+  confidence: 'high' | 'medium' | 'low';
+  polarity_hint: string;
+  strong_domains: string[];
+  key_signals: string[];
+  clinical_hint: string;
+  is_taemong_alert: boolean;
+  is_clinical_alert: boolean;
+}
+export const parseDreamClassification = (raw: string): ParsedDreamClassification | null => {
+  if (!raw) return null;
+  try {
+    // ```json ... ``` 로 감쌌을 수 있음 — strip
+    const stripped = raw.replace(/^```(?:json)?\s*/i, '').replace(/```\s*$/i, '').trim();
+    const j = JSON.parse(stripped);
+    if (!j || typeof j !== 'object') return null;
+    return {
+      primary_kind: String(j.primary_kind || '일상몽'),
+      confidence: (j.confidence === 'high' || j.confidence === 'medium' || j.confidence === 'low') ? j.confidence : 'medium',
+      polarity_hint: String(j.polarity_hint || '평'),
+      strong_domains: Array.isArray(j.strong_domains) ? j.strong_domains.map(String).slice(0, 3) : [],
+      key_signals: Array.isArray(j.key_signals) ? j.key_signals.map(String).slice(0, 6) : [],
+      clinical_hint: String(j.clinical_hint || 'ordinary'),
+      is_taemong_alert: !!j.is_taemong_alert,
+      is_clinical_alert: !!j.is_clinical_alert,
+    };
+  } catch {
+    return null;
+  }
+};
 
 export type DreamPolarityLabel = '대길' | '길' | '중길' | '평' | '중흉' | '흉' | '';
 export type DreamKindLabel = '태몽' | '일상몽' | '영몽' | '잡몽' | '혼재' | '';

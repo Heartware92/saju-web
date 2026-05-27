@@ -13,24 +13,30 @@ import type { ZamidusuResult } from '@/engine/zamidusu';
 
 const PASS1_MAX_TOKENS = 8000;
 const PASS2_MAX_TOKENS = 8000;
-const PASS1_KEYS: ZamidusuSectionKey[] = ['overview', 'main_star', 'helper_stars', 'body_palace', 'relations', 'wealth'];
-const PASS2_KEYS: ZamidusuSectionKey[] = ['body_mind', 'mutagen', 'interactions', 'daehan', 'sohan', 'advice'];
+// 2026-05-27 영역별 13 섹션 재구성: relations·wealth·body_mind 의미 변경,
+// career·love 신설, interactions 제거(사화 mutagen 흡수).
+const PASS1_KEYS: ZamidusuSectionKey[] = ['overview', 'main_star', 'helper_stars', 'body_palace', 'wealth', 'career', 'love'];
+const PASS2_KEYS: ZamidusuSectionKey[] = ['body_mind', 'relations', 'mutagen', 'daehan', 'sohan', 'advice'];
 
 // parseZamidusuSections — fortuneService.ts 와 동일 로직 server-safe 복제
 const ZAMIDUSU_KEYS: ZamidusuSectionKey[] = [
   'overview', 'main_star', 'helper_stars', 'body_palace',
-  'relations', 'wealth', 'body_mind', 'mutagen',
-  'interactions', 'daehan', 'sohan', 'advice',
+  'wealth', 'career', 'love', 'body_mind', 'relations',
+  'mutagen', 'daehan', 'sohan', 'advice',
 ];
 function parseZamidusuSections(raw: string): Partial<Record<ZamidusuSectionKey, string>> {
   const out: Partial<Record<ZamidusuSectionKey, string>> = {};
   const parts = raw.split(
-    /^\s*\[(overview|main_star|helper_stars|body_palace|relations|wealth|body_mind|mutagen|interactions|daehan|sohan|advice|core)\]\s*$/m,
+    /^\s*\[(overview|main_star|helper_stars|body_palace|wealth|career|love|body_mind|relations|mutagen|daehan|sohan|advice|interactions|core)\]\s*$/m,
   );
   for (let i = 1; i < parts.length; i += 2) {
-    const key = parts[i] as ZamidusuSectionKey;
+    const key = parts[i];
     const body = (parts[i + 1] ?? '').trim();
-    const normalized = (key as string) === 'core' ? ('main_star' as ZamidusuSectionKey) : key;
+    // core(레거시) → main_star, interactions(레거시) → mutagen 흡수
+    let normalized: ZamidusuSectionKey;
+    if (key === 'core') normalized = 'main_star';
+    else if (key === 'interactions') normalized = 'mutagen';
+    else normalized = key as ZamidusuSectionKey;
     if (ZAMIDUSU_KEYS.includes(normalized) && body) out[normalized] = body;
   }
   return out;
