@@ -501,8 +501,23 @@ export function SummaryScoreVisual({
 // 3a) 강점 박스 (strength 섹션용) — 사주 매칭 기반 자동 추출
 // ─────────────────────────────────────────────────────────────────────────────
 /**
+ * 5오행 의미 nuance — fallback 시그널에 결의 결을 풍부하게 안내할 때 활용.
+ * 너무 추상적이지 않게 일상 영역에서의 결을 한 줄로.
+ */
+const ELEMENT_STRENGTH_NUANCE: Record<string, string> = {
+  '목': '성장과 뻗어나가는 의지',
+  '화': '표현과 따뜻한 열정',
+  '토': '안정과 중심을 잡는 신뢰',
+  '금': '결단력과 정밀한 판단',
+  '수': '깊은 사유와 유연한 적응',
+};
+
+/**
  * 이름의 강점 신호 추출 — 음령·자원·분포 3축에서 사주 용신 매칭 결을 자동 분석.
  * 단순 매칭 여부만이 아니라 "어느 글자/한자에 어떤 강점이 깃들어 있는지" 구체 묘사.
+ *
+ * fallback (직접 매칭 0 케이스) 도 빈약한 메시지 대신
+ * 음령 dominant 오행 → 5오행 의미 → 본문 연결 안내로 신뢰감 톤 유지.
  */
 function buildStrengthSignals(
   yongSinEl: string,
@@ -546,19 +561,29 @@ function buildStrengthSignals(
     });
   }
 
-  // 4. fallback — 매칭이 없을 때도 의미있는 안내
+  // 4. fallback — 직접 용신 매칭이 없어도 의미있는 분석 + 신뢰감 톤
   if (out.length === 0) {
-    if (yongSinEl) {
+    // 음령 분포에서 가장 우세한 오행 추출 → 그 오행의 결로 강점 안내
+    const eumCounts: Record<string, number> = {};
+    eumElements.forEach(e => { if (e) eumCounts[e] = (eumCounts[e] ?? 0) + 1; });
+    const sorted = Object.entries(eumCounts).sort((a, b) => b[1] - a[1]);
+    const dominant = sorted[0]?.[0];
+
+    if (dominant && ELEMENT_STRENGTH_NUANCE[dominant]) {
       out.push({
-        headline: `이름 자체엔 용신 ${yongSinEl} 직접 매칭이 없어요`,
-        detail: `호명·필명·서명·SNS 닉네임에 용신 오행을 보태는 보완을 고려해 보세요.`,
-      });
-    } else {
-      out.push({
-        headline: '명확한 강점 신호가 추출되지 않았어요',
-        detail: '본문 풀이에서 결의 흐름을 자세히 참고해 주세요.',
+        headline: `음령에 ${dominant} 기운이 우세`,
+        detail: `한글 발음에 ${ELEMENT_STRENGTH_NUANCE[dominant]}의 결이 깊이 깔려 있어요. 이 결이 이름을 부를 때마다 본인의 일상에 스며들어요.`,
       });
     }
+
+    out.push({
+      headline: yongSinEl
+        ? `사주 용신 ${yongSinEl} 직접 매칭은 약해요`
+        : '이름의 깊은 강점은 본문에서 자세히 다뤄요',
+      detail: yongSinEl
+        ? `이름 자체엔 용신 ${yongSinEl} 오행이 직접 들어가지 않았어요. 본문 풀이에서 이름과 사주의 미세한 결을 짚어드렸고, 보완을 원하시면 호명·필명·서명·SNS 닉네임에 ${yongSinEl} 오행 글자를 더해 일상에서 채울 수 있어요.`
+        : '시각 카드는 4축의 직접 매칭만 자동 추출해요. 위 본문 풀이에 사주와 이름이 어떻게 어울리는지 결을 자세히 풀어드렸어요.',
+    });
   }
 
   return out;
@@ -615,11 +640,17 @@ function buildShadowSignals(
     });
   }
 
-  // 4. fallback
+  // 4. fallback — 직접 기신 매칭이 없을 때도 신뢰감 톤 + 본문 안내
   if (out.length === 0) {
     out.push({
-      headline: '치명적 마찰 신호가 추출되지 않았어요',
-      detail: '전체적으로 큰 부담 없이 흐르는 결이에요. 본문에서 미세한 결을 함께 살펴보세요.',
+      headline: '사주와 큰 마찰은 없어요',
+      detail: giSinEl
+        ? `이름 자체에 사주 기신 ${giSinEl} 오행이 직접 들어가지 않아 발음·부수 양쪽 모두 큰 충돌은 없는 흐름이에요.`
+        : '시각 카드 기준 직접 자극되는 자리는 없어요. 큰 부담 없이 흐르는 이름이에요.',
+    });
+    out.push({
+      headline: '미세한 그늘은 본문에서 짚어드려요',
+      detail: '4축 시각 카드는 명확한 매칭만 자동 추출해요. 일상에서 무심코 새어 나오는 약점·주의 결은 위 본문 풀이에서 자세히 분석해 드렸어요.',
     });
   }
 
