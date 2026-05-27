@@ -1414,30 +1414,6 @@ function NameInputPanel({
         onClose={() => setPickerOpen(false)}
       />
 
-      {/* "한자 모르겠어요" 모드 안내 — 모달이 닫혀있을 때만 */}
-      {!readOnly && manualMeaningIndex === null && (
-        <div style={{ marginTop: 4 }}>
-          <button
-            type="button"
-            onClick={() => {
-              // 첫 번째 미선택 글자에서 직접 뜻 입력 모드 시작
-              const firstEmpty = chars.findIndex((_, i) => !selectedHanjas[i] && !(charMeanings[i] || '').trim());
-              setManualMeaningIndex(firstEmpty >= 0 ? firstEmpty : 0);
-            }}
-            style={{
-              fontSize: 11,
-              color: 'var(--text-tertiary)',
-              background: 'transparent',
-              border: 'none',
-              textDecoration: 'underline',
-              cursor: 'pointer',
-              padding: '2px 0',
-            }}
-          >
-            한자 후보에 없어요 — 뜻만 직접 입력하기
-          </button>
-        </div>
-      )}
     </div>
   );
 }
@@ -2166,9 +2142,10 @@ function MoreFortuneSectionedCard({
                 (() => {
                   const ctx = nameVisualContext;
                   const isHanja = ctx.hanjas.length > 0;
-                  const segs = bodyText.split(/\[(axis_eum|axis_jawon|axis_suri|axis_81|axis_eumyang)\]/);
-                  const parts: Record<'axis_eum' | 'axis_jawon' | 'axis_suri' | 'axis_81' | 'axis_eumyang', string> = {
-                    axis_eum: '', axis_jawon: '', axis_suri: '', axis_81: '', axis_eumyang: '',
+                  // [BACKLOG] 5축 부활 시 axis_eumyang 추가: /\[(axis_eum|axis_jawon|axis_suri|axis_81|axis_eumyang)\]/
+                  const segs = bodyText.split(/\[(axis_eum|axis_jawon|axis_suri|axis_81)\]/);
+                  const parts: Record<'axis_eum' | 'axis_jawon' | 'axis_suri' | 'axis_81', string> = {
+                    axis_eum: '', axis_jawon: '', axis_suri: '', axis_81: '',
                   };
                   // sub-marker 누락 fallback — 전체 본문을 axis_eum 에 몰아넣음
                   if (segs.length <= 1) {
@@ -2217,13 +2194,14 @@ function MoreFortuneSectionedCard({
                       accent: '#A78BFA',
                       visual: isHanja ? <NumerologyVisual chars={hanjaChars} sounds={ctx.sounds} yongSinEl={ctx.yongSinEl} giSinEl={ctx.giSinEl} hideCaptionTitle /> : null,
                     },
-                    {
-                      key: 'axis_eumyang',
-                      label: '수리 음양',
-                      subLabel: '한자 획수 홀짝으로 보기',
-                      accent: '#FB923C',
-                      visual: isHanja ? <EumYangVisual hanjas={ctx.hanjas} hideCaptionTitle /> : null,
-                    },
+                    // [BACKLOG] 5축 부활 시 활성화 — 수리 음양 (정통 4축 외 보조 분석)
+                    // {
+                    //   key: 'axis_eumyang',
+                    //   label: '수리 음양',
+                    //   subLabel: '한자 획수 홀짝으로 보기',
+                    //   accent: '#FB923C',
+                    //   visual: isHanja ? <EumYangVisual hanjas={ctx.hanjas} hideCaptionTitle /> : null,
+                    // },
                   ];
                   const visiblePartitions = partitions.filter(p => parts[p.key] || p.visual);
 

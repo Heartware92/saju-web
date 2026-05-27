@@ -371,14 +371,16 @@ function computeStarRating(grades: AxisGrade[]): {
  *   0~39:   주의
  */
 /**
- * 축당 20점 (5축 × 20점 = 100점 만점, 청월당 스타일).
- *   보강 = 20 / 중립 = 12 / 거스름 = 4 / 미분석 = 10 (중간값)
+ * 축당 25점 (4축 × 25점 = 100점 만점).
+ *   보강 = 25 / 중립 = 15 / 거스름 = 5 / 미분석 = 12.5 (중간값)
+ *
+ * [BACKLOG] 5축 부활 시 20/12/4/10 으로 조정.
  */
 const SCORE_PER_GRADE: Record<AxisGrade, number> = {
-  '보강':   20,
-  '중립':   12,
-  '거스름': 4,
-  '미분석': 10,
+  '보강':   25,
+  '중립':   15,
+  '거스름': 5,
+  '미분석': 12.5,
 };
 type OverallTier = { label: string; color: string; bg: string; border: string };
 function computeScore(grades: AxisGrade[]): { score: number; tier: OverallTier; axisScores: number[] } {
@@ -427,22 +429,22 @@ export function SummaryScoreVisual({
   const suriGyeokGrade = suri
     ? gradeFromSuriGrades([suri.won, suri.hyeong, suri.i, suri.jeong].map(g => g.entry.grade))
     : '미분석' as AxisGrade;
-  // 음양 등급 — 한자 획수 홀짝 분포 균형
-  const eumyangGrade: AxisGrade = (() => {
-    if (!isHanjaMode) return '미분석';
-    const yang = hanjas.filter(h => h.strokes % 2 === 1).length;
-    const eum = hanjas.length - yang;
-    if (yang === hanjas.length || eum === hanjas.length) return '거스름';
-    if (Math.abs(yang - eum) <= Math.max(1, Math.floor(hanjas.length / 2))) return '보강';
-    return '중립';
-  })();
+  // [BACKLOG] 5축 부활 시 음양 등급 활성화
+  // const eumyangGrade: AxisGrade = (() => {
+  //   if (!isHanjaMode) return '미분석';
+  //   const yang = hanjas.filter(h => h.strokes % 2 === 1).length;
+  //   const eum = hanjas.length - yang;
+  //   if (yang === hanjas.length || eum === hanjas.length) return '거스름';
+  //   if (Math.abs(yang - eum) <= Math.max(1, Math.floor(hanjas.length / 2))) return '보강';
+  //   return '중립';
+  // })();
 
   const axes: Array<{ label: string; sub: string; grade: AxisGrade }> = [
     { label: '음령',   sub: '한글 발음', grade: eumGrade },
     { label: '자원',   sub: '한자 부수', grade: jawonGrade },
     { label: '수리',   sub: '수리오행',  grade: suriElGrade },
     { label: '81수리', sub: '4격 길흉',  grade: suriGyeokGrade },
-    { label: '음양',   sub: '획수 홀짝', grade: eumyangGrade },
+    // { label: '음양',   sub: '획수 홀짝', grade: eumyangGrade },  // [BACKLOG] 5축
   ];
 
   // 종합 별점 + 점수 근거 — 사용자가 별의 출처를 직접 보고 납득하도록
@@ -600,8 +602,8 @@ export function SummaryScoreVisual({
         </div>
       )}
 
-      {/* 5축 등급칩 + 축별 점수 — 박스 좁아도 줄바꿈 방지 (whitespace-nowrap) */}
-      <div className="grid grid-cols-5 gap-1.5">
+      {/* 4축 등급칩 + 축별 점수 — 박스 좁아도 줄바꿈 방지 (whitespace-nowrap) */}
+      <div className="grid grid-cols-4 gap-1.5">
         {axes.map((a, i) => {
           const badge = GRADE_BADGE[a.grade];
           return (
@@ -636,7 +638,7 @@ export function SummaryScoreVisual({
                 className="text-[11px] font-semibold whitespace-nowrap"
                 style={{ color: 'var(--text-secondary)', fontFamily: 'var(--font-body)', opacity: 0.85 }}
               >
-                {axisScores[i] % 1 === 0 ? axisScores[i] : axisScores[i].toFixed(1)}<span className="opacity-50">/20</span>
+                {axisScores[i] % 1 === 0 ? axisScores[i] : axisScores[i].toFixed(1)}<span className="opacity-50">/25</span>
               </span>
             </div>
           );
