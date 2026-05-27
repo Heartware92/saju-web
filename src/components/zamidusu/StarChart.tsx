@@ -18,6 +18,7 @@
 import { motion } from 'framer-motion';
 import type { ZamidusuPalace } from '../../engine/zamidusu';
 import { PALACE_GRID_POSITIONS } from '../../engine/zamidusu';
+import { isValidBrightness, isValidMutagen } from '../../engine/zamidusu/knowledge';
 
 interface StarChartProps {
   palaces: ZamidusuPalace[];
@@ -194,24 +195,40 @@ export function StarChart({ palaces, soul, fiveElementsClass, selectedIndex, onS
                 {palace.heavenlyStem}{palace.earthlyBranch}
               </text>
 
-              {/* 주성 이름 (최대 2개) — brightness 첫 글자(묘·왕·득·이·평·불·함) + 사화 표기 */}
-              {palace.majorStars.slice(0, 2).map((s, si) => (
-                <text
-                  key={`${palace.index}-s-${si}`}
-                  x={x}
-                  y={y - r - 8 - (si * 15)}
-                  textAnchor="middle"
-                  fill={s.mutagen ? '#FBBF24' : '#D8BFFD'}
-                  fontSize="14"
-                  fontWeight="700"
-                >
-                  {s.name}
-                  {s.brightness ? (
-                    <tspan dx="2" fontSize="10" fillOpacity="0.7">·{s.brightness.charAt(0)}</tspan>
-                  ) : null}
-                  {s.mutagen ? `·${s.mutagen.charAt(0)}` : ''}
-                </text>
-              ))}
+              {/* 주성 이름 (최대 2개) — 별 이름만 위에, brightness/mutagen은 별 이름 아래 줄로 분리해 겹침 방지 */}
+              {palace.majorStars.slice(0, 2).map((s, si) => {
+                const hasBrightness = isValidBrightness(s.brightness);
+                const hasMutagen = isValidMutagen(s.mutagen);
+                // 별 이름 — 위쪽
+                const namePosY = y - r - 8 - (si * 26);
+                return (
+                  <g key={`${palace.index}-s-${si}`}>
+                    <text
+                      x={x}
+                      y={namePosY}
+                      textAnchor="middle"
+                      fill={hasMutagen ? '#FBBF24' : '#D8BFFD'}
+                      fontSize="13"
+                      fontWeight="700"
+                    >
+                      {s.name}
+                    </text>
+                    {(hasBrightness || hasMutagen) && (
+                      <text
+                        x={x}
+                        y={namePosY + 11}
+                        textAnchor="middle"
+                        fontSize="9"
+                        fillOpacity="0.7"
+                      >
+                        {hasBrightness && <tspan fill="#B8B1C8">{s.brightness}</tspan>}
+                        {hasBrightness && hasMutagen && <tspan fill="#B8B1C8">·</tspan>}
+                        {hasMutagen && <tspan fill="#FBBF24" fontWeight="700">{s.mutagen}</tspan>}
+                      </text>
+                    )}
+                  </g>
+                );
+              })}
             </g>
           );
         })}

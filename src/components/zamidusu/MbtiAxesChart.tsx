@@ -112,32 +112,32 @@ export function MbtiAxesChart({ palaces }: Props) {
       >
         타고난 나의 성향
       </h3>
-      <div className="space-y-4">
+      <div className="space-y-5">
         {AXES.map((axis) => {
           const aPct = pcts[axis.key];
           const bPct = 100 - aPct;
+          const aLeads = aPct >= bPct;
           return (
             <div key={axis.key}>
-              <div className="flex justify-between text-[11px] text-text-tertiary mb-1.5">
-                <span>{axis.label}</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="text-[12px] text-text-secondary w-12 text-right">
-                  {axis.sideA} <strong className="text-cta">{aPct}%</strong>
+              {/* 한 줄: 축 라벨(왼쪽) + 좌우 키워드·퍼센트 한 줄 (한글 줄바꿈 없음) */}
+              <div className="flex items-baseline justify-between mb-2 gap-2">
+                <span className="text-[13px] text-text-tertiary font-medium flex-shrink-0">
+                  {axis.label}
                 </span>
-                <div className="flex-1 h-2 rounded-full bg-space-deep overflow-hidden flex">
-                  <div
-                    className="bg-cta"
-                    style={{ width: `${aPct}%` }}
-                  />
-                  <div
-                    className="bg-[#a78bfa]"
-                    style={{ width: `${bPct}%` }}
-                  />
+                <div className="flex items-baseline gap-1.5 text-[13px] whitespace-nowrap">
+                  <span className={aLeads ? 'text-cta font-bold' : 'text-text-tertiary'}>
+                    {axis.sideA} {aPct}%
+                  </span>
+                  <span className="text-text-tertiary">·</span>
+                  <span className={!aLeads ? 'text-[#c4b5fd] font-bold' : 'text-text-tertiary'}>
+                    {bPct}% {axis.sideB}
+                  </span>
                 </div>
-                <span className="text-[12px] text-text-secondary w-12">
-                  <strong className="text-[#c4b5fd]">{bPct}%</strong> {axis.sideB}
-                </span>
+              </div>
+              {/* 막대 — 좌측은 cta(주황), 우측은 violet */}
+              <div className="h-2.5 rounded-full bg-space-deep overflow-hidden flex">
+                <div className="bg-cta" style={{ width: `${aPct}%` }} />
+                <div className="bg-[#a78bfa]" style={{ width: `${bPct}%` }} />
               </div>
             </div>
           );

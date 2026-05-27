@@ -38,7 +38,7 @@ import { sajuDB, supabase } from '../services/supabase';
 import { useFortuneJob } from '../hooks/useFortuneJob';
 import { SUN_COST_BIG, CHARGE_REASONS } from '../constants/creditCosts';
 import { ZAMIDUSU_SECTION_KEYS, ZAMIDUSU_SECTION_LABELS } from '../constants/prompts';
-import { MAJOR_STARS_META, MINOR_STARS_META, MUTAGEN_META, PALACE_ROLE_META } from '../engine/zamidusu/knowledge';
+import { MAJOR_STARS_META, MINOR_STARS_META, MUTAGEN_META, PALACE_ROLE_META, isValidBrightness, isValidMutagen } from '../engine/zamidusu/knowledge';
 import { AILoadingBar } from '../components/AILoadingBar';
 import { LuckyVisualCard, ELEMENT_LUCKY } from '../components/saju/LuckyVisualCard';
 import { BackButton } from '../components/ui/BackButton';
@@ -123,10 +123,10 @@ function StarBigCard({ name, hanja, brightness, mutagen, keywords }: { name: str
     }}>
       <div style={{ fontSize: 40, fontFamily: 'var(--font-serif)', color: 'var(--text-primary)', lineHeight: 1 }}>{hanja}</div>
       <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--text-primary)' }}>{name}</div>
-      {(brightness || mutagen) && (
+      {(isValidBrightness(brightness) || isValidMutagen(mutagen)) && (
         <div style={{ fontSize: 13, color: 'var(--text-tertiary)', display: 'flex', justifyContent: 'center', gap: 8, flexWrap: 'wrap' }}>
-          {brightness && <span>{brightness}</span>}
-          {mutagen && <span style={{ color: CARD_ACCENT, fontWeight: 700 }}>{mutagen}</span>}
+          {isValidBrightness(brightness) && <span>{brightness}</span>}
+          {isValidMutagen(mutagen) && <span style={{ color: CARD_ACCENT, fontWeight: 700 }}>{mutagen}</span>}
         </div>
       )}
       {keywords && keywords.length > 0 && (
@@ -1208,24 +1208,12 @@ export default function ZamidusuResultPage() {
           <MbtiAxesChart palaces={chart.palaces} />
         </div>
 
-        {/* 유년(流年) 5개년 시기 예측 — 자운파 색채 */}
-        {yearlyHoroscopes.length > 0 && (
-          <div className={styles.section}>
-            <YearlyTimeline horoscopes={yearlyHoroscopes} />
-          </div>
-        )}
-
-        {/* 유월(流月) — 올해 12개월 시기 예측 — 즉각 위험 회피 */}
-        {monthlyHoroscopes.length > 0 && (
-          <div className={styles.section}>
-            <MonthlyTimeline year={currentYearForMonthly} horoscopes={monthlyHoroscopes} />
-          </div>
-        )}
+        {/* 유년·유월은 대한(DaehanTimeline) 다음으로 이동 — 자미두수 정통 시기 순서: 대한→유년→유월 */}
 
         {/* 영역별 모듈 (재물·직업·연애·건강·대인관계) — 청월당 7장 벤치마크 */}
         {reading && reading.domainBundles.length > 0 && (
           <div className={styles.section}>
-            <h2 style={{ textAlign: 'center', marginBottom: 14, fontSize: 18 }}>영역별 인사이트</h2>
+            <h2 style={{ marginBottom: 14, fontSize: 18 }}>영역별 인사이트</h2>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
               {reading.domainBundles
                 .filter((b) => b.id !== 'overview' && b.id !== 'timing' && b.insights.length > 0)
@@ -1440,12 +1428,12 @@ export default function ZamidusuResultPage() {
                                   {s.name}
                                   {meta && <span style={{ fontSize: 14, color: 'var(--text-tertiary)', fontWeight: 500, marginLeft: 4 }}>({meta.hanja})</span>}
                                 </span>
-                                {s.brightness && (
+                                {isValidBrightness(s.brightness) && (
                                   <span style={{ fontSize: 12, color: 'var(--text-tertiary)', background: 'rgba(255,255,255,0.06)', padding: '2px 8px', borderRadius: 6 }}>
                                     {s.brightness}
                                   </span>
                                 )}
-                                {s.mutagen && (
+                                {isValidMutagen(s.mutagen) && (
                                   <span style={{ fontSize: 12, fontWeight: 700, color: '#FBBF24', background: 'rgba(251,191,36,0.12)', padding: '2px 8px', borderRadius: 6 }}>
                                     {s.mutagen}
                                   </span>
@@ -1580,6 +1568,20 @@ export default function ZamidusuResultPage() {
         {daehanSegments.length > 0 && (
           <div className={styles.section}>
             <DaehanTimeline segments={daehanSegments} currentAge={currentAge} />
+          </div>
+        )}
+
+        {/* 유년(流年) 5개년 시기 예측 — 자운파 색채. 대한 다음 정통 순서 */}
+        {yearlyHoroscopes.length > 0 && (
+          <div className={styles.section}>
+            <YearlyTimeline horoscopes={yearlyHoroscopes} />
+          </div>
+        )}
+
+        {/* 유월(流月) — 올해 12개월 시기 예측 — 즉각 위험 회피 */}
+        {monthlyHoroscopes.length > 0 && (
+          <div className={styles.section}>
+            <MonthlyTimeline year={currentYearForMonthly} horoscopes={monthlyHoroscopes} />
           </div>
         )}
 

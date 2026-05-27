@@ -283,7 +283,29 @@ export const MUTAGEN_META: Record<string, MutagenMeta> = {
 };
 
 // ============================================
+// brightness·mutagen 화이트리스트 — UI 표시 가드
+//
+// iztro 한국어 로케일이 가끔 값을 변환하지 못하고 숫자(-1, +1) 또는
+// 영문 코드로 흘려보내는 경우가 있어, UI 표시 시 화이트리스트로 가드.
+// 알려진 값만 노출, 나머지는 숨김.
+// ============================================
+
+export const VALID_BRIGHTNESS = ['묘', '왕', '지', '득', '이', '평', '불', '함'] as const;
+export const VALID_MUTAGEN = ['화록', '화권', '화과', '화기'] as const;
+
+export function isValidBrightness(v: string | undefined | null): boolean {
+  return !!v && (VALID_BRIGHTNESS as readonly string[]).includes(v);
+}
+
+export function isValidMutagen(v: string | undefined | null): boolean {
+  return !!v && (VALID_MUTAGEN as readonly string[]).includes(v);
+}
+
+// ============================================
 // 12궁 역할
+//
+// 자미두수 정통 12궁 분류. 사용자 직관 인지와 맞추기 위해 핵심 영역
+// (수명·외부 인간관계·경제·지위 등)을 domain·focus에 명시 보강.
 // ============================================
 
 export interface PalaceRoleMeta {
@@ -293,18 +315,18 @@ export interface PalaceRoleMeta {
 }
 
 export const PALACE_ROLE_META: Record<string, PalaceRoleMeta> = {
-  명궁: { name: '명궁', domain: '본질·성격·인생 방향', focus: '이 사람이 어떤 사람인가 — 주성과 사화를 먼저 본다.' },
-  형제궁: { name: '형제궁', domain: '형제자매·가까운 동료', focus: '혈연·동료 관계의 우호/갈등.' },
-  부처궁: { name: '부처궁', domain: '배우자·연인·동업자', focus: '장기 파트너의 성향과 궁합.' },
-  자녀궁: { name: '자녀궁', domain: '자녀·창작물·제자', focus: '자손운과 창조적 결과물.' },
-  재백궁: { name: '재백궁', domain: '돈·유동 재산', focus: '수입원과 소비 성향.' },
-  질액궁: { name: '질액궁', domain: '건강·질병·재액', focus: '약한 부위와 재난 유형.' },
-  천이궁: { name: '천이궁', domain: '이동·외부 활동·타향', focus: '해외·출장·이사의 길흉.' },
-  노복궁: { name: '노복궁', domain: '부하·친구·인맥', focus: '수평 인간관계의 복.' },
-  관록궁: { name: '관록궁', domain: '직업·공명·지위', focus: '커리어의 성향과 성패.' },
-  전택궁: { name: '전택궁', domain: '부동산·가족 공간', focus: '집·땅·가업.' },
-  복덕궁: { name: '복덕궁', domain: '정신세계·취미·복록', focus: '내면의 평안과 여가.' },
-  부모궁: { name: '부모궁', domain: '부모·윗사람', focus: '부모와의 관계, 상사 운.' },
+  명궁: { name: '명궁', domain: '본질·성격·인생 방향·타고난 자질', focus: '이 사람이 어떤 사람인가 — 주성과 사화를 먼저 본다. 평생을 관통하는 자기 정체성.' },
+  형제궁: { name: '형제궁', domain: '형제자매·동급자·가까운 동료', focus: '혈연·동급 인간관계의 우호/갈등, 형제 인연 깊이.' },
+  부처궁: { name: '부처궁', domain: '배우자·연인·결혼·동업자', focus: '장기 파트너의 성향·끌리는 이성·결혼운·궁합·이혼 가능성.' },
+  자녀궁: { name: '자녀궁', domain: '자녀·창작물·제자·아랫사람', focus: '자손운·창의력·후배 복·자녀와의 인연.' },
+  재백궁: { name: '재백궁', domain: '돈을 버는 방식·수입원·경제·유동 재산', focus: '어떻게 돈을 벌고 다루는가 — 수입원·소비 성향·재테크·재물복.' },
+  질액궁: { name: '질액궁', domain: '건강·질병·체질·재액·사고수', focus: '약한 신체 부위·만성 질환 경향·재난 유형·정신적 위기.' },
+  천이궁: { name: '천이궁', domain: '외부 활동·이동·타향·사회 진출·대외적 인간관계', focus: '해외·출장·이직·외부에서 만나는 사람들과의 인연·사회적 모습.' },
+  노복궁: { name: '노복궁', domain: '부하·친구·동료·인맥·수평 인간관계', focus: '친구·후배·동료 복, 직장 인간관계의 도움/갈등.' },
+  관록궁: { name: '관록궁', domain: '직업·공명·지위·승진·커리어', focus: '어떤 직업이 맞는가·직장에서의 지위·승진 가능성·일하는 방식.' },
+  전택궁: { name: '전택궁', domain: '부동산·가족 공간·자산·가업', focus: '집·땅·큰 자산 축적·부동산운·가정 환경·유산.' },
+  복덕궁: { name: '복덕궁', domain: '정신세계·취미·복록·수명·내면의 행복', focus: '심리·취미·여가·정신적 평안·종교성·복의 그릇·수명 잠재.' },
+  부모궁: { name: '부모궁', domain: '부모·윗사람·상사·웃어른과의 관계', focus: '부모와의 인연 깊이·상사 운·연장자와의 관계.' },
 };
 
 // ============================================
