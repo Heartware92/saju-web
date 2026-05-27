@@ -101,7 +101,7 @@ function BodyParagraphs({ text }: { text: string; boxed?: boolean }) {
   return (
     <div className="flex flex-col gap-3">
       {paras.map((p, i) => (
-        <p key={i} className="text-[16px] text-text-secondary leading-[1.75] tracking-[-0.005em] whitespace-pre-line break-keep">
+        <p key={i} className="text-[16px] text-text-secondary leading-[1.75] tracking-[-0.005em] whitespace-pre-line">
           {p}
         </p>
       ))}
@@ -473,19 +473,19 @@ function AdviceCard({ advice }: { advice: { body: string; items: DreamAdviceItem
 
   return (
     <div className="flex flex-col gap-3">
-      {/* 1) 나침반들 — 방향 N개 각자 표시 (LuckyVisualCard 단일 나침반이 아닌 다중 표시) */}
+      {/* 1) 나침반들 — 좌측 정렬 라벨 (LabelValueCard·ChipWrapCard와 일관) */}
       {directions.length > 0 && (
         <div className="rounded-xl p-3 bg-white/5 border border-white/10">
-          <div className="text-[12px] text-text-tertiary text-center mb-3">길한 방향</div>
+          <div className="text-[13px] text-text-tertiary mb-2">길한 방향</div>
           <CompassGroup directions={directions} />
         </div>
       )}
 
-      {/* 2) 색상 스와치 — 별도 카드 (나침반과 row 합치지 않음, 모바일 가독성) */}
+      {/* 2) 색상 스와치 — 좌측 정렬 라벨 통일 */}
       {colors.length > 0 && (
         <div className="rounded-xl p-3 bg-white/5 border border-white/10">
-          <div className="text-[12px] text-text-tertiary text-center mb-3">행운 색상</div>
-          <div className="flex flex-wrap justify-center gap-4">
+          <div className="text-[13px] text-text-tertiary mb-2">행운 색상</div>
+          <div className="flex flex-wrap gap-4">
             {colors.slice(0, 4).map((c, i) => (
               <ColorSwatch key={`${c.name}-${i}`} name={c.name} css={c.css} />
             ))}
@@ -493,21 +493,26 @@ function AdviceCard({ advice }: { advice: { body: string; items: DreamAdviceItem
         </div>
       )}
 
-      {/* 3) 숫자 + 시간대 — 2 col 카드 */}
-      {(numVal || timeVal) && (
+      {/* 3) 숫자 + 시간대 — 둘 다 있으면 2col, 하나만 있으면 full width (빈 div 사고 차단) */}
+      {numVal && timeVal && (
         <div className="grid grid-cols-2 gap-2">
-          {numVal ? <LabelValueCard label="행운 숫자" value={numVal} big /> : <div />}
-          {timeVal ? <LabelValueCard label="유리한 시간대" value={timeVal} /> : <div />}
+          <LabelValueCard label="행운 숫자" value={numVal} big />
+          <LabelValueCard label="유리한 시간대" value={timeVal} />
         </div>
       )}
+      {numVal && !timeVal && <LabelValueCard label="행운 숫자" value={numVal} big />}
+      {!numVal && timeVal && <LabelValueCard label="유리한 시간대" value={timeVal} />}
 
       {/* 4) 칩 wrap 카드들 */}
       {gemVal && <ChipWrapCard label="행운 보석" items={parseChips(gemVal)} />}
       {activityVal && <ChipWrapCard label="추천 활동" items={parseChips(activityVal)} />}
       {foodVal && <ChipWrapCard label="추천 음식" items={parseChips(foodVal)} />}
 
-      {/* 5) 기타 항목 (액막이·환경·보호 등) — 2col 카드 */}
-      {otherItems.length > 0 && (
+      {/* 5) 기타 항목 (액막이·환경·보호 등) — 개수 따라 1·2col 자동 */}
+      {otherItems.length === 1 && (
+        <LabelValueCard label={otherItems[0].key} value={otherItems[0].value} />
+      )}
+      {otherItems.length >= 2 && (
         <div className="grid grid-cols-2 gap-2">
           {otherItems.slice(0, 4).map((it, i) => (
             <LabelValueCard key={i} label={it.key} value={it.value} />
@@ -540,23 +545,23 @@ function CautionBox({ caution }: { caution: { body: string; items: DreamAdviceIt
 
   return (
     <div className="flex flex-col gap-3">
-      {/* 1) 나침반들 — 피해야 할 방향 N개 각자 표시 */}
+      {/* 1) 나침반들 — 좌측 정렬 라벨 */}
       {directions.length > 0 && (
         <div className="rounded-xl p-3 border" style={{
           background: 'rgba(248,113,113,0.04)', borderColor: 'rgba(248,113,113,0.28)',
         }}>
-          <div className="text-[12px] text-text-tertiary text-center mb-3">조심할 방향</div>
+          <div className="text-[13px] text-text-tertiary mb-2">조심할 방향</div>
           <CompassGroup directions={directions} />
         </div>
       )}
 
-      {/* 2) 피해야 할 색 — 별도 카드 */}
+      {/* 2) 피해야 할 색 — 좌측 정렬 라벨 */}
       {colors.length > 0 && (
         <div className="rounded-xl p-3 border" style={{
           background: 'rgba(248,113,113,0.04)', borderColor: 'rgba(248,113,113,0.28)',
         }}>
-          <div className="text-[12px] text-text-tertiary text-center mb-3">조심할 색</div>
-          <div className="flex flex-wrap justify-center gap-4">
+          <div className="text-[13px] text-text-tertiary mb-2">조심할 색</div>
+          <div className="flex flex-wrap gap-4">
             {colors.slice(0, 4).map((c, i) => (
               <ColorSwatch key={`${c.name}-${i}`} name={c.name} css={c.css} />
             ))}
@@ -564,13 +569,15 @@ function CautionBox({ caution }: { caution: { body: string; items: DreamAdviceIt
         </div>
       )}
 
-      {/* 2) 시간 + 사람 / 활동 — 2col 카드 */}
-      {(timeVal || personVal) && (
+      {/* 3) 시간 + 사람 — 둘 다 있으면 2col, 하나만 있으면 full width */}
+      {timeVal && personVal && (
         <div className="grid grid-cols-2 gap-2">
-          {timeVal ? <LabelValueCard label="조심할 시간" value={timeVal} /> : <div />}
-          {personVal ? <LabelValueCard label="조심할 사람" value={personVal} /> : <div />}
+          <LabelValueCard label="조심할 시간" value={timeVal} />
+          <LabelValueCard label="조심할 사람" value={personVal} />
         </div>
       )}
+      {timeVal && !personVal && <LabelValueCard label="조심할 시간" value={timeVal} />}
+      {!timeVal && personVal && <LabelValueCard label="조심할 사람" value={personVal} />}
 
       {/* 3) 칩 wrap 카드들 */}
       {activityVal && <ChipWrapCard label="피해야 할 활동" items={parseChips(activityVal)} />}
