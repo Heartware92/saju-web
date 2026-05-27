@@ -40,7 +40,8 @@ const MUTAGEN_DELTA: Record<string, number> = {
 
 const MINOR_DELTA: Record<string, number> = {
   '6길성': 5,
-  '4흉성': -6,
+  '6살성': -6,
+  '잡성': -1, // 잡성 평균 미세 부정 (음살·천형 등은 흉, 홍란·천희 등은 길이라 평균 약하게 음수)
   '기타': 2,
 };
 

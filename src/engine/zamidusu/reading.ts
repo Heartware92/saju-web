@@ -30,7 +30,7 @@ export interface PalaceReading {
   role?: string;           // 주관 영역
   ganZhi: string;
   majorStars: StarDetail[];
-  minorStars: { name: string; effect: string; category: '6길성' | '4흉성' | '기타' }[];
+  minorStars: { name: string; effect: string; category: '6길성' | '6살성' | '잡성' | '기타' }[];
   summary: string;         // 한 문장 요약
 }
 
@@ -180,8 +180,13 @@ export function buildZamidusuReading(chart: ZamidusuResult): ZamidusuReading {
   // 전체 12궁 상세
   const palaceReadings: PalaceReading[] = chart.palaces.map(p => {
     const stars = starsToDetails(p.majorStars);
-    const minor: { name: string; effect: string; category: '6길성' | '4흉성' | '기타' }[] = [];
+    const minor: { name: string; effect: string; category: '6길성' | '6살성' | '잡성' | '기타' }[] = [];
     p.minorStars.forEach(s => {
+      const m = MINOR_STARS_META[s.name];
+      if (m) minor.push({ name: m.name, effect: m.effect, category: m.category });
+    });
+    // 잡성(adjectiveStars) 통합 — 음살·천형·홍란·천희·고진·과숙 등 ~30종
+    (p.adjectiveStars || []).forEach(s => {
       const m = MINOR_STARS_META[s.name];
       if (m) minor.push({ name: m.name, effect: m.effect, category: m.category });
     });
@@ -254,13 +259,17 @@ export function buildZamidusuReading(chart: ZamidusuResult): ZamidusuReading {
         muHits.forEach((m) => {
           insights.push(`${pr.name}의 ${m.type}(${m.star}) — ${m.effect}`);
         });
-        const sals = pr.minorStars.filter((s) => s.category === '4흉성');
+        const sals = pr.minorStars.filter((s) => s.category === '6살성');
         if (sals.length > 0) {
-          insights.push(`${pr.name}에 살성 ${sals.map((s) => s.name).join('·')} — 변동·갈등 주의`);
+          insights.push(`${pr.name}에 6살성 ${sals.map((s) => s.name).join('·')} — 변동·갈등 주의`);
         }
         const gils = pr.minorStars.filter((s) => s.category === '6길성');
         if (gils.length >= 2) {
           insights.push(`${pr.name}에 6길성 ${gils.slice(0, 3).map((s) => s.name).join('·')} 회조 — 귀인의 도움`);
+        }
+        const japs = pr.minorStars.filter((s) => s.category === '잡성');
+        if (japs.length > 0) {
+          insights.push(`${pr.name}에 잡성 ${japs.slice(0, 3).map((s) => s.name).join('·')} — 미세 변수`);
         }
       });
 

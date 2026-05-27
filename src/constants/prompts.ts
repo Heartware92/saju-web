@@ -3152,7 +3152,8 @@ export const generateZamidusuPrompt = (z: ZamidusuResult): string => {
       return `${s.name}${br}${mut}`;
     }).join(' ');
     const minors = p.minorStars.slice(0, 4).map((s) => s.name).join(' ');
-    return `${p.name}[${p.heavenlyStem}${p.earthlyBranch}${p.isBodyPalace ? '·신궁' : ''}] 주성: ${majors || '(공궁)'}${minors ? ` 보조: ${minors}` : ''}`;
+    const jab = (p.adjectiveStars || []).slice(0, 4).map((s) => s.name).join(' ');
+    return `${p.name}[${p.heavenlyStem}${p.earthlyBranch}${p.isBodyPalace ? '·신궁' : ''}] 주성: ${majors || '(공궁)'}${minors ? ` 보조: ${minors}` : ''}${jab ? ` 잡성: ${jab}` : ''}`;
   }).join('\n');
 
   // 명반에 실제 등장한 별만 뽑아 해설 주입
@@ -3205,7 +3206,8 @@ ${palaceSummary}
 ▣ 14주성 해설 (이 명반에 실제 등장한 별)
 ${majorDesc}
 
-▣ 보좌성 해설 (이 명반에 실제 등장한 별)
+▣ 보좌성·살성·잡성 해설 (이 명반에 실제 등장한 별)
+※ category 표기: [6길성]=귀인·복록 / [6살성]=시련·압력(경양·타라·화성·령성·지공·지겁) / [잡성]=미세 색채(음살·천형·홍란·천희·고진·과숙 등) / [기타]=록존·천마
 ${minorDesc}
 
 ▣ 12궁 역할
@@ -3289,7 +3291,8 @@ ${METAPHOR_SHORT_GUIDE}
 첫 줄: 은유 제목 (보좌성의 보호·견제 양상을 이미지로. 예: "곁에 선 등불, 등 뒤의 그림자")
 본문: 명궁에 좌한 보조성을 풀이.
 - 6길성(좌보·우필·문창·문곡·천괴·천월)이 있으면: 어떤 귀인·재능·인정의 복이 명궁에 흐르는지 (각 별 한 줄)
-- 4흉성(경양·타라·화성·영성)이 있으면: 어떤 압력·함정이 명궁에 작동하는지 + 대응법
+- 6살성(경양·타라·화성·령성·지공·지겁)이 있으면: 어떤 압력·함정이 명궁에 작동하는지 + 대응법
+- 잡성(음살·천형·천요·홍란·천희·고진·과숙·화개·함지 등)이 있으면: 미세 색채 한 줄 — 도화·고독·예술성·구설 등 명궁에 입혀지는 결을 짚어줄 것
 - 보좌성이 주성과 어떻게 화학작용 하는지 (강화/약화/균형) 1문장
 - 보조성이 없다면 "명궁이 단독 — 외부 도움 없이 본인 별만으로 풀어가는 인생" 명시
 

@@ -218,29 +218,86 @@ export const MAJOR_STARS_META: Record<string, MajorStarMeta> = {
 };
 
 // ============================================
-// 주요 보좌성(輔星·佐星) — 6길성 + 4흉성
+// 보좌성·살성·잡성
+//
+// 자미두수 정통 분류:
+//  - 6길성: 좌보·우필·문창·문곡·천괴·천월
+//  - 6살성: 경양·타라·화성·령성·지공·지겁  (4흉성 + 천공·지겁 2개)
+//  - 록마: 녹존·천마
+//  - 잡성(雜星): 음살·천형·천요·홍란·천희 등 ~30종, 사회적/도화/고독/명예 등 미세 영향
+//
+// iztro 한국어 로케일 변환 차이:
+//  - "영성" ↔ "령성" (한자 鈴 — 표준은 '영', iztro는 '령')
+//  - "천공" ↔ "지공" (한자 地空 — iztro는 '지공')
+// 양 표기를 키로 함께 등록해 어느 쪽으로 와도 매칭.
 // ============================================
 
 export interface MinorStarMeta {
   name: string;
   hanja: string;
-  category: '6길성' | '4흉성' | '기타';
+  category: '6길성' | '6살성' | '잡성' | '기타';
   effect: string;
 }
 
 export const MINOR_STARS_META: Record<string, MinorStarMeta> = {
+  // 6길성
   좌보: { name: '좌보', hanja: '左輔', category: '6길성', effect: '좌우 보좌 — 귀인·조력자, 리더를 돕는 힘.' },
   우필: { name: '우필', hanja: '右弼', category: '6길성', effect: '실질적 지원 — 협력자·파트너 복.' },
   문창: { name: '문창', hanja: '文昌', category: '6길성', effect: '학문·문서·시험운. 글·계약·발표 유리.' },
   문곡: { name: '문곡', hanja: '文曲', category: '6길성', effect: '예술·감성·언변. 표현력과 매력.' },
   천괴: { name: '천괴', hanja: '天魁', category: '6길성', effect: '주간 귀인 — 윗사람·남성 조력.' },
   천월: { name: '천월', hanja: '天鉞', category: '6길성', effect: '야간 귀인 — 여성·부드러운 조력자.' },
-  경양: { name: '경양', hanja: '擎羊', category: '4흉성', effect: '날카로운 경쟁·다툼·상해. 용맹하나 갈등 유발.' },
-  타라: { name: '타라', hanja: '陀羅', category: '4흉성', effect: '지체·장애·우회. 일이 느리고 얽힘.' },
-  화성: { name: '화성', hanja: '火星', category: '4흉성', effect: '급격한 변동·충동·사고. 불같은 에너지.' },
-  영성: { name: '영성', hanja: '鈴星', category: '4흉성', effect: '은근한 타격·예민·걱정. 내재된 긴장.' },
+
+  // 6살성 (정통) — 4흉성 + 지공·지겁
+  경양: { name: '경양', hanja: '擎羊', category: '6살성', effect: '날카로운 경쟁·다툼·상해. 용맹하나 갈등 유발.' },
+  타라: { name: '타라', hanja: '陀羅', category: '6살성', effect: '지체·장애·우회. 일이 느리고 얽힘.' },
+  화성: { name: '화성', hanja: '火星', category: '6살성', effect: '급격한 변동·충동·사고. 불같은 에너지.' },
+  영성: { name: '영성', hanja: '鈴星', category: '6살성', effect: '은근한 타격·예민·걱정. 내재된 긴장.' },
+  령성: { name: '령성', hanja: '鈴星', category: '6살성', effect: '은근한 타격·예민·걱정. 내재된 긴장. (영성과 동일)' },
+  지공: { name: '지공', hanja: '地空', category: '6살성', effect: '공허·헛수고·정신적 좌절. 물질욕 무너지나 정신·종교성 깊어짐.' },
+  천공: { name: '천공', hanja: '天空', category: '6살성', effect: '공허·헛수고·정신적 좌절. 지공과 동일 계열로 함께 동조 시 손재 큼.' },
+  지겁: { name: '지겁', hanja: '地劫', category: '6살성', effect: '겁탈·손실·계획 무산. 갑작스러운 손재나 사기 주의.' },
+
+  // 록마
   녹존: { name: '녹존', hanja: '祿存', category: '기타', effect: '재물의 씨앗 — 꾸준한 벌이와 안정.' },
+  록존: { name: '록존', hanja: '祿存', category: '기타', effect: '재물의 씨앗 — 꾸준한 벌이와 안정. (녹존과 동일)' },
   천마: { name: '천마', hanja: '天馬', category: '기타', effect: '이동·변화·역마. 여행·출장·이직 기운.' },
+
+  // ============ 잡성 (雜星) — adjectiveStars ============
+  // 흉성 계열
+  음살: { name: '음살', hanja: '陰煞', category: '잡성', effect: '음험한 기운·암해(暗害)·소인배 시비. 뒤에서 발목 잡는 일 조심.' },
+  천형: { name: '천형', hanja: '天刑', category: '잡성', effect: '형벌·소송·자기단속. 의료·법조·종교 등 엄정한 길에선 길성으로 작용.' },
+  천요: { name: '천요', hanja: '天姚', category: '잡성', effect: '매력·사교·도화·구설. 이성 인기 많지만 풍파 따라옴.' },
+  천허: { name: '천허', hanja: '天虛', category: '잡성', effect: '공허·실속 부족·과장된 명예. 허세 경계.' },
+  천곡: { name: '천곡', hanja: '天哭', category: '잡성', effect: '슬픔·우울·이별. 천허와 동조 시 정신적 침체 깊음.' },
+  비렴: { name: '비렴', hanja: '蜚廉', category: '잡성', effect: '구설·시비·중상. 입조심 시기 강조.' },
+  파쇄: { name: '파쇄', hanja: '破碎', category: '잡성', effect: '잔손해·자잘한 망실·계획 어그러짐.' },
+  대모: { name: '대모', hanja: '大耗', category: '잡성', effect: '큰 손재·자산 소모. 큰 지출 시기 경계.' },
+  겁살: { name: '겁살', hanja: '劫煞', category: '잡성', effect: '빼앗기는 기운·강압적 손실. 계약·재물 보호 필요.' },
+  재살: { name: '재살', hanja: '災煞', category: '잡성', effect: '재난·사고수. 안전 점검·예방 강조.' },
+  천살: { name: '천살', hanja: '天煞', category: '잡성', effect: '하늘의 살 — 자연재해·돌발 변고.' },
+  화개: { name: '화개', hanja: '華蓋', category: '잡성', effect: '고독·예술·종교·고매함. 외로우나 정신세계 깊음.' },
+  고진: { name: '고진', hanja: '孤辰', category: '잡성', effect: '고독·독신·동떨어짐. 남성에게 더 강하게 발현.' },
+  과숙: { name: '과숙', hanja: '寡宿', category: '잡성', effect: '고독·이별·홀로 됨. 여성에게 더 강하게 발현.' },
+  함지: { name: '함지', hanja: '咸池', category: '잡성', effect: '도화·풍류·이성 인연. 매력 강하나 정도 넘으면 구설.' },
+
+  // 길성 계열
+  홍란: { name: '홍란', hanja: '紅鸞', category: '잡성', effect: '연애·결혼·경사. 부처궁/명궁 회조 시 좋은 인연·혼인 시기.' },
+  천희: { name: '천희', hanja: '天喜', category: '잡성', effect: '기쁨·경사·생산(임신·출산). 홍란과 짝을 이룸.' },
+  천관: { name: '천관', hanja: '天官', category: '잡성', effect: '관록·공명·승진 보조. 관록궁에서 길성 보강.' },
+  천복: { name: '천복', hanja: '天福', category: '잡성', effect: '복록·평안. 복덕궁에서 안정 보강.' },
+  천무: { name: '천무', hanja: '天巫', category: '잡성', effect: '승진·진급·승계의 별. 관록궁에서 빠른 출세.' },
+  태보: { name: '태보', hanja: '台輔', category: '잡성', effect: '명예·신분 상승의 보조. 봉고와 짝.' },
+  봉고: { name: '봉고', hanja: '封誥', category: '잡성', effect: '책봉·임명. 태보와 함께 명예 보강.' },
+  삼태: { name: '삼태', hanja: '三台', category: '잡성', effect: '지위·체면·격조 상승. 팔좌와 짝.' },
+  팔좌: { name: '팔좌', hanja: '八座', category: '잡성', effect: '지위·체면·격조 상승. 삼태와 함께 명예 보강.' },
+  은광: { name: '은광', hanja: '恩光', category: '잡성', effect: '귀인·은혜·표창. 천귀와 짝.' },
+  천귀: { name: '천귀', hanja: '天貴', category: '잡성', effect: '귀인·존경·명예. 은광과 함께 길성 보강.' },
+  천재: { name: '천재', hanja: '天才', category: '잡성', effect: '재능·총명·학문. 문창·문곡과 동조 시 학문 대성.' },
+  천수: { name: '천수', hanja: '天壽', category: '잡성', effect: '수명·건강·장수. 복덕·질액궁에서 길성.' },
+  용지: { name: '용지', hanja: '龍池', category: '잡성', effect: '재예·예능·문예 재능. 봉각과 짝.' },
+  봉각: { name: '봉각', hanja: '鳳閣', category: '잡성', effect: '재예·문장·아름다움. 용지와 함께 예술 보강.' },
+  해신: { name: '해신', hanja: '解神', category: '잡성', effect: '재앙을 풀어주는 별 — 흉을 완화하고 분쟁 해소.' },
 };
 
 // ============================================
@@ -464,6 +521,12 @@ export function collectKnowledge(chart: ZamidusuResult): KnowledgeHit {
       }
     });
     p.minorStars.forEach((s) => {
+      const meta = MINOR_STARS_META[s.name];
+      if (meta) minorStars.push({ palace: p.name, meta });
+    });
+    // 잡성(adjectiveStars)도 동일 채널로 수집 — 6살성 일부(지공·지겁 등)와
+    // 잡성(음살·천형·천요·홍란·천희·고진·과숙 등)이 여기로 흘러온다.
+    (p.adjectiveStars || []).forEach((s) => {
       const meta = MINOR_STARS_META[s.name];
       if (meta) minorStars.push({ palace: p.name, meta });
     });

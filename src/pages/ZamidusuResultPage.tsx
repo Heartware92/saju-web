@@ -222,10 +222,13 @@ function HelperStarGroup({ title, desc, stars, color, bg }: {
 }
 
 function HelperStarsChips({ palace }: { palace: ZamidusuPalace }) {
-  const lucky = palace.minorStars.filter(s => MINOR_STARS_META[s.name]?.category === '6길성');
-  const unlucky = palace.minorStars.filter(s => MINOR_STARS_META[s.name]?.category === '4흉성');
-  const other = palace.minorStars.filter(s => MINOR_STARS_META[s.name]?.category === '기타');
-  if (lucky.length + unlucky.length + other.length === 0) {
+  // 보좌성·살성·잡성 통합 — minorStars(6길성·6살성·록마) + adjectiveStars(잡성)
+  const allMinor = [...palace.minorStars, ...(palace.adjectiveStars || [])];
+  const lucky = allMinor.filter(s => MINOR_STARS_META[s.name]?.category === '6길성');
+  const unlucky = allMinor.filter(s => MINOR_STARS_META[s.name]?.category === '6살성');
+  const other = allMinor.filter(s => MINOR_STARS_META[s.name]?.category === '기타');
+  const misc = allMinor.filter(s => MINOR_STARS_META[s.name]?.category === '잡성');
+  if (lucky.length + unlucky.length + other.length + misc.length === 0) {
     return (
       <div style={{ padding: ZV.pad, borderRadius: ZV.radius, background: CARD_BG, border: `1px solid ${CARD_BORDER}`, textAlign: 'center', marginBottom: ZV.sectionGap, fontSize: 15, color: 'var(--text-tertiary)' }}>
         명궁에 보좌성 없음 — 본인 별만으로 풀어가는 인생
@@ -253,6 +256,11 @@ function HelperStarsChips({ palace }: { palace: ZamidusuPalace }) {
         title="록존·천마"
         desc="재물복을 부르는 록존, 이동·변동·기회를 부르는 천마. 활동성과 실리의 별입니다."
         stars={other} color="#FBBF24" bg="rgba(251,191,36,0.08)"
+      />
+      <HelperStarGroup
+        title="잡성"
+        desc="음살·천형·홍란·천희·고진·과숙 같은 미세 변수들. 큰 흐름은 주성·6길·6살이 정하지만, 잡성이 색채를 입혀줍니다."
+        stars={misc} color="#A78BFA" bg="rgba(167,139,250,0.08)"
       />
     </div>
   );
@@ -1514,8 +1522,10 @@ export default function ZamidusuResultPage() {
                     )}
                   </div>
 
-                  {/* 보조성 — 각각 설명 */}
-                  {p.minorStars.length > 0 && (
+                  {/* 보조성·살성·잡성 — 각각 설명. minorStars + adjectiveStars 통합 */}
+                  {(p.minorStars.length + (p.adjectiveStars?.length || 0)) > 0 && (() => {
+                    const allStars = [...p.minorStars, ...(p.adjectiveStars || [])];
+                    return (
                     <div style={{ marginBottom: 18 }}>
                       <div
                         style={{
@@ -1529,14 +1539,15 @@ export default function ZamidusuResultPage() {
                         }}
                       >
                         <span style={{ display: 'inline-block', width: 3, height: 16, borderRadius: 2, background: '#34D399' }} />
-                        곁에서 돕는 별
+                        곁에서 돕는 별 · 살성 · 잡성
                       </div>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                        {p.minorStars.map((s, i) => {
+                        {allStars.map((s, i) => {
                           const meta = MINOR_STARS_META[s.name];
                           const badgeColor =
                             meta?.category === '6길성' ? '#34D399' :
-                            meta?.category === '4흉성' ? '#F87171' : 'var(--text-tertiary)';
+                            meta?.category === '6살성' ? '#F87171' :
+                            meta?.category === '잡성' ? '#A78BFA' : 'var(--text-tertiary)';
                           return (
                             <div
                               key={i}
@@ -1568,7 +1579,8 @@ export default function ZamidusuResultPage() {
                         })}
                       </div>
                     </div>
-                  )}
+                    );
+                  })()}
                 </motion.div>
               </motion.div>
             );

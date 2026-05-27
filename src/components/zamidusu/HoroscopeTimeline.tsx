@@ -16,6 +16,7 @@
  * 헤더 스타일: DaehanTimeline과 동일한 "X(漢) — Y" 형식 (4px 사이드바 + serif 18px + 부제)
  */
 
+import { useEffect, useRef } from 'react';
 import type { YearlyHoroscope, MonthlyHoroscope } from '../../engine/zamidusu/horoscope';
 import { MAJOR_STARS_META } from '../../engine/zamidusu/knowledge';
 
@@ -197,11 +198,24 @@ function smoothPath(pts: { x: number; y: number }[]): string {
   return segs.join(' ');
 }
 
-function FortuneLineChart({ points, title }: { points: ChartPoint[]; title?: string }) {
-  if (points.length < 2) return null;
-  // SVG viewBox 기준 좌표 — 컨테이너에 width 100%로 fit되도록 (스크롤 제거).
-  // 5개년 정도면 컨테이너 너비에 자연 분포, 12개월 정도여도 viewBox 비율로 압축 표시.
-  const W = 400;
+function FortuneLineChart({
+  points,
+  title,
+  scrollable = false,
+  focusIndex,
+}: {
+  points: ChartPoint[];
+  title?: string;
+  /** true 시 가로 스크롤 + 각 포인트에 충분한 간격 부여 (유월 12개월용) */
+  scrollable?: boolean;
+  /** 마운트 시 이 인덱스가 컨테이너 중앙에 오도록 자동 스크롤 */
+  focusIndex?: number;
+}) {
+  const scrollRef = useRef<HTMLDivElement | null>(null);
+
+  // 가로 스크롤 모드: 한 포인트당 60px씩 확보 → 12개월이면 720px (스크롤 발생)
+  // 일반 모드: 컨테이너 너비에 fit (400 viewBox)
+  const W = scrollable ? Math.max(400, points.length * 60) : 400;
   const H = 160;
   const PAD_L = 28;
   const PAD_R = 16;
@@ -210,6 +224,16 @@ function FortuneLineChart({ points, title }: { points: ChartPoint[]; title?: str
   const PLOT_W = W - PAD_L - PAD_R;
   const PLOT_H = H - PAD_T - PAD_B;
 
+  useEffect(() => {
+    if (!scrollable || focusIndex == null || !scrollRef.current) return;
+    const el = scrollRef.current;
+    const ratio = focusIndex / Math.max(points.length - 1, 1);
+    const target = ratio * el.scrollWidth - el.clientWidth / 2;
+    el.scrollLeft = Math.max(0, Math.min(target, el.scrollWidth - el.clientWidth));
+  }, [scrollable, focusIndex, points.length]);
+
+  if (points.length < 2) return null;
+
   const xOf = (i: number) => PAD_L + (i / (points.length - 1)) * PLOT_W;
   const yOf = (score: number) => PAD_T + (1 - score / 100) * PLOT_H;
 
@@ -217,9 +241,14 @@ function FortuneLineChart({ points, title }: { points: ChartPoint[]; title?: str
   const linePath = smoothPath(smoothPts);
   const areaPath = `${linePath} L${smoothPts[smoothPts.length - 1].x.toFixed(1)},${(PAD_T + PLOT_H).toFixed(1)} L${smoothPts[0].x.toFixed(1)},${(PAD_T + PLOT_H).toFixed(1)} Z`;
 
-  return (
-    <div style={{ marginBottom: 14 }}>
-      <svg viewBox={`0 0 ${W} ${H}`} width="100%" style={{ display: 'block', maxWidth: '100%' }} preserveAspectRatio="xMidYMid meet">
+  const svgEl = (
+    <svg
+      viewBox={`0 0 ${W} ${H}`}
+      width={scrollable ? W : '100%'}
+      height={scrollable ? H : undefined}
+      style={{ display: 'block', maxWidth: scrollable ? 'none' : '100%' }}
+      preserveAspectRatio="xMidYMid meet"
+    >
         <defs>
           <linearGradient id="fortuneArea" x1="0" y1="0" x2="0" y2="1">
             <stop offset="0%" stopColor="#FBBF24" stopOpacity="0.4" />
@@ -292,7 +321,26 @@ function FortuneLineChart({ points, title }: { points: ChartPoint[]; title?: str
             </g>
           );
         })}
-      </svg>
+    </svg>
+  );
+
+  return (
+    <div style={{ marginBottom: 14 }}>
+      {scrollable ? (
+        <div
+          ref={scrollRef}
+          style={{
+            overflowX: 'auto',
+            overflowY: 'hidden',
+            WebkitOverflowScrolling: 'touch',
+            scrollbarWidth: 'thin',
+          }}
+        >
+          {svgEl}
+        </div>
+      ) : (
+        svgEl
+      )}
       {title && (
         <div className="text-[11px] text-text-tertiary text-center mt-1">{title}</div>
       )}
@@ -369,11 +417,13 @@ interface MonthlyProps {
 
 export function MonthlyTimeline({ year, horoscopes, embedded = false }: MonthlyProps) {
   if (horoscopes.length === 0) return null;
+  const currentMonth = new Date().getMonth() + 1;
   const points: ChartPoint[] = horoscopes.map((m) => ({
     label: `${m.month}월`,
     score: calcWindowScore(m.mutagen),
-    isCurrent: m.month === new Date().getMonth() + 1,
+    isCurrent: m.month === currentMonth,
   }));
+  const focusIndex = horoscopes.findIndex((m) => m.month === currentMonth);
 
   const wrapperClass = embedded
     ? 'pt-4 border-t border-[var(--border-subtle)] mt-4'
@@ -381,8 +431,13 @@ export function MonthlyTimeline({ year, horoscopes, embedded = false }: MonthlyP
 
   return (
     <div className={wrapperClass}>
-      <SectionHeader title={`유월(流月) — 1달 단위의 변화 · ${year}년`} subtitle="달마다 사화 비행과 점수 — 즉각 의사결정 단위" />
-      <FortuneLineChart points={points} title={`${year}년 12개월 흐름`} />
+      <SectionHeader title={`유월(流月) — 1달 단위의 변화 · ${year}년`} subtitle="달마다 사화 비행과 점수 — 즉각 의사결정 단위 · 좌우로 밀어 12개월 확인" />
+      <FortuneLineChart
+        points={points}
+        title={`${year}년 12개월 흐름 — 좌우로 스크롤`}
+        scrollable
+        focusIndex={focusIndex >= 0 ? focusIndex : undefined}
+      />
       {/* 세로 리스트 — 1월 표기 + 설명, 2월 표기 + 설명 식 (신년운세 월별 흐름 스타일) */}
       <div className="space-y-2.5">
         {horoscopes.map((m) => {
