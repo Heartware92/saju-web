@@ -38,6 +38,8 @@ import {
   parseDreamSections,
   parseDreamSymbols,
   parseDreamAction,
+  parseDreamV4,
+  type DreamV4Result,
 } from '../services/fortuneService';
 import {
   generateStudyShortPrompt,
@@ -54,6 +56,7 @@ import { MOON_COST_PER_FORTUNE as MOON_COST_SELECT } from '../constants/moreFort
 import { analyzeKoreanName } from '../utils/nameEumRyeong';
 import { AILoadingBar } from '../components/AILoadingBar';
 import { DreamInputPanel } from '../components/dream/DreamInputPanel';
+import { DreamResultCard } from '../components/dream/DreamResultCard';
 import { BackButton } from '../components/ui/BackButton';
 import { useLoadingGuard } from '../hooks/useLoadingGuard';
 import { useScrollToTopOnLoad } from '../hooks/useScrollToTopOnLoad';
@@ -184,11 +187,15 @@ export default function MoreFortunePage({ category }: Props) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [category, koreanName, charMeanings, selectedHanjas, saju?.yongSinElement, saju?.giSin, saju?.dayMasterElement]);
 
-  // 꿈 해몽 전용 state — DreamInputPanel에서 onChange로 주입되는 합성 텍스트/유효성
-  // dreamInputResetKey: "다른 꿈 풀이받기" 클릭 시 패널을 강제 remount 해 내부 상태(선명/흐릿 모드, 칩 선택 등)를 초기화
+  // 꿈 해몽 전용 state — DreamInputPanel에서 onChange로 주입
+  // dreamInputResetKey: "다른 꿈 풀이받기" 클릭 시 패널을 강제 remount 해 입력 초기화
   const [dreamText, setDreamText] = useState('');
   const [dreamValid, setDreamValid] = useState(false);
+  const [dreamTimeBandId, setDreamTimeBandId] = useState<string>('unknown');
+  const [dreamRepeating, setDreamRepeating] = useState(false);
   const [dreamInputResetKey, setDreamInputResetKey] = useState(0);
+  // V4 파싱 결과 (11마커 응답이면 set, 옛 record/legacy 응답이면 null → resultSections 사용)
+  const [dreamV4, setDreamV4] = useState<DreamV4Result | null>(null);
 
   // 결과 state
   const [loading, setLoading] = useState(false);
@@ -280,6 +287,9 @@ export default function MoreFortunePage({ category }: Props) {
     if (category === 'dream') {
       setDreamText('');
       setDreamValid(false);
+      setDreamTimeBandId('unknown');
+      setDreamRepeating(false);
+      setDreamV4(null);
       setDreamInputResetKey((k) => k + 1);
     }
     window.scrollTo({ top: 0 });
@@ -339,11 +349,17 @@ export default function MoreFortunePage({ category }: Props) {
           const out = parseNameSections(content) as Record<string, string>;
           setResultSections(Object.keys(out).length > 0 ? out : null);
         } else if (record.category === 'dream') {
-          // 옛 record (v1: 마커 없는 단일 본문 / v2: oriental+western 2섹션) 는 fallback 으로 일부만 채워짐.
-          // 5섹션 중 하나라도 있으면 렌더 분기 통과.
-          const out = parseDreamSections(content);
-          const hasAny = out.diagnosis || out.symbols || out.oriental || out.western || out.advice || out.caution;
-          setResultSections(hasAny ? out as Record<string, string> : null);
+          // V4 11마커 우선. 옛 record는 legacy 6마커 fallback.
+          const v4 = parseDreamV4(content);
+          if (v4) {
+            setDreamV4(v4);
+            setResultSections({ __v4__: '1' });
+          } else {
+            const out = parseDreamSections(content);
+            const hasAny = out.diagnosis || out.symbols || out.oriental || out.western || out.advice || out.caution;
+            setResultSections(hasAny ? out as Record<string, string> : null);
+            setDreamV4(null);
+          }
         } else {
           setResultSections(null);
         }
@@ -364,10 +380,12 @@ export default function MoreFortunePage({ category }: Props) {
             setSelectedHanjas([...eng.hanjaName]);
           }
         }
-        // 꿈 해몽이면 저장된 꿈 텍스트 복원
+        // 꿈 해몽이면 저장된 꿈 텍스트·시각·반복 여부 복원
         if (record.category === 'dream' && record.engine_result) {
-          const eng = record.engine_result as { dreamText?: string };
+          const eng = record.engine_result as { dreamText?: string; timeBandId?: string; isRepeating?: boolean };
           if (typeof eng.dreamText === 'string') setDreamText(eng.dreamText);
+          if (typeof eng.timeBandId === 'string') setDreamTimeBandId(eng.timeBandId);
+          if (typeof eng.isRepeating === 'boolean') setDreamRepeating(eng.isRepeating);
         }
       })
       .catch((e) => {
@@ -550,9 +568,16 @@ export default function MoreFortunePage({ category }: Props) {
           const out = parseNameSections(cached.data) as Record<string, string>;
           setResultSections(Object.keys(out).length > 0 ? out : null);
         } else if (category === 'dream') {
-          const out = parseDreamSections(cached.data);
-          const hasAny = out.diagnosis || out.symbols || out.oriental || out.western || out.advice || out.caution;
-          setResultSections(hasAny ? out as Record<string, string> : null);
+          const v4 = parseDreamV4(cached.data);
+          if (v4) {
+            setDreamV4(v4);
+            setResultSections({ __v4__: '1' });
+          } else {
+            const out = parseDreamSections(cached.data);
+            const hasAny = out.diagnosis || out.symbols || out.oriental || out.western || out.advice || out.caution;
+            setResultSections(hasAny ? out as Record<string, string> : null);
+            setDreamV4(null);
+          }
         } else {
           setResultSections(null);
         }
@@ -638,8 +663,15 @@ export default function MoreFortunePage({ category }: Props) {
       let engineResult: Record<string, unknown> = {};
 
       if (category === 'dream') {
-        prompt = generateDreamInterpretationPrompt(dreamText.trim());
-        engineResult = { dreamText: dreamText.trim() };
+        prompt = generateDreamInterpretationPrompt(dreamText.trim(), {
+          timeBandId: dreamTimeBandId,
+          isRepeating: dreamRepeating,
+        });
+        engineResult = {
+          dreamText: dreamText.trim(),
+          timeBandId: dreamTimeBandId,
+          isRepeating: dreamRepeating,
+        };
       } else {
         const s = saju!;
         if (category === 'study') {
@@ -726,15 +758,22 @@ export default function MoreFortunePage({ category }: Props) {
       else if (category === 'personality') sections = parsePersonalitySections(content) as Record<string, string>;
       else if (category === 'name') sections = parseNameSections(content) as Record<string, string>;
       else if (category === 'dream') {
-        const p = parseDreamSections(content);
-        const dreamSections: Record<string, string> = {};
-        if (p.diagnosis) dreamSections.diagnosis = p.diagnosis;
-        if (p.symbols) dreamSections.symbols = p.symbols;
-        if (p.oriental) dreamSections.oriental = p.oriental;
-        if (p.western) dreamSections.western = p.western;
-        if (p.advice) dreamSections.advice = p.advice;
-        if (p.caution) dreamSections.caution = p.caution;
-        sections = dreamSections;
+        const v4 = parseDreamV4(content);
+        if (v4) {
+          setDreamV4(v4);
+          sections = { __v4__: '1' };
+        } else {
+          const p = parseDreamSections(content);
+          const dreamSections: Record<string, string> = {};
+          if (p.diagnosis) dreamSections.diagnosis = p.diagnosis;
+          if (p.symbols) dreamSections.symbols = p.symbols;
+          if (p.oriental) dreamSections.oriental = p.oriental;
+          if (p.western) dreamSections.western = p.western;
+          if (p.advice) dreamSections.advice = p.advice;
+          if (p.caution) dreamSections.caution = p.caution;
+          sections = dreamSections;
+          setDreamV4(null);
+        }
       }
       setResultSections(sections && Object.keys(sections).length > 0 ? sections : null);
       setSavedRecordId(fortuneJob.jobId);
@@ -865,6 +904,8 @@ export default function MoreFortunePage({ category }: Props) {
                   key={dreamInputResetKey}
                   onTextChange={setDreamText}
                   onValidChange={setDreamValid}
+                  onTimeBandChange={setDreamTimeBandId}
+                  onRepeatingChange={setDreamRepeating}
                 />
               </div>
             )}
@@ -940,8 +981,15 @@ export default function MoreFortunePage({ category }: Props) {
               isArchiveMode={isArchiveMode}
             />
           )}
-          {/* 꿈해몽 — 진단 + 상징 + 동양식 + 서양식 + 이렇게 하면 좋아요 + 주의할 점 6섹션 */}
-          {result && category === 'dream' && resultSections && (resultSections.diagnosis || resultSections.symbols || resultSections.oriental || resultSections.western || resultSections.advice || resultSections.caution) && (
+          {/* 꿈해몽 V4 — 2탭 (동양/서양) + 11섹션. 옛 record(v3 6마커)는 옛 카드로 fallback. */}
+          {result && category === 'dream' && dreamV4 && (
+            <DreamResultCard
+              title={`${cfg.title} 풀이`}
+              result={dreamV4}
+              timeBandId={dreamTimeBandId}
+            />
+          )}
+          {result && category === 'dream' && !dreamV4 && resultSections && (resultSections.diagnosis || resultSections.symbols || resultSections.oriental || resultSections.western || resultSections.advice || resultSections.caution) && (
             <MoreFortuneDreamCard
               title={`${cfg.title} 풀이`}
               diagnosis={resultSections.diagnosis ?? ''}
@@ -1925,11 +1973,15 @@ function MoreFortuneSectionedCard({
     : NAME_SECTION_LABELS as Record<string, string>;
 
   // 본문 잔여 섹션 마커 strip 패턴 — 두 단계 방어
-  //  (1) 줄 단독 마커: 섹션 분리 후에도 본문 첫/끝에 남는 [aptitude] 등 strip
+  //  (1) 줄 단독 마커: 섹션 분리 후에도 본문 첫/끝에 남는 [aptitude] 등 strip (전 카테고리)
   //  (2) 인라인 마커: AI 가 본문에 "[rename]에서 안내" 같이 직접 적는 사고 차단
-  //      (예: 이름풀이 preserve 섹션 마지막 줄에서 발견됨)
+  //      ★ name 카테고리에만 적용. study/children/personality 의 키는
+  //        aptitude·strengths·outside_view·meaning 등 일반 영문이라 사용자 입력·
+  //        본문 인용 안에 우연히 등장한 영문 라벨까지 strip 하는 부작용을 회피.
   const markerLinePattern = new RegExp(`^\\s*\\[(${keys.join('|')})\\]\\s*$`, 'gm');
-  const markerInlinePattern = new RegExp(`\\[(${keys.join('|')})\\]`, 'g');
+  const markerInlinePattern: RegExp | null = category === 'name'
+    ? new RegExp(`\\[(${keys.join('|')})\\]`, 'g')
+    : null;
 
   return (
     <motion.div
@@ -1946,9 +1998,10 @@ function MoreFortuneSectionedCard({
           const raw = (sections[key] || '').trim();
           if (!raw) return null;
           // 본문 안 잔여 카테고리 마커 strip → extractMetaphor 로 [은유] 마커 + 부제 추출
-          const stripped = raw
-            .replace(markerLinePattern, '')
-            .replace(markerInlinePattern, '')
+          const stripped = (markerInlinePattern
+            ? raw.replace(markerLinePattern, '').replace(markerInlinePattern, '')
+            : raw.replace(markerLinePattern, '')
+          )
             .replace(/\n{3,}/g, '\n\n')
             .trim();
           const { metaphorTitle, bodyText } = extractMetaphor(stripped);
