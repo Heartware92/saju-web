@@ -49,8 +49,8 @@ import { DaehanTimeline } from '../components/zamidusu/DaehanTimeline';
 import { CharacterCard } from '../components/zamidusu/CharacterCard';
 import { GekkukList } from '../components/zamidusu/GekkukBadge';
 import { MbtiAxesChart } from '../components/zamidusu/MbtiAxesChart';
-import { YearlyTimeline, MonthlyTimeline, FlowGroup } from '../components/zamidusu/HoroscopeTimeline';
-import { getYearlyHoroscopes, getMonthlyHoroscopes } from '../engine/zamidusu/horoscope';
+import { YearlyTimeline, MonthlyTimeline } from '../components/zamidusu/HoroscopeTimeline';
+import { getYearlyHoroscopes, getMonthlyHoroscopes, type YearlyHoroscope, type MonthlyHoroscope } from '../engine/zamidusu/horoscope';
 import {
   calcCoreScores,
   calcMutagenPlacements,
@@ -478,6 +478,9 @@ function renderSectionDataCards(
   key: string,
   chart: ZamidusuResult,
   currentAge?: number,
+  yearlyHoroscopes?: YearlyHoroscope[],
+  monthlyHoroscopes?: MonthlyHoroscope[],
+  currentYearForMonthly?: number,
 ): React.ReactNode | null {
   const myeong = chart.palaces.find(p => p.name === '명궁');
   switch (key) {
@@ -506,7 +509,16 @@ function renderSectionDataCards(
     case 'daehan':
       return <DaehanTable chart={chart} currentAge={currentAge} />;
     case 'sohan':
-      return <SohanCard chart={chart} currentAge={currentAge} />;
+      // 정통 자미두수 4단위(대한·유년·유월·유일)에 맞춰 sohan 키를 유년·유월 시각으로 재사용.
+      // 라벨도 "유년·유월 — 가까운 시기 흐름"으로 변경 (prompts.ts ZAMIDUSU_SECTION_LABELS).
+      return (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+          {yearlyHoroscopes && yearlyHoroscopes.length > 0 && <YearlyTimeline horoscopes={yearlyHoroscopes} />}
+          {monthlyHoroscopes && monthlyHoroscopes.length > 0 && currentYearForMonthly && (
+            <MonthlyTimeline year={currentYearForMonthly} horoscopes={monthlyHoroscopes} />
+          )}
+        </div>
+      );
     case 'advice':
       return <AdviceLuckyCard chart={chart} />;
     default:
@@ -1531,18 +1543,12 @@ export default function ZamidusuResultPage() {
             <MutagenCards placements={mutagenPlacements} />
           </div>
         )}
-        {/* 운의 흐름 — 대한 · 유년 · 유월 하나의 섹션 그룹으로 묶음
-            (자미두수 정통 시기 순서: 10년 → 1년 → 1달) */}
         {daehanSegments.length > 0 && (
           <div className={styles.section}>
-            <FlowGroup
-              daehanNode={<DaehanTimeline segments={daehanSegments} currentAge={currentAge} />}
-              yearlyHoroscopes={yearlyHoroscopes}
-              monthlyYear={currentYearForMonthly}
-              monthlyHoroscopes={monthlyHoroscopes}
-            />
+            <DaehanTimeline segments={daehanSegments} currentAge={currentAge} />
           </div>
         )}
+        {/* 유년·유월 시각은 AI 풀이 [sohan] 섹션 안으로 통합됨 (사용자 결정 2026-05-27) */}
 
         {/* AI 풀이 — 섹션별 은유 헤드라인으로 카드화 */}
         {ZAMIDUSU_SECTION_KEYS.map((key, idx) => {
@@ -1574,7 +1580,7 @@ export default function ZamidusuResultPage() {
               enterDelay={0.05 * idx}
             >
               {/* 섹션별 데이터 카드 — 본문 위 시각 파티션 */}
-              {renderSectionDataCards(key, chart, currentAge)}
+              {renderSectionDataCards(key, chart, currentAge, yearlyHoroscopes, monthlyHoroscopes, currentYearForMonthly)}
               {(() => {
                 const raw = hasHeadline ? body : text;
                 const paragraphs = splitIntoParagraphs(raw);
