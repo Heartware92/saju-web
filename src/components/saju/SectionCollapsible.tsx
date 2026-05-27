@@ -242,7 +242,7 @@ export function SectionCollapsible({
                 scale: { duration: 0.55, delay: 0.08, ease: BOUNCE_EASE },
                 opacity: { duration: 0.4, delay: 0.1, ease: 'easeOut' },
               }}
-              className="px-5 pb-5"
+              className="px-4 pb-5"
             >
               {metaphorTitle && (
                 <motion.div

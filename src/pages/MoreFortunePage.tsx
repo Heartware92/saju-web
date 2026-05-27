@@ -2125,8 +2125,10 @@ function MoreFortuneSectionedCard({
                 style={{ wordBreak: 'keep-all', overflowWrap: 'break-word' }}
               >
                 {(() => {
-                  // 단락 분리 + 단락 안에서 "- " "· " 같은 불릿 라인은 별도 리스트로 렌더
-                  // name+preserve/rename 은 위에서 AdviceVisual 로 분리했으므로 renderBody 사용
+                  // 단락 분리 + 단락 안에서 "- " "· " 같은 불릿 라인은 별도 리스트로 렌더.
+                  //  ★ 같은 단락 안 단일 \n (LLM 이 의미 단위로 짧게 끊은 줄) 은 모두 공백 1개로
+                  //    합쳐 한 흐름으로 흘림. 모바일에서 어절 단위 들쭉날쭉 줄바꿈 회피.
+                  //  name+preserve/rename 은 위에서 AdviceVisual 로 분리했으므로 renderBody 사용.
                   const sourceText = (category === 'name'
                     && (key === 'preserve' || key === 'rename'))
                     ? renderBody : bodyText;
@@ -2135,13 +2137,14 @@ function MoreFortuneSectionedCard({
                     const lines = para.split('\n');
                     const items: { type: 'text' | 'bullet'; content: string }[] = [];
                     for (const line of lines) {
-                      const t = line.trim();
+                      // \r 제거 + 다중 공백 → 단일 공백 정제
+                      const t = line.replace(/\r/g, '').trim().replace(/\s+/g, ' ');
                       if (!t) continue;
                       const m = t.match(/^[-·•∙]\s*(.+)$/);
                       if (m) {
                         items.push({ type: 'bullet', content: m[1].trim() });
                       } else {
-                        // 이전 항목이 text 면 같은 텍스트 블록으로 합침
+                        // 이전 항목이 text 면 같은 텍스트 블록으로 합침 (단일 공백 연결)
                         if (items.length > 0 && items[items.length - 1].type === 'text') {
                           items[items.length - 1].content += ' ' + t;
                         } else {
@@ -2158,7 +2161,9 @@ function MoreFortuneSectionedCard({
                               <span className="flex-1">{it.content}</span>
                             </div>
                           ) : (
-                            <p key={ii} className="whitespace-pre-line">{it.content}</p>
+                            // whitespace-pre-line 제거 — items 합치는 로직에서 \n 모두 공백화 했으므로
+                            // pre-line 효과 불필요. 자동 wrap 만 동작해 깔끔하게 흐름.
+                            <p key={ii}>{it.content}</p>
                           )
                         )}
                       </div>
