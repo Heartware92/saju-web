@@ -257,9 +257,19 @@ export function StarChart({ palaces, soul, fiveElementsClass, selectedIndex, onS
           <span className="opacity-50">평</span>
           <span className="opacity-40">불·함 약</span>
         </div>
-        <p className="text-[13px] text-text-secondary text-center mt-3">
-          별을 눌러 자세히 볼 수 있어요
-        </p>
+        {/* 인터랙션 안내 — 칩 형태로 강조해서 눈에 띄게 */}
+        <div className="mt-4 text-center">
+          <span
+            className="inline-block px-3.5 py-1.5 rounded-full text-[14px] font-semibold"
+            style={{
+              color: '#FBBF24',
+              backgroundColor: 'rgba(251,191,36,0.10)',
+              border: '1px solid rgba(251,191,36,0.35)',
+            }}
+          >
+            별을 눌러 자세히 볼 수 있어요
+          </span>
+        </div>
       </div>
     </div>
   );
