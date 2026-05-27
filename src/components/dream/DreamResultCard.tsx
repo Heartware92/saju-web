@@ -101,7 +101,7 @@ function BodyParagraphs({ text }: { text: string; boxed?: boolean }) {
   return (
     <div className="flex flex-col gap-3">
       {paras.map((p, i) => (
-        <p key={i} className="text-[16px] text-text-secondary leading-[1.75] tracking-[-0.005em] whitespace-pre-line">
+        <p key={i} className="text-[16px] text-text-secondary leading-[1.75] tracking-[-0.005em] whitespace-pre-line break-all">
           {p}
         </p>
       ))}
@@ -819,7 +819,7 @@ export function DreamResultCard({ title, result, timeBandId }: Props) {
               <MirrorBlock text={result.western_mirror} />
             </SectionCollapsible>
 
-            <SectionCollapsible title="스스로 해볼 수 있는 작업" enterDelay={0.24}>
+            <SectionCollapsible title="직접 해보는 자기 대화" enterDelay={0.24}>
               <SelfWorkCard text={result.western_self_work} />
             </SectionCollapsible>
           </motion.div>
