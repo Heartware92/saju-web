@@ -118,15 +118,15 @@ const SURI_NAME_KOREAN: Record<string, string> = {
 // ─────────────────────────────────────────────────────────────────────────────
 function VisualCaption({ title, desc }: { title: string; desc: string }) {
   return (
-    <div className="mb-2.5 pl-0.5">
+    <div className="mb-3 pl-0.5">
       <div
-        className="text-[15px] font-bold mb-1"
+        className="text-[16px] font-bold mb-1"
         style={{ color: 'var(--text-primary)', fontFamily: 'var(--font-title)', letterSpacing: '0.01em' }}
       >
         {title}
       </div>
       <div
-        className="text-[13px] text-text-tertiary leading-[1.6]"
+        className="text-[14px] text-text-secondary leading-[1.65]"
         style={{ fontFamily: 'var(--font-body)' }}
       >
         {desc}
@@ -157,7 +157,7 @@ export function EumRyeongVisual({
     <div className="space-y-3 mb-3">
       <VisualCaption
         title="음령오행"
-        desc="한글 초성(ㄱ·ㄴ·ㅁ·ㅅ·ㅇ…)을 5오행으로 본 발음의 결입니다. 사주의 용신 오행이 포함되면 발음이 사주를 보강해요."
+        desc="한글 초성을 5오행으로 본 발음의 결입니다. 용신 오행이 포함되면 발음이 사주를 보강해요."
       />
       {/* 음절별 카드 */}
       <div className="flex flex-wrap gap-2 justify-center">
@@ -179,8 +179,8 @@ export function EumRyeongVisual({
       </div>
 
       {/* 5오행 분포 막대 */}
-      <div className="rounded-xl p-3.5 bg-white/[0.03] border border-white/10">
-        <div className="text-[14px] font-semibold text-text-tertiary mb-2.5">오행 분포</div>
+      <div className="rounded-xl p-4 bg-white/[0.03] border border-white/10">
+        <div className="text-[15px] font-semibold text-text-secondary mb-3">오행 분포</div>
         <div className="space-y-1.5">
           {(['목', '화', '토', '금', '수'] as const).map((el) => {
             const color = ELEMENT_COLOR[el];
@@ -219,7 +219,7 @@ export function JaWonVisual({
     <div className="mb-3">
       <VisualCaption
         title="자원오행"
-        desc="각 한자의 부수가 어떤 오행인지 보여주는 카드예요. 예) 木부 = 목, 火부 = 화. 부수 옆 점은 자원오행 색."
+        desc="한자 부수가 품은 오행이에요. 카드 좌상단 점이 그 오행 색입니다."
       />
     <div className="grid grid-cols-3 gap-2">
       {hanjas.map((h, i) => {
@@ -399,15 +399,15 @@ export function SummaryScoreVisual({
       }}
     >
       {/* 종합 별점 */}
-      <div className="flex flex-col items-center mb-3">
-        <span className="text-[12px] text-text-tertiary mb-1" style={{ fontFamily: 'var(--font-body)' }}>
+      <div className="flex flex-col items-center mb-4">
+        <span className="text-[14px] font-semibold text-text-secondary mb-2" style={{ fontFamily: 'var(--font-body)' }}>
           4축 종합
         </span>
-        <div className="flex gap-1 mb-1.5">
+        <div className="flex gap-1.5 mb-2">
           {[0, 1, 2, 3, 4].map(i => (
             <span
               key={i}
-              className="text-[18px] leading-none"
+              className="text-[22px] leading-none"
               style={{ color: i < rating.stars ? '#FBBF24' : 'rgba(255,255,255,0.18)' }}
             >
               ★
@@ -416,14 +416,14 @@ export function SummaryScoreVisual({
         </div>
         {rating.analyzedCount > 0 ? (
           <span
-            className="text-[13px] text-text-tertiary leading-tight text-center"
+            className="text-[14px] text-text-secondary leading-tight text-center"
             style={{ fontFamily: 'var(--font-body)' }}
           >
             보강 {rating.bonusCount} · 중립 {rating.neutralCount} · 거스름 {rating.penaltyCount}
             <span className="ml-1 opacity-60">(분석 {rating.analyzedCount}축)</span>
           </span>
         ) : (
-          <span className="text-[13px] text-text-tertiary leading-tight" style={{ fontFamily: 'var(--font-body)' }}>
+          <span className="text-[14px] text-text-secondary leading-tight" style={{ fontFamily: 'var(--font-body)' }}>
             분석 가능한 축이 없어 중간값으로 표시
           </span>
         )}
@@ -436,20 +436,20 @@ export function SummaryScoreVisual({
           return (
             <div
               key={i}
-              className="rounded-xl p-2 flex flex-col items-center justify-center border"
+              className="rounded-xl p-2.5 flex flex-col items-center justify-center border"
               style={{ background: 'rgba(255,255,255,0.03)', borderColor: 'rgba(255,255,255,0.08)' }}
             >
               <span
-                className="text-[12px] font-bold mb-0.5"
+                className="text-[14px] font-bold mb-0.5"
                 style={{ color: 'var(--text-primary)', fontFamily: 'var(--font-title)' }}
               >
                 {a.label}
               </span>
-              <span className="text-[10px] text-text-tertiary mb-1.5" style={{ fontFamily: 'var(--font-body)' }}>
+              <span className="text-[11px] text-text-tertiary mb-2 text-center leading-tight" style={{ fontFamily: 'var(--font-body)' }}>
                 {a.sub}
               </span>
               <span
-                className="text-[11px] font-bold px-2 py-0.5 rounded-md"
+                className="text-[12px] font-bold px-2 py-0.5 rounded-md"
                 style={{
                   background: badge.bg,
                   color: badge.fg,
@@ -465,26 +465,26 @@ export function SummaryScoreVisual({
 
       {/* 등급 의미 안내 — 사용자가 "보강/중립/거스름" 의미를 즉시 알 수 있게 */}
       <div
-        className="mt-3 pt-3 grid grid-cols-3 gap-2 text-[13px] text-text-tertiary leading-[1.5] border-t"
+        className="mt-3 pt-3 grid grid-cols-3 gap-2 text-[13px] text-text-secondary leading-[1.5] border-t"
         style={{ borderColor: 'rgba(255,255,255,0.08)', fontFamily: 'var(--font-body)' }}
       >
         <div className="flex flex-col items-start">
-          <span className="font-bold mb-0.5" style={{ color: '#34D399' }}>보강</span>
+          <span className="font-bold mb-1 text-[14px]" style={{ color: '#34D399' }}>보강</span>
           <span>사주 용신을<br />도와줘요</span>
         </div>
         <div className="flex flex-col items-start">
-          <span className="font-bold mb-0.5" style={{ color: '#CBD5E1' }}>중립</span>
+          <span className="font-bold mb-1 text-[14px]" style={{ color: '#CBD5E1' }}>중립</span>
           <span>도움도<br />거스름도 약해요</span>
         </div>
         <div className="flex flex-col items-start">
-          <span className="font-bold mb-0.5" style={{ color: '#F87171' }}>거스름</span>
+          <span className="font-bold mb-1 text-[14px]" style={{ color: '#F87171' }}>거스름</span>
           <span>사주 기신을<br />자극해요</span>
         </div>
       </div>
 
       {!isHanjaMode && (
         <p
-          className="text-[12px] text-text-tertiary text-center mt-2 leading-[1.6]"
+          className="text-[13px] text-text-tertiary text-center mt-3 leading-[1.6]"
           style={{ fontFamily: 'var(--font-body)' }}
         >
           한자 정보를 더하면 자원·수리오행·81수리까지 분석돼요
@@ -543,19 +543,19 @@ export function StrengthVisual({
       style={{ background: 'rgba(52,211,153,0.06)', borderColor: 'rgba(52,211,153,0.30)' }}
     >
       <div className="flex items-center gap-2 mb-1.5">
-        <span className="text-[16px] font-bold" style={{ color: '#34D399' }}>이름의 강점 신호</span>
+        <span className="text-[17px] font-bold" style={{ color: '#34D399' }}>이름의 강점 신호</span>
       </div>
       <div
-        className="text-[13px] text-text-tertiary mb-3 leading-[1.6]"
+        className="text-[14px] text-text-secondary mb-3 leading-[1.65]"
         style={{ fontFamily: 'var(--font-body)' }}
       >
-        이름의 4축 중 사주 용신({yongSinEl || '?'})을 보태는 자리를 자동 추출했어요.
+        사주 용신({yongSinEl || '?'})을 보태는 자리를 자동 추출했어요.
       </div>
       <ul className="space-y-2.5">
         {signals.map((p, i) => (
           <li
             key={i}
-            className="text-[16px] text-text-secondary leading-[1.75] tracking-[-0.005em] whitespace-pre-line"
+            className="text-[17px] text-text-secondary leading-[1.75] tracking-[-0.005em] whitespace-pre-line"
             style={{ fontFamily: 'var(--font-body)' }}
           >
             {p}
@@ -582,19 +582,19 @@ export function ShadowVisual({
       style={{ background: 'rgba(248,113,113,0.06)', borderColor: 'rgba(248,113,113,0.30)' }}
     >
       <div className="flex items-center gap-2 mb-1.5">
-        <span className="text-[16px] font-bold" style={{ color: '#F87171' }}>주의 신호</span>
+        <span className="text-[17px] font-bold" style={{ color: '#F87171' }}>주의 신호</span>
       </div>
       <div
-        className="text-[13px] text-text-tertiary mb-3 leading-[1.6]"
+        className="text-[14px] text-text-secondary mb-3 leading-[1.65]"
         style={{ fontFamily: 'var(--font-body)' }}
       >
-        이름의 4축 중 사주 기신({giSinEl || '?'})을 자극하는 자리를 자동 추출했어요.
+        사주 기신({giSinEl || '?'})을 자극하는 자리를 자동 추출했어요.
       </div>
       <ul className="space-y-2.5">
         {signals.map((c, i) => (
           <li
             key={i}
-            className="text-[16px] text-text-secondary leading-[1.75] tracking-[-0.005em] whitespace-pre-line"
+            className="text-[17px] text-text-secondary leading-[1.75] tracking-[-0.005em] whitespace-pre-line"
             style={{ fontFamily: 'var(--font-body)' }}
           >
             {c}
@@ -708,7 +708,7 @@ export function NumerologyVisual({
     <div className="mb-3">
       <VisualCaption
         title="81수리"
-        desc="한자 획수 조합으로 인생 시기별(초년·중년·사회·평생) 길흉을 봅니다. 등급 칩(대길~대흉)과 수리오행이 사주 용신과 맞물리는지 표시돼요."
+        desc="한자 획수로 보는 인생 4단계(초년·중년·사회·평생) 길흉입니다. 등급과 수리오행이 사주 용신과 맞물리는지 표시돼요."
       />
     <div className="space-y-2">
       {items.map((it, i) => {
@@ -809,7 +809,7 @@ export function AdviceVisual({ bullets }: { bullets: string[] }): JSX.Element | 
     <div className="mb-2">
       <VisualCaption
         title="실천 가이드"
-        desc="본문에서 추출한 실천 항목입니다. 일상에서 바로 적용해보세요."
+        desc="본문에서 추출한 실천 항목입니다."
       />
     <div className="space-y-2">
       {bullets.map((b, i) => (
@@ -824,7 +824,7 @@ export function AdviceVisual({ bullets }: { bullets: string[] }): JSX.Element | 
             {i + 1}
           </span>
           <span
-            className="text-[16px] text-text-secondary leading-[1.75] tracking-[-0.005em]"
+            className="text-[17px] text-text-secondary leading-[1.75] tracking-[-0.005em]"
             style={{ fontFamily: 'var(--font-body)' }}
           >
             {b}

@@ -1985,12 +1985,15 @@ function MoreFortuneSectionedCard({
   //  (3) 임의 대괄호 강조 표기 unwrap: name 본문에 LLM 이 누출하는
   //      [대길수] [형격] [수리오행 목] 같은 강조 대괄호를 풀어서 안의 텍스트만 남김.
   //      한국어 본문에 30자 이내 대괄호가 의도적으로 들어갈 일은 거의 없으므로 안전.
+  //      ★★ 단, [은유] [metaphor] 는 extractMetaphor 에서 metaphorTitle 로 추출해
+  //      카드 상단에 별도 표시해야 하므로 unwrap 에서 제외 (lookahead 차단).
+  //      적용 순서도 extractMetaphor 호출 이후로 미뤄 이중 안전.
   const markerLinePattern = new RegExp(`^\\s*\\[(${keys.join('|')})\\]\\s*$`, 'gm');
   const markerInlinePattern: RegExp | null = category === 'name'
     ? new RegExp(`\\[(${keys.join('|')})\\]`, 'g')
     : null;
   const nameBracketUnwrapPattern: RegExp | null = category === 'name'
-    ? /\[([^\]\n]{1,30})\]/g
+    ? /\[(?!은유|metaphor)([^\]\n]{1,30})\]/g
     : null;
 
   return (
@@ -2008,11 +2011,20 @@ function MoreFortuneSectionedCard({
           const raw = (sections[key] || '').trim();
           if (!raw) return null;
           // 본문 안 잔여 카테고리 마커 strip → extractMetaphor 로 [은유] 마커 + 부제 추출
+          //  순서 중요:
+          //   1) 영문 7섹션 마커 (line + inline name 전용) 먼저 strip
+          //   2) extractMetaphor 가 [은유] 마커를 metaphorTitle 로 뽑고 본문에서 strip
+          //   3) 마지막으로 남은 임의 [대길수] [형격] 같은 강조 대괄호만 unwrap
+          //  → [은유] 가 extractMetaphor 단계에서 처리되기 전에 unwrap 되면
+          //     "은유 강물에..." 평문이 본문에 노출되는 버그 (재현됨) 차단.
           let preStripped = raw.replace(markerLinePattern, '');
           if (markerInlinePattern) preStripped = preStripped.replace(markerInlinePattern, '');
-          if (nameBracketUnwrapPattern) preStripped = preStripped.replace(nameBracketUnwrapPattern, '$1');
-          const stripped = preStripped.replace(/\n{3,}/g, '\n\n').trim();
-          const { metaphorTitle, bodyText } = extractMetaphor(stripped);
+          preStripped = preStripped.replace(/\n{3,}/g, '\n\n').trim();
+          const extracted = extractMetaphor(preStripped);
+          const metaphorTitle = extracted.metaphorTitle;
+          const bodyText = nameBracketUnwrapPattern
+            ? extracted.bodyText.replace(nameBracketUnwrapPattern, '$1')
+            : extracted.bodyText;
           // name 카테고리: 섹션별 시각 컴포넌트 (7섹션)
           // 레거시 6섹션 키로 저장된 archive 풀이는 parseNameSections 단계에서
           // four_axis/strength/preserve 등 새 키로 매핑되므로 여기서는 새 키만 다룬다.
