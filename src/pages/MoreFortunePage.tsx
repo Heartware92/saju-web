@@ -502,8 +502,9 @@ export default function MoreFortunePage({ category }: Props) {
     if (category === 'dream') {
       const t = dreamText.trim();
       if (!t) return null;
-      // v4: 6섹션 ([action] → [advice]+[caution] 분리) prompt. 옛 캐시(v3, 5섹션) 자동 무효화.
-      return `dream:v4:${t}`;
+      // v5: 11마커 prompt + timeBandId·isRepeating 결합. 옛 캐시(v3/v4) 자동 무효화.
+      // 같은 꿈 텍스트라도 시각·반복 여부가 다르면 다른 결과여야 함.
+      return `dream:v5:${dreamTimeBandId}:${dreamRepeating ? '1' : '0'}:${t}`;
     }
     if (!saju) return null;
     const sk = sajuKey(saju);
@@ -1032,6 +1033,9 @@ export default function MoreFortunePage({ category }: Props) {
                 if (category === 'dream') {
                   setDreamText('');
                   setDreamValid(false);
+                  setDreamTimeBandId('unknown');
+                  setDreamRepeating(false);
+                  setDreamV4(null);
                   setDreamInputResetKey((k) => k + 1);
                 }
               }}

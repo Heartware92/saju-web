@@ -109,7 +109,7 @@ export const DREAM_SYMBOLS: DreamSymbol[] = [
     id: 'water',
     label: '물',
     category: '자연',
-    keywords: ['물', '바다', '강', '호수', '비', '홍수', '개울'],
+    keywords: ['물', '바다', '강', '호수', '비', '개울'],
     tradition: '맑은 물은 재물·축복. 잔잔한 바다는 안정. 더럽거나 탁한 물은 건강·감정 문제. 홍수는 큰 변동이지만 물이 집으로 들어오면 재물이 들어오는 뜻.',
     psychology: '감정·무의식의 상태.',
     polarity: 'mixed',
@@ -295,7 +295,7 @@ export const DREAM_SYMBOLS: DreamSymbol[] = [
     id: 'car',
     label: '차·교통',
     category: '사물',
-    keywords: ['차', '자동차', '버스', '기차', '비행기', '운전'],
+    keywords: ['차', '자동차', '버스', '기차', '비행기'],
     tradition: '내가 운전대를 잡으면 주도권 확보. 사고가 나면 계획에 제동. 큰 차·고급차를 타면 지위 상승.',
     polarity: 'mixed',
   },
@@ -374,7 +374,7 @@ export const DREAM_SYMBOLS: DreamSymbol[] = [
     id: 'flower',
     label: '꽃',
     category: '자연',
-    keywords: ['꽃', '꽃밭', '꽃피', '꽃봉오리', '장미', '연꽃', '국화'],
+    keywords: ['꽃', '꽃밭', '꽃피', '꽃봉오리', '장미'],
     tradition: '활짝 핀 꽃은 기쁨·결실·인연. 꽃을 받으면 사랑·축하의 일이 생긴다. 시들거나 짓밟힌 꽃은 정 내려놓은 관계 또는 무산된 기대.',
     psychology: '아름다움·결실·관계의 절정.',
     polarity: 'mixed',
@@ -516,7 +516,7 @@ export const DREAM_SYMBOLS: DreamSymbol[] = [
     id: 'haetae',
     label: '해태·신수',
     category: '동물',
-    keywords: ['해태', '신수', '청룡', '백호', '주작', '현무'],
+    keywords: ['해태', '신수', '백호', '주작', '현무'],
     tradition: '사신수·해태가 등장하면 가호·수호의 길조. 법정·시험·다툼에서 정의가 자기 편이 된다는 신호.',
     polarity: 'good',
   },
@@ -1150,12 +1150,15 @@ export interface TimeBand {
   hour: number;
 }
 
+// hour는 각 시간대의 의도 시진 한복판 시각 (findSijinByHour 분기와 정합):
+//   dawn=6(묘시 영험도 5★) / morning=8(진시 3) / noon=12(오시 2) /
+//   evening=20(술시 2) / midnight=0(자시 1)
 export const TIME_BANDS: TimeBand[] = [
-  { id: 'dawn',     label: '새벽',   sub: '03:30~07:30 · 영험도 최고', hour: 5 },
-  { id: 'morning',  label: '아침',   sub: '07:30~11:30 · 상징몽',       hour: 9 },
-  { id: 'noon',     label: '낮·오후', sub: '11:30~17:30 · 잡몽',         hour: 14 },
-  { id: 'evening',  label: '저녁',   sub: '17:30~21:30 · 입몽기',       hour: 19 },
-  { id: 'midnight', label: '한밤중', sub: '21:30~03:30 · 깊은 잠',      hour: 23 },
+  { id: 'dawn',     label: '새벽',   sub: '03:30~07:30 · 영험도 최고', hour: 6 },
+  { id: 'morning',  label: '아침',   sub: '07:30~11:30 · 상징몽',       hour: 8 },
+  { id: 'noon',     label: '낮·오후', sub: '11:30~17:30 · 잡몽',         hour: 12 },
+  { id: 'evening',  label: '저녁',   sub: '17:30~21:30 · 입몽기',       hour: 20 },
+  { id: 'midnight', label: '한밤중', sub: '21:30~03:30 · 깊은 잠',      hour: 0 },
   { id: 'unknown',  label: '모름',   sub: '시간 보정 없이 풀이',         hour: -1 },
 ];
 

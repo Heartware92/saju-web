@@ -317,7 +317,7 @@ function SijinChart({ timing, timeBandId }: { timing: string; timeBandId?: strin
                   fontSize: 10, fontWeight: isUser ? 800 : 500,
                   color: isUser ? '#FCE8B2' : 'var(--text-tertiary)',
                   fontFamily: 'var(--font-title)',
-                }}>{s.id.slice(0, 1).toUpperCase() === 'J' ? '자' : s.label.charAt(3)}</span>
+                }}>{s.label.charAt(0)}</span>
               </div>
             );
           })}

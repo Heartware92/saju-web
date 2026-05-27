@@ -2167,9 +2167,11 @@ const V4_KEYS = [
   'western_self_work',
 ] as const;
 
+// advice 본문 안 "키:값" 항목 화이트리스트. caution용 "조심할 *" 키는 제외 —
+// advice는 긍정 처방만, 회피 안내는 [oriental_caution]의 자연 문장으로 분리.
 const ORIENTAL_ADVICE_KEYS = new Set([
   '색', '방향', '시간', '숫자', '활동', '보석', '음식',
-  '액막이', '환경', '조심할 시간', '조심할 방향', '조심할 색', '보호',
+  '액막이', '환경', '보호',
 ]);
 
 const DOMAIN_ORDER = ['재물', '인연', '건강', '시험·학업', '직장·일', '가족·관계'] as const;
