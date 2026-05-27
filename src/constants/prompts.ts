@@ -8048,7 +8048,7 @@ export type NameSectionKey = typeof NAME_SECTION_KEYS[number];
 export const NAME_SECTION_LABELS: Record<NameSectionKey, string> = {
   summary:   '종합 평가',
   meaning:   '이름의 뜻',
-  four_axis: '4축 진단 (음령·자원·수리·81수리)',
+  four_axis: '4가지 방식으로 보는 이름풀이',
   strength:  '이 이름의 강점',
   shadow:    '놓치기 쉬운 그늘 (약점·주의)',
   preserve:  '현 이름 살리는 법',
@@ -8493,7 +8493,7 @@ kind=${classification?.primary_kind || '태몽|일상몽|영몽|잡몽|혼재'}
 polarity=${classification?.polarity_hint || '대길|길|중길|평|중흉|흉'}
 score=0~100
 certainty=${classification?.confidence || 'high|medium|low'}
-근거: 2~3문장 (사용자 단어 1회+ 인용)
+근거: 7~10문장 (400~600자) — 사용자 단어 2회 이상 인용 + 꿈 종류 판정 이유 + 길흉 점수 근거 + 핵심 상징 의미 + 어떤 영역에 신호가 있는지 + 해석 방향 한 문장 결론.
 
 [oriental_symbols]
 3~5줄. 형식: 상징명=전통의미 | good|bad|mixed|neutral | 재물|인연|건강|시험·학업|직장·일|가족·관계
@@ -8518,7 +8518,7 @@ ${classification && classification.strong_domains.length > 0
 
 [oriental_timing]
 ${sijinInfo
-  ? '5~7문장 (250~400자). 시진 의미·영험도·노트 인용·해석 무게·실질 단서.'
+  ? '8~12문장 (450~650자). 다음 순서로 풍부하게: ①그 시진의 동양 전통 의미와 음양 흐름 ②영험도 X/5 가 정몽/사몽/잡몽 중 어느 쪽에 가까운지 ③시진 노트를 본문에 자연스럽게 인용 ④이 시각에 꾼 꿈이 해석 무게를 어떻게 변화시키는지 ⑤전통적으로 이 시진에 꾸는 꿈은 어떤 영역(재물·인연·건강 등)과 더 자주 연결되는지 ⑥사용자가 이 꿈을 어떤 실질적 단서로 받아들이면 좋은지 결론.'
   : '"꿈꾼 시각을 알려주시면 시진 영험도까지 결합해 더 정밀하게 풀어드릴 수 있어요." 한두 줄.'}
 
 [oriental_advice]

@@ -116,15 +116,17 @@ const SURI_NAME_KOREAN: Record<string, string> = {
 // ─────────────────────────────────────────────────────────────────────────────
 // 캡션 헤더 — 모든 시각 카드 공통: 작은 타이틀 + 1줄 설명
 // ─────────────────────────────────────────────────────────────────────────────
-function VisualCaption({ title, desc }: { title: string; desc: string }) {
+function VisualCaption({ title, desc, hideTitle = false }: { title: string; desc: string; hideTitle?: boolean }) {
   return (
     <div className="mb-3 pl-0.5">
-      <div
-        className="text-[16px] font-bold mb-1"
-        style={{ color: 'var(--text-primary)', fontFamily: 'var(--font-title)', letterSpacing: '0.01em' }}
-      >
-        {title}
-      </div>
+      {!hideTitle && (
+        <div
+          className="text-[16px] font-bold mb-1"
+          style={{ color: 'var(--text-primary)', fontFamily: 'var(--font-title)', letterSpacing: '0.01em' }}
+        >
+          {title}
+        </div>
+      )}
       <div
         className="text-[14px] text-text-secondary leading-[1.65]"
         style={{ fontFamily: 'var(--font-body)' }}
@@ -143,11 +145,13 @@ export function EumRyeongVisual({
   elements,
   yongSinEl,
   giSinEl,
+  hideCaptionTitle = false,
 }: {
   chars: string[];
   elements: string[];
   yongSinEl: string;
   giSinEl?: string;
+  hideCaptionTitle?: boolean;
 }) {
   const counts = { 목: 0, 화: 0, 토: 0, 금: 0, 수: 0 } as Record<string, number>;
   elements.forEach(e => { if (counts[e] !== undefined) counts[e]++; });
@@ -158,6 +162,7 @@ export function EumRyeongVisual({
       <VisualCaption
         title="음령오행"
         desc="한글 초성을 5오행으로 본 발음의 결입니다. 용신 오행이 포함되면 발음이 사주를 보강해요."
+        hideTitle={hideCaptionTitle}
       />
       {/* 음절별 카드 */}
       <div className="flex flex-wrap gap-2 justify-center">
@@ -211,8 +216,10 @@ export function EumRyeongVisual({
 // ─────────────────────────────────────────────────────────────────────────────
 export function JaWonVisual({
   hanjas,
+  hideCaptionTitle = false,
 }: {
   hanjas: Array<{ char: string; meaning: string; radical: string; strokes: number; jawon: string }>;
+  hideCaptionTitle?: boolean;
 }) {
   if (hanjas.length === 0) return null;
   return (
@@ -220,6 +227,7 @@ export function JaWonVisual({
       <VisualCaption
         title="자원오행"
         desc="한자 부수가 품은 오행이에요. 카드 좌상단 점이 그 오행 색입니다."
+        hideTitle={hideCaptionTitle}
       />
     <div className="grid grid-cols-3 gap-2">
       {hanjas.map((h, i) => {
@@ -561,9 +569,8 @@ function buildStrengthSignals(
     });
   }
 
-  // 4. fallback — 직접 용신 매칭이 없어도 의미있는 분석 + 신뢰감 톤
+  // 4. fallback — 직접 용신 매칭이 없을 때는 이름 발음의 우세 오행 결로 강점 안내
   if (out.length === 0) {
-    // 음령 분포에서 가장 우세한 오행 추출 → 그 오행의 결로 강점 안내
     const eumCounts: Record<string, number> = {};
     eumElements.forEach(e => { if (e) eumCounts[e] = (eumCounts[e] ?? 0) + 1; });
     const sorted = Object.entries(eumCounts).sort((a, b) => b[1] - a[1]);
@@ -574,16 +581,12 @@ function buildStrengthSignals(
         headline: `이름 발음에 ${dominant} 기운이 우세해요`,
         detail: `한글 초성을 5오행으로 봤을 때 ${dominant} 오행이 가장 많이 깔려 있어요. 이는 ${ELEMENT_STRENGTH_NUANCE[dominant]}의 결을 일상에 스며들게 해줘요.`,
       });
+    } else {
+      out.push({
+        headline: '이름의 깊은 강점은 본문에서 다뤘어요',
+        detail: '시각 카드는 4축의 직접 매칭만 자동 추출해요. 위 본문 풀이에 사주와 이름이 어떻게 어울리는지 결을 자세히 풀어드렸어요.',
+      });
     }
-
-    out.push({
-      headline: yongSinEl
-        ? `사주를 보태주는 ${yongSinEl} 오행 글자는 없어요`
-        : '이름의 깊은 강점은 본문에서 다뤘어요',
-      detail: yongSinEl
-        ? `사주에서 가장 보강이 필요한 오행은 ${yongSinEl}이지만, 이 이름의 발음·한자 부수·획수 어디에도 ${yongSinEl} 오행 글자가 들어있지 않아요. 본문에서 이름과 사주의 미세한 결을 풀어드렸고, 보완을 원하시면 호명·필명·서명·SNS 닉네임에 ${yongSinEl} 오행 글자를 한 글자 더해서 일상에서 채울 수 있어요.`
-        : '시각 카드는 4축의 직접 매칭만 자동 추출해요. 위 본문 풀이에 사주와 이름이 어떻게 어울리는지 결을 자세히 풀어드렸어요.',
-    });
   }
 
   return out;
@@ -816,11 +819,13 @@ export function SuriElementVisual({
   sounds,
   yongSinEl,
   giSinEl,
+  hideCaptionTitle = false,
 }: {
   chars: string[];
   sounds: string[];
   yongSinEl?: string;
   giSinEl?: string;
+  hideCaptionTitle?: boolean;
 }) {
   const result = calc4Gyeok(chars, sounds);
   if (!result) return null;
@@ -835,6 +840,7 @@ export function SuriElementVisual({
       <VisualCaption
         title="수리오행"
         desc="4격 끝자리 숫자가 어떤 오행인지 표시해요. 용신 오행과 맞물리면 사주를 보강해요."
+        hideTitle={hideCaptionTitle}
       />
     <div className="grid grid-cols-4 gap-2">
       {items.map((it, i) => {
@@ -889,12 +895,14 @@ export function NumerologyVisual({
   sounds,
   yongSinEl,
   giSinEl,
+  hideCaptionTitle = false,
 }: {
   chars: string[]; // 한자
   sounds: string[]; // 한국 음
   /** 사주 용신 오행 (한글: '목'/'화'/'토'/'금'/'수') — 수리오행 매칭 강조용 */
   yongSinEl?: string;
   giSinEl?: string;
+  hideCaptionTitle?: boolean;
 }) {
   const result = calc4Gyeok(chars, sounds);
   if (!result) return null;
@@ -911,6 +919,7 @@ export function NumerologyVisual({
       <VisualCaption
         title="81수리"
         desc="한자 획수로 보는 인생 4단계(초년·중년·사회·평생) 길흉입니다. 등급과 수리오행이 사주 용신과 맞물리는지 표시돼요."
+        hideTitle={hideCaptionTitle}
       />
     <div className="space-y-2">
       {items.map((it, i) => {

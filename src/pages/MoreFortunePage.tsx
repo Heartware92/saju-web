@@ -2174,62 +2174,109 @@ function MoreFortuneSectionedCard({
                   }
 
                   const hanjaChars = ctx.hanjas.map(h => h.char);
+                  // 파티션별 컬러 톤 (오행과 다른 의미 — 4가지 방식 구분용 액센트)
                   const partitions: Array<{
                     key: keyof typeof parts;
                     label: string;
+                    subLabel: string;
+                    accent: string;
                     visual: React.ReactNode | null;
                   }> = [
                     {
                       key: 'axis_eum',
                       label: '음령오행',
-                      visual: <EumRyeongVisual chars={ctx.chars} elements={ctx.elements} yongSinEl={ctx.yongSinEl} giSinEl={ctx.giSinEl} />,
+                      subLabel: '한글 발음으로 보기',
+                      accent: '#34D399',
+                      visual: <EumRyeongVisual chars={ctx.chars} elements={ctx.elements} yongSinEl={ctx.yongSinEl} giSinEl={ctx.giSinEl} hideCaptionTitle />,
                     },
                     {
                       key: 'axis_jawon',
                       label: '자원오행',
-                      visual: isHanja ? <JaWonVisual hanjas={ctx.hanjas} /> : null,
+                      subLabel: '한자 부수로 보기',
+                      accent: '#F59E0B',
+                      visual: isHanja ? <JaWonVisual hanjas={ctx.hanjas} hideCaptionTitle /> : null,
                     },
                     {
                       key: 'axis_suri',
                       label: '수리오행',
-                      visual: isHanja ? <SuriElementVisual chars={hanjaChars} sounds={ctx.sounds} yongSinEl={ctx.yongSinEl} giSinEl={ctx.giSinEl} /> : null,
+                      subLabel: '획수의 오행으로 보기',
+                      accent: '#60A5FA',
+                      visual: isHanja ? <SuriElementVisual chars={hanjaChars} sounds={ctx.sounds} yongSinEl={ctx.yongSinEl} giSinEl={ctx.giSinEl} hideCaptionTitle /> : null,
                     },
                     {
                       key: 'axis_81',
                       label: '81수리 4격',
-                      visual: isHanja ? <NumerologyVisual chars={hanjaChars} sounds={ctx.sounds} yongSinEl={ctx.yongSinEl} giSinEl={ctx.giSinEl} /> : null,
+                      subLabel: '인생 4단계 길흉으로 보기',
+                      accent: '#A78BFA',
+                      visual: isHanja ? <NumerologyVisual chars={hanjaChars} sounds={ctx.sounds} yongSinEl={ctx.yongSinEl} giSinEl={ctx.giSinEl} hideCaptionTitle /> : null,
                     },
                   ];
+                  const visiblePartitions = partitions.filter(p => parts[p.key] || p.visual);
 
                   return (
-                    <div className="space-y-5">
-                      {partitions.map((p) => {
+                    <div className="space-y-4">
+                      {visiblePartitions.map((p, idx) => {
                         const text = parts[p.key];
-                        if (!text && !p.visual) return null;
+                        const stepNum = idx + 1;
+                        const total = visiblePartitions.length;
                         return (
-                          <div key={p.key}>
-                            {/* 파티션 라벨 — 시각 컴포넌트의 VisualCaption 과 중복 회피.
-                               시각 null (한글 모드의 자원·수리·81수리 등) 일 때만 표시. */}
-                            {!p.visual && (
-                              <div
-                                className="text-[15px] font-bold mb-2 pl-0.5"
-                                style={{ color: 'var(--text-primary)', fontFamily: 'var(--font-title)' }}
+                          <div
+                            key={p.key}
+                            className="rounded-2xl overflow-hidden border"
+                            style={{
+                              background: `linear-gradient(135deg, rgba(20,12,38,0.55) 0%, ${p.accent}0A 60%, rgba(20,12,38,0.45) 100%)`,
+                              borderColor: `${p.accent}33`,
+                              boxShadow: `inset 0 0 1px ${p.accent}44`,
+                            }}
+                          >
+                            {/* 파티션 헤더 — step 배지 + 라벨 + sub 라벨 */}
+                            <div
+                              className="flex items-center gap-3 px-4 py-3 border-b"
+                              style={{
+                                background: `linear-gradient(90deg, ${p.accent}18 0%, transparent 100%)`,
+                                borderColor: `${p.accent}22`,
+                              }}
+                            >
+                              <span
+                                className="flex items-center justify-center rounded-full font-bold text-[13px] shrink-0"
+                                style={{
+                                  width: 28, height: 28,
+                                  background: `${p.accent}22`,
+                                  color: p.accent,
+                                  border: `1px solid ${p.accent}55`,
+                                  fontFamily: 'var(--font-title)',
+                                }}
                               >
-                                {p.label}
+                                {stepNum}
+                              </span>
+                              <div className="flex flex-col leading-tight min-w-0">
+                                <span
+                                  className="text-[16px] font-bold"
+                                  style={{ color: 'var(--text-primary)', fontFamily: 'var(--font-title)' }}
+                                >
+                                  {p.label}
+                                </span>
+                                <span
+                                  className="text-[12px] mt-0.5"
+                                  style={{ color: p.accent, opacity: 0.9, fontFamily: 'var(--font-body)' }}
+                                >
+                                  {p.subLabel} · {stepNum}/{total}
+                                </span>
                               </div>
-                            )}
-                            {/* 시각 카드 (있을 때) — 자체 VisualCaption 으로 제목 + 설명 표시 */}
-                            {p.visual}
-                            {/* 본문 단락 */}
-                            {text && (
-                              <div className="text-[17px] text-text-secondary leading-[1.85] tracking-[-0.005em] space-y-3">
-                                {text.split(/\n\n+/).map((para, pi) => {
-                                  const trimmed = para.trim();
-                                  if (!trimmed) return null;
-                                  return <p key={pi} className="whitespace-pre-line">{trimmed}</p>;
-                                })}
-                              </div>
-                            )}
+                            </div>
+                            {/* 본문 영역 */}
+                            <div className="px-4 py-4 space-y-3">
+                              {p.visual}
+                              {text && (
+                                <div className="text-[17px] text-text-secondary leading-[1.85] tracking-[-0.005em] space-y-3">
+                                  {text.split(/\n\n+/).map((para, pi) => {
+                                    const trimmed = para.trim();
+                                    if (!trimmed) return null;
+                                    return <p key={pi} className="whitespace-pre-line">{trimmed}</p>;
+                                  })}
+                                </div>
+                              )}
+                            </div>
                           </div>
                         );
                       })}
