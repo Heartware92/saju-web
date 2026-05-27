@@ -36,6 +36,66 @@ export function lookupHanjaBySound(sound: string): HanjaCandidate[] {
   return HANJA_BY_KOREAN_SOUND[sound] ?? [];
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// 두음법칙 페어 — 한국식 음 ↔ 본음 양방향 매핑.
+// 데이터 출처(한국어문회)는 본음 기준이라 "이" 음에 李·理 가 누락된다.
+// 검색 시 두음 페어 후보를 별도 그룹으로 합쳐 보여주기 위한 테이블.
+// ─────────────────────────────────────────────────────────────────────────────
+const DUEUM_PAIRS: Array<[string, string]> = [
+  // ㄹ 두음 → ㅇ
+  ['라', '나'], ['락', '낙'], ['란', '난'], ['람', '남'], ['랑', '낭'],
+  ['래', '내'], ['략', '약'], ['량', '양'], ['려', '여'], ['력', '역'],
+  ['련', '연'], ['렬', '열'], ['렴', '염'], ['렵', '엽'], ['령', '영'],
+  ['례', '예'], ['로', '노'], ['록', '녹'], ['론', '논'], ['뢰', '뇌'],
+  ['료', '요'], ['룡', '용'], ['류', '유'], ['륙', '육'], ['륜', '윤'],
+  ['률', '율'], ['름', '임'], ['릉', '능'], ['리', '이'], ['린', '인'],
+  ['림', '임'], ['립', '입'],
+  // ㄴ 두음 → ㅇ (ㅑ/ㅕ/ㅛ/ㅠ/ㅣ 앞)
+  ['녀', '여'], ['뇨', '요'], ['뉴', '유'], ['니', '이'], ['녕', '영'],
+  ['닉', '익'], ['닐', '일'], ['님', '임'],
+];
+
+const DUEUM_PARTNERS: Record<string, string[]> = (() => {
+  const map: Record<string, string[]> = {};
+  for (const [a, b] of DUEUM_PAIRS) {
+    (map[a] ??= []).push(b);
+    (map[b] ??= []).push(a);
+  }
+  return map;
+})();
+
+export interface HanjaDueumGroup {
+  /** 본음 (예: "리", "니" 등) — 입력 음과 다른 두음 페어 */
+  sound: string;
+  candidates: HanjaCandidate[];
+}
+
+export interface HanjaLookupResult {
+  /** 입력 음 그대로의 후보 */
+  primary: HanjaCandidate[];
+  /** 두음법칙 페어 후보 그룹 (여러 본음이 같은 한국식 음으로 변환되는 경우 다수) */
+  dueumGroups: HanjaDueumGroup[];
+  /** primary + 모든 dueumGroups 합계 */
+  totalCount: number;
+}
+
+/**
+ * 한 음에 대한 한자 후보를 두음법칙 페어와 함께 그룹화하여 반환.
+ * 예: "이" 검색 시 primary=이 음 후보, dueumGroups=[{sound:"리", ...}, {sound:"니", ...}].
+ */
+export function lookupHanjaBySoundWithDueum(sound: string): HanjaLookupResult {
+  const primary = HANJA_BY_KOREAN_SOUND[sound] ?? [];
+  const partners = DUEUM_PARTNERS[sound] ?? [];
+  const primaryChars = new Set(primary.map(c => c.char));
+  const dueumGroups: HanjaDueumGroup[] = [];
+  for (const p of partners) {
+    const cands = (HANJA_BY_KOREAN_SOUND[p] ?? []).filter(c => !primaryChars.has(c.char));
+    if (cands.length > 0) dueumGroups.push({ sound: p, candidates: cands });
+  }
+  const totalCount = primary.length + dueumGroups.reduce((s, g) => s + g.candidates.length, 0);
+  return { primary, dueumGroups, totalCount };
+}
+
 /**
  * 부수 → 자원오행 매핑 (전통 성명학). prompt 룰베이스와 동일.
  * 동적 lookup 이 필요할 때 사용.

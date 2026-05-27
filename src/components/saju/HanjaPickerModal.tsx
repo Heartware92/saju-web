@@ -10,7 +10,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { lookupHanjaBySound, type HanjaCandidate } from '../../lib/data/hanjaByKoreanSound';
+import { lookupHanjaBySoundWithDueum, type HanjaCandidate } from '../../lib/data/hanjaByKoreanSound';
 
 const JAWON_COLOR: Record<string, string> = {
   '木': '#22c55e',
@@ -46,16 +46,25 @@ export function HanjaPickerModal({ open, sound, currentChar, onSelect, onClose }
     return () => { document.body.style.overflow = prev; };
   }, [open]);
 
-  const candidates = useMemo(() => lookupHanjaBySound(sound), [sound]);
-  const filtered = useMemo(() => {
+  const lookup = useMemo(() => lookupHanjaBySoundWithDueum(sound), [sound]);
+  const totalCount = lookup.totalCount;
+
+  // 필터링 — primary + 두음 그룹 모두에 동일 q 적용
+  const filteredGroups = useMemo(() => {
     const q = filter.trim();
-    if (!q) return candidates;
-    return candidates.filter(c =>
+    const matches = (cands: HanjaCandidate[]) => !q ? cands : cands.filter(c =>
       c.char.includes(q)
       || c.meanings.some(m => m.includes(q))
       || c.radical.includes(q)
     );
-  }, [candidates, filter]);
+    return {
+      primary: matches(lookup.primary),
+      dueum: lookup.dueumGroups
+        .map(g => ({ sound: g.sound, candidates: matches(g.candidates) }))
+        .filter(g => g.candidates.length > 0),
+    };
+  }, [lookup, filter]);
+  const filteredTotal = filteredGroups.primary.length + filteredGroups.dueum.reduce((s, g) => s + g.candidates.length, 0);
 
   return (
     <AnimatePresence>
@@ -103,7 +112,15 @@ export function HanjaPickerModal({ open, sound, currentChar, onSelect, onClose }
                     <span className="text-[13px] text-text-tertiary">자 후보</span>
                   </div>
                   <p className="text-[11px] text-text-tertiary mt-1">
-                    {candidates.length}개 한자 · 자원오행 색 표시 · 클릭하면 선택돼요
+                    {totalCount}개 한자 · 자원오행 색 표시 · 클릭하면 선택돼요
+                    {lookup.dueumGroups.length > 0 && (
+                      <>
+                        <br />
+                        <span style={{ color: 'var(--cta-primary)' }}>
+                          본음({lookup.dueumGroups.map(g => g.sound).join('·')})에서 두음법칙으로 「{sound}」로 읽는 한자도 함께 보여드려요.
+                        </span>
+                      </>
+                    )}
                   </p>
                 </div>
                 <button
@@ -119,7 +136,7 @@ export function HanjaPickerModal({ open, sound, currentChar, onSelect, onClose }
               </div>
 
               {/* 검색 필터 */}
-              {candidates.length > 12 && (
+              {totalCount > 12 && (
                 <div className="px-5 pt-3 pb-2">
                   <input
                     type="text"
@@ -132,66 +149,58 @@ export function HanjaPickerModal({ open, sound, currentChar, onSelect, onClose }
               )}
 
               {/* 후보 그리드 */}
-              <div className="flex-1 overflow-y-auto px-4 py-3">
-                {filtered.length === 0 ? (
+              <div className="flex-1 overflow-y-auto px-4 py-3 space-y-4">
+                {filteredTotal === 0 ? (
                   <div className="text-center py-12 text-text-tertiary text-[14px]">
-                    {candidates.length === 0
+                    {totalCount === 0
                       ? `"${sound}" 음의 한자가 데이터에 없어요. 직접 입력 모드로 진행해 주세요.`
                       : '해당하는 한자가 없어요. 검색어를 다시 적어주세요.'}
                   </div>
                 ) : (
-                  <div className="grid grid-cols-3 gap-2">
-                    {filtered.map((c) => {
-                      const isSelected = c.char === currentChar;
-                      const jawonColor = JAWON_COLOR[c.jawon] ?? 'transparent';
-                      return (
-                        <button
-                          key={c.char + c.level}
-                          onClick={() => onSelect(c)}
-                          className={`
-                            relative flex flex-col items-center justify-start gap-1 px-2 py-3 rounded-2xl
-                            border transition-all active:scale-[0.96]
-                            ${isSelected
-                              ? 'bg-cta/15 border-cta'
-                              : 'bg-white/[0.03] border-white/10 hover:border-cta/40 hover:bg-white/[0.06]'}
-                          `}
-                        >
-                          {/* 자원오행 표시 (좌상단 점) */}
-                          {c.jawon && (
-                            <span
-                              className="absolute top-2 left-2 w-2 h-2 rounded-full"
-                              style={{ background: jawonColor, boxShadow: `0 0 6px ${jawonColor}88` }}
-                              aria-label={`자원오행 ${c.jawon}`}
-                            />
-                          )}
-                          {/* 한자 (큰) */}
-                          <span
-                            className="text-[28px] font-bold leading-none mt-1"
-                            style={{
-                              fontFamily: 'var(--font-serif)',
-                              color: isSelected ? 'var(--cta-primary)' : 'var(--text-primary)',
-                            }}
+                  <>
+                    {/* primary 그리드 — 입력 음 그대로 */}
+                    {filteredGroups.primary.length > 0 && (
+                      <div>
+                        {lookup.dueumGroups.length > 0 && (
+                          <div
+                            className="text-[13px] font-bold mb-2 pl-0.5 flex items-center gap-2"
+                            style={{ color: 'var(--text-primary)', fontFamily: 'var(--font-title)' }}
                           >
-                            {c.char}
-                          </span>
-                          {/* 뜻 + 음 */}
-                          <span className="text-[12px] font-semibold text-text-secondary leading-tight text-center px-0.5">
-                            {c.meanings[0]} {sound}
-                          </span>
-                          {/* 부수·획수·자원오행 */}
-                          <span className="text-[10px] text-text-tertiary leading-none mt-0.5">
-                            {c.radical}부 · {c.strokes}획
-                            {c.jawon && (
-                              <>
-                                {' · '}
-                                <span style={{ color: jawonColor, fontWeight: 700 }}>{c.jawon}</span>
-                              </>
-                            )}
-                          </span>
-                        </button>
-                      );
-                    })}
-                  </div>
+                            <span>「{sound}」 본음</span>
+                            <span className="text-[11px] font-normal text-text-tertiary">{filteredGroups.primary.length}자</span>
+                          </div>
+                        )}
+                        <CandidateGrid
+                          candidates={filteredGroups.primary}
+                          displaySound={sound}
+                          currentChar={currentChar}
+                          onSelect={onSelect}
+                          isDueum={false}
+                        />
+                      </div>
+                    )}
+
+                    {/* 두음 그룹별 — "리 → 이 (두음법칙)" 헤더 + 그리드 */}
+                    {filteredGroups.dueum.map((g) => (
+                      <div key={g.sound}>
+                        <div
+                          className="text-[13px] font-bold mb-2 pl-0.5 flex items-center gap-2 flex-wrap"
+                          style={{ color: 'var(--cta-primary)', fontFamily: 'var(--font-title)' }}
+                        >
+                          <span>「{g.sound}」 → 「{sound}」 (두음법칙)</span>
+                          <span className="text-[11px] font-normal text-text-tertiary">{g.candidates.length}자</span>
+                        </div>
+                        <CandidateGrid
+                          candidates={g.candidates}
+                          displaySound={sound}
+                          originalSound={g.sound}
+                          currentChar={currentChar}
+                          onSelect={onSelect}
+                          isDueum
+                        />
+                      </div>
+                    ))}
+                  </>
                 )}
               </div>
 
@@ -212,5 +221,93 @@ export function HanjaPickerModal({ open, sound, currentChar, onSelect, onClose }
         </>
       )}
     </AnimatePresence>
+  );
+}
+
+function CandidateGrid({
+  candidates,
+  displaySound,
+  originalSound,
+  currentChar,
+  onSelect,
+  isDueum,
+}: {
+  candidates: HanjaCandidate[];
+  /** 화면에 표시할 한국식 음 (예: 두음 후보의 경우에도 "이") */
+  displaySound: string;
+  /** 두음 후보일 때 본음 (예: "리") */
+  originalSound?: string;
+  currentChar?: string;
+  onSelect: (c: HanjaCandidate) => void;
+  isDueum: boolean;
+}) {
+  return (
+    <div className="grid grid-cols-3 gap-2">
+      {candidates.map((c) => {
+        const isSelected = c.char === currentChar;
+        const jawonColor = JAWON_COLOR[c.jawon] ?? 'transparent';
+        return (
+          <button
+            key={c.char + c.level}
+            onClick={() => onSelect(c)}
+            className={`
+              relative flex flex-col items-center justify-start gap-1 px-2 py-3 rounded-2xl
+              border transition-all active:scale-[0.96]
+              ${isSelected
+                ? 'bg-cta/15 border-cta'
+                : isDueum
+                  ? 'bg-[rgba(139,92,246,0.04)] border-[rgba(139,92,246,0.18)] hover:border-cta/50 hover:bg-[rgba(139,92,246,0.08)]'
+                  : 'bg-white/[0.03] border-white/10 hover:border-cta/40 hover:bg-white/[0.06]'}
+            `}
+          >
+            {/* 자원오행 표시 (좌상단 점) */}
+            {c.jawon && (
+              <span
+                className="absolute top-2 left-2 w-2 h-2 rounded-full"
+                style={{ background: jawonColor, boxShadow: `0 0 6px ${jawonColor}88` }}
+                aria-label={`자원오행 ${c.jawon}`}
+              />
+            )}
+            {/* 두음 배지 — 우상단 (본음 표시) */}
+            {isDueum && originalSound && (
+              <span
+                className="absolute top-1.5 right-1.5 text-[9px] font-bold px-1.5 py-0.5 rounded-md leading-none"
+                style={{
+                  color: 'var(--cta-primary)',
+                  background: 'rgba(139,92,246,0.12)',
+                  border: '1px solid rgba(139,92,246,0.3)',
+                }}
+              >
+                {originalSound}→{displaySound}
+              </span>
+            )}
+            {/* 한자 (큰) */}
+            <span
+              className="text-[28px] font-bold leading-none mt-1"
+              style={{
+                fontFamily: 'var(--font-serif)',
+                color: isSelected ? 'var(--cta-primary)' : 'var(--text-primary)',
+              }}
+            >
+              {c.char}
+            </span>
+            {/* 뜻 + 음 */}
+            <span className="text-[12px] font-semibold text-text-secondary leading-tight text-center px-0.5">
+              {c.meanings[0]} {displaySound}
+            </span>
+            {/* 부수·획수·자원오행 */}
+            <span className="text-[10px] text-text-tertiary leading-none mt-0.5">
+              {c.radical}부 · {c.strokes}획
+              {c.jawon && (
+                <>
+                  {' · '}
+                  <span style={{ color: jawonColor, fontWeight: 700 }}>{c.jawon}</span>
+                </>
+              )}
+            </span>
+          </button>
+        );
+      })}
+    </div>
   );
 }
