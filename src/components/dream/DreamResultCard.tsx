@@ -328,6 +328,14 @@ function SymbolCardGrid({ symbols }: { symbols: DreamSymbolCardData[] }) {
 }
 
 function DomainBarsCard({ domains }: { domains: DreamDomainScore[] }) {
+  if (domains.length === 0) {
+    return (
+      <p className="text-[14px] text-text-tertiary leading-[1.7] break-keep">
+        이 꿈은 특정 영역(재물·인연·건강·시험·일·관계)에 강한 신호가 보이지 않아요.
+        일상의 잔상이거나 내면의 감정 흐름에 가까운 꿈으로 보입니다.
+      </p>
+    );
+  }
   return (
     <div className="flex flex-col gap-4">
       {domains.map((d, i) => {

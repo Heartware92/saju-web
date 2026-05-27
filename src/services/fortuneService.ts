@@ -2291,24 +2291,36 @@ export const parseDreamV4 = (raw: string): DreamV4Result | null => {
     .slice(0, 5);
 
   // ── 도메인 점수 ────────────────────────────────────
+  // 강한 영역만 반환 (강제 매핑 금지). LLM이 출력 안 한 도메인은 빈 결과.
+  // "종합=점수 | 풀이" 한 줄도 인식 (strong_domains 없을 때).
   const odsBody = extractV4Section(raw, 'oriental_domains');
-  const oriental_domains: DreamDomainScore[] = DOMAIN_ORDER.map(label => {
-    const re = new RegExp(`^\\s*${label.replace('.', '\\.').replace('·', '·')}\\s*=\\s*(\\d+)\\s*\\|\\s*(.+)$`, 'm');
+  const allDomainLabels = [...DOMAIN_ORDER, '종합'];
+  const oriental_domains: DreamDomainScore[] = [];
+  for (const label of allDomainLabels) {
+    const re = new RegExp(`^\\s*${label}\\s*=\\s*(\\d+)\\s*\\|\\s*(.+)$`, 'm');
     const m = odsBody.match(re);
-    if (!m) return { label, score: 50, note: '' };
-    return { label, score: Math.max(0, Math.min(100, Number(m[1]))), note: m[2].trim() };
-  });
+    if (m) {
+      oriental_domains.push({
+        label,
+        score: Math.max(0, Math.min(100, Number(m[1]))),
+        note: m[2].trim(),
+      });
+    }
+  }
 
   // ── 시진 ──────────────────────────────────────────
   const oriental_timing = extractV4Section(raw, 'oriental_timing');
 
   // ── 조언 본문 + 항목 ───────────────────────────────
+  // ── 조언 — "키: 값" 항목 추출 + 본문 분리 ────────────
+  // LLM이 가끔 "키: 색: 값" 형식으로 prompt의 "키:" literal까지 적는 사고가 있음 → 자동 strip.
   const oaBody = extractV4Section(raw, 'oriental_advice');
   const bodyLines: string[] = [];
   const adviceItems: DreamAdviceItem[] = [];
   for (const ln of oaBody.split('\n')) {
-    const t = ln.trim();
-    const m = t.match(/^([가-힣\s]+?)\s*[:：]\s*(.+)$/);
+    // "키: 색: ..." 같은 잘못된 prefix 자동 제거 → "색: ..."
+    const t = ln.trim().replace(/^키\s*[:：]\s*/, '');
+    const m = t.match(/^([가-힣\s·]+?)\s*[:：]\s*(.+)$/);
     if (m && ORIENTAL_ADVICE_KEYS.has(m[1].trim())) {
       adviceItems.push({ key: m[1].trim(), value: m[2].trim() });
     } else {
@@ -2325,8 +2337,8 @@ export const parseDreamV4 = (raw: string): DreamV4Result | null => {
   const cautionBodyLines: string[] = [];
   const cautionItems: DreamAdviceItem[] = [];
   for (const ln of ocBody.split('\n')) {
-    const t = ln.trim();
-    const m = t.match(/^([가-힣\s]+?)\s*[:：]\s*(.+)$/);
+    const t = ln.trim().replace(/^키\s*[:：]\s*/, '');
+    const m = t.match(/^([가-힣\s·]+?)\s*[:：]\s*(.+)$/);
     if (m && ORIENTAL_CAUTION_KEYS.has(m[1].trim())) {
       cautionItems.push({ key: m[1].trim(), value: m[2].trim() });
     } else {
