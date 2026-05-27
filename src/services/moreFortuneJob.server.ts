@@ -44,8 +44,8 @@ const CATEGORY_LABEL: Record<MoreFortuneCategory, string> = {
 
 // dream 3-pass 호출별 토큰 한도 (각자 Gemini 8192 한도 안에서 충분 분량)
 const DREAM_CLASSIFIER_TOKENS = 1500;   // JSON 작은 응답
-const DREAM_ORIENTAL_TOKENS = 7000;     // 6 섹션
-const DREAM_WESTERN_TOKENS = 7000;      // 5 섹션
+const DREAM_ORIENTAL_TOKENS = 8000;     // 6 섹션 풍부 분량 (Gemini 8192 한도 풀)
+const DREAM_WESTERN_TOKENS = 8000;      // 5 섹션 풍부 분량 (Gemini 8192 한도 풀)
 
 export interface DreamJobInput {
   dreamText: string;
