@@ -15,31 +15,10 @@
  * 클릭하면 해당 궁 선택 (onSelect 콜백)
  */
 
-import { useState } from 'react';
 import { motion } from 'framer-motion';
 import type { ZamidusuPalace } from '../../engine/zamidusu';
 import { PALACE_GRID_POSITIONS } from '../../engine/zamidusu';
 import { isValidBrightness, isValidMutagen } from '../../engine/zamidusu/knowledge';
-
-// ============================================
-// 대궁(對宮) 6쌍 — 마주보는 궁끼리는 거울 관계로 함께 봐야 한다 (자미두수 정통 분석)
-// ============================================
-const DAEGUNG_PAIRS: Array<[string, string]> = [
-  ['명궁', '천이궁'],     // 나 ↔ 외부 사회
-  ['형제궁', '노복궁'],   // 혈연 동급 ↔ 친구
-  ['부처궁', '관록궁'],   // 배우자 ↔ 직업
-  ['자녀궁', '전택궁'],   // 자식·창작 ↔ 집·자산
-  ['재백궁', '복덕궁'],   // 돈 ↔ 마음의 복
-  ['질액궁', '부모궁'],   // 내 몸 ↔ 부모(유전)
-];
-
-// 사화 색상
-const MUTAGEN_COLOR: Record<string, string> = {
-  화록: '#34D399', // 록 — 초록 (재물·즐거움)
-  화권: '#FBBF24', // 권 — 황금 (권세)
-  화과: '#60A5FA', // 과 — 파랑 (명예)
-  화기: '#F87171', // 기 — 적색 (집착·시련)
-};
 
 interface StarChartProps {
   palaces: ZamidusuPalace[];
@@ -85,56 +64,12 @@ function starColor(palace: ZamidusuPalace): string {
 }
 
 export function StarChart({ palaces, soul, fiveElementsClass, selectedIndex, onSelect }: StarChartProps) {
-  const [showDaegung, setShowDaegung] = useState(false);
-  const [showMutagenFlow, setShowMutagenFlow] = useState(false);
-
   const palaceWithPos = palaces.map(p => {
     const pos = PALACE_GRID_POSITIONS[p.name];
     if (!pos) return null;
     const { x, y } = gridToXY(pos.row, pos.col);
     return { palace: p, x, y };
   }).filter((v): v is { palace: ZamidusuPalace; x: number; y: number } => !!v);
-
-  // 궁 이름 → 좌표 lookup
-  const posOf = (name: string): { x: number; y: number } | null => {
-    const hit = palaceWithPos.find((p) => p.palace.name === name);
-    return hit ? { x: hit.x, y: hit.y } : null;
-  };
-
-  // 선택된 궁의 대궁 이름 — 선택 시 자동 강조 (대궁 토글과 무관)
-  const selectedPalaceName = palaceWithPos.find((p) => p.palace.index === selectedIndex)?.palace.name;
-  const selectedDaegungName = selectedPalaceName
-    ? DAEGUNG_PAIRS.find((pair) => pair.includes(selectedPalaceName))?.find((n) => n !== selectedPalaceName)
-    : undefined;
-
-  // 사화 비행 — 명궁 출발, 4개 사화 별이 좌한 궁으로 곡선
-  // 사화는 14주성 + 4보좌(좌보·우필·문창·문곡)에 떨어질 수 있으므로 둘 다 스캔
-  // 명궁에 사화 별이 있으면 self-flight (출발=도착) → 명궁 자체에 표식만 + 곡선 생략
-  const myeongPos = posOf('명궁');
-  const myeongName = palaceWithPos.find((p) => p.palace.name === '명궁')?.palace.name;
-  const mutagenFlights: Array<{
-    type: '화록' | '화권' | '화과' | '화기';
-    star: string;
-    to: { x: number; y: number };
-    toPalace: string;
-    isSelfMyeong: boolean;
-  }> = [];
-  if (myeongPos) {
-    palaceWithPos.forEach(({ palace, x, y }) => {
-      const stars = [...palace.majorStars, ...palace.minorStars];
-      stars.forEach((s) => {
-        if (s.mutagen && (s.mutagen === '화록' || s.mutagen === '화권' || s.mutagen === '화과' || s.mutagen === '화기')) {
-          mutagenFlights.push({
-            type: s.mutagen,
-            star: s.name,
-            to: { x, y },
-            toPalace: palace.name,
-            isSelfMyeong: palace.name === myeongName,
-          });
-        }
-      });
-    });
-  }
 
   // 12궁 순환 연결선 (시계 방향 인접궁끼리)
   // 12궁 전통 순서: 명궁 → 부모 → 복덕 → 전택 → 관록 → 노복 → 천이 → 질액 → 재백 → 자녀 → 부처 → 형제 → (명궁)
@@ -154,59 +89,7 @@ export function StarChart({ palaces, soul, fiveElementsClass, selectedIndex, onS
   });
 
   return (
-    <div className="relative w-full mx-auto">
-      {/* 회조 토글 — 대궁 / 사화 비행 */}
-      <div className="mb-3 flex flex-wrap items-center justify-center gap-2">
-        <button
-          type="button"
-          onClick={() => setShowDaegung((v) => !v)}
-          className="text-[13px] font-semibold px-3 py-1.5 rounded-full transition-colors"
-          style={{
-            color: showDaegung ? '#FBBF24' : 'var(--text-tertiary)',
-            backgroundColor: showDaegung ? 'rgba(251,191,36,0.12)' : 'rgba(255,255,255,0.04)',
-            border: `1px solid ${showDaegung ? 'rgba(251,191,36,0.45)' : 'rgba(255,255,255,0.10)'}`,
-          }}
-        >
-          대궁(對宮) 6쌍 {showDaegung ? '·ON' : ''}
-        </button>
-        <button
-          type="button"
-          onClick={() => setShowMutagenFlow((v) => !v)}
-          className="text-[13px] font-semibold px-3 py-1.5 rounded-full transition-colors"
-          style={{
-            color: showMutagenFlow ? '#A78BFA' : 'var(--text-tertiary)',
-            backgroundColor: showMutagenFlow ? 'rgba(167,139,250,0.12)' : 'rgba(255,255,255,0.04)',
-            border: `1px solid ${showMutagenFlow ? 'rgba(167,139,250,0.45)' : 'rgba(255,255,255,0.10)'}`,
-          }}
-        >
-          사화(四化) 비행 {showMutagenFlow ? '·ON' : ''}
-        </button>
-      </div>
-      <div className="text-[11px] text-text-tertiary text-center mb-2 px-2" style={{ wordBreak: 'keep-all' }}>
-        대궁: 마주보는 6쌍의 거울 관계 · 사화 비행: 명궁 출발 4개 사화가 어느 궁에 떨어졌는지
-      </div>
-
-      {/* 사화 비행 ON인데 결과 0개일 때 — SVG 밖 안내 카드 (별과 겹침 방지) */}
-      {showMutagenFlow && mutagenFlights.length === 0 && (
-        <div
-          className="mb-3 mx-auto max-w-md rounded-xl px-4 py-3 text-center"
-          style={{
-            background: 'rgba(251,191,36,0.08)',
-            border: '1px solid rgba(251,191,36,0.35)',
-            color: '#FBBF24',
-            fontSize: 13,
-            fontWeight: 600,
-            lineHeight: 1.5,
-          }}
-        >
-          이 명반엔 사화 변동이 표시되지 않습니다
-          <div className="mt-1 text-[11px] font-normal" style={{ color: 'rgba(251,191,36,0.7)' }}>
-            본명 천간이 변환한 4사화가 검출 가능한 별에 떨어지지 않았어요
-          </div>
-        </div>
-      )}
-
-      <div className="relative w-full aspect-square max-w-none mx-auto">
+    <div className="relative w-full aspect-square max-w-none mx-auto">
       <svg
         viewBox={`0 0 ${VIEWBOX} ${VIEWBOX}`}
         className="w-full h-full"
@@ -243,131 +126,6 @@ export function StarChart({ palaces, soul, fiveElementsClass, selectedIndex, onS
             strokeDasharray="3 4"
           />
         )}
-
-        {/* 대궁(對宮) 6쌍 — 마주보는 거울 관계. 토글 ON 시 6쌍 다 표시 */}
-        {showDaegung && DAEGUNG_PAIRS.map(([a, b], i) => {
-          const pa = posOf(a);
-          const pb = posOf(b);
-          if (!pa || !pb) return null;
-          return (
-            <line
-              key={`daegung-${i}`}
-              x1={pa.x} y1={pa.y} x2={pb.x} y2={pb.y}
-              stroke="rgba(196,181,253,0.35)"
-              strokeWidth="1"
-              strokeDasharray="5 5"
-            />
-          );
-        })}
-
-        {/* 선택된 궁의 대궁 강조 — 토글과 별개로 항상 표시 */}
-        {selectedPalaceName && selectedDaegungName && (() => {
-          const pa = posOf(selectedPalaceName);
-          const pb = posOf(selectedDaegungName);
-          if (!pa || !pb) return null;
-          return (
-            <g>
-              <motion.line
-                x1={pa.x} y1={pa.y} x2={pb.x} y2={pb.y}
-                stroke="#FBBF24"
-                strokeWidth="1.8"
-                strokeDasharray="6 4"
-                initial={{ pathLength: 0, opacity: 0 }}
-                animate={{ pathLength: 1, opacity: 0.85 }}
-                transition={{ duration: 0.6, ease: 'easeOut' }}
-              />
-              {/* 대궁 표식 */}
-              <circle cx={pb.x} cy={pb.y} r="14" fill="none" stroke="#FBBF24" strokeWidth="1.2" strokeDasharray="3 3" opacity="0.75" />
-            </g>
-          );
-        })()}
-
-        {/* 사화 비행 — 명궁 출발 4개 곡선. 명궁 self-flight는 명궁 위 색칩으로 표시 */}
-        {showMutagenFlow && myeongPos && (() => {
-          // self-flight (명궁 자체에 사화)와 외부 비행을 분리
-          const selfFlights = mutagenFlights.filter((f) => f.isSelfMyeong);
-          const outFlights = mutagenFlights.filter((f) => !f.isSelfMyeong);
-          return (
-            <>
-              {outFlights.map((f, i) => {
-                const mx = (myeongPos.x + f.to.x) / 2;
-                const my = (myeongPos.y + f.to.y) / 2;
-                const cx = mx + (CENTER - mx) * 0.4;
-                const cy = my + (CENTER - my) * 0.4;
-                const color = MUTAGEN_COLOR[f.type];
-                const labelX = (myeongPos.x + cx + f.to.x) / 3;
-                const labelY = (myeongPos.y + cy + f.to.y) / 3;
-                return (
-                  <g key={`mu-${i}`}>
-                    <motion.path
-                      d={`M${myeongPos.x},${myeongPos.y} Q${cx},${cy} ${f.to.x},${f.to.y}`}
-                      fill="none"
-                      stroke={color}
-                      strokeWidth="1.8"
-                      strokeDasharray="4 3"
-                      initial={{ pathLength: 0, opacity: 0 }}
-                      animate={{ pathLength: 1, opacity: 0.9 }}
-                      transition={{ duration: 0.7, delay: i * 0.1, ease: 'easeOut' }}
-                    />
-                    <circle cx={f.to.x} cy={f.to.y} r="4" fill={color} stroke="#fff" strokeWidth="0.8" />
-                    <rect
-                      x={labelX - 26} y={labelY - 8}
-                      width="52" height="14" rx="3"
-                      fill={`${color}44`}
-                      stroke={color}
-                      strokeWidth="0.5"
-                    />
-                    <text
-                      x={labelX} y={labelY + 2}
-                      textAnchor="middle"
-                      fontSize="9.5"
-                      fontWeight="700"
-                      fill={color}
-                    >
-                      {f.type.replace('화', '')}·{f.star}
-                    </text>
-                  </g>
-                );
-              })}
-              {/* 명궁 self-flight — 명궁 위에 색칩으로 표시 (4사화 한 줄로 정렬) */}
-              {selfFlights.length > 0 && (
-                <g>
-                  {selfFlights.map((f, i) => {
-                    const color = MUTAGEN_COLOR[f.type];
-                    const cellSize = VIEWBOX / 4;
-                    // 명궁 셀 상단에 4칩 수평 정렬
-                    const chipW = 28;
-                    const chipGap = 4;
-                    const totalW = selfFlights.length * chipW + (selfFlights.length - 1) * chipGap;
-                    const startX = myeongPos.x - totalW / 2 + chipW / 2 + i * (chipW + chipGap);
-                    const chipY = myeongPos.y - cellSize / 2 + 8;
-                    return (
-                      <g key={`self-${i}`}>
-                        <rect
-                          x={startX - chipW / 2} y={chipY - 7}
-                          width={chipW} height={14} rx="3"
-                          fill={`${color}55`}
-                          stroke={color}
-                          strokeWidth="0.8"
-                        />
-                        <text
-                          x={startX} y={chipY + 3}
-                          textAnchor="middle"
-                          fontSize="9.5"
-                          fontWeight="700"
-                          fill={color}
-                        >
-                          {f.type.replace('화', '')}·{f.star}
-                        </text>
-                      </g>
-                    );
-                  })}
-                </g>
-              )}
-              {/* 빈결과 안내는 SVG 밖 카드로 이동 (별 위 겹침 방지) */}
-            </>
-          );
-        })()}
 
         {/* 중심 원 — 명주·오행국 표기 */}
         <circle cx={CENTER} cy={CENTER} r="64" fill="rgba(20,12,38,0.85)" stroke="rgba(139,92,246,0.35)" strokeWidth="1.5" />
@@ -475,7 +233,6 @@ export function StarChart({ palaces, soul, fiveElementsClass, selectedIndex, onS
           );
         })}
       </svg>
-      </div>
 
       {/* 하단 범례 — 한 번 더 확대 */}
       <div className="mt-4 rounded-xl p-4 bg-[rgba(20,12,38,0.45)] border border-[var(--border-subtle)]">

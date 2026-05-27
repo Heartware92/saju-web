@@ -44,15 +44,15 @@ export function RadarChart({
   const n = domains.length;
   if (n < 3) return null;
 
-  // 라벨이 차트 영역 밖으로 잘리지 않을 만큼만 pad 확보 — 폰트 줄높이 1.6배 정도면 충분
-  const pad = Math.max(48, Math.round(labelFontSize * 1.8 + 10));
-  const cx = pad + size / 2;
-  const cy = pad + size / 2;
-  // 차트 자체를 더 크게 — 폰트가 크면 labelR을 살짝 더 안쪽으로 (글자가 차트 모서리에 더 붙음)
-  const maxR = size * 0.36;
-  const labelR = size * 0.44;
-  const vbW = size + pad * 2;
-  const vbH = size + pad * 2;
+  // 좌우 라벨은 옆으로 길게 뻗으므로 padX를 더 확보, 위아래는 라벨 한 줄만 들어가도록 padY를 짧게
+  const padX = Math.max(44, Math.round(labelFontSize * 1.6 + 8));
+  const padY = Math.max(20, Math.round(labelFontSize * 0.7 + 4));
+  const cx = padX + size / 2;
+  const cy = padY + size / 2;
+  const maxR = size * 0.38;
+  const labelR = size * 0.46;
+  const vbW = size + padX * 2;
+  const vbH = size + padY * 2;
   const gridLevels = [20, 40, 60, 80, 100];
 
   const dataPoints = domains.map((d, i) => {
