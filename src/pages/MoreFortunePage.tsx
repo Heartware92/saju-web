@@ -79,6 +79,7 @@ import {
   NumerologyVisual,
   SuriElementVisual,
   EumYangVisual,
+  NameMeaningVisual,
   AdviceVisual,
   StrengthVisual,
   ShadowVisual,
@@ -2065,10 +2066,15 @@ function MoreFortuneSectionedCard({
                   />
                 );
               case 'meaning':
-                // ★ 옵션 B (2026-05-27) — meaning 섹션은 시각 없음. 자원오행 시각(JaWonVisual)은
-                //   four_axis 의 axis_jawon 파티션으로 이동. 한자 모드도 한글 모드도 시각 없음.
-                //   meaning 섹션은 한자/한글의 "뜻" 본문에 집중.
-                return null;
+                // 은유 표현 바로 아래에 한자/한글 글자 카드 표시 (시각 앵커).
+                // 자원오행 상세는 four_axis 의 axis_jawon 파티션이 담당.
+                return (
+                  <NameMeaningVisual
+                    chars={ctx.chars}
+                    elements={ctx.elements}
+                    hanjas={ctx.hanjas}
+                  />
+                );
               case 'four_axis':
                 // ★ 옵션 B (2026-05-27) — 4축을 4 파티션으로 분리해 (시각 + 본문) 짝지움.
                 //   nameVisualNode 는 null 반환 (시각은 본문 옆에 alternating 으로 렌더 — 아래 four_axis 전용 분기 참조).

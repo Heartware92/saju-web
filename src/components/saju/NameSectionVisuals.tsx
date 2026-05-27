@@ -138,6 +138,92 @@ function VisualCaption({ title, desc, hideTitle = false }: { title: string; desc
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// 0) 이름 카드 — meaning 섹션의 은유 표현 아래에 표기.
+//    한자 모드: 한자 + 한글 음 + 한자 뜻 (글자별 카드)
+//    한글 모드: 한글 글자 + 음령오행 (글자별 카드)
+// ─────────────────────────────────────────────────────────────────────────────
+export function NameMeaningVisual({
+  chars,
+  elements,
+  hanjas,
+}: {
+  /** 한글 글자 배열 (예: ["허", "진", "우"]) */
+  chars: string[];
+  /** 한글 초성 음령오행 (chars 와 같은 길이) */
+  elements: string[];
+  /** 한자 정보 — 한자 모드에서만 채워짐. 비어있으면 한글 모드 카드 */
+  hanjas: Array<{ char: string; meaning: string; radical: string; strokes: number; jawon: string }>;
+}) {
+  const isHanjaMode = hanjas.length > 0;
+  if (chars.length === 0) return null;
+  return (
+    <div className="mb-3">
+      <div className="grid grid-cols-3 gap-2">
+        {chars.map((ch, i) => {
+          if (isHanjaMode) {
+            const h = hanjas[i];
+            if (!h) return null;
+            const color = ELEMENT_COLOR[h.jawon] ?? 'rgba(255,255,255,0.10)';
+            const bg = ELEMENT_BG[h.jawon] ?? 'rgba(255,255,255,0.03)';
+            return (
+              <div
+                key={i}
+                className="flex flex-col items-center justify-center px-2 py-2.5 rounded-xl border"
+                style={{ background: bg, borderColor: `${color}55` }}
+              >
+                <span
+                  className="text-[32px] font-bold leading-none"
+                  style={{ fontFamily: 'var(--font-serif)', color: 'var(--text-primary)' }}
+                >
+                  {h.char}
+                </span>
+                <span
+                  className="text-[12px] font-semibold mt-1"
+                  style={{ color: 'var(--text-tertiary)', fontFamily: 'var(--font-body)' }}
+                >
+                  {ch}
+                </span>
+                <span
+                  className="text-[13px] font-semibold text-text-secondary mt-1 text-center leading-tight"
+                  style={{ fontFamily: 'var(--font-body)' }}
+                >
+                  {h.meaning}
+                </span>
+              </div>
+            );
+          }
+          const el = elements[i] ?? '';
+          const color = ELEMENT_COLOR[el] ?? 'rgba(255,255,255,0.10)';
+          const bg = ELEMENT_BG[el] ?? 'rgba(255,255,255,0.03)';
+          return (
+            <div
+              key={i}
+              className="flex flex-col items-center justify-center px-2 py-3 rounded-xl border"
+              style={{ background: bg, borderColor: `${color}55` }}
+            >
+              <span
+                className="text-[28px] font-bold leading-none"
+                style={{ fontFamily: 'var(--font-serif)', color: 'var(--text-primary)' }}
+              >
+                {ch}
+              </span>
+              {el && (
+                <span
+                  className="text-[12px] font-bold mt-1.5"
+                  style={{ color, letterSpacing: '0.04em' }}
+                >
+                  음령 {el}
+                </span>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // 1) 음령오행 — 음절별 카드 + 5오행 분포 막대
 // ─────────────────────────────────────────────────────────────────────────────
 export function EumRyeongVisual({
@@ -236,37 +322,37 @@ export function JaWonVisual({
         return (
           <div
             key={i}
-            className="relative flex flex-col items-center justify-center px-2 py-3 rounded-2xl border"
+            className="relative flex flex-col items-center justify-center px-2 py-2.5 rounded-xl border"
             style={{ background: bg, borderColor: `${color}55` }}
           >
             {h.jawon && (
               <span
-                className="absolute top-2 left-2 w-2 h-2 rounded-full"
-                style={{ background: color, boxShadow: `0 0 6px ${color}aa` }}
+                className="absolute top-1.5 left-1.5 w-1.5 h-1.5 rounded-full"
+                style={{ background: color, boxShadow: `0 0 5px ${color}aa` }}
                 aria-hidden
               />
             )}
             <span
-              className="text-[40px] font-bold leading-none"
+              className="text-[32px] font-bold leading-none"
               style={{ fontFamily: 'var(--font-serif)', color: 'var(--text-primary)' }}
             >
               {h.char}
             </span>
             <span
-              className="text-[17px] font-semibold text-text-secondary mt-2 text-center leading-snug"
+              className="text-[13px] font-semibold text-text-secondary mt-1.5 text-center leading-tight"
               style={{ fontFamily: 'var(--font-body)', letterSpacing: '-0.005em' }}
             >
               {h.meaning}
             </span>
             <span
-              className="text-[13px] text-text-tertiary mt-1"
+              className="text-[11px] text-text-tertiary mt-0.5"
               style={{ fontFamily: 'var(--font-body)', letterSpacing: '-0.005em' }}
             >
               {h.radical || '?'}부 · {h.strokes}획
             </span>
             {h.jawon && (
               <span
-                className="text-[13px] font-bold mt-1"
+                className="text-[11px] font-bold mt-0.5"
                 style={{ color, fontFamily: 'var(--font-body)', letterSpacing: '0.02em' }}
               >
                 자원 {h.jawon}
@@ -542,9 +628,6 @@ export function SummaryScoreVisual({
               style={{ color: 'var(--text-primary)', fontFamily: 'var(--font-title)' }}
             >
               내 사주 오행 분포
-            </span>
-            <span className="text-[11px] text-text-tertiary" style={{ fontFamily: 'var(--font-body)' }}>
-              이 이름이 보태야 할 결
             </span>
           </div>
           <div className="grid grid-cols-5 gap-1.5">
