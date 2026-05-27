@@ -90,31 +90,21 @@ function parseChips(value: string): string[] {
 // ════════════════════════════════════════════════════════════════════
 
 /**
- * 본문 단락 — text-[17px] text-text-secondary leading-[1.85] tracking-[-0.005em].
- * `boxed`면 부드러운 박스로 감쌈 (지금 삶과의 거울·자기 워크 등 본문 단독 섹션 통일).
+ * 본문 단락 — 정통사주·신년운세와 동일한 평면 본문.
+ * 박스로 감싸지 않음 — SectionCollapsible 의 px-5 패딩이 본문 폭 충분히 확보.
+ * 박스 중첩으로 본문 폭이 좁아져 한 줄 5-10자만 들어가던 사고 차단.
+ * (boxed prop은 호환성 유지 — 무시됨)
  */
-function BodyParagraphs({ text, boxed }: { text: string; boxed?: boolean }) {
+function BodyParagraphs({ text }: { text: string; boxed?: boolean }) {
   const paras = text.split(/\n\n+/).map(p => p.trim()).filter(Boolean);
   if (paras.length === 0) return null;
-  const content = (
+  return (
     <div className="flex flex-col gap-3">
       {paras.map((p, i) => (
         <p key={i} className="text-[17px] text-text-secondary leading-[1.85] tracking-[-0.005em] whitespace-pre-line break-keep">
           {p}
         </p>
       ))}
-    </div>
-  );
-  if (!boxed) return content;
-  // 박스 padding 16 → 좌우 10 으로 축소 — SectionCollapsible 의 px-5 와 합쳐도
-  // 본문 폭이 좁아져 한 줄 5-10자만 들어가던 문제 해결.
-  return (
-    <div className="rounded-2xl border" style={{
-      padding: '14px 10px',
-      background: 'rgba(255,255,255,0.04)',
-      borderColor: 'rgba(255,255,255,0.10)',
-    }}>
-      {content}
     </div>
   );
 }
@@ -167,13 +157,15 @@ function ColorSwatch({ name, css }: { name: string; css: string }) {
 /** 단일 나침반 SVG - LuckyVisualCard 와 동일 스펙. */
 function CompassSVG({ direction }: { direction: string }) {
   const deg = DIRECTION_DEG[direction] ?? null;
+  // 등록되지 않은 방향 또는 '중앙' → 회색 디스크 + 라벨만
   if (deg === null || deg === -1) {
     return (
       <div className="flex flex-col items-center gap-1">
         <div className="w-[64px] h-[64px] rounded-full border border-white/20 flex items-center justify-center bg-white/5">
-          <span className="text-[20px] font-bold text-text-primary" style={{ fontFamily: 'var(--font-serif)' }}>中</span>
+          <span className="text-[14px] font-bold text-text-secondary text-center px-1 break-keep" style={{ fontFamily: 'var(--font-title)' }}>
+            {direction || '중앙'}
+          </span>
         </div>
-        <span className="text-[12px] text-text-tertiary whitespace-nowrap">{direction || '중앙'}</span>
       </div>
     );
   }
@@ -238,7 +230,10 @@ function PolarityScoreCard({ diag }: { diag: DreamV4Result['oriental_diagnosis']
           <span className="text-[15px] font-extrabold px-3 py-1 rounded-lg border" style={{
             background: `${color}22`, color, borderColor: `${color}55`,
             fontFamily: 'var(--font-title)',
-          }}>{diag.polarity}몽</span>
+          }}>{
+            /* LLM이 polarity 필드에 '길' 대신 '길몽'으로 적는 사고 — '몽' 중복 방지 */
+            diag.polarity.endsWith('몽') ? diag.polarity : `${diag.polarity}몽`
+          }</span>
         )}
       </div>
       <div className="h-2.5 rounded-full overflow-hidden mb-3.5" style={{ background: 'rgba(255,255,255,0.06)' }}>
