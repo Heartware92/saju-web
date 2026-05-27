@@ -2093,6 +2093,256 @@ export const parseDreamAction = (raw: string): { body: string; items: { key: str
   };
 };
 
+// ════════════════════════════════════════════════════════════════════
+// 꿈해몽 V4 파서 — 11 마커 (동양 6 + 서양 5)
+// 2026-05-27 재설계: 가로 2탭 / 동·서양 별도 진단 / 시진 영험도 결합
+// ════════════════════════════════════════════════════════════════════
+
+export type DreamPolarityLabel = '대길' | '길' | '중길' | '평' | '중흉' | '흉' | '';
+export type DreamKindLabel = '태몽' | '일상몽' | '영몽' | '잡몽' | '혼재' | '';
+export type DreamClinicalType = 'ordinary' | 'vivid' | 'lucid' | 'nightmare' | 'recurring' | 'threat_sim' | 'continuity' | 'sleep_paralysis' | 'false_awakening' | '';
+export type DreamArchetype = 'persona' | 'shadow' | 'anima' | 'animus' | 'self' | 'wise_elder' | 'inner_child' | 'trickster' | '';
+
+export interface DreamSymbolCardData {
+  name: string;
+  meaning: string;
+  polarity: 'good' | 'bad' | 'mixed' | 'neutral';
+  domain: string;
+}
+export interface DreamDomainScore {
+  label: string;
+  score: number;
+  note: string;
+}
+export interface DreamAdviceItem {
+  key: string;
+  value: string;
+}
+export interface DreamArchetypeCard {
+  target: string;
+  archetype: DreamArchetype;
+  note: string;
+}
+
+export interface DreamV4Result {
+  isV4: true;
+  // 동양 6섹션
+  oriental_diagnosis: {
+    label: string;
+    kind: DreamKindLabel;
+    polarity: DreamPolarityLabel;
+    score: number;        // 0~100
+    certainty: 'high' | 'medium' | 'low' | '';
+    reason: string;
+  };
+  oriental_symbols: DreamSymbolCardData[];
+  oriental_domains: DreamDomainScore[];
+  oriental_timing: string;
+  oriental_advice: { body: string; items: DreamAdviceItem[] };
+  oriental_caution: string;
+  // 서양 5섹션
+  western_diagnosis: {
+    clinical: DreamClinicalType;
+    function: string;
+    intensity: 'low' | 'medium' | 'high' | '';
+    reason: string;
+  };
+  western_latent: { surface: string; latent: string; work: string; body: string };
+  western_archetypes: DreamArchetypeCard[];
+  western_mirror: string;
+  western_self_work: string;
+}
+
+const V4_KEYS = [
+  'oriental_diagnosis',
+  'oriental_symbols',
+  'oriental_domains',
+  'oriental_timing',
+  'oriental_advice',
+  'oriental_caution',
+  'western_diagnosis',
+  'western_latent',
+  'western_archetypes',
+  'western_mirror',
+  'western_self_work',
+] as const;
+
+const ORIENTAL_ADVICE_KEYS = new Set([
+  '색', '방향', '시간', '숫자', '활동', '보석', '음식',
+  '액막이', '환경', '조심할 시간', '조심할 방향', '조심할 색', '보호',
+]);
+
+const DOMAIN_ORDER = ['재물', '인연', '건강', '시험·학업', '직장·일', '가족·관계'] as const;
+
+function extractV4Section(raw: string, key: string): string {
+  const others = V4_KEYS.filter(k => k !== key).join('|');
+  const re = new RegExp(`\\[${key}\\]\\s*([\\s\\S]*?)(?=\\[(?:${others})\\]|$)`);
+  const m = raw.match(re);
+  return m ? m[1].trim() : '';
+}
+
+function getKV(text: string, key: string): string {
+  const re = new RegExp(`^\\s*${key}\\s*[:=]\\s*(.+)$`, 'mi');
+  const m = text.match(re);
+  return m ? m[1].trim() : '';
+}
+
+/**
+ * 11마커 응답을 구조화 데이터로 파싱.
+ * V4 마커가 하나도 없으면 null 반환 — 호출부에서 legacy parseDreamSections로 fallback.
+ */
+export const parseDreamV4 = (raw: string): DreamV4Result | null => {
+  if (!raw) return null;
+  // V4 마커가 하나도 없으면 legacy 응답
+  if (!raw.includes('[oriental_diagnosis]') && !raw.includes('[western_diagnosis]')) return null;
+
+  // ── 동양 ────────────────────────────────────────────
+  const odBody = extractV4Section(raw, 'oriental_diagnosis');
+  const scoreNum = Number((odBody.match(/score\s*=\s*(\d+)/i) || [])[1]) || 0;
+  const odReason = (() => {
+    const m = odBody.match(/근거\s*[:：]\s*([\s\S]+)/);
+    if (m) return m[1].trim();
+    // 근거: 라벨 없으면 마지막 비라벨 줄들
+    const lines = odBody.split('\n').filter(l => l.trim() && !/^\s*(label|kind|polarity|score|certainty)\s*=/i.test(l));
+    return lines.join(' ').trim();
+  })();
+  const oriental_diagnosis: DreamV4Result['oriental_diagnosis'] = {
+    label: getKV(odBody, 'label'),
+    kind: (getKV(odBody, 'kind') as DreamKindLabel) || '',
+    polarity: (getKV(odBody, 'polarity') as DreamPolarityLabel) || '',
+    score: Math.max(0, Math.min(100, scoreNum)),
+    certainty: (getKV(odBody, 'certainty') as 'high' | 'medium' | 'low' | '') || '',
+    reason: odReason.slice(0, 500),
+  };
+
+  // ── 상징 카드 ──────────────────────────────────────
+  const osBody = extractV4Section(raw, 'oriental_symbols');
+  const oriental_symbols: DreamSymbolCardData[] = osBody
+    .split('\n')
+    .map(l => l.trim())
+    .filter(Boolean)
+    .map(line => {
+      const eq = line.indexOf('=');
+      if (eq < 0) return null;
+      const name = line.slice(0, eq).trim();
+      const rest = line.slice(eq + 1);
+      const parts = rest.split('|').map(s => s.trim());
+      const meaning = parts[0] || '';
+      const polRaw = (parts[1] || '').toLowerCase();
+      let polarity: DreamSymbolCardData['polarity'] = 'neutral';
+      if (polRaw === 'good' || polRaw === 'bad' || polRaw === 'mixed' || polRaw === 'neutral') polarity = polRaw;
+      const domain = parts[2] || '';
+      return { name, meaning, polarity, domain };
+    })
+    .filter((x): x is DreamSymbolCardData => !!x && !!x.name)
+    .slice(0, 5);
+
+  // ── 도메인 점수 ────────────────────────────────────
+  const odsBody = extractV4Section(raw, 'oriental_domains');
+  const oriental_domains: DreamDomainScore[] = DOMAIN_ORDER.map(label => {
+    const re = new RegExp(`^\\s*${label.replace('.', '\\.').replace('·', '·')}\\s*=\\s*(\\d+)\\s*\\|\\s*(.+)$`, 'm');
+    const m = odsBody.match(re);
+    if (!m) return { label, score: 50, note: '' };
+    return { label, score: Math.max(0, Math.min(100, Number(m[1]))), note: m[2].trim() };
+  });
+
+  // ── 시진 ──────────────────────────────────────────
+  const oriental_timing = extractV4Section(raw, 'oriental_timing');
+
+  // ── 조언 본문 + 항목 ───────────────────────────────
+  const oaBody = extractV4Section(raw, 'oriental_advice');
+  const bodyLines: string[] = [];
+  const adviceItems: DreamAdviceItem[] = [];
+  for (const ln of oaBody.split('\n')) {
+    const t = ln.trim();
+    const m = t.match(/^([가-힣\s]+?)\s*[:：]\s*(.+)$/);
+    if (m && ORIENTAL_ADVICE_KEYS.has(m[1].trim())) {
+      adviceItems.push({ key: m[1].trim(), value: m[2].trim() });
+    } else {
+      bodyLines.push(ln);
+    }
+  }
+  const oriental_advice = {
+    body: bodyLines.join('\n').replace(/\n{3,}/g, '\n\n').trim(),
+    items: adviceItems.slice(0, 6),
+  };
+
+  // ── 주의 ───────────────────────────────────────────
+  const oriental_caution = extractV4Section(raw, 'oriental_caution');
+
+  // ── 서양 진단 ──────────────────────────────────────
+  const wdBody = extractV4Section(raw, 'western_diagnosis');
+  const wdReason = (() => {
+    const m = wdBody.match(/근거\s*[:：]\s*([\s\S]+)/);
+    if (m) return m[1].trim();
+    const lines = wdBody.split('\n').filter(l => l.trim() && !/^\s*(clinical|function|intensity)\s*=/i.test(l));
+    return lines.join(' ').trim();
+  })();
+  const western_diagnosis: DreamV4Result['western_diagnosis'] = {
+    clinical: (getKV(wdBody, 'clinical') as DreamClinicalType) || '',
+    function: getKV(wdBody, 'function'),
+    intensity: (getKV(wdBody, 'intensity') as 'low' | 'medium' | 'high' | '') || '',
+    reason: wdReason.slice(0, 500),
+  };
+
+  // ── 잠재 의미 ──────────────────────────────────────
+  const wlBody = extractV4Section(raw, 'western_latent');
+  const wlReason = (() => {
+    // 표면/잠재/작동 라벨 제외한 나머지를 본문으로
+    const lines = wlBody.split('\n').filter(l => {
+      const t = l.trim();
+      return t && !/^\s*(표면|잠재|작동)\s*[:=]/i.test(t);
+    });
+    return lines.join('\n').trim();
+  })();
+  const western_latent: DreamV4Result['western_latent'] = {
+    surface: getKV(wlBody, '표면'),
+    latent: getKV(wlBody, '잠재'),
+    work: getKV(wlBody, '작동'),
+    body: wlReason,
+  };
+
+  // ── 원형 카드 ──────────────────────────────────────
+  const waBody = extractV4Section(raw, 'western_archetypes');
+  const western_archetypes: DreamArchetypeCard[] = waBody
+    .split('\n')
+    .map(l => l.trim())
+    .filter(Boolean)
+    .map(line => {
+      const eq = line.indexOf('=');
+      if (eq < 0) return null;
+      const target = line.slice(0, eq).trim();
+      const rest = line.slice(eq + 1);
+      const parts = rest.split('|').map(s => s.trim());
+      const archetype = (parts[0] || '').toLowerCase() as DreamArchetype;
+      const note = parts[1] || '';
+      return { target, archetype, note };
+    })
+    .filter((x): x is DreamArchetypeCard => !!x && !!x.target)
+    .slice(0, 4);
+
+  // ── 거울 ───────────────────────────────────────────
+  const western_mirror = extractV4Section(raw, 'western_mirror');
+
+  // ── 자기 워크 ──────────────────────────────────────
+  const western_self_work = extractV4Section(raw, 'western_self_work');
+
+  return {
+    isV4: true,
+    oriental_diagnosis,
+    oriental_symbols,
+    oriental_domains,
+    oriental_timing,
+    oriental_advice,
+    oriental_caution,
+    western_diagnosis,
+    western_latent,
+    western_archetypes,
+    western_mirror,
+    western_self_work,
+  };
+};
+
 export const getDreamInterpretation = async (
   dreamText: string,
   profileId?: string,

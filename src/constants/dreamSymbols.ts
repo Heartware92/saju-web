@@ -493,7 +493,732 @@ export const DREAM_SYMBOLS: DreamSymbol[] = [
     tradition: '환한 빛이 자기 위로 쏟아지거나 사람에게 후광이 비치면 큰 운·귀인·종교적 가호. 길몽 중 강한 격.',
     polarity: 'good',
   },
+
+  // ─── 영물(靈物) ────────────────────────────────────
+  {
+    id: 'phoenix',
+    label: '봉황',
+    category: '동물',
+    keywords: ['봉황', '봉황새', '주작'],
+    tradition: '봉황은 용에 버금가는 최상위 길조. 만나면 큰 명예·귀한 자리·태몽으로는 영부인급 자식. 봉황이 품에 안기면 평생의 큰 행운.',
+    psychology: '자기실현의 정점·재탄생의 원형.',
+    polarity: 'good',
+  },
+  {
+    id: 'kirin',
+    label: '기린',
+    category: '동물',
+    keywords: ['기린', '신수기린'],
+    tradition: '기린은 성인(聖人)의 등장을 알리는 상서로운 짐승. 학자·교사·종교지도자급 태몽으로 풀이된다.',
+    polarity: 'good',
+  },
+  {
+    id: 'haetae',
+    label: '해태·신수',
+    category: '동물',
+    keywords: ['해태', '신수', '청룡', '백호', '주작', '현무'],
+    tradition: '사신수·해태가 등장하면 가호·수호의 길조. 법정·시험·다툼에서 정의가 자기 편이 된다는 신호.',
+    polarity: 'good',
+  },
+
+  // ─── 가축·야생포유 추가 ────────────────────────────
+  {
+    id: 'cow',
+    label: '소·황소',
+    category: '동물',
+    keywords: ['소', '황소', '암소', '송아지', '검은소'],
+    tradition: '검은 소·황소는 재물·근면의 길조. 송아지를 받거나 안으면 태몽 또는 자수성가의 신호. 소가 달아나면 재물 누수 주의.',
+    polarity: 'mixed',
+  },
+  {
+    id: 'horse',
+    label: '말·백마',
+    category: '동물',
+    keywords: ['말', '백마', '준마', '말타고'],
+    tradition: '말을 타는 꿈은 출세·명성·이동. 백마는 명예·귀인. 말이 사납게 날뛰면 통제 안 되는 일이 임박.',
+    psychology: '본능적 추동력·리비도.',
+    polarity: 'mixed',
+  },
+  {
+    id: 'deer',
+    label: '사슴',
+    category: '동물',
+    keywords: ['사슴', '꽃사슴', '뿔사슴'],
+    tradition: '뿔이 큰 사슴은 학자·교사 태몽. 사슴을 잡거나 받으면 명예·승진. 뿔 없는 사슴은 우아한 딸 태몽.',
+    polarity: 'good',
+  },
+  {
+    id: 'bear',
+    label: '곰',
+    category: '동물',
+    keywords: ['곰', '흑곰', '백곰'],
+    tradition: '곰은 우직함·강인함의 상징. 곰에게 안기거나 곰을 받으면 든든한 자식 태몽 또는 큰 후원자의 등장.',
+    polarity: 'good',
+  },
+  {
+    id: 'rabbit',
+    label: '토끼',
+    category: '동물',
+    keywords: ['토끼', '산토끼', '흰토끼'],
+    tradition: '토끼는 행운·재물의 작은 신호. 토끼를 안으면 귀여운 딸 태몽. 토끼가 도망가면 작은 기회를 놓침.',
+    polarity: 'good',
+  },
+  {
+    id: 'fox',
+    label: '여우',
+    category: '동물',
+    keywords: ['여우', '구미호', '백여우'],
+    tradition: '여우는 영리함과 동시에 변덕·유혹의 양가성. 흰 여우는 영적 가호, 검은 여우는 음해·구설 주의.',
+    psychology: '아니마의 그림자 면·유혹과 직관.',
+    polarity: 'mixed',
+  },
+  {
+    id: 'wolf',
+    label: '늑대',
+    category: '동물',
+    keywords: ['늑대', '이리'],
+    tradition: '늑대는 위협적 인물·경쟁자의 등장 신호. 늑대 무리에 쫓기면 집단적 압박. 늑대를 쓰러뜨리면 큰 적을 이긴다.',
+    psychology: '그림자·억압된 야성.',
+    polarity: 'mixed',
+  },
+  {
+    id: 'monkey',
+    label: '원숭이',
+    category: '동물',
+    keywords: ['원숭이', '잔나비'],
+    tradition: '원숭이는 영리하나 변덕·교활의 양면. 장난스러운 원숭이는 가벼운 즐거움, 위협적 원숭이는 구설.',
+    polarity: 'mixed',
+  },
+
+  // ─── 곤충 ──────────────────────────────────────────
+  {
+    id: 'butterfly',
+    label: '나비',
+    category: '동물',
+    keywords: ['나비', '나비꿈', '범나비'],
+    tradition: '고운 나비는 영혼의 자유·짧은 행복·예쁜 딸 태몽. 빨간 나비는 강한 인연, 검은 나비는 부고 또는 큰 변화 예고.',
+    psychology: '변환·영혼·재탄생의 원형.',
+    polarity: 'mixed',
+  },
+  {
+    id: 'bee',
+    label: '벌·꿀벌',
+    category: '동물',
+    keywords: ['벌', '꿀벌', '말벌', '벌떼'],
+    tradition: '꿀벌은 근면·재물·풍요. 벌에 쏘이면 작지만 따끔한 손실. 벌떼가 따라오면 사소한 일들이 몰아닥침.',
+    polarity: 'mixed',
+  },
+  {
+    id: 'spider',
+    label: '거미',
+    category: '동물',
+    keywords: ['거미', '거미줄'],
+    tradition: '큰 검은 거미는 의외로 길조 — 능력·복의 신호. 거미줄에 걸리면 인간관계 옭아매임 주의.',
+    psychology: '그레이트 마더의 양가성·운명의 짜임.',
+    polarity: 'mixed',
+  },
+  {
+    id: 'ant',
+    label: '개미',
+    category: '동물',
+    keywords: ['개미', '개미떼', '왕개미'],
+    tradition: '개미떼는 작은 재물이 모이는 신호. 개미가 집 안으로 들어오면 식록(食祿) 풍성. 개미에 물리면 사소한 손실·구설.',
+    polarity: 'mixed',
+  },
+  {
+    id: 'dragonfly',
+    label: '잠자리',
+    category: '동물',
+    keywords: ['잠자리'],
+    tradition: '잠자리는 가벼움·자유·작은 행운. 잡았다 놓아주면 기회가 손에서 빠져나가는 경고.',
+    polarity: 'mixed',
+  },
+  {
+    id: 'cicada',
+    label: '매미',
+    category: '동물',
+    keywords: ['매미', '매미소리'],
+    tradition: '매미는 시기·계절의 단서. 우는 매미는 답답한 일의 끝 또는 짧은 영광 후의 마침.',
+    polarity: 'neutral',
+  },
+  {
+    id: 'cockroach',
+    label: '바퀴벌레',
+    category: '동물',
+    keywords: ['바퀴벌레', '바퀴'],
+    tradition: '바퀴벌레는 끈질긴 골칫거리·드러내고 싶지 않은 일의 노출 위험. 잡아 없애면 묵은 문제 해결.',
+    polarity: 'bad',
+  },
+  {
+    id: 'worm',
+    label: '지렁이·구더기',
+    category: '동물',
+    keywords: ['지렁이', '구더기', '벌레떼'],
+    tradition: '구더기·벌레떼는 의외로 큰 재물의 역몽으로 풀이되기도 한다. 다만 자기 몸에 붙으면 건강 점검.',
+    polarity: 'mixed',
+  },
+
+  // ─── 신체부위 추가 ─────────────────────────────────
+  {
+    id: 'eye',
+    label: '눈',
+    category: '신체',
+    keywords: ['눈', '눈동자', '시력', '눈이밝'],
+    tradition: '눈이 밝아지거나 새 눈이 생기는 꿈은 통찰·진리·기회 포착. 눈이 멀거나 흐려지면 판단 흐려짐의 경고.',
+    polarity: 'mixed',
+  },
+  {
+    id: 'nose_mouth',
+    label: '코·입',
+    category: '신체',
+    keywords: ['코', '입', '입술', '혀'],
+    tradition: '코가 커지면 명예·재물. 입에서 빛이 나거나 좋은 말이 나오면 명성. 이상한 것을 뱉으면 구설 정화.',
+    polarity: 'mixed',
+  },
+  {
+    id: 'hand',
+    label: '손·손톱',
+    category: '신체',
+    keywords: ['손', '손톱', '손가락', '주먹'],
+    tradition: '손에 무언가 쥐는 꿈은 재물·기회의 획득. 손톱이 빠지거나 손가락이 부러지면 재물·관계 손실.',
+    polarity: 'mixed',
+  },
+  {
+    id: 'foot',
+    label: '발·다리',
+    category: '신체',
+    keywords: ['발', '다리', '맨발', '발가락'],
+    tradition: '발이 시원하게 걷는 꿈은 진로 순항. 다리가 부러지거나 못 걸으면 추진력·기반 약화 경고.',
+    polarity: 'mixed',
+  },
+  {
+    id: 'heart_organ',
+    label: '심장·내장',
+    category: '신체',
+    keywords: ['심장', '내장', '간', '폐'],
+    tradition: '심장이 강하게 뛰는 꿈은 새 인연·새 도전의 신호. 내장이 보이거나 다치면 건강·정서 점검 필요.',
+    polarity: 'mixed',
+  },
+
+  // ─── 인물·신령 ─────────────────────────────────────
+  {
+    id: 'buddha_jesus',
+    label: '부처·예수·신',
+    category: '인물',
+    keywords: ['부처', '석가', '예수', '하나님', '천사', '관음', '보살'],
+    tradition: '부처·예수·신이 등장해 무언가를 주거나 미소 짓는 꿈은 최상위 영성·가호의 길조. 큰 시련의 끝 또는 영적 각성 신호.',
+    polarity: 'good',
+  },
+  {
+    id: 'monk_priest',
+    label: '스님·도사·신선',
+    category: '인물',
+    keywords: ['스님', '도사', '신선', '백발노인', '수염노인'],
+    tradition: '스님·도사·백발노인이 시주를 청하거나 무언가를 건네면 귀한 자식 태몽 또는 큰 가르침·기회.',
+    psychology: '노현자(Wise Old Man) 원형 — 자기 통합의 안내자.',
+    polarity: 'good',
+  },
+  {
+    id: 'shaman',
+    label: '무당·점쟁이',
+    category: '인물',
+    keywords: ['무당', '점쟁이', '굿', '신내림'],
+    tradition: '무당이 굿을 하거나 점을 봐주는 꿈은 가운(家運)의 변동·조상 점검 필요 신호. 무당이 길조를 말해주면 그대로 일어날 가능성.',
+    polarity: 'mixed',
+  },
+  {
+    id: 'ghost',
+    label: '귀신·도깨비',
+    category: '인물',
+    keywords: ['귀신', '도깨비', '유령', '혼령'],
+    tradition: '귀신·도깨비가 놀라게 하면 가위눌림·억눌린 정서의 표출. 잡아 쫓아내면 묵은 문제 해결. 도깨비방망이를 얻으면 횡재.',
+    psychology: '그림자·억압된 트라우마의 인격화.',
+    polarity: 'mixed',
+  },
+  {
+    id: 'reaper',
+    label: '저승사자·죽음의 사자',
+    category: '인물',
+    keywords: ['저승사자', '검은옷', '죽음의사자'],
+    tradition: '저승사자가 나타나 따라오라 하면 인생의 큰 결정·전환점이 임박. 도망쳐 벗어나면 위기 회피, 따라가면 큰 변화 수용.',
+    polarity: 'mixed',
+  },
+  {
+    id: 'celebrity',
+    label: '연예인·유명인',
+    category: '인물',
+    keywords: ['연예인', '아이돌', '배우', '가수', '스타', '유명인'],
+    tradition: '연예인이 친밀하게 다가오면 인기·인정·사회적 주목. 유명인과 함께 있으면 그 분야의 기회 신호.',
+    psychology: '자아 이상(Ego Ideal)의 투사. 이성 유명인은 아니마/아니무스.',
+    polarity: 'good',
+  },
+
+  // ─── 사물·보석·재물 추가 ────────────────────────────
+  {
+    id: 'gold_silver',
+    label: '금·은·옥',
+    category: '사물',
+    keywords: ['금', '황금', '금괴', '은', '옥', '비취', '진주'],
+    tradition: '금·옥·진주는 장기적 재물·고귀함의 상징. 받거나 주우면 큰 재물 또는 귀한 자식 태몽.',
+    polarity: 'good',
+  },
+  {
+    id: 'diamond',
+    label: '다이아·보석',
+    category: '사물',
+    keywords: ['다이아', '다이아몬드', '보석', '루비', '사파이어'],
+    tradition: '큰 보석을 발견하거나 받으면 큰 재물·예술적 재능·귀한 딸 태몽.',
+    polarity: 'good',
+  },
+  {
+    id: 'amulet',
+    label: '부적·반지·목걸이',
+    category: '사물',
+    keywords: ['부적', '반지', '목걸이', '귀걸이', '팔찌'],
+    tradition: '부적을 받으면 액막이·가호. 반지를 받으면 결혼·약속·귀한 딸 태몽. 잃어버리면 관계·기반 약화.',
+    polarity: 'good',
+  },
+  {
+    id: 'book_letter',
+    label: '책·편지·문서',
+    category: '사물',
+    keywords: ['책', '편지', '문서', '계약서', '두루마리', '붓'],
+    tradition: '책·두루마리를 펼치거나 편지를 받는 꿈은 학문성취·좋은 소식·계약 성사. 검은 봉투·찢어진 문서는 흉사 또는 약속 파기.',
+    polarity: 'mixed',
+  },
+  {
+    id: 'clothes_hanbok',
+    label: '옷·한복·수의',
+    category: '사물',
+    keywords: ['옷', '한복', '드레스', '양복', '수의', '갑옷', '제복'],
+    tradition: '깨끗한 새 옷·한복은 새 출발·승진·인연. 갑옷은 보호·승리. 수의는 의외로 장수·재생의 역몽. 더러운 옷은 평판 점검.',
+    polarity: 'mixed',
+  },
+  {
+    id: 'naked_undies',
+    label: '속옷·반나체',
+    category: '사물',
+    keywords: ['속옷', '반나체', '맨몸'],
+    tradition: '속옷 차림 또는 반나체로 공공장소에 나타나는 꿈은 약점 노출 불안. 편안했다면 진짜 자기를 받아들이는 신호.',
+    psychology: '페르소나 박탈·자기 수용.',
+    polarity: 'neutral',
+  },
+
+  // ─── 가옥 구조 추가 ────────────────────────────────
+  {
+    id: 'stairs',
+    label: '계단·엘리베이터',
+    category: '사물',
+    keywords: ['계단', '엘리베이터', '에스컬레이터', '층계'],
+    tradition: '계단을 오르면 승진·지위 상승. 내리면 정리·종결. 미끄러지거나 무너지면 진행 중인 일에 제동.',
+    psychology: '의식 수준의 이행·자기 탐사.',
+    polarity: 'mixed',
+  },
+  {
+    id: 'kitchen',
+    label: '부엌·아궁이',
+    category: '사물',
+    keywords: ['부엌', '아궁이', '주방', '솥걸이'],
+    tradition: '부엌이 깨끗하고 음식이 가득하면 가운(家運) 융성. 부엌에 불이 꺼져 있으면 살림의 어려움.',
+    polarity: 'mixed',
+  },
+  {
+    id: 'toilet',
+    label: '화장실·변소',
+    category: '사물',
+    keywords: ['화장실', '변소', '뒷간'],
+    tradition: '화장실에서 시원하게 일을 보면 묵은 문제 해소·재물 정리. 화장실이 더럽거나 막혀 있으면 답답한 일이 쌓임.',
+    polarity: 'mixed',
+  },
+  {
+    id: 'well',
+    label: '우물·샘',
+    category: '사물',
+    keywords: ['우물', '샘', '약수터', '용천'],
+    tradition: '맑은 우물물을 길어 마시면 재물·건강·지혜의 길조. 우물이 마르거나 더러우면 자원 고갈 경고.',
+    psychology: '무의식의 깊은 자원·내면의 지혜.',
+    polarity: 'good',
+  },
+  {
+    id: 'window',
+    label: '창문·열린 문',
+    category: '사물',
+    keywords: ['창문', '열린문', '문이열려'],
+    tradition: '창문이 활짝 열려 빛이 들어오면 새 기회·전환점. 깨진 창은 사생활 노출 또는 예기치 못한 사건.',
+    polarity: 'mixed',
+  },
+
+  // ─── 무덤·장례 ─────────────────────────────────────
+  {
+    id: 'coffin',
+    label: '관·시체',
+    category: '사물',
+    keywords: ['관', '시체', '죽은사람몸', '주검'],
+    tradition: '관이 집 안으로 들어오거나 시체를 보는 꿈은 의외의 큰 길몽 — 관운·재물·승진. 다만 자기 관이라도 두려움이 컸다면 변화에 대한 저항.',
+    polarity: 'good',
+  },
+  {
+    id: 'funeral',
+    label: '장례·상복·제사',
+    category: '행위',
+    keywords: ['장례', '상복', '제사', '차례', '발인'],
+    tradition: '장례식·제사 꿈은 옛 자기·옛 관계의 정리와 새 시작. 상복을 입고 평온했다면 새 인생 시작의 신호.',
+    polarity: 'mixed',
+  },
+
+  // ─── 천체 추가 ─────────────────────────────────────
+  {
+    id: 'eclipse',
+    label: '일식·월식',
+    category: '자연',
+    keywords: ['일식', '월식', '해가림', '달가림'],
+    tradition: '일식·월식은 권력자의 변고 또는 큰 정치적·사회적 사건의 예고. 개인적으로는 큰 결단·전환의 임박.',
+    polarity: 'mixed',
+  },
+  {
+    id: 'meteor',
+    label: '유성·혜성',
+    category: '자연',
+    keywords: ['유성', '혜성', '별똥별', '별이떨어'],
+    tradition: '별이 품에 떨어지는 꿈은 귀한 자식 태몽의 최상위. 김유신·자장율사 어머니의 태몽으로 유명. 멀리 떨어진 별은 큰 기회 임박.',
+    polarity: 'good',
+  },
+
+  // ─── 색 추가 ───────────────────────────────────────
+  {
+    id: 'color_gold',
+    label: '금색·황금색',
+    category: '숫자색',
+    keywords: ['금색', '황금색', '금빛'],
+    tradition: '금색·황금빛은 재물·권력·왕재의 최상위 길조. 황금에 둘러싸이면 큰 부와 명예.',
+    polarity: 'good',
+  },
+  {
+    id: 'color_blue',
+    label: '파란색·청록',
+    category: '숫자색',
+    keywords: ['파란', '파랑', '청색', '청록', '하늘색'],
+    tradition: '파란색은 수(水)의 기운 — 재물의 흐름·지혜. 맑은 하늘색은 마음의 평정과 새 기회.',
+    polarity: 'good',
+  },
+  {
+    id: 'color_green',
+    label: '초록색·연두',
+    category: '숫자색',
+    keywords: ['초록', '녹색', '연두', '푸른'],
+    tradition: '초록은 목(木)의 기운 — 성장·생명·건강. 푸른 들판이나 푸른 옷은 새 출발의 길조.',
+    polarity: 'good',
+  },
+  {
+    id: 'color_yellow',
+    label: '노란색',
+    category: '숫자색',
+    keywords: ['노란', '노랑', '황색'],
+    tradition: '노란색은 토(土)의 기운 — 안정·중심·재물의 누적. 황금색과 가까울수록 길조 강함.',
+    polarity: 'good',
+  },
+
+  // ─── 숫자 ──────────────────────────────────────────
+  {
+    id: 'numbers_lucky',
+    label: '숫자(1·3·7·9)',
+    category: '숫자색',
+    keywords: ['숫자', '1', '3', '7', '9', '777'],
+    tradition: '1은 시작·유일, 3은 천지인 조화, 7은 신성·완성, 9는 양의 극치. 꿈에서 또렷이 본 숫자는 행운수로 기억해둘 가치.',
+    polarity: 'good',
+  },
+
+  // ─── 행위 추가 ─────────────────────────────────────
+  {
+    id: 'sex_intimacy',
+    label: '성관계·키스',
+    category: '행위',
+    keywords: ['성관계', '섹스', '키스', '입맞춤', '안고있'],
+    tradition: '성관계·키스 꿈은 깊은 결합·생명력·창조의 응축. 누구와 했는가보다 그 감정(따뜻함/거부감)이 길흉을 가른다.',
+    psychology: 'Coniunctio — 대립의 통합. 자기 안의 두 면의 결합.',
+    polarity: 'mixed',
+  },
+  {
+    id: 'breakup',
+    label: '이별·헤어짐',
+    category: '행위',
+    keywords: ['이별', '헤어졌', '헤어지', '결별'],
+    tradition: '이별 꿈은 실제 이별보다 한 국면의 종결·내려놓음의 신호. 시원했다면 정리 완성, 슬펐다면 미해결 감정 잔존.',
+    polarity: 'mixed',
+  },
+  {
+    id: 'proposal',
+    label: '청혼·약혼',
+    category: '행위',
+    keywords: ['청혼', '약혼', '프러포즈', '반지받'],
+    tradition: '청혼·약혼 장면은 새로운 관계 또는 사업 결합의 예고. 받아들였다면 좋은 인연, 거절했다면 잠재된 망설임.',
+    polarity: 'good',
+  },
+  {
+    id: 'pass_exam',
+    label: '합격·승리',
+    category: '행위',
+    keywords: ['합격', '붙었', '승리', '이겼', '수상'],
+    tradition: '꿈에서 합격하거나 이기면 실제 결과도 좋을 가능성. 다만 너무 쉬운 합격은 방심 경계.',
+    polarity: 'good',
+  },
+  {
+    id: 'move_house',
+    label: '이사·이동',
+    category: '행위',
+    keywords: ['이사', '이동', '거처옮'],
+    tradition: '이사 꿈은 실제 환경·관계·직장의 전환 임박. 새 집이 밝고 넓으면 좋은 전환, 좁고 어두우면 신중함 필요.',
+    polarity: 'mixed',
+  },
+  {
+    id: 'travel',
+    label: '여행·길떠남',
+    category: '행위',
+    keywords: ['여행', '길떠나', '출발', '먼길'],
+    tradition: '여행 꿈은 인생의 새 국면·자기 탐색. 짐을 잘 챙겼다면 준비된 출발, 잃어버렸다면 미흡한 준비.',
+    polarity: 'mixed',
+  },
+  {
+    id: 'driving',
+    label: '운전·핸들',
+    category: '행위',
+    keywords: ['운전', '핸들', '브레이크', '액셀'],
+    tradition: '내가 운전대를 잡으면 주도권 확보. 사고가 나거나 브레이크가 안 들으면 통제 상실 경고.',
+    polarity: 'mixed',
+  },
+  {
+    id: 'speech',
+    label: '발표·연설',
+    category: '행위',
+    keywords: ['발표', '연설', '강의', '많은사람앞'],
+    tradition: '많은 사람 앞에서 또렷이 발표하면 인정·승진의 신호. 말이 막히거나 옷이 흐트러지면 준비 부족 또는 불안.',
+    polarity: 'mixed',
+  },
+  {
+    id: 'bath_wash',
+    label: '목욕·씻기',
+    category: '행위',
+    keywords: ['목욕', '씻었', '샤워', '몸을씻'],
+    tradition: '맑은 물에 시원하게 목욕하면 묵은 일·관계의 정화. 흙탕물에서 씻으면 정화가 어렵거나 오히려 더러워짐.',
+    polarity: 'good',
+  },
+
+  // ─── 음식 추가 ─────────────────────────────────────
+  {
+    id: 'rice_cake',
+    label: '떡·전통음식',
+    category: '사물',
+    keywords: ['떡', '백설기', '인절미', '시루떡'],
+    tradition: '떡을 받거나 나누는 꿈은 복덕·잔치·결실. 시루떡이 김 나며 익으면 가운(家運) 융성.',
+    polarity: 'good',
+  },
+  {
+    id: 'meat_fish',
+    label: '고기·생선 음식',
+    category: '사물',
+    keywords: ['고기', '생선요리', '회', '구이'],
+    tradition: '잘 익은 고기·생선을 받거나 먹으면 풍요·식록(食祿). 비린내가 강하거나 상한 음식이면 구설·건강 주의.',
+    polarity: 'mixed',
+  },
+  {
+    id: 'alcohol',
+    label: '술·잔치 음료',
+    category: '사물',
+    keywords: ['술', '막걸리', '소주', '와인', '잔치술'],
+    tradition: '맑은 술을 받거나 함께 마시면 좋은 만남·계약 성사. 취해 쓰러지면 분별 잃을 위험 경고.',
+    polarity: 'mixed',
+  },
+
+  // ─── 식물 추가 ─────────────────────────────────────
+  {
+    id: 'pine_bamboo',
+    label: '소나무·대나무',
+    category: '자연',
+    keywords: ['소나무', '대나무', '청송', '왕대'],
+    tradition: '소나무·대나무는 절개·장수·곧음의 상징. 청청한 소나무 숲은 가문의 번창과 자손의 강건함.',
+    polarity: 'good',
+  },
+  {
+    id: 'ginseng',
+    label: '인삼·산삼',
+    category: '자연',
+    keywords: ['인삼', '산삼', '약초'],
+    tradition: '산삼·인삼은 귀한 자식 태몽 또는 큰 횡재·장수의 강한 길조. 캐어 손에 쥐면 더욱 강함.',
+    polarity: 'good',
+  },
+  {
+    id: 'lotus',
+    label: '연꽃',
+    category: '자연',
+    keywords: ['연꽃', '연못꽃'],
+    tradition: '연꽃은 진흙 속의 고결함 — 영성·고귀함의 태몽 또는 큰 명예. 활짝 핀 연꽃은 깨달음·성취.',
+    polarity: 'good',
+  },
+  {
+    id: 'plum_blossom',
+    label: '매화·난초·국화',
+    category: '자연',
+    keywords: ['매화', '난초', '국화', '사군자'],
+    tradition: '사군자는 학자·절개·인격의 상징. 매화·난초 꿈은 학문성취·교양 있는 자식 태몽.',
+    polarity: 'good',
+  },
+
+  // ─── 자연재해 ──────────────────────────────────────
+  {
+    id: 'flood',
+    label: '홍수·큰물',
+    category: '자연',
+    keywords: ['홍수', '큰물', '물난리'],
+    tradition: '홍수가 집으로 들어오면 의외로 큰 재물의 길조. 자기를 휩쓸어 가면 큰 변동 — 통제 어려움.',
+    polarity: 'mixed',
+  },
+  {
+    id: 'typhoon',
+    label: '태풍·폭풍',
+    category: '자연',
+    keywords: ['태풍', '폭풍', '강풍'],
+    tradition: '태풍이 지나가면 큰 정리·전환. 안전한 곳에서 지켜봤다면 시련을 비켜 가는 신호.',
+    polarity: 'mixed',
+  },
+  {
+    id: 'earthquake',
+    label: '지진',
+    category: '자연',
+    keywords: ['지진', '땅이흔들', '진동'],
+    tradition: '지진은 기반·정체성의 흔들림. 무너지지 않고 버텼다면 큰 시련을 견뎌낸다는 신호.',
+    psychology: '정체성 토대의 동요.',
+    polarity: 'bad',
+  },
 ];
+
+// ════════════════════════════════════════════════════════
+// 12지시 영험도 (Sijin Rules)
+// 동양 전통의 시간대별 꿈 영험도 — 사주 데이터와 결합하여 시각화 가능
+// ════════════════════════════════════════════════════════
+
+export interface SijinRule {
+  id: string;
+  label: string;           // 한자+한글
+  hour: string;            // 시간 범위
+  weight: 1 | 2 | 3 | 4 | 5; // 1=거의 잡몽, 5=최고 정몽
+  note: string;            // 한 줄 의미
+}
+
+export const SIJIN_RULES: SijinRule[] = [
+  { id: 'ja',  label: '자시 (子)', hour: '23:30~01:30', weight: 1, note: '초경몽 — 정신이 혼탁해 대부분 허몽' },
+  { id: 'chuk',label: '축시 (丑)', hour: '01:30~03:30', weight: 2, note: '잠재의식 정리 — 풀이 가치 낮음' },
+  { id: 'in',  label: '인시 (寅)', hour: '03:30~05:30', weight: 4, note: '정몽(正夢) — 적중률 높은 시간대' },
+  { id: 'myo', label: '묘시 (卯)', hour: '05:30~07:30', weight: 5, note: '★ 새벽 꿈의 황금시간대 — 예지력 최고' },
+  { id: 'jin', label: '진시 (辰)', hour: '07:30~09:30', weight: 3, note: '각몽기 — 상징몽 다수, 기억에 잘 남음' },
+  { id: 'sa',  label: '사시 (巳)', hour: '09:30~11:30', weight: 2, note: '낮잠몽 — 가벼운 인상' },
+  { id: 'o',   label: '오시 (午)', hour: '11:30~13:30', weight: 2, note: '낮잠몽 — 약한 정몽' },
+  { id: 'mi',  label: '미시 (未)', hour: '13:30~15:30', weight: 1, note: '잡몽 빈도↑' },
+  { id: 'sin', label: '신시 (申)', hour: '15:30~17:30', weight: 1, note: '잡몽 빈도↑' },
+  { id: 'yu',  label: '유시 (酉)', hour: '17:30~19:30', weight: 2, note: '저녁몽 — 일상 잔상' },
+  { id: 'sul', label: '술시 (戌)', hour: '19:30~21:30', weight: 2, note: '입몽기 — 사몽·오몽 빈도↑' },
+  { id: 'hae', label: '해시 (亥)', hour: '21:30~23:30', weight: 1, note: '입몽기 — 정몽 가능성 낮음' },
+];
+
+/** 24시간 형식의 시각을 받아 해당 시진을 반환. 잘못된 입력은 null. */
+export function findSijinByHour(hour24: number, minute: number = 0): SijinRule | null {
+  if (Number.isNaN(hour24) || hour24 < 0 || hour24 > 23) return null;
+  const minutes = hour24 * 60 + minute;
+  // 자시는 23:30~01:30 으로 자정을 가로지름
+  if (minutes >= 23 * 60 + 30 || minutes < 1 * 60 + 30) return SIJIN_RULES[0];
+  if (minutes < 3 * 60 + 30) return SIJIN_RULES[1];
+  if (minutes < 5 * 60 + 30) return SIJIN_RULES[2];
+  if (minutes < 7 * 60 + 30) return SIJIN_RULES[3];
+  if (minutes < 9 * 60 + 30) return SIJIN_RULES[4];
+  if (minutes < 11 * 60 + 30) return SIJIN_RULES[5];
+  if (minutes < 13 * 60 + 30) return SIJIN_RULES[6];
+  if (minutes < 15 * 60 + 30) return SIJIN_RULES[7];
+  if (minutes < 17 * 60 + 30) return SIJIN_RULES[8];
+  if (minutes < 19 * 60 + 30) return SIJIN_RULES[9];
+  if (minutes < 21 * 60 + 30) return SIJIN_RULES[10];
+  return SIJIN_RULES[11];
+}
+
+// ════════════════════════════════════════════════════════
+// 시간대 친화 라벨 (입력 UI 용)
+// ════════════════════════════════════════════════════════
+
+export interface TimeBand {
+  id: 'dawn' | 'morning' | 'noon' | 'evening' | 'midnight' | 'unknown';
+  label: string;
+  sub: string;
+  /** 대표 시각(시간만) — 시진 매핑용 */
+  hour: number;
+}
+
+export const TIME_BANDS: TimeBand[] = [
+  { id: 'dawn',     label: '새벽',   sub: '03:30~07:30 · 영험도 최고', hour: 5 },
+  { id: 'morning',  label: '아침',   sub: '07:30~11:30 · 상징몽',       hour: 9 },
+  { id: 'noon',     label: '낮·오후', sub: '11:30~17:30 · 잡몽',         hour: 14 },
+  { id: 'evening',  label: '저녁',   sub: '17:30~21:30 · 입몽기',       hour: 19 },
+  { id: 'midnight', label: '한밤중', sub: '21:30~03:30 · 깊은 잠',      hour: 23 },
+  { id: 'unknown',  label: '모름',   sub: '시간 보정 없이 풀이',         hour: -1 },
+];
+
+// ════════════════════════════════════════════════════════
+// 도메인 태그 (6 영역)
+// 동양 풀이의 [oriental_domains] 섹션에서 사용
+// ════════════════════════════════════════════════════════
+
+export type DomainTag = '재물' | '인연' | '건강' | '시험·학업' | '직장·일' | '가족·관계';
+
+export const DOMAIN_TAGS: { id: DomainTag; icon: string; color: string }[] = [
+  { id: '재물',       icon: '◆', color: '#FBBF24' },
+  { id: '인연',       icon: '♡', color: '#F87171' },
+  { id: '건강',       icon: '+', color: '#34D399' },
+  { id: '시험·학업',  icon: '✎', color: '#A78BFA' },
+  { id: '직장·일',    icon: '▲', color: '#60A5FA' },
+  { id: '가족·관계',  icon: '◎', color: '#F472B6' },
+];
+
+// ════════════════════════════════════════════════════════
+// Jung Archetype 라벨 (서양 풀이 [western_archetypes] 섹션용)
+// ════════════════════════════════════════════════════════
+
+export type ArchetypeId = 'persona' | 'shadow' | 'anima' | 'animus' | 'self' | 'wise_elder' | 'inner_child' | 'trickster';
+
+export const ARCHETYPE_LABELS: Record<ArchetypeId, { ko: string; desc: string; color: string }> = {
+  persona:     { ko: '페르소나',       desc: '사회적 가면 — 외부에 보이는 자기',         color: '#94A3B8' },
+  shadow:      { ko: '그림자',         desc: '의식이 거부한 자기 — 통합 과제',           color: '#7C3AED' },
+  anima:       { ko: '아니마',         desc: '남성 안의 여성성 — 감정·직관·관계',         color: '#F472B6' },
+  animus:      { ko: '아니무스',       desc: '여성 안의 남성성 — 의지·논리·행동',         color: '#60A5FA' },
+  self:        { ko: '자기(Self)',     desc: '의식·무의식 통합의 중심 — 개성화 목표',     color: '#FBBF24' },
+  wise_elder:  { ko: '노현자',         desc: '내면의 지혜 안내자',                       color: '#C9A6FF' },
+  inner_child: { ko: '내면 아이',      desc: '취약성·창조성·신성한 가능성',               color: '#A7F3D0' },
+  trickster:   { ko: '트릭스터',       desc: '전환·교란·새로운 관점',                    color: '#FB923C' },
+};
+
+// ════════════════════════════════════════════════════════
+// 임상 유형 (서양 풀이 [western_diagnosis] 섹션용)
+// 현대 dream science 분류
+// ════════════════════════════════════════════════════════
+
+export type ClinicalDreamType =
+  | 'ordinary'        // 일상몽
+  | 'vivid'           // 생생몽
+  | 'lucid'           // 자각몽
+  | 'nightmare'       // 악몽
+  | 'recurring'       // 반복몽
+  | 'threat_sim'      // 위협 시뮬레이션
+  | 'continuity'      // 일상 연속
+  | 'sleep_paralysis' // 가위눌림
+  | 'false_awakening'; // 거짓 각성
+
+export const CLINICAL_LABELS: Record<ClinicalDreamType, { ko: string; desc: string; color: string }> = {
+  ordinary:        { ko: '일상몽',         desc: '평범한 일상 단편',                color: '#94A3B8' },
+  vivid:           { ko: '생생몽',         desc: 'REM 후기 — 인상 강렬',           color: '#FBBF24' },
+  lucid:           { ko: '자각몽',         desc: '꿈인 줄 아는 꿈 — 자기효능감',   color: '#A78BFA' },
+  nightmare:       { ko: '악몽',           desc: '강한 부정 정서 동반',             color: '#F87171' },
+  recurring:       { ko: '반복몽',         desc: '미해결 과제의 신호',              color: '#FB923C' },
+  threat_sim:      { ko: '위협 시뮬레이션', desc: '추격·낙하 — 적응적 기능',         color: '#FB923C' },
+  continuity:      { ko: '일상 연속',      desc: '현실 고민의 거울',                color: '#60A5FA' },
+  sleep_paralysis: { ko: '가위눌림',       desc: 'REM atonia 정상 현상',           color: '#7C3AED' },
+  false_awakening: { ko: '거짓 각성',      desc: '깬 줄 알았는데 꿈',               color: '#C9A6FF' },
+};
 
 /** 특수 규칙: 역몽(逆夢) — 흉해 보이지만 길한 것들 */
 export const REVERSE_DREAM_NOTES = [

@@ -3,6 +3,8 @@
 import { motion } from 'framer-motion';
 import { MORE_FORTUNE_CONFIGS, type MoreFortuneId } from '@/constants/moreFortunes';
 import { extractMetaphor } from '@/utils/parseMetaphor';
+import { parseDreamV4 } from '@/services/fortuneService';
+import { DreamResultCard } from '@/components/dream/DreamResultCard';
 
 interface Props {
   record: Record<string, any>;
@@ -20,6 +22,23 @@ export function MoreResultBlock({ record }: Props) {
   const koreanName = eng.koreanName as string | undefined;
   const charMeanings = (eng.charMeanings as string[] | undefined) ?? [];
   const dreamText = eng.dreamText as string | undefined;
+  const dreamTimeBandId = eng.timeBandId as string | undefined;
+
+  // ★ 꿈해몽 V4 (11마커) — 보관함에서 새 카드로 노출. 옛 record는 아래 legacy 렌더로 fallback.
+  const dreamV4 = category === 'dream' ? parseDreamV4(text) : null;
+  if (dreamV4) {
+    return (
+      <>
+        {dreamText && (
+          <div className="rounded-2xl p-4 mb-3 bg-[rgba(124,92,252,0.08)] border border-[rgba(124,92,252,0.25)]">
+            <div className="text-[12px] font-semibold uppercase tracking-wider text-text-tertiary mb-2">사용자 입력 — 꿈</div>
+            <p className="text-[14px] text-text-secondary leading-relaxed whitespace-pre-line">{dreamText}</p>
+          </div>
+        )}
+        <DreamResultCard title={title} result={dreamV4} timeBandId={dreamTimeBandId} />
+      </>
+    );
+  }
 
   // [은유] 마커 우선 추출 + 본문 strip. 마커 없으면 첫 비어있지 않은 줄 fallback.
   const parsed = extractMetaphor(text.replace(/\r/g, ''));
