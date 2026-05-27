@@ -127,7 +127,7 @@ function VisualCaption({ title, desc }: { title: string; desc: string }) {
       </div>
       <div
         className="text-[14px] text-text-secondary leading-[1.65]"
-        style={{ fontFamily: 'var(--font-body)' }}
+        style={{ fontFamily: 'var(--font-body)', wordBreak: 'keep-all', overflowWrap: 'break-word' }}
       >
         {desc}
       </div>
@@ -383,8 +383,8 @@ export function SummaryScoreVisual({
   const axes: Array<{ label: string; sub: string; grade: AxisGrade }> = [
     { label: '음령',   sub: '한글 발음', grade: eumGrade },
     { label: '자원',   sub: '한자 부수', grade: jawonGrade },
-    { label: '수리오행', sub: '4격 끝자리', grade: suriElGrade },
-    { label: '81수리',  sub: '4격 길흉',  grade: suriGyeokGrade },
+    { label: '수리',   sub: '수리오행',  grade: suriElGrade },
+    { label: '81수리', sub: '4격 길흉',  grade: suriGyeokGrade },
   ];
 
   // 종합 별점 + 점수 근거 — 사용자가 별의 출처를 직접 보고 납득하도록
@@ -429,27 +429,30 @@ export function SummaryScoreVisual({
         )}
       </div>
 
-      {/* 4축 등급칩 */}
-      <div className="grid grid-cols-4 gap-2">
+      {/* 4축 등급칩 — 박스 좁아도 줄바꿈 방지 (whitespace-nowrap) */}
+      <div className="grid grid-cols-4 gap-1.5">
         {axes.map((a, i) => {
           const badge = GRADE_BADGE[a.grade];
           return (
             <div
               key={i}
-              className="rounded-xl p-2.5 flex flex-col items-center justify-center border"
+              className="rounded-xl px-1.5 py-2.5 flex flex-col items-center justify-center border"
               style={{ background: 'rgba(255,255,255,0.03)', borderColor: 'rgba(255,255,255,0.08)' }}
             >
               <span
-                className="text-[14px] font-bold mb-0.5"
+                className="text-[14px] font-bold mb-0.5 whitespace-nowrap"
                 style={{ color: 'var(--text-primary)', fontFamily: 'var(--font-title)' }}
               >
                 {a.label}
               </span>
-              <span className="text-[11px] text-text-tertiary mb-2 text-center leading-tight" style={{ fontFamily: 'var(--font-body)' }}>
+              <span
+                className="text-[11px] text-text-tertiary mb-2 text-center leading-tight whitespace-nowrap"
+                style={{ fontFamily: 'var(--font-body)' }}
+              >
                 {a.sub}
               </span>
               <span
-                className="text-[12px] font-bold px-2 py-0.5 rounded-md"
+                className="text-[12px] font-bold px-1.5 py-0.5 rounded-md whitespace-nowrap"
                 style={{
                   background: badge.bg,
                   color: badge.fg,
@@ -463,22 +466,22 @@ export function SummaryScoreVisual({
         })}
       </div>
 
-      {/* 등급 의미 안내 — 사용자가 "보강/중립/거스름" 의미를 즉시 알 수 있게 */}
+      {/* 등급 의미 안내 — 한 줄에 컬러 키 + 설명 (모바일 좁은 폭에서 줄바꿈 자연스럽게) */}
       <div
-        className="mt-3 pt-3 grid grid-cols-3 gap-2 text-[13px] text-text-secondary leading-[1.5] border-t"
-        style={{ borderColor: 'rgba(255,255,255,0.08)', fontFamily: 'var(--font-body)' }}
+        className="mt-3 pt-3 space-y-1.5 text-[13px] text-text-secondary leading-[1.55] border-t"
+        style={{ borderColor: 'rgba(255,255,255,0.08)', fontFamily: 'var(--font-body)', wordBreak: 'keep-all' }}
       >
-        <div className="flex flex-col items-start">
-          <span className="font-bold mb-1 text-[14px]" style={{ color: '#34D399' }}>보강</span>
-          <span>사주 용신을<br />도와줘요</span>
+        <div className="flex items-baseline gap-2">
+          <span className="font-bold text-[14px] shrink-0" style={{ color: '#34D399' }}>보강</span>
+          <span>사주 용신을 도와줘요</span>
         </div>
-        <div className="flex flex-col items-start">
-          <span className="font-bold mb-1 text-[14px]" style={{ color: '#CBD5E1' }}>중립</span>
-          <span>도움도<br />거스름도 약해요</span>
+        <div className="flex items-baseline gap-2">
+          <span className="font-bold text-[14px] shrink-0" style={{ color: '#CBD5E1' }}>중립</span>
+          <span>도움도 거스름도 약해요</span>
         </div>
-        <div className="flex flex-col items-start">
-          <span className="font-bold mb-1 text-[14px]" style={{ color: '#F87171' }}>거스름</span>
-          <span>사주 기신을<br />자극해요</span>
+        <div className="flex items-baseline gap-2">
+          <span className="font-bold text-[14px] shrink-0" style={{ color: '#F87171' }}>거스름</span>
+          <span>사주 기신을 자극해요</span>
         </div>
       </div>
 
@@ -497,33 +500,129 @@ export function SummaryScoreVisual({
 // ─────────────────────────────────────────────────────────────────────────────
 // 3a) 강점 박스 (strength 섹션용) — 사주 매칭 기반 자동 추출
 // ─────────────────────────────────────────────────────────────────────────────
+/**
+ * 이름의 강점 신호 추출 — 음령·자원·분포 3축에서 사주 용신 매칭 결을 자동 분석.
+ * 단순 매칭 여부만이 아니라 "어느 글자/한자에 어떤 강점이 깃들어 있는지" 구체 묘사.
+ */
 function buildStrengthSignals(
   yongSinEl: string,
   eumElements: string[],
   jawonElements: string[],
-): string[] {
-  const out: string[] = [];
-  if (eumElements.includes(yongSinEl)) out.push(`음령에 용신 ${yongSinEl} 포함\n발음이 사주 보강`);
-  if (jawonElements.length > 0 && jawonElements.includes(yongSinEl)) {
-    out.push(`한자 자원에 용신 ${yongSinEl} 포함\n부수가 사주 보강`);
+  chars: string[],
+  hanjas: Array<{ char: string; jawon: string }>,
+): Array<{ headline: string; detail: string }> {
+  const out: Array<{ headline: string; detail: string }> = [];
+
+  // 1. 음령 용신 매칭 — 어느 한글 음절(들)에 용신 오행이 깃들어 있는지
+  if (yongSinEl && eumElements.includes(yongSinEl)) {
+    const matchingChars = chars
+      .map((c, i) => (eumElements[i] === yongSinEl ? c : null))
+      .filter((c): c is string => !!c);
+    out.push({
+      headline: `음령에 용신 ${yongSinEl} 깃듦`,
+      detail: matchingChars.length > 0
+        ? `"${matchingChars.join('·')}" 글자가 발음에서 사주 용신을 받쳐줘요.`
+        : `한글 발음이 사주 용신을 보강해요.`,
+    });
   }
-  if (out.length === 0) out.push('직접적 용신 매칭은 없으나 다른 영역에서 보강');
+
+  // 2. 자원오행 용신 매칭 — 어느 한자(들)의 부수가 용신 오행인지
+  if (yongSinEl && hanjas.length > 0) {
+    const matching = hanjas.filter(h => h.jawon === yongSinEl);
+    if (matching.length > 0) {
+      out.push({
+        headline: `자원오행에 용신 ${yongSinEl} 깃듦`,
+        detail: `한자 "${matching.map(h => h.char).join('·')}"의 부수가 사주 용신을 보태요.`,
+      });
+    }
+  }
+
+  // 3. 음령 분포 균형 — 5오행 중 3개 이상에 골고루 흩어진 이름
+  const eumDistinct = new Set(eumElements.filter(Boolean)).size;
+  if (eumDistinct >= 3) {
+    out.push({
+      headline: `음령 ${eumDistinct}오행 분포`,
+      detail: `한 기운에 쏠리지 않고 여러 영역의 결을 골고루 품은 이름이에요.`,
+    });
+  }
+
+  // 4. fallback — 매칭이 없을 때도 의미있는 안내
+  if (out.length === 0) {
+    if (yongSinEl) {
+      out.push({
+        headline: `이름 자체엔 용신 ${yongSinEl} 직접 매칭이 없어요`,
+        detail: `호명·필명·서명·SNS 닉네임에 용신 오행을 보태는 보완을 고려해 보세요.`,
+      });
+    } else {
+      out.push({
+        headline: '명확한 강점 신호가 추출되지 않았어요',
+        detail: '본문 풀이에서 결의 흐름을 자세히 참고해 주세요.',
+      });
+    }
+  }
+
   return out;
 }
 
+/**
+ * 이름의 약점·주의 신호 추출 — 음령·자원·편중 3축에서 사주 기신 자극 결을 자동 분석.
+ */
 function buildShadowSignals(
   giSinEl: string | undefined,
   eumElements: string[],
   jawonElements: string[],
-): string[] {
-  const out: string[] = [];
+  chars: string[],
+  hanjas: Array<{ char: string; jawon: string }>,
+): Array<{ headline: string; detail: string }> {
+  const out: Array<{ headline: string; detail: string }> = [];
+
+  // 1. 음령 기신 매칭
   if (giSinEl && eumElements.includes(giSinEl)) {
-    out.push(`음령에 기신 ${giSinEl} 포함\n발음에서 마찰 가능`);
+    const matchingChars = chars
+      .map((c, i) => (eumElements[i] === giSinEl ? c : null))
+      .filter((c): c is string => !!c);
+    out.push({
+      headline: `음령에 기신 ${giSinEl} 포함`,
+      detail: matchingChars.length > 0
+        ? `"${matchingChars.join('·')}" 글자가 사주 기신 오행을 자극해 발음에서 마찰이 생겨요.`
+        : `발음에서 사주 기신을 자극하는 결이 있어요.`,
+    });
   }
-  if (giSinEl && jawonElements.length > 0 && jawonElements.includes(giSinEl)) {
-    out.push(`한자 자원에 기신 ${giSinEl} 포함\n부수에서 거스름`);
+
+  // 2. 자원오행 기신 매칭
+  if (giSinEl && hanjas.length > 0) {
+    const matching = hanjas.filter(h => h.jawon === giSinEl);
+    if (matching.length > 0) {
+      out.push({
+        headline: `자원오행에 기신 ${giSinEl} 포함`,
+        detail: `한자 "${matching.map(h => h.char).join('·')}"의 부수가 사주 흐름을 거슬러요.`,
+      });
+    }
   }
-  if (out.length === 0) out.push('치명적 기신 매칭은 없어 큰 부담 없음');
+
+  // 3. 음령 편중 — 한 오행에 3개 이상 쏠림
+  const eumCounts: Record<string, number> = {};
+  eumElements.forEach(e => { if (e) eumCounts[e] = (eumCounts[e] ?? 0) + 1; });
+  const entries = Object.entries(eumCounts);
+  const maxEntry = entries.reduce<[string, number] | null>(
+    (best, cur) => (best === null || cur[1] > best[1] ? cur : best),
+    null,
+  );
+  if (maxEntry && maxEntry[1] >= 3) {
+    out.push({
+      headline: `음령이 ${maxEntry[0]} 한 기운에 치우침`,
+      detail: `한 영역만 강하게 흐르고 다른 영역의 결은 부족해요.`,
+    });
+  }
+
+  // 4. fallback
+  if (out.length === 0) {
+    out.push({
+      headline: '치명적 마찰 신호가 추출되지 않았어요',
+      detail: '전체적으로 큰 부담 없이 흐르는 결이에요. 본문에서 미세한 결을 함께 살펴보세요.',
+    });
+  }
+
   return out;
 }
 
@@ -531,34 +630,33 @@ export function StrengthVisual({
   yongSinEl,
   eumElements,
   jawonElements,
+  chars,
+  hanjas,
 }: {
   yongSinEl: string;
   eumElements: string[];
   jawonElements: string[];
+  chars: string[];
+  hanjas: Array<{ char: string; jawon: string }>;
 }) {
-  const signals = buildStrengthSignals(yongSinEl, eumElements, jawonElements);
+  const signals = buildStrengthSignals(yongSinEl, eumElements, jawonElements, chars, hanjas);
   return (
     <div
       className="rounded-2xl p-4 border mb-3"
       style={{ background: 'rgba(52,211,153,0.06)', borderColor: 'rgba(52,211,153,0.30)' }}
     >
-      <div className="flex items-center gap-2 mb-1.5">
+      <div className="flex items-center gap-2 mb-3">
         <span className="text-[17px] font-bold" style={{ color: '#34D399' }}>이름의 강점 신호</span>
       </div>
-      <div
-        className="text-[14px] text-text-secondary mb-3 leading-[1.65]"
-        style={{ fontFamily: 'var(--font-body)' }}
-      >
-        사주 용신({yongSinEl || '?'})을 보태는 자리를 자동 추출했어요.
-      </div>
-      <ul className="space-y-2.5">
-        {signals.map((p, i) => (
+      <ul className="space-y-3">
+        {signals.map((s, i) => (
           <li
             key={i}
-            className="text-[17px] text-text-secondary leading-[1.75] tracking-[-0.005em] whitespace-pre-line"
-            style={{ fontFamily: 'var(--font-body)' }}
+            className="leading-[1.65] tracking-[-0.005em]"
+            style={{ fontFamily: 'var(--font-body)', wordBreak: 'keep-all', overflowWrap: 'break-word' }}
           >
-            {p}
+            <div className="text-[16px] font-bold text-text-primary mb-1">{s.headline}</div>
+            <div className="text-[15px] text-text-secondary">{s.detail}</div>
           </li>
         ))}
       </ul>
@@ -570,34 +668,33 @@ export function ShadowVisual({
   giSinEl,
   eumElements,
   jawonElements,
+  chars,
+  hanjas,
 }: {
   giSinEl?: string;
   eumElements: string[];
   jawonElements: string[];
+  chars: string[];
+  hanjas: Array<{ char: string; jawon: string }>;
 }) {
-  const signals = buildShadowSignals(giSinEl, eumElements, jawonElements);
+  const signals = buildShadowSignals(giSinEl, eumElements, jawonElements, chars, hanjas);
   return (
     <div
       className="rounded-2xl p-4 border mb-3"
       style={{ background: 'rgba(248,113,113,0.06)', borderColor: 'rgba(248,113,113,0.30)' }}
     >
-      <div className="flex items-center gap-2 mb-1.5">
+      <div className="flex items-center gap-2 mb-3">
         <span className="text-[17px] font-bold" style={{ color: '#F87171' }}>주의 신호</span>
       </div>
-      <div
-        className="text-[14px] text-text-secondary mb-3 leading-[1.65]"
-        style={{ fontFamily: 'var(--font-body)' }}
-      >
-        사주 기신({giSinEl || '?'})을 자극하는 자리를 자동 추출했어요.
-      </div>
-      <ul className="space-y-2.5">
-        {signals.map((c, i) => (
+      <ul className="space-y-3">
+        {signals.map((s, i) => (
           <li
             key={i}
-            className="text-[17px] text-text-secondary leading-[1.75] tracking-[-0.005em] whitespace-pre-line"
-            style={{ fontFamily: 'var(--font-body)' }}
+            className="leading-[1.65] tracking-[-0.005em]"
+            style={{ fontFamily: 'var(--font-body)', wordBreak: 'keep-all', overflowWrap: 'break-word' }}
           >
-            {c}
+            <div className="text-[16px] font-bold text-text-primary mb-1">{s.headline}</div>
+            <div className="text-[15px] text-text-secondary">{s.detail}</div>
           </li>
         ))}
       </ul>
@@ -815,20 +912,21 @@ export function AdviceVisual({ bullets }: { bullets: string[] }): JSX.Element | 
       {bullets.map((b, i) => (
         <div
           key={i}
-          className="flex items-start gap-2.5 rounded-xl p-3.5 bg-white/[0.04] border border-white/10"
+          className="rounded-xl p-4 bg-white/[0.04] border border-white/10"
         >
-          <span
-            className="flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-[12px] font-bold text-cta"
+          {/* 번호 칩 — 한 줄 단독 (상단). 본문은 그 아래 전체 너비로 흘려 들여쓰기 회피 */}
+          <div
+            className="inline-flex items-center justify-center text-[13px] font-bold text-cta mb-2 px-2.5 py-0.5 rounded-md"
             style={{ background: 'rgba(124,92,252,0.15)', border: '1px solid rgba(124,92,252,0.40)' }}
           >
             {i + 1}
-          </span>
-          <span
+          </div>
+          <div
             className="text-[17px] text-text-secondary leading-[1.75] tracking-[-0.005em]"
-            style={{ fontFamily: 'var(--font-body)' }}
+            style={{ fontFamily: 'var(--font-body)', wordBreak: 'keep-all', overflowWrap: 'break-word' }}
           >
             {b}
-          </span>
+          </div>
         </div>
       ))}
     </div>

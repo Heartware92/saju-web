@@ -2058,9 +2058,25 @@ function MoreFortuneSectionedCard({
                   </>
                 );
               case 'strength':
-                return <StrengthVisual yongSinEl={ctx.yongSinEl} eumElements={ctx.elements} jawonElements={ctx.jawonElements} />;
+                return (
+                  <StrengthVisual
+                    yongSinEl={ctx.yongSinEl}
+                    eumElements={ctx.elements}
+                    jawonElements={ctx.jawonElements}
+                    chars={ctx.chars}
+                    hanjas={ctx.hanjas}
+                  />
+                );
               case 'shadow':
-                return <ShadowVisual giSinEl={ctx.giSinEl} eumElements={ctx.elements} jawonElements={ctx.jawonElements} />;
+                return (
+                  <ShadowVisual
+                    giSinEl={ctx.giSinEl}
+                    eumElements={ctx.elements}
+                    jawonElements={ctx.jawonElements}
+                    chars={ctx.chars}
+                    hanjas={ctx.hanjas}
+                  />
+                );
               default:
                 return null;
             }
@@ -2102,7 +2118,10 @@ function MoreFortuneSectionedCard({
                 && nameAdviceBullets.length > 0 && (
                 <AdviceVisual bullets={nameAdviceBullets} />
               )}
-              <div className="text-[17px] text-text-secondary leading-[1.85] tracking-[-0.005em] space-y-3">
+              <div
+                className="text-[17px] text-text-secondary leading-[1.85] tracking-[-0.005em] space-y-3"
+                style={{ wordBreak: 'keep-all', overflowWrap: 'break-word' }}
+              >
                 {(() => {
                   // 단락 분리 + 단락 안에서 "- " "· " 같은 불릿 라인은 별도 리스트로 렌더
                   // name+preserve/rename 은 위에서 AdviceVisual 로 분리했으므로 renderBody 사용
