@@ -53,14 +53,14 @@ export function CorePalaceScores({ cores, overall }: CorePalaceScoresProps) {
           alignItems: 'stretch',
         }}
       >
-        <div style={{ position: 'relative', alignSelf: 'center', width: '100%', maxWidth: 560 }}>
+        <div style={{ position: 'relative', alignSelf: 'center', width: '100%', maxWidth: 720 }}>
           <RadarChart
             domains={domains}
-            size={460}
+            size={520}
             fillColor="rgba(167,139,250,0.22)"
             strokeColor="rgba(167,139,250,0.85)"
-            labelFontSize={28}
-            scoreFontSize={32}
+            labelFontSize={26}
+            scoreFontSize={30}
           />
           <div
             style={{
@@ -80,7 +80,7 @@ export function CorePalaceScores({ cores, overall }: CorePalaceScoresProps) {
           </div>
         </div>
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
           {cores.map((c, i) => {
             const color = colorOfScore(c.score);
             return (
@@ -91,18 +91,18 @@ export function CorePalaceScores({ cores, overall }: CorePalaceScoresProps) {
                 transition={{ duration: 0.35, delay: i * 0.04 }}
                 style={{
                   display: 'grid',
-                  gridTemplateColumns: '64px 1fr 38px',
+                  gridTemplateColumns: '92px 1fr 56px',
                   alignItems: 'center',
-                  gap: 8,
+                  gap: 12,
                 }}
               >
-                <div style={{ display: 'flex', flexDirection: 'column', lineHeight: 1.2 }}>
-                  <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-primary)', fontFamily: 'var(--font-serif)' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', lineHeight: 1.25 }}>
+                  <span style={{ fontSize: 18, fontWeight: 700, color: 'var(--text-primary)', fontFamily: 'var(--font-serif)' }}>
                     {c.label}
                   </span>
-                  <span style={{ fontSize: 10, color: 'var(--text-tertiary)' }}>{c.palaceName}</span>
+                  <span style={{ fontSize: 13, color: 'var(--text-tertiary)' }}>{c.palaceName}</span>
                 </div>
-                <div style={{ height: 6, borderRadius: 999, background: 'rgba(255,255,255,0.06)', overflow: 'hidden' }}>
+                <div style={{ height: 10, borderRadius: 999, background: 'rgba(255,255,255,0.06)', overflow: 'hidden' }}>
                   <motion.div
                     initial={{ width: 0 }}
                     animate={{ width: `${c.score}%` }}
@@ -110,7 +110,7 @@ export function CorePalaceScores({ cores, overall }: CorePalaceScoresProps) {
                     style={{ height: '100%', background: color, borderRadius: 999 }}
                   />
                 </div>
-                <div style={{ fontSize: 14, fontWeight: 700, color, textAlign: 'right', fontFamily: 'var(--font-serif)' }}>
+                <div style={{ fontSize: 22, fontWeight: 800, color, textAlign: 'right', fontFamily: 'var(--font-serif)' }}>
                   {c.score}
                 </div>
               </motion.div>

@@ -44,12 +44,13 @@ export function RadarChart({
   const n = domains.length;
   if (n < 3) return null;
 
-  // 큰 폰트일 때 라벨이 차트 영역과 겹치지 않도록 pad와 labelR을 폰트 기준으로 조정
-  const pad = Math.max(62, labelFontSize * 4.5);
+  // 라벨이 차트 영역 밖으로 잘리지 않을 만큼만 pad 확보 — 폰트 줄높이 1.6배 정도면 충분
+  const pad = Math.max(48, Math.round(labelFontSize * 1.8 + 10));
   const cx = pad + size / 2;
   const cy = pad + size / 2;
-  const maxR = size * 0.32;
-  const labelR = size * 0.46;
+  // 차트 자체를 더 크게 — 폰트가 크면 labelR을 살짝 더 안쪽으로 (글자가 차트 모서리에 더 붙음)
+  const maxR = size * 0.36;
+  const labelR = size * 0.44;
   const vbW = size + pad * 2;
   const vbH = size + pad * 2;
   const gridLevels = [20, 40, 60, 80, 100];
