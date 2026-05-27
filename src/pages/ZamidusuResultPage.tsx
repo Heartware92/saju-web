@@ -47,7 +47,6 @@ import { CorePalaceScores } from '../components/zamidusu/CorePalaceScores';
 import { MutagenCards } from '../components/zamidusu/MutagenCards';
 import { DaehanTimeline } from '../components/zamidusu/DaehanTimeline';
 import { CharacterCard } from '../components/zamidusu/CharacterCard';
-import { GekkukList } from '../components/zamidusu/GekkukBadge';
 import { YearlyTimeline, MonthlyTimeline } from '../components/zamidusu/HoroscopeTimeline';
 import { getYearlyHoroscopes, getMonthlyHoroscopes, type YearlyHoroscope, type MonthlyHoroscope } from '../engine/zamidusu/horoscope';
 import {
@@ -1249,13 +1248,10 @@ export default function ZamidusuResultPage() {
           />
         </div>
 
-        {/* 격국(格局) — 자동 판정된 명반의 격국 */}
-        {reading && reading.gekkuks.length > 0 && (
-          <div className={styles.section}>
-            <h2 style={{ textAlign: 'center', marginBottom: 14, fontSize: 18 }}>나의 격국</h2>
-            <GekkukList gekkuks={reading.gekkuks} />
-          </div>
-        )}
+        {/* 격국 카드 노출은 제거 (사용자 결정 2026-05-27).
+            격국 데이터는 reading.gekkuks 그대로 살아있고, AI 풀이 본문 안에 일상 표현으로
+            녹여 들어감 (prompts.ts의 [overview]·[main_star] 본문 지침 + 별도 한자 노출 금지 규칙).
+            진입장벽 우려로 한자 격국명을 직접 노출하지 않는 대신 본문 묘사로만 활용. */}
 
         {/* 봉신연의 캐릭터 카드 — 14주성 의인화 */}
         {reading && reading.characterCards.length > 0 && (
