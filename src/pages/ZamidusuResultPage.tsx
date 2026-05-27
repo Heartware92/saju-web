@@ -673,28 +673,52 @@ export default function ZamidusuResultPage() {
   }, [selectedPalace]);
 
   // 명반 계산용 입력 — 캐시 키와 chart 둘 다 같은 입력에서 파생되도록 분리
+  //
+  // 시진 결정 시 한국식 30분 시프트 적용 (정통사주와 일관)
+  //  - 한국 표준자오선 135°와 실제 서울 127.5° 사이 30분 시차를 시진에 반영
+  //  - 13:24 입력 → 12:54로 시프트 → 오시(11~13)에 안착
+  //  - 정통사주/포스텔러/점신 등 한국 시장 표준과 동일
   const birthInput = useMemo(() => {
     if (hourUnknown) return null;
+    let rawY: number, rawM: number, rawD: number, rawH: number, rawMin: number;
+    let gender: 'male' | 'female';
+    let calendarType: 'solar' | 'lunar';
+
     if (hasUrlBirth) {
-      return {
-        year: parseInt(searchParams!.get('year')!),
-        month: parseInt(searchParams!.get('month')!),
-        day: parseInt(searchParams!.get('day')!),
-        hour: parseInt(searchParams!.get('hour') || '12'),
-        gender: (searchParams!.get('gender') || 'male') as 'male' | 'female',
-        calendarType: (searchParams!.get('calendarType') || 'solar') as 'solar' | 'lunar',
-      };
-    }
-    if (targetProfile) {
+      rawY = parseInt(searchParams!.get('year')!);
+      rawM = parseInt(searchParams!.get('month')!);
+      rawD = parseInt(searchParams!.get('day')!);
+      rawH = parseInt(searchParams!.get('hour') || '12');
+      rawMin = parseInt(searchParams!.get('minute') || '0');
+      gender = (searchParams!.get('gender') || 'male') as 'male' | 'female';
+      calendarType = (searchParams!.get('calendarType') || 'solar') as 'solar' | 'lunar';
+    } else if (targetProfile) {
       const [y, m, d] = targetProfile.birth_date.split('-').map(Number);
-      return {
-        year: y, month: m, day: d,
-        hour: targetProfile.birth_time ? parseInt(targetProfile.birth_time.split(':')[0]) : 12,
-        gender: targetProfile.gender,
-        calendarType: targetProfile.calendar_type,
-      };
+      const [h, min] = targetProfile.birth_time
+        ? targetProfile.birth_time.split(':').map(Number)
+        : [12, 0];
+      rawY = y; rawM = m; rawD = d;
+      rawH = h ?? 12;
+      rawMin = min ?? 0;
+      gender = targetProfile.gender;
+      calendarType = targetProfile.calendar_type;
+    } else {
+      return null;
     }
-    return null;
+
+    // 한국식 30분 시프트 — 시계 시간에서 30분 빼서 시진 경계 보정
+    // 자정 가까운 시각은 전날로 넘어갈 수 있으므로 Date 객체 사용
+    const dt = new Date(rawY, rawM - 1, rawD, rawH, rawMin);
+    const shifted = new Date(dt.getTime() - 30 * 60 * 1000);
+
+    return {
+      year: shifted.getFullYear(),
+      month: shifted.getMonth() + 1,
+      day: shifted.getDate(),
+      hour: shifted.getHours(),
+      gender,
+      calendarType,
+    };
   }, [searchParams, hourUnknown, hasUrlBirth, targetProfile]);
 
   const cacheKey = useMemo(() => {
