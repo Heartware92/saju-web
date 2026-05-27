@@ -170,28 +170,39 @@ function SymbolCardGrid({ symbols }: { symbols: DreamSymbolCardData[] }) {
               border: `1px solid ${color}40`,
             }}
           >
+            {/* 좌: 이름 / 우상단: 길흉·도메인 칩 (기호 없이) */}
             <div style={{
-              display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8, flexWrap: 'wrap',
+              display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between',
+              gap: 10, marginBottom: 10, flexWrap: 'nowrap',
             }}>
               <span style={{
                 fontSize: 17, fontWeight: 800,
                 fontFamily: 'var(--font-title)',
                 color: 'var(--text-primary)',
                 letterSpacing: '-0.01em',
+                flex: 1, minWidth: 0,
+                wordBreak: 'keep-all',
               }}>{s.name}</span>
-              <span style={{
-                fontSize: 11, fontWeight: 700,
-                padding: '2px 8px', borderRadius: 6,
-                color, background: `${color}20`,
-              }}>{polLabel}</span>
-              {domain && (
+              <div style={{
+                display: 'flex', gap: 4, flexShrink: 0,
+                alignItems: 'center',
+              }}>
                 <span style={{
-                  fontSize: 11, fontWeight: 600,
-                  padding: '2px 8px', borderRadius: 6,
-                  color: domain.color, background: `${domain.color}15`,
-                  border: `1px solid ${domain.color}40`,
-                }}>{domain.icon} {domain.id}</span>
-              )}
+                  fontSize: 11, fontWeight: 700,
+                  padding: '3px 9px', borderRadius: 6,
+                  color, background: `${color}20`,
+                  whiteSpace: 'nowrap',
+                }}>{polLabel}</span>
+                {domain && (
+                  <span style={{
+                    fontSize: 11, fontWeight: 600,
+                    padding: '3px 9px', borderRadius: 6,
+                    color: domain.color, background: `${domain.color}15`,
+                    border: `1px solid ${domain.color}40`,
+                    whiteSpace: 'nowrap',
+                  }}>{domain.id}</span>
+                )}
+              </div>
             </div>
             <p style={{
               margin: 0, fontSize: 14, lineHeight: 1.7,
@@ -224,14 +235,14 @@ function DomainBarsCard({ domains }: { domains: DreamDomainScore[] }) {
               marginBottom: 6,
             }}>
               <span style={{
-                fontSize: 14, fontWeight: 700,
+                fontSize: 15, fontWeight: 700,
                 color: 'var(--text-primary)',
                 fontFamily: 'var(--font-title)',
               }}>
-                {meta?.icon} {d.label}
+                {d.label}
               </span>
               <span style={{
-                fontSize: 13, fontWeight: 800,
+                fontSize: 14, fontWeight: 800,
                 color, fontFamily: 'var(--font-serif)',
               }}>{d.score}</span>
             </div>
@@ -253,8 +264,8 @@ function DomainBarsCard({ domains }: { domains: DreamDomainScore[] }) {
             </div>
             {d.note && (
               <p style={{
-                margin: 0, fontSize: 13, lineHeight: 1.6,
-                color: 'var(--text-tertiary)',
+                margin: 0, fontSize: 14, lineHeight: 1.75,
+                color: 'var(--text-secondary)',
                 fontFamily: 'var(--font-body)',
                 wordBreak: 'keep-all',
               }}>{d.note}</p>
@@ -348,33 +359,18 @@ function SijinChart({ timing, timeBandId }: { timing: string; timeBandId?: strin
 
 function AdviceCard({ advice }: { advice: { body: string; items: DreamAdviceItem[] } }) {
   const paras = advice.body.split(/\n\n+/).map(p => p.trim()).filter(Boolean);
+  // 다른 운세풀이(자미두수·신년운세) 스타일에 맞춰 — 시각 데이터(처방 칩) 상단, 본문 하단.
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-      {paras.length > 0 && (
-        <div style={{
-          padding: '16px 18px', borderRadius: 12,
-          background: 'rgba(52,211,153,0.08)',
-          border: '1px solid rgba(52,211,153,0.28)',
-        }}>
-          {paras.map((p, i) => (
-            <p key={i} style={{
-              margin: i === 0 ? 0 : '10px 0 0 0',
-              fontSize: 15, lineHeight: 1.8,
-              color: 'var(--text-primary)',
-              fontFamily: 'var(--font-body)',
-              wordBreak: 'keep-all',
-            }}>{p}</p>
-          ))}
-        </div>
-      )}
+      {/* 1) 처방 칩 (시각 데이터) — 상단 */}
       {advice.items.length > 0 && (
         <div style={{
           padding: 14,
-          background: 'rgba(124,92,252,0.06)',
-          border: '1px solid rgba(124,92,252,0.20)',
+          background: 'rgba(52,211,153,0.06)',
+          border: '1px solid rgba(52,211,153,0.28)',
           borderRadius: 12,
           display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))',
           gap: 10,
         }}>
           {advice.items.map((it, i) => (
@@ -386,7 +382,7 @@ function AdviceCard({ advice }: { advice: { body: string; items: DreamAdviceItem
             }}>
               <div style={{
                 fontSize: 12, fontWeight: 800,
-                color: 'var(--cta-primary)',
+                color: '#34D399',
                 marginBottom: 4,
                 fontFamily: 'var(--font-title)',
                 letterSpacing: '-0.01em',
@@ -396,8 +392,23 @@ function AdviceCard({ advice }: { advice: { body: string; items: DreamAdviceItem
                 color: 'var(--text-primary)',
                 lineHeight: 1.5,
                 fontFamily: 'var(--font-body)',
+                wordBreak: 'keep-all',
               }}>{it.value}</div>
             </div>
+          ))}
+        </div>
+      )}
+      {/* 2) 본문 풀이 — 하단 */}
+      {paras.length > 0 && (
+        <div>
+          {paras.map((p, i) => (
+            <p key={i} style={{
+              margin: i === 0 ? 0 : '12px 0 0 0',
+              fontSize: 15, lineHeight: 1.85,
+              color: 'var(--text-secondary)',
+              fontFamily: 'var(--font-body)',
+              wordBreak: 'keep-all',
+            }}>{p}</p>
           ))}
         </div>
       )}
@@ -405,27 +416,69 @@ function AdviceCard({ advice }: { advice: { body: string; items: DreamAdviceItem
   );
 }
 
-function CautionBox({ text }: { text: string }) {
-  const paras = text.split(/\n\n+/).map(p => p.trim()).filter(Boolean);
-  if (paras.length === 0) {
+function CautionBox({ caution }: { caution: { body: string; items: DreamAdviceItem[] } }) {
+  const paras = caution.body.split(/\n\n+/).map(p => p.trim()).filter(Boolean);
+  if (paras.length === 0 && caution.items.length === 0) {
     return <p style={{ fontSize: 14, color: 'var(--text-tertiary)' }}>주의할 점은 특별히 없어요.</p>;
   }
+  // AdviceCard와 동일 패턴 — 시각 데이터(회피 칩) 상단, 본문 하단.
   return (
-    <div style={{
-      padding: '14px 18px',
-      borderLeft: '3px solid #F87171',
-      background: 'rgba(248,113,113,0.06)',
-      borderRadius: 10,
-    }}>
-      {paras.map((p, i) => (
-        <p key={i} style={{
-          margin: i === 0 ? 0 : '10px 0 0 0',
-          fontSize: 15, lineHeight: 1.8,
-          color: 'var(--text-secondary)',
-          fontFamily: 'var(--font-body)',
-          wordBreak: 'keep-all',
-        }}>{p}</p>
-      ))}
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+      {/* 1) 회피 칩 (시각 데이터) — 상단 */}
+      {caution.items.length > 0 && (
+        <div style={{
+          padding: 14,
+          background: 'rgba(248,113,113,0.06)',
+          border: '1px solid rgba(248,113,113,0.28)',
+          borderRadius: 12,
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))',
+          gap: 10,
+        }}>
+          {caution.items.map((it, i) => (
+            <div key={i} style={{
+              padding: '12px 14px',
+              background: 'rgba(20,12,38,0.5)',
+              borderRadius: 10,
+              border: '1px solid rgba(255,255,255,0.06)',
+            }}>
+              <div style={{
+                fontSize: 12, fontWeight: 800,
+                color: '#F87171',
+                marginBottom: 4,
+                fontFamily: 'var(--font-title)',
+                letterSpacing: '-0.01em',
+              }}>{it.key}</div>
+              <div style={{
+                fontSize: 14, fontWeight: 600,
+                color: 'var(--text-primary)',
+                lineHeight: 1.5,
+                fontFamily: 'var(--font-body)',
+                wordBreak: 'keep-all',
+              }}>{it.value}</div>
+            </div>
+          ))}
+        </div>
+      )}
+      {/* 2) 본문 풀이 — 하단 (좌측 띠 박스로 caution 톤 유지) */}
+      {paras.length > 0 && (
+        <div style={{
+          padding: '14px 18px',
+          borderLeft: '3px solid #F87171',
+          background: 'rgba(248,113,113,0.04)',
+          borderRadius: 10,
+        }}>
+          {paras.map((p, i) => (
+            <p key={i} style={{
+              margin: i === 0 ? 0 : '10px 0 0 0',
+              fontSize: 15, lineHeight: 1.85,
+              color: 'var(--text-secondary)',
+              fontFamily: 'var(--font-body)',
+              wordBreak: 'keep-all',
+            }}>{p}</p>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -748,7 +801,7 @@ export function DreamResultCard({ title, result, timeBandId }: Props) {
             </SectionCollapsible>
 
             <SectionCollapsible title="조심할 점" enterDelay={0.30}>
-              <CautionBox text={result.oriental_caution} />
+              <CautionBox caution={result.oriental_caution} />
             </SectionCollapsible>
           </motion.div>
         ) : (

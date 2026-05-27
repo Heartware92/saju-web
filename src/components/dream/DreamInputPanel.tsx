@@ -6,6 +6,12 @@
  * V1(흐릿/선명 모드) 폐기. 단일 textarea + 꿈꾼 시각 선택 + 반복 여부.
  * placeholder 안에 두 종류 입력 예시(긴 서술 + 단어 나열)를 노출해
  * 사용자가 모드 분기 없이 자유롭게 작성하도록 한다.
+ *
+ * V2.1 UI 개선:
+ *   - 상위 카드 헤더가 "꿈 내용 입력"을 이미 표시하므로 패널 안 라벨은 제거.
+ *   - 안내글 폰트 13 → 15, 본문 위계와 통일.
+ *   - 시간 칩 3열 → 2열 (모바일 좁은 폭에서 칩 내 텍스트 잘림 방지).
+ *   - 시간 칩 부제 단축 (시간 범위만 노출, 영험도는 결과 페이지 그래프에서 확인).
  */
 
 import { useEffect, useState } from 'react';
@@ -20,6 +26,17 @@ interface Props {
 
 const DREAM_MIN = 5;
 const DREAM_MAX = 800;
+
+// 입력 UI 전용 단축 시간 라벨 — TIME_BANDS의 sub("03:30~07:30 · 영험도 최고")은
+// 칩 폭에 들어가지 않아 가독성 떨어짐. 시간 범위만 깔끔하게.
+const TIME_RANGE_LABEL: Record<TimeBand['id'], string> = {
+  dawn:     '03:30 ~ 07:30',
+  morning:  '07:30 ~ 11:30',
+  noon:     '11:30 ~ 17:30',
+  evening:  '17:30 ~ 21:30',
+  midnight: '21:30 ~ 03:30',
+  unknown:  '시간 모름',
+};
 
 export function DreamInputPanel({
   onTextChange,
@@ -41,11 +58,10 @@ export function DreamInputPanel({
   useEffect(() => { onRepeatingChange?.(isRepeating); }, [isRepeating, onRepeatingChange]);
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-      {/* ── 꿈 내용 입력 ───────────────────────────────── */}
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+      {/* ── 꿈 내용 입력 — 상위 카드 헤더가 이미 라벨링하므로 안내문만 ── */}
       <div>
-        <h3 style={labelStyle}>꿈 내용</h3>
-        <p style={subLabelStyle}>
+        <p style={helpStyle}>
           또렷이 기억나면 장면 그대로, 흐릿하면 떠오르는 단어 몇 개만 적어도 풀어드려요.
         </p>
         <textarea
@@ -59,7 +75,7 @@ export function DreamInputPanel({
           rows={9}
           style={{
             width: '100%',
-            padding: '14px 16px',
+            padding: '16px 18px',
             background: 'rgba(255,255,255,0.05)',
             border: '1px solid rgba(255,255,255,0.12)',
             borderRadius: 12,
@@ -67,13 +83,13 @@ export function DreamInputPanel({
             fontSize: 16,
             lineHeight: 1.75,
             resize: 'vertical',
-            minHeight: 180,
+            minHeight: 200,
             fontFamily: 'inherit',
           }}
         />
         <div style={{
           display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-          marginTop: 8, fontSize: 13, color: 'var(--text-tertiary)',
+          marginTop: 10, fontSize: 14, color: 'var(--text-tertiary)',
         }}>
           <span>
             {dreamText.trim().length < DREAM_MIN
@@ -86,11 +102,20 @@ export function DreamInputPanel({
 
       {/* ── 꿈꾼 시각 (선택) ──────────────────────────── */}
       <div>
-        <h3 style={labelStyle}>꿈꾼 시각 (선택)</h3>
-        <p style={subLabelStyle}>
-          새벽 꿈일수록 동양 전통에서 영험도가 높다고 봅니다. 시간을 알려주시면 시진(時辰) 보정까지 결합해 풀이합니다.
+        <h3 style={sectionLabelStyle}>
+          꿈꾼 시각
+          <span style={{ marginLeft: 8, fontSize: 13, fontWeight: 500, color: 'var(--text-tertiary)' }}>
+            (선택)
+          </span>
+        </h3>
+        <p style={helpStyle}>
+          새벽 꿈일수록 동양 전통에서 영험도가 높다고 봐요. 시간을 알려주시면 시진(時辰) 보정까지 결합해 풀이합니다.
         </p>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(2, 1fr)',
+          gap: 10,
+        }}>
           {TIME_BANDS.map(b => (
             <button
               key={b.id}
@@ -98,8 +123,14 @@ export function DreamInputPanel({
               onClick={() => setTimeBandId(b.id)}
               style={timeChipStyle(timeBandId === b.id)}
             >
-              <span style={{ fontSize: 14, fontWeight: 700, marginBottom: 2 }}>{b.label}</span>
-              <span style={{ fontSize: 11, opacity: 0.75 }}>{b.sub}</span>
+              <span style={{ fontSize: 15, fontWeight: 700, lineHeight: 1.3 }}>{b.label}</span>
+              <span style={{
+                fontSize: 12, fontWeight: 500,
+                opacity: 0.8, marginTop: 4,
+                whiteSpace: 'nowrap',
+              }}>
+                {TIME_RANGE_LABEL[b.id]}
+              </span>
             </button>
           ))}
         </div>
@@ -123,17 +154,23 @@ export function DreamInputPanel({
   );
 }
 
-const labelStyle: React.CSSProperties = {
-  fontSize: 16, fontWeight: 700, color: 'var(--text-primary)',
-  margin: '0 0 6px 0',
-  lineHeight: 1.5,
+// ── 스타일 ─────────────────────────────────────────────
+
+const sectionLabelStyle: React.CSSProperties = {
+  fontSize: 17, fontWeight: 700, color: 'var(--text-primary)',
+  margin: '0 0 8px 0',
+  lineHeight: 1.4,
   wordBreak: 'keep-all',
+  display: 'flex', alignItems: 'baseline',
+  fontFamily: 'var(--font-title)',
 };
 
-const subLabelStyle: React.CSSProperties = {
-  fontSize: 13, color: 'var(--text-tertiary)',
-  margin: '0 0 10px 0',
-  lineHeight: 1.6,
+const helpStyle: React.CSSProperties = {
+  fontSize: 15, color: 'var(--text-secondary)',
+  margin: '0 0 12px 0',
+  lineHeight: 1.7,
+  wordBreak: 'keep-all',
+  fontFamily: 'var(--font-body)',
 };
 
 function timeChipStyle(active: boolean): React.CSSProperties {
@@ -141,7 +178,9 @@ function timeChipStyle(active: boolean): React.CSSProperties {
     display: 'flex',
     flexDirection: 'column',
     alignItems: 'flex-start',
-    padding: '10px 12px',
+    justifyContent: 'center',
+    padding: '14px 16px',
+    minHeight: 64,
     borderRadius: 12,
     border: `1.5px solid ${active ? 'var(--cta-primary)' : 'rgba(255,255,255,0.15)'}`,
     background: active ? 'rgba(139,92,246,0.18)' : 'rgba(255,255,255,0.04)',
@@ -150,5 +189,6 @@ function timeChipStyle(active: boolean): React.CSSProperties {
     transition: 'all 0.15s',
     textAlign: 'left',
     lineHeight: 1.3,
+    WebkitTapHighlightColor: 'transparent',
   };
 }

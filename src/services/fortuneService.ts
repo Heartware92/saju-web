@@ -2139,7 +2139,7 @@ export interface DreamV4Result {
   oriental_domains: DreamDomainScore[];
   oriental_timing: string;
   oriental_advice: { body: string; items: DreamAdviceItem[] };
-  oriental_caution: string;
+  oriental_caution: { body: string; items: DreamAdviceItem[] };
   // 서양 5섹션
   western_diagnosis: {
     clinical: DreamClinicalType;
@@ -2167,11 +2167,16 @@ const V4_KEYS = [
   'western_self_work',
 ] as const;
 
-// advice 본문 안 "키:값" 항목 화이트리스트. caution용 "조심할 *" 키는 제외 —
-// advice는 긍정 처방만, 회피 안내는 [oriental_caution]의 자연 문장으로 분리.
+// advice 본문 안 "키:값" 항목 화이트리스트 — 긍정 처방.
 const ORIENTAL_ADVICE_KEYS = new Set([
   '색', '방향', '시간', '숫자', '활동', '보석', '음식',
   '액막이', '환경', '보호',
+]);
+
+// caution 본문 안 "키:값" 항목 화이트리스트 — 회피 안내 시각화.
+const ORIENTAL_CAUTION_KEYS = new Set([
+  '조심할 시간', '조심할 방향', '조심할 색', '조심할 활동', '조심할 사람',
+  '피해야 할 음식', '피해야 할 장소',
 ]);
 
 const DOMAIN_ORDER = ['재물', '인연', '건강', '시험·학업', '직장·일', '가족·관계'] as const;
@@ -2270,7 +2275,22 @@ export const parseDreamV4 = (raw: string): DreamV4Result | null => {
   };
 
   // ── 주의 ───────────────────────────────────────────
-  const oriental_caution = extractV4Section(raw, 'oriental_caution');
+  const ocBody = extractV4Section(raw, 'oriental_caution');
+  const cautionBodyLines: string[] = [];
+  const cautionItems: DreamAdviceItem[] = [];
+  for (const ln of ocBody.split('\n')) {
+    const t = ln.trim();
+    const m = t.match(/^([가-힣\s]+?)\s*[:：]\s*(.+)$/);
+    if (m && ORIENTAL_CAUTION_KEYS.has(m[1].trim())) {
+      cautionItems.push({ key: m[1].trim(), value: m[2].trim() });
+    } else {
+      cautionBodyLines.push(ln);
+    }
+  }
+  const oriental_caution = {
+    body: cautionBodyLines.join('\n').replace(/\n{3,}/g, '\n\n').trim(),
+    items: cautionItems.slice(0, 5),
+  };
 
   // ── 서양 진단 ──────────────────────────────────────
   const wdBody = extractV4Section(raw, 'western_diagnosis');
