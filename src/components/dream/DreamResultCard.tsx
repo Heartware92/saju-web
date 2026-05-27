@@ -138,7 +138,7 @@ function PolarityScoreCard({ diag }: { diag: DreamV4Result['oriental_diagnosis']
       {/* 근거 본문 */}
       {diag.reason && (
         <p style={{
-          margin: 0, fontSize: 15, lineHeight: 1.8,
+          margin: 0, fontSize: 16, lineHeight: 1.85,
           color: 'var(--text-secondary)',
           fontFamily: 'var(--font-body)',
           wordBreak: 'keep-all',
@@ -278,7 +278,7 @@ function DomainBarsCard({ domains }: { domains: DreamDomainScore[] }) {
 }
 
 function SijinChart({ timing, timeBandId }: { timing: string; timeBandId?: string }) {
-  // 사용자 시각이 어느 시진에 매핑되는지 (TIME_BANDS 의 hour → SIJIN_RULES)
+  // 사용자 시각이 어느 시진에 매핑되는지 (TIME_BANDS 의 hour → SIJIN_RULES 인덱스)
   const band = TIME_BANDS.find(b => b.id === timeBandId);
   const userSijinIdx = (() => {
     if (!band || band.hour < 0) return -1;
@@ -298,19 +298,19 @@ function SijinChart({ timing, timeBandId }: { timing: string; timeBandId?: strin
   })();
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
       {/* 12지시 영험도 막대 그래프 */}
       <div>
         <div style={{
-          display: 'flex', gap: 3, alignItems: 'flex-end',
-          height: 80, marginBottom: 6,
+          display: 'flex', gap: 4, alignItems: 'flex-end',
+          height: 100, marginBottom: 10,
         }}>
           {SIJIN_RULES.map((s, i) => {
             const isUser = i === userSijinIdx;
             const heightPct = (s.weight / 5) * 100;
-            const barColor = s.weight >= 4 ? '#FBBF24' : s.weight >= 3 ? '#A78BFA' : 'rgba(255,255,255,0.15)';
+            const barColor = s.weight >= 4 ? '#FBBF24' : s.weight >= 3 ? '#A78BFA' : 'rgba(255,255,255,0.18)';
             return (
-              <div key={s.id} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
+              <div key={s.id} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
                 <motion.div
                   initial={{ height: 0 }}
                   animate={{ height: `${heightPct}%` }}
@@ -320,38 +320,47 @@ function SijinChart({ timing, timeBandId }: { timing: string; timeBandId?: strin
                     background: isUser
                       ? 'linear-gradient(180deg, #FCE8B2, #FBBF24)'
                       : barColor,
-                    borderRadius: '3px 3px 0 0',
-                    boxShadow: isUser ? '0 0 12px rgba(252,232,178,0.7)' : 'none',
+                    borderRadius: '4px 4px 0 0',
+                    boxShadow: isUser ? '0 0 14px rgba(252,232,178,0.7)' : 'none',
                   }}
                 />
                 <span style={{
-                  fontSize: 10, fontWeight: isUser ? 800 : 500,
-                  color: isUser ? '#FCE8B2' : 'var(--text-tertiary)',
+                  fontSize: 13, fontWeight: isUser ? 800 : 600,
+                  color: isUser ? '#FCE8B2' : 'var(--text-secondary)',
                   fontFamily: 'var(--font-title)',
+                  lineHeight: 1,
                 }}>{s.label.charAt(0)}</span>
               </div>
             );
           })}
         </div>
         <div style={{
-          fontSize: 11, color: 'var(--text-tertiary)',
+          fontSize: 12, color: 'var(--text-tertiary)',
           textAlign: 'center', fontFamily: 'var(--font-body)',
+          letterSpacing: '0.02em',
         }}>
-          자 · 축 · 인 · 묘 · 진 · 사 · 오 · 미 · 신 · 유 · 술 · 해 (12 시진)
+          12 시진 영험도 — 막대 높이는 정몽(正夢) 가능성
         </div>
       </div>
-      {/* 시진 본문 */}
+      {/* 시진 본문 — 자미두수·신년운세 본문 폰트와 동일 (var(--font-body) 16px) */}
       {timing && (
-        <p style={{
-          margin: 0, fontSize: 15, lineHeight: 1.8,
-          color: 'var(--text-secondary)',
-          fontFamily: 'var(--font-body)',
-          wordBreak: 'keep-all',
-          padding: '12px 14px',
+        <div style={{
+          padding: '16px 18px',
           background: 'rgba(252,232,178,0.06)',
           border: '1px solid rgba(252,232,178,0.20)',
-          borderRadius: 10,
-        }}>{timing}</p>
+          borderRadius: 12,
+        }}>
+          {timing.split(/\n\n+/).map((p, i) => (
+            <p key={i} style={{
+              margin: i === 0 ? 0 : '12px 0 0 0',
+              fontSize: 16, lineHeight: 1.85,
+              color: 'var(--text-primary)',
+              fontFamily: 'var(--font-body)',
+              wordBreak: 'keep-all',
+              letterSpacing: '-0.005em',
+            }}>{p}</p>
+          ))}
+        </div>
       )}
     </div>
   );
@@ -398,16 +407,17 @@ function AdviceCard({ advice }: { advice: { body: string; items: DreamAdviceItem
           ))}
         </div>
       )}
-      {/* 2) 본문 풀이 — 하단 */}
+      {/* 2) 본문 풀이 — 하단. 자미두수·신년운세 본문 폰트(16px SUIT)와 동일. */}
       {paras.length > 0 && (
         <div>
           {paras.map((p, i) => (
             <p key={i} style={{
               margin: i === 0 ? 0 : '12px 0 0 0',
-              fontSize: 15, lineHeight: 1.85,
+              fontSize: 16, lineHeight: 1.85,
               color: 'var(--text-secondary)',
               fontFamily: 'var(--font-body)',
               wordBreak: 'keep-all',
+              letterSpacing: '-0.005em',
             }}>{p}</p>
           ))}
         </div>
@@ -460,21 +470,17 @@ function CautionBox({ caution }: { caution: { body: string; items: DreamAdviceIt
           ))}
         </div>
       )}
-      {/* 2) 본문 풀이 — 하단 (좌측 띠 박스로 caution 톤 유지) */}
+      {/* 2) 본문 풀이 — 하단. 좌측 띠 제거, 자미두수·신년운세 본문 폰트와 동일. */}
       {paras.length > 0 && (
-        <div style={{
-          padding: '14px 18px',
-          borderLeft: '3px solid #F87171',
-          background: 'rgba(248,113,113,0.04)',
-          borderRadius: 10,
-        }}>
+        <div>
           {paras.map((p, i) => (
             <p key={i} style={{
-              margin: i === 0 ? 0 : '10px 0 0 0',
-              fontSize: 15, lineHeight: 1.85,
+              margin: i === 0 ? 0 : '12px 0 0 0',
+              fontSize: 16, lineHeight: 1.85,
               color: 'var(--text-secondary)',
               fontFamily: 'var(--font-body)',
               wordBreak: 'keep-all',
+              letterSpacing: '-0.005em',
             }}>{p}</p>
           ))}
         </div>
@@ -528,7 +534,7 @@ function ClinicalDiagnosisCard({ diag }: { diag: DreamV4Result['western_diagnosi
       )}
       {diag.reason && (
         <p style={{
-          margin: 0, fontSize: 15, lineHeight: 1.8,
+          margin: 0, fontSize: 16, lineHeight: 1.85,
           color: 'var(--text-secondary)',
           fontFamily: 'var(--font-body)',
           wordBreak: 'keep-all',
@@ -598,7 +604,7 @@ function LatentDiptychCard({ latent }: { latent: DreamV4Result['western_latent']
       )}
       {latent.body && (
         <p style={{
-          margin: 0, fontSize: 15, lineHeight: 1.8,
+          margin: 0, fontSize: 16, lineHeight: 1.85,
           color: 'var(--text-secondary)',
           fontFamily: 'var(--font-body)',
           wordBreak: 'keep-all',
@@ -681,7 +687,7 @@ function MirrorBlock({ text }: { text: string }) {
       {paras.map((p, i) => (
         <p key={i} style={{
           margin: i === 0 ? 0 : '10px 0 0 0',
-          fontSize: 15, lineHeight: 1.8,
+          fontSize: 16, lineHeight: 1.85,
           color: 'var(--text-primary)',
           fontFamily: 'var(--font-body)',
           wordBreak: 'keep-all',
@@ -710,7 +716,7 @@ function SelfWorkCard({ text }: { text: string }) {
       {paras.map((p, i) => (
         <p key={i} style={{
           margin: i === 0 ? 0 : '10px 0 0 0',
-          fontSize: 15, lineHeight: 1.85,
+          fontSize: 16, lineHeight: 1.85,
           color: 'var(--text-primary)',
           fontFamily: 'var(--font-body)',
           wordBreak: 'keep-all',

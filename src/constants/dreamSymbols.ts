@@ -1143,23 +1143,25 @@ export function findSijinByHour(hour24: number, minute: number = 0): SijinRule |
 // ════════════════════════════════════════════════════════
 
 export interface TimeBand {
-  id: 'dawn' | 'morning' | 'noon' | 'evening' | 'midnight' | 'unknown';
+  id: 'late_night' | 'morning' | 'afternoon' | 'evening' | 'unknown';
   label: string;
   sub: string;
-  /** 대표 시각(시간만) — 시진 매핑용 */
+  /** 대표 시각(시간만) — 시진 매핑용. 각 6시간 구간의 한가운데 */
   hour: number;
 }
 
-// hour는 각 시간대의 의도 시진 한복판 시각 (findSijinByHour 분기와 정합):
-//   dawn=6(묘시 영험도 5★) / morning=8(진시 3) / noon=12(오시 2) /
-//   evening=20(술시 2) / midnight=0(자시 1)
+// 사용자 친화 5분할 — 6시간 단위 구간 + 모름.
+// 각 구간의 대표 시진 (findSijinByHour 분기와 정합):
+//   late_night (00~06, hour=3)  → 인시 [2] 영험도 4
+//   morning    (06~12, hour=9)  → 진시 [4] 영험도 3
+//   afternoon  (12~18, hour=15) → 미시 [7] 영험도 1 (낮잠)
+//   evening    (18~24, hour=21) → 술시 [10] 영험도 2
 export const TIME_BANDS: TimeBand[] = [
-  { id: 'dawn',     label: '새벽',   sub: '03:30~07:30 · 영험도 최고', hour: 6 },
-  { id: 'morning',  label: '아침',   sub: '07:30~11:30 · 상징몽',       hour: 8 },
-  { id: 'noon',     label: '낮·오후', sub: '11:30~17:30 · 잡몽',         hour: 12 },
-  { id: 'evening',  label: '저녁',   sub: '17:30~21:30 · 입몽기',       hour: 20 },
-  { id: 'midnight', label: '한밤중', sub: '21:30~03:30 · 깊은 잠',      hour: 0 },
-  { id: 'unknown',  label: '모름',   sub: '시간 보정 없이 풀이',         hour: -1 },
+  { id: 'late_night', label: '자정 ~ 06시', sub: '깊은 밤 ~ 새벽 (寅卯時 황금시)', hour: 3 },
+  { id: 'morning',    label: '06 ~ 12시',   sub: '아침 ~ 오전',                   hour: 9 },
+  { id: 'afternoon',  label: '12 ~ 18시',   sub: '낮 ~ 오후 (낮잠 포함)',          hour: 15 },
+  { id: 'evening',    label: '18 ~ 24시',   sub: '저녁 ~ 한밤 (입몽기)',           hour: 21 },
+  { id: 'unknown',    label: '시간 모름',    sub: '시진 보정 없이 풀이',            hour: -1 },
 ];
 
 // ════════════════════════════════════════════════════════

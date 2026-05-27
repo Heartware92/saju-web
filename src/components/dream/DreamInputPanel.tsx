@@ -27,15 +27,14 @@ interface Props {
 const DREAM_MIN = 5;
 const DREAM_MAX = 800;
 
-// 입력 UI 전용 단축 시간 라벨 — TIME_BANDS의 sub("03:30~07:30 · 영험도 최고")은
-// 칩 폭에 들어가지 않아 가독성 떨어짐. 시간 범위만 깔끔하게.
-const TIME_RANGE_LABEL: Record<TimeBand['id'], string> = {
-  dawn:     '03:30 ~ 07:30',
-  morning:  '07:30 ~ 11:30',
-  noon:     '11:30 ~ 17:30',
-  evening:  '17:30 ~ 21:30',
-  midnight: '21:30 ~ 03:30',
-  unknown:  '시간 모름',
+// 입력 UI 전용 단축 라벨 — TIME_BANDS sub 텍스트 그대로 노출 (시간 라벨이
+// 이미 충분히 짧으므로 별도 매핑 불필요했지만, 칩 부제로 더 짧은 안내가 필요해 유지).
+const TIME_CHIP_SUB: Record<TimeBand['id'], string> = {
+  late_night: '새벽 황금시',
+  morning:    '아침·오전',
+  afternoon:  '낮잠 포함',
+  evening:    '입몽기',
+  unknown:    '시진 미적용',
 };
 
 export function DreamInputPanel({
@@ -129,7 +128,7 @@ export function DreamInputPanel({
                 opacity: 0.8, marginTop: 4,
                 whiteSpace: 'nowrap',
               }}>
-                {TIME_RANGE_LABEL[b.id]}
+                {TIME_CHIP_SUB[b.id]}
               </span>
             </button>
           ))}
