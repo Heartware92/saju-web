@@ -124,10 +124,10 @@ function ScoreBar({ score, size = 'md' }: { score: number; size?: 'sm' | 'md' })
  * 헤더 — DaehanTimeline과 동일 디자인 (4px 사이드바 + 18px serif + 부제).
  * 운흐름 wrapper 안에서 sub-section 헤더로 사용 가능.
  */
-function SectionHeader({ title, subtitle }: { title: string; subtitle: string }) {
+function SectionHeader({ title, subtitle }: { title: string; subtitle?: string }) {
   return (
     <>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: subtitle ? 14 : 18 }}>
         <span
           style={{
             display: 'inline-block',
@@ -149,17 +149,19 @@ function SectionHeader({ title, subtitle }: { title: string; subtitle: string })
           {title}
         </div>
       </div>
-      <div
-        style={{
-          fontSize: 13,
-          color: 'var(--text-tertiary)',
-          lineHeight: 1.6,
-          marginBottom: 14,
-          paddingLeft: 12,
-        }}
-      >
-        {subtitle}
-      </div>
+      {subtitle && (
+        <div
+          style={{
+            fontSize: 13,
+            color: 'var(--text-tertiary)',
+            lineHeight: 1.6,
+            marginBottom: 14,
+            paddingLeft: 12,
+          }}
+        >
+          {subtitle}
+        </div>
+      )}
     </>
   );
 }
@@ -431,10 +433,9 @@ export function MonthlyTimeline({ year, horoscopes, embedded = false }: MonthlyP
 
   return (
     <div className={wrapperClass}>
-      <SectionHeader title={`유월(流月) — 1달 단위의 변화 · ${year}년`} subtitle="달마다 사화 비행과 점수 — 즉각 의사결정 단위 · 좌우로 밀어 12개월 확인" />
+      <SectionHeader title="유월(流月) — 1달 단위의 변화" />
       <FortuneLineChart
         points={points}
-        title={`${year}년 12개월 흐름 — 좌우로 스크롤`}
         scrollable
         focusIndex={focusIndex >= 0 ? focusIndex : undefined}
       />
