@@ -1208,45 +1208,11 @@ export default function ZamidusuResultPage() {
           <MbtiAxesChart palaces={chart.palaces} />
         </div>
 
-        {/* 유년·유월은 대한(DaehanTimeline) 다음으로 이동 — 자미두수 정통 시기 순서: 대한→유년→유월 */}
-
-        {/* 영역별 모듈 (재물·직업·연애·건강·대인관계) — 청월당 7장 벤치마크 */}
-        {reading && reading.domainBundles.length > 0 && (
-          <div className={styles.section}>
-            <h2 style={{ marginBottom: 14, fontSize: 18 }}>영역별 인사이트</h2>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-              {reading.domainBundles
-                .filter((b) => b.id !== 'overview' && b.id !== 'timing' && b.insights.length > 0)
-                .map((bundle) => (
-                  <div
-                    key={bundle.id}
-                    style={{
-                      padding: '16px 18px',
-                      borderRadius: 14,
-                      background: 'rgba(139, 92, 246, 0.10)',
-                      border: '1px solid rgba(139, 92, 246, 0.30)',
-                    }}
-                  >
-                    <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 8 }}>
-                      <span style={{ fontSize: 16, fontWeight: 700, color: 'var(--text-primary)', fontFamily: 'var(--font-serif)' }}>
-                        {bundle.title}
-                      </span>
-                      <span style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>
-                        {bundle.subtitle}
-                      </span>
-                    </div>
-                    <ul style={{ margin: 0, paddingLeft: 16, display: 'flex', flexDirection: 'column', gap: 6 }}>
-                      {bundle.insights.map((ins, i) => (
-                        <li key={i} style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.6 }}>
-                          {ins}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                ))}
-            </div>
-          </div>
-        )}
+        {/* 영역별 인사이트 텍스트 카드는 제거 (2026-05-27 사용자 결정)
+            이유: 위쪽 시각 카드(CorePalaceScores·MutagenCards·FlowGroup)에서
+            영역별 점수가 이미 시각화되고, 아래 AI 풀이 12 섹션에서 영역별
+            깊이 풀이가 나오므로 중간의 짧은 텍스트 요약 카드는 중복.
+            domainBundles 데이터는 reading.ts에 유지 — 다른 곳에서 활용 여지. */}
 
         {/* 선택된 궁 상세 — 모달 오버레이 */}
         <AnimatePresence>
