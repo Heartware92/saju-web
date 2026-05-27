@@ -665,12 +665,17 @@ export default function MoreFortunePage({ category }: Props) {
       let prompt = '';
       let maxTokens: number | undefined;
       let engineResult: Record<string, unknown> = {};
+      // dream 카테고리는 3-pass — 서버가 1차 분류기 + 2차 동양 + 3차 서양 직접 호출.
+      // 클라는 raw input(dreamText/timeBandId/isRepeating)만 보냄. prompt는 빈 문자열.
+      let dreamInput: { dreamText: string; timeBandId?: string; isRepeating?: boolean } | undefined;
 
       if (category === 'dream') {
-        prompt = generateDreamInterpretationPrompt(dreamText.trim(), {
+        dreamInput = {
+          dreamText: dreamText.trim(),
           timeBandId: dreamTimeBandId,
           isRepeating: dreamRepeating,
-        });
+        };
+        prompt = 'DREAM_3PASS';  // 서버에서 dreamInput 우선 사용. prompt 무시되지만 빈 문자열 가드 통과용.
         engineResult = {
           dreamText: dreamText.trim(),
           timeBandId: dreamTimeBandId,
@@ -715,6 +720,7 @@ export default function MoreFortunePage({ category }: Props) {
           sajuResult: category === 'dream' ? {} : saju,
           prompt,
           maxTokens,
+          dreamInput,  // dream 3-pass 전용 입력 (서버가 분류기→동양+서양 직접 호출)
           profileId: targetProfile?.id,
           sourceBirth: targetProfile
             ? {

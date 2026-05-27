@@ -220,7 +220,8 @@ function PolarityScoreCard({ diag }: { diag: DreamV4Result['oriental_diagnosis']
   const color = POLARITY_COLOR[diag.polarity] || '#CBD5E1';
   const tagList = diag.label.split(/\s*[·•]\s*/).filter(Boolean);
   return (
-    <div className="rounded-2xl p-4 border" style={{
+    <div className="rounded-2xl border" style={{
+      padding: '14px 12px',
       background: `linear-gradient(135deg, rgba(20,12,38,0.6), ${color}12)`,
       borderColor: `${color}55`,
     }}>
@@ -590,7 +591,8 @@ function ClinicalDiagnosisCard({ diag }: { diag: DreamV4Result['western_diagnosi
     : diag.intensity === 'medium' ? '#FBBF24'
     : diag.intensity === 'low' ? '#34D399' : '#CBD5E1';
   return (
-    <div className="rounded-2xl p-4 border" style={{
+    <div className="rounded-2xl border" style={{
+      padding: '14px 12px',
       background: `linear-gradient(135deg, rgba(20,12,38,0.6), ${color}12)`,
       borderColor: `${color}55`,
     }}>
@@ -715,7 +717,8 @@ function MirrorBlock({ text }: { text: string }) {
 function SelfWorkCard({ text }: { text: string }) {
   if (text) return <BodyParagraphs text={text} boxed />;
   return (
-    <div className="rounded-2xl p-4 border" style={{
+    <div className="rounded-2xl border" style={{
+      padding: '14px 12px',
       background: 'rgba(255,255,255,0.04)', borderColor: 'rgba(255,255,255,0.10)',
     }}>
       <p className="text-[15px] text-text-tertiary leading-[1.85] tracking-[-0.005em] break-keep m-0">

@@ -143,6 +143,12 @@ interface MoreFortuneJobBody extends BaseJobBody {
   maxTokens?: number;
   /** archive engine_result — name 의 charMeanings, dream 의 dreamText 등 카테고리별 메타 */
   engineResult?: Record<string, unknown>;
+  /** dream 3-pass 전용 입력 — 서버가 1차 분류기 + 2차 동양 + 3차 서양 직접 호출 */
+  dreamInput?: {
+    dreamText: string;
+    timeBandId?: string;
+    isRepeating?: boolean;
+  };
 }
 
 /**
@@ -493,6 +499,7 @@ export async function POST(request: NextRequest) {
             maxTokens: moreBody.maxTokens,
             consumeIdempotencyKey: consumeKey,
             creditAmount: policy.creditCost,
+            dreamInput: moreBody.dreamInput,  // dream 3-pass 전용 입력 (서버가 분류기→동양+서양 직접 호출)
           });
         }
       } catch (e) {
