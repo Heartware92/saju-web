@@ -186,6 +186,26 @@ export function StarChart({ palaces, soul, fiveElementsClass, selectedIndex, onS
         대궁: 마주보는 6쌍의 거울 관계 · 사화 비행: 명궁 출발 4개 사화가 어느 궁에 떨어졌는지
       </div>
 
+      {/* 사화 비행 ON인데 결과 0개일 때 — SVG 밖 안내 카드 (별과 겹침 방지) */}
+      {showMutagenFlow && mutagenFlights.length === 0 && (
+        <div
+          className="mb-3 mx-auto max-w-md rounded-xl px-4 py-3 text-center"
+          style={{
+            background: 'rgba(251,191,36,0.08)',
+            border: '1px solid rgba(251,191,36,0.35)',
+            color: '#FBBF24',
+            fontSize: 13,
+            fontWeight: 600,
+            lineHeight: 1.5,
+          }}
+        >
+          이 명반엔 사화 변동이 표시되지 않습니다
+          <div className="mt-1 text-[11px] font-normal" style={{ color: 'rgba(251,191,36,0.7)' }}>
+            본명 천간이 변환한 4사화가 검출 가능한 별에 떨어지지 않았어요
+          </div>
+        </div>
+      )}
+
       <div className="relative w-full aspect-square max-w-none mx-auto">
       <svg
         viewBox={`0 0 ${VIEWBOX} ${VIEWBOX}`}
@@ -344,18 +364,7 @@ export function StarChart({ palaces, soul, fiveElementsClass, selectedIndex, onS
                   })}
                 </g>
               )}
-              {/* 사화 비행 결과가 0이면 안내 */}
-              {mutagenFlights.length === 0 && (
-                <text
-                  x={CENTER} y={CENTER + 70}
-                  textAnchor="middle"
-                  fontSize="11"
-                  fill="#FBBF24"
-                  fontWeight="600"
-                >
-                  이 명반엔 사화 변동이 표시되지 않습니다
-                </text>
-              )}
+              {/* 빈결과 안내는 SVG 밖 카드로 이동 (별 위 겹침 방지) */}
             </>
           );
         })()}
