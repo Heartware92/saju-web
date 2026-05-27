@@ -2208,14 +2208,17 @@ function MoreFortuneSectionedCard({
                         if (!text && !p.visual) return null;
                         return (
                           <div key={p.key}>
-                            {/* 파티션 라벨 */}
-                            <div
-                              className="text-[15px] font-bold mb-2 pl-0.5"
-                              style={{ color: 'var(--text-primary)', fontFamily: 'var(--font-title)' }}
-                            >
-                              {p.label}
-                            </div>
-                            {/* 시각 카드 (있을 때) */}
+                            {/* 파티션 라벨 — 시각 컴포넌트의 VisualCaption 과 중복 회피.
+                               시각 null (한글 모드의 자원·수리·81수리 등) 일 때만 표시. */}
+                            {!p.visual && (
+                              <div
+                                className="text-[15px] font-bold mb-2 pl-0.5"
+                                style={{ color: 'var(--text-primary)', fontFamily: 'var(--font-title)' }}
+                              >
+                                {p.label}
+                              </div>
+                            )}
+                            {/* 시각 카드 (있을 때) — 자체 VisualCaption 으로 제목 + 설명 표시 */}
                             {p.visual}
                             {/* 본문 단락 */}
                             {text && (

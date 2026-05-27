@@ -831,7 +831,12 @@ export function SuriElementVisual({
     { label: '정격', area: '평생',         data: result.jeong },
   ];
   return (
-    <div className="grid grid-cols-4 gap-2 mb-3">
+    <div className="mb-3">
+      <VisualCaption
+        title="수리오행"
+        desc="4격 끝자리 숫자가 어떤 오행인지 표시해요. 용신 오행과 맞물리면 사주를 보강해요."
+      />
+    <div className="grid grid-cols-4 gap-2">
       {items.map((it, i) => {
         const elKor = SURI_ELEMENT_KOREAN[it.data.entry.element] ?? '';
         const color = ELEMENT_COLOR[elKor] ?? '#CBD5E1';
@@ -871,6 +876,7 @@ export function SuriElementVisual({
           </div>
         );
       })}
+    </div>
     </div>
   );
 }
