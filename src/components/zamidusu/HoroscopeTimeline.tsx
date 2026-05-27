@@ -72,26 +72,30 @@ function scoreLabel(score: number): string {
 }
 
 /**
- * 사용자 친화 한 줄 의미 라벨 — 점수 등급 + 가장 두드러진 사화 별 키워드 조합.
- * 유월 카드 안에 작게 노출해 "이 달이 어떤 달인지" 즉시 전달.
+ * 사용자 친화 한 줄 의미 라벨 — "X 화기 → 영역 주의" / "Y 화록 → 영역 좋음" 식.
+ * 사화 별의 본의 키워드 2개를 묶어 직관적 영역 전달.
  */
 function makeWindowMeaning(mutagen: { 록: string; 권: string; 과: string; 기: string }, score: number): string {
-  if (score < 45) {
-    const giStar = mutagen.기;
-    const meta = MAJOR_STARS_META[giStar];
-    if (meta) return `${meta.keywords[0]} 영역 주의`;
-    return '주의 흐름';
+  const giStar = mutagen.기;
+  const rokStar = mutagen.록;
+  const giMeta = MAJOR_STARS_META[giStar];
+  const rokMeta = MAJOR_STARS_META[rokStar];
+
+  if (score < 45 && giMeta) {
+    const kw = giMeta.keywords.slice(0, 2).join('·');
+    return `${giStar} 화기 → ${kw} 영역 주의`;
   }
-  if (score >= 60) {
-    const rokStar = mutagen.록;
-    const rokMeta = MAJOR_STARS_META[rokStar];
-    if (rokMeta) return `${rokMeta.keywords[0]} 흐름 좋음`;
-    return '길운 흐름';
+  if (score >= 60 && rokMeta) {
+    const kw = rokMeta.keywords.slice(0, 2).join('·');
+    return `${rokStar} 화록 → ${kw} 흐름 좋음`;
   }
   // 평이 — 화권 별 키워드로 색채만 알림
   const gwonStar = mutagen.권;
   const gwonMeta = MAJOR_STARS_META[gwonStar];
-  if (gwonMeta) return `${gwonMeta.keywords[0]} 활성화`;
+  if (gwonMeta) {
+    const kw = gwonMeta.keywords.slice(0, 2).join('·');
+    return `${gwonStar} 화권 → ${kw} 활성화`;
+  }
   return '평이한 흐름';
 }
 
@@ -195,12 +199,14 @@ function smoothPath(pts: { x: number; y: number }[]): string {
 
 function FortuneLineChart({ points, title }: { points: ChartPoint[]; title?: string }) {
   if (points.length < 2) return null;
-  const W = Math.max(320, points.length * 60);
-  const H = 140;
+  // SVG viewBox 기준 좌표 — 컨테이너에 width 100%로 fit되도록 (스크롤 제거).
+  // 5개년 정도면 컨테이너 너비에 자연 분포, 12개월 정도여도 viewBox 비율로 압축 표시.
+  const W = 400;
+  const H = 160;
   const PAD_L = 28;
   const PAD_R = 16;
-  const PAD_T = 18;
-  const PAD_B = 28;
+  const PAD_T = 22;
+  const PAD_B = 36;
   const PLOT_W = W - PAD_L - PAD_R;
   const PLOT_H = H - PAD_T - PAD_B;
 
@@ -212,8 +218,8 @@ function FortuneLineChart({ points, title }: { points: ChartPoint[]; title?: str
   const areaPath = `${linePath} L${smoothPts[smoothPts.length - 1].x.toFixed(1)},${(PAD_T + PLOT_H).toFixed(1)} L${smoothPts[0].x.toFixed(1)},${(PAD_T + PLOT_H).toFixed(1)} Z`;
 
   return (
-    <div style={{ overflowX: 'auto', marginBottom: 14 }}>
-      <svg width={W} height={H} style={{ display: 'block' }}>
+    <div style={{ marginBottom: 14 }}>
+      <svg viewBox={`0 0 ${W} ${H}`} width="100%" style={{ display: 'block', maxWidth: '100%' }} preserveAspectRatio="xMidYMid meet">
         <defs>
           <linearGradient id="fortuneArea" x1="0" y1="0" x2="0" y2="1">
             <stop offset="0%" stopColor="#FBBF24" stopOpacity="0.4" />
@@ -377,7 +383,8 @@ export function MonthlyTimeline({ year, horoscopes, embedded = false }: MonthlyP
     <div className={wrapperClass}>
       <SectionHeader title={`유월(流月) — 1달 단위의 변화 · ${year}년`} subtitle="달마다 사화 비행과 점수 — 즉각 의사결정 단위" />
       <FortuneLineChart points={points} title={`${year}년 12개월 흐름`} />
-      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+      {/* 세로 리스트 — 1월 표기 + 설명, 2월 표기 + 설명 식 (신년운세 월별 흐름 스타일) */}
+      <div className="space-y-2.5">
         {horoscopes.map((m) => {
           const score = calcWindowScore(m.mutagen);
           const meaning = makeWindowMeaning(m.mutagen, score);
@@ -385,30 +392,44 @@ export function MonthlyTimeline({ year, horoscopes, embedded = false }: MonthlyP
           return (
             <div
               key={m.month}
-              className="rounded-lg p-2.5"
+              className="rounded-xl p-3.5 flex items-start gap-3"
               style={{
-                background: isCurrent ? 'rgba(167,139,250,0.12)' : 'var(--space-deep, #0f0a2e)',
-                border: isCurrent ? '1px solid rgba(167,139,250,0.40)' : '1px solid transparent',
+                background: isCurrent ? 'rgba(167,139,250,0.12)' : 'rgba(20,12,38,0.5)',
+                border: isCurrent ? '1px solid rgba(167,139,250,0.45)' : '1px solid var(--border-subtle)',
               }}
             >
-              <div className="flex items-baseline justify-between mb-1">
-                <div className="text-sm font-bold text-text-primary">{m.month}월</div>
-                <div className="text-[10px] text-cta">{m.heavenlyStem}{m.earthlyBranch}</div>
+              {/* 월 표기 — 왼쪽 큰 라벨 */}
+              <div className="flex-shrink-0 w-14 text-center">
+                <div
+                  className="text-lg font-bold"
+                  style={{
+                    color: isCurrent ? '#A78BFA' : 'var(--text-primary)',
+                    fontFamily: 'var(--font-serif)',
+                  }}
+                >
+                  {m.month}월
+                </div>
+                <div className="text-[11px] text-cta mt-0.5">{m.heavenlyStem}{m.earthlyBranch}</div>
+                {isCurrent && (
+                  <div className="text-[9px] font-bold text-[#A78BFA] mt-1">현재</div>
+                )}
               </div>
-              {/* 의미 라벨 — 사용자가 카드 보고 즉시 이해 */}
-              <div
-                className="text-[11px] text-text-secondary font-medium mb-1.5"
-                style={{ wordBreak: 'keep-all' }}
-              >
-                {meaning}
+              {/* 설명 영역 */}
+              <div className="flex-1 min-w-0">
+                <div
+                  className="text-[13px] text-text-secondary font-medium mb-1.5"
+                  style={{ wordBreak: 'keep-all' }}
+                >
+                  {meaning}
+                </div>
+                <div className="flex flex-wrap gap-1 mb-2">
+                  <MutagenChip type="록" star={m.mutagen.록} />
+                  <MutagenChip type="권" star={m.mutagen.권} />
+                  <MutagenChip type="과" star={m.mutagen.과} />
+                  <MutagenChip type="기" star={m.mutagen.기} />
+                </div>
+                <ScoreBar score={score} size="sm" />
               </div>
-              <div className="flex flex-wrap gap-1 mb-1.5">
-                <MutagenChip type="록" star={m.mutagen.록} />
-                <MutagenChip type="권" star={m.mutagen.권} />
-                <MutagenChip type="과" star={m.mutagen.과} />
-                <MutagenChip type="기" star={m.mutagen.기} />
-              </div>
-              <ScoreBar score={score} size="sm" />
             </div>
           );
         })}

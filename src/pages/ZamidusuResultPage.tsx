@@ -111,7 +111,10 @@ function MetaPills({ items }: { items: { label: string; value: string; color?: s
   );
 }
 
-function StarBigCard({ name, hanja, brightness, mutagen, keywords }: { name: string; hanja: string; brightness?: string; mutagen?: string; keywords?: string[] }) {
+function StarBigCard({ name, hanja, brightness, mutagen, keywords, theme, strength }: {
+  name: string; hanja: string; brightness?: string; mutagen?: string;
+  keywords?: string[]; theme?: string; strength?: string;
+}) {
   return (
     <div style={{
       flex: '1 1 0', minWidth: 0,
@@ -133,6 +136,17 @@ function StarBigCard({ name, hanja, brightness, mutagen, keywords }: { name: str
           {keywords.slice(0, 3).map((k, i) => (
             <span key={i} style={{ fontSize: 13, padding: '4px 10px', borderRadius: 8, background: 'rgba(252,213,180,0.10)', color: CARD_ACCENT, border: '1px solid rgba(252,213,180,0.25)' }}>#{k}</span>
           ))}
+        </div>
+      )}
+      {/* 별 본질 — theme 한 줄 + strength 한 줄. 사용자가 카드 보고 별의 의미 즉시 인지 (#키워드만 보고 무슨 뜻인지 모르는 문제 해결) */}
+      {theme && (
+        <div style={{ marginTop: 10, fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.55, padding: '0 4px', wordBreak: 'keep-all' }}>
+          {theme}
+        </div>
+      )}
+      {strength && (
+        <div style={{ marginTop: 2, fontSize: 12, color: 'var(--text-tertiary)', lineHeight: 1.55, padding: '0 4px', wordBreak: 'keep-all' }}>
+          <span style={{ color: '#34D399', fontWeight: 700 }}>강점</span> {strength}
         </div>
       )}
     </div>
@@ -163,6 +177,8 @@ function MainStarCards({ palace }: { palace: ZamidusuPalace }) {
             brightness={s.brightness}
             mutagen={s.mutagen}
             keywords={meta?.keywords}
+            theme={meta?.theme}
+            strength={meta?.strength}
           />
         );
       })}
