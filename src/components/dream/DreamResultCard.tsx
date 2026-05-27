@@ -106,8 +106,11 @@ function BodyParagraphs({ text, boxed }: { text: string; boxed?: boolean }) {
     </div>
   );
   if (!boxed) return content;
+  // 박스 padding 16 → 좌우 10 으로 축소 — SectionCollapsible 의 px-5 와 합쳐도
+  // 본문 폭이 좁아져 한 줄 5-10자만 들어가던 문제 해결.
   return (
-    <div className="rounded-2xl p-4 border" style={{
+    <div className="rounded-2xl border" style={{
+      padding: '14px 10px',
       background: 'rgba(255,255,255,0.04)',
       borderColor: 'rgba(255,255,255,0.10)',
     }}>
@@ -161,47 +164,50 @@ function ColorSwatch({ name, css }: { name: string; css: string }) {
   );
 }
 
-/** 나침반 SVG - LuckyVisualCard 와 동일. 다중 방향 평균 각도. */
-function CompassSVG({ directions }: { directions: string[] }) {
-  const degs = directions.map(d => DIRECTION_DEG[d] ?? null).filter((x): x is number => x !== null);
-  if (degs.length === 0 || degs.every(d => d === -1)) {
+/** 단일 나침반 SVG - LuckyVisualCard 와 동일 스펙. */
+function CompassSVG({ direction }: { direction: string }) {
+  const deg = DIRECTION_DEG[direction] ?? null;
+  if (deg === null || deg === -1) {
     return (
       <div className="flex flex-col items-center gap-1">
-        <div className="w-[72px] h-[72px] rounded-full border border-white/20 flex items-center justify-center bg-white/5">
-          <span className="text-[22px] font-bold text-text-primary" style={{ fontFamily: 'var(--font-serif)' }}>中</span>
+        <div className="w-[64px] h-[64px] rounded-full border border-white/20 flex items-center justify-center bg-white/5">
+          <span className="text-[20px] font-bold text-text-primary" style={{ fontFamily: 'var(--font-serif)' }}>中</span>
         </div>
-        <span className="text-[13px] text-text-tertiary">중앙이 길합니다</span>
+        <span className="text-[12px] text-text-tertiary whitespace-nowrap">{direction || '중앙'}</span>
       </div>
     );
   }
-  // 평균(원형 평균 — sin/cos 평균)
-  const validDegs = degs.filter(d => d !== -1);
-  const avgDeg = (() => {
-    const sin = validDegs.reduce((s, d) => s + Math.sin(d * Math.PI / 180), 0) / validDegs.length;
-    const cos = validDegs.reduce((s, d) => s + Math.cos(d * Math.PI / 180), 0) / validDegs.length;
-    return ((Math.atan2(sin, cos) * 180 / Math.PI) + 360) % 360;
-  })();
   const labels = [
-    { text: '북', x: 36, y: 11 }, { text: '동', x: 64, y: 39 },
-    { text: '남', x: 36, y: 67 }, { text: '서', x: 8, y: 39 },
+    { text: '북', x: 32, y: 9 }, { text: '동', x: 57, y: 34 },
+    { text: '남', x: 32, y: 59 }, { text: '서', x: 7, y: 34 },
   ];
   return (
     <div className="flex flex-col items-center gap-1">
-      <svg width="72" height="72" viewBox="0 0 72 72">
-        <circle cx="36" cy="36" r="34" fill="rgba(255,255,255,0.04)" stroke="rgba(255,255,255,0.15)" strokeWidth="1" />
-        <line x1="36" y1="4" x2="36" y2="68" stroke="rgba(255,255,255,0.08)" strokeWidth="1" />
-        <line x1="4" y1="36" x2="68" y2="36" stroke="rgba(255,255,255,0.08)" strokeWidth="1" />
+      <svg width="64" height="64" viewBox="0 0 64 64">
+        <circle cx="32" cy="32" r="30" fill="rgba(255,255,255,0.04)" stroke="rgba(255,255,255,0.15)" strokeWidth="1" />
+        <line x1="32" y1="4" x2="32" y2="60" stroke="rgba(255,255,255,0.08)" strokeWidth="1" />
+        <line x1="4" y1="32" x2="60" y2="32" stroke="rgba(255,255,255,0.08)" strokeWidth="1" />
         {labels.map(l => (
           <text key={l.text} x={l.x} y={l.y} textAnchor="middle" dominantBaseline="middle"
-            fontSize="9" fill="rgba(255,255,255,0.35)" fontFamily="var(--font-sans)">{l.text}</text>
+            fontSize="8" fill="rgba(255,255,255,0.35)" fontFamily="var(--font-sans)">{l.text}</text>
         ))}
-        <g transform={`rotate(${avgDeg}, 36, 36)`}>
-          <polygon points="36,6 32.5,36 39.5,36" fill="var(--color-cta, #8B6914)" opacity="0.9" />
-          <polygon points="36,66 32.5,36 39.5,36" fill="rgba(255,255,255,0.18)" />
+        <g transform={`rotate(${deg}, 32, 32)`}>
+          <polygon points="32,6 29,32 35,32" fill="var(--color-cta, #8B6914)" opacity="0.9" />
+          <polygon points="32,58 29,32 35,32" fill="rgba(255,255,255,0.18)" />
         </g>
-        <circle cx="36" cy="36" r="3.5" fill="white" opacity="0.7" />
+        <circle cx="32" cy="32" r="3" fill="white" opacity="0.7" />
       </svg>
-      <span className="text-[13px] text-text-tertiary">{directions.join(' · ')}</span>
+      <span className="text-[12px] text-text-tertiary whitespace-nowrap">{direction}</span>
+    </div>
+  );
+}
+
+/** 다중 방향이면 나침반 N개 가로 정렬 */
+function CompassGroup({ directions }: { directions: string[] }) {
+  if (directions.length === 0) return null;
+  return (
+    <div className="flex flex-wrap items-start justify-center gap-x-4 gap-y-3">
+      {directions.map((d, i) => <CompassSVG key={`${d}-${i}`} direction={d} />)}
     </div>
   );
 }
@@ -460,29 +466,30 @@ function AdviceCard({ advice }: { advice: { body: string; items: DreamAdviceItem
   const colors = colorVal ? parseColors(colorVal) : [];
   const directions = dirVal ? parseDirections(dirVal) : [];
 
-  const hasCompassRow = colors.length > 0 || directions.length > 0;
 
   return (
     <div className="flex flex-col gap-3">
-      {/* 1) 나침반 + 색상 스와치 — LuckyVisualCard 와 동일 레이아웃 */}
-      {hasCompassRow && (
-        <div className="flex items-center justify-around py-3 px-2 rounded-2xl bg-white/5 border border-white/10">
-          {directions.length > 0 && <CompassSVG directions={directions} />}
-          {directions.length > 0 && colors.length > 0 && <div className="w-px h-16 bg-white/10" />}
-          {colors.length > 0 && (
-            <div className="flex flex-col items-center gap-2">
-              <span className="text-[12px] text-text-tertiary mb-0.5">행운 색상</span>
-              <div className="flex gap-3">
-                {colors.slice(0, 3).map((c, i) => (
-                  <ColorSwatch key={`${c.name}-${i}`} name={c.name} css={c.css} />
-                ))}
-              </div>
-            </div>
-          )}
+      {/* 1) 나침반들 — 방향 N개 각자 표시 (LuckyVisualCard 단일 나침반이 아닌 다중 표시) */}
+      {directions.length > 0 && (
+        <div className="rounded-2xl py-4 px-3 bg-white/5 border border-white/10">
+          <div className="text-[12px] text-text-tertiary text-center mb-3">길한 방향</div>
+          <CompassGroup directions={directions} />
         </div>
       )}
 
-      {/* 2) 숫자 + 시간대 — 2 col 카드 */}
+      {/* 2) 색상 스와치 — 별도 카드 (나침반과 row 합치지 않음, 모바일 가독성) */}
+      {colors.length > 0 && (
+        <div className="rounded-2xl p-3 bg-white/5 border border-white/10">
+          <div className="text-[12px] text-text-tertiary text-center mb-3">행운 색상</div>
+          <div className="flex flex-wrap justify-center gap-4">
+            {colors.slice(0, 4).map((c, i) => (
+              <ColorSwatch key={`${c.name}-${i}`} name={c.name} css={c.css} />
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* 3) 숫자 + 시간대 — 2 col 카드 */}
       {(numVal || timeVal) && (
         <div className="grid grid-cols-2 gap-2">
           {numVal ? <LabelValueCard label="행운 숫자" value={numVal} big /> : <div />}
@@ -490,12 +497,12 @@ function AdviceCard({ advice }: { advice: { body: string; items: DreamAdviceItem
         </div>
       )}
 
-      {/* 3) 칩 wrap 카드들 */}
+      {/* 4) 칩 wrap 카드들 */}
       {gemVal && <ChipWrapCard label="행운 보석" items={parseChips(gemVal)} />}
       {activityVal && <ChipWrapCard label="추천 활동" items={parseChips(activityVal)} />}
       {foodVal && <ChipWrapCard label="추천 음식" items={parseChips(foodVal)} />}
 
-      {/* 4) 기타 항목 (액막이·환경·보호 등) — 2col 카드 */}
+      {/* 5) 기타 항목 (액막이·환경·보호 등) — 2col 카드 */}
       {otherItems.length > 0 && (
         <div className="grid grid-cols-2 gap-2">
           {otherItems.slice(0, 4).map((it, i) => (
@@ -504,7 +511,7 @@ function AdviceCard({ advice }: { advice: { body: string; items: DreamAdviceItem
         </div>
       )}
 
-      {/* 5) 본문 풀이 — 다른 운세 본문과 동일 스펙 + 박스 통일 */}
+      {/* 6) 본문 풀이 — 박스 통일 */}
       <BodyParagraphs text={advice.body} boxed />
     </div>
   );
@@ -526,26 +533,30 @@ function CautionBox({ caution }: { caution: { body: string; items: DreamAdviceIt
 
   const colors = colorVal ? parseColors(colorVal) : [];
   const directions = dirVal ? parseDirections(dirVal) : [];
-  const hasCompassRow = colors.length > 0 || directions.length > 0;
 
   return (
     <div className="flex flex-col gap-3">
-      {/* 1) 나침반 + 색상 — caution 톤 (붉은 테두리) */}
-      {hasCompassRow && (
-        <div className="flex items-center justify-around py-3 px-2 rounded-2xl border"
-          style={{ background: 'rgba(248,113,113,0.04)', borderColor: 'rgba(248,113,113,0.28)' }}>
-          {directions.length > 0 && <CompassSVG directions={directions} />}
-          {directions.length > 0 && colors.length > 0 && <div className="w-px h-16 bg-white/10" />}
-          {colors.length > 0 && (
-            <div className="flex flex-col items-center gap-2">
-              <span className="text-[12px] text-text-tertiary mb-0.5">피해야 할 색</span>
-              <div className="flex gap-3">
-                {colors.slice(0, 3).map((c, i) => (
-                  <ColorSwatch key={`${c.name}-${i}`} name={c.name} css={c.css} />
-                ))}
-              </div>
-            </div>
-          )}
+      {/* 1) 나침반들 — 피해야 할 방향 N개 각자 표시 */}
+      {directions.length > 0 && (
+        <div className="rounded-2xl py-4 px-3 border" style={{
+          background: 'rgba(248,113,113,0.04)', borderColor: 'rgba(248,113,113,0.28)',
+        }}>
+          <div className="text-[12px] text-text-tertiary text-center mb-3">조심할 방향</div>
+          <CompassGroup directions={directions} />
+        </div>
+      )}
+
+      {/* 2) 피해야 할 색 — 별도 카드 */}
+      {colors.length > 0 && (
+        <div className="rounded-2xl p-3 border" style={{
+          background: 'rgba(248,113,113,0.04)', borderColor: 'rgba(248,113,113,0.28)',
+        }}>
+          <div className="text-[12px] text-text-tertiary text-center mb-3">조심할 색</div>
+          <div className="flex flex-wrap justify-center gap-4">
+            {colors.slice(0, 4).map((c, i) => (
+              <ColorSwatch key={`${c.name}-${i}`} name={c.name} css={c.css} />
+            ))}
+          </div>
         </div>
       )}
 
