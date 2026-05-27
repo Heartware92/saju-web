@@ -802,15 +802,15 @@ export function DreamResultCard({ title, result, timeBandId }: Props) {
               <SymbolCardGrid symbols={result.oriental_symbols} />
             </SectionCollapsible>
 
-            <SectionCollapsible title="다가올 일 — 6 영역" enterDelay={0.12}>
+            <SectionCollapsible title="꿈의 영역별 신호" enterDelay={0.12}>
               <DomainBarsCard domains={result.oriental_domains} />
             </SectionCollapsible>
 
-            <SectionCollapsible title="꿈꾼 시간에 대한 해석" enterDelay={0.18}>
+            <SectionCollapsible title="꿈과 시간에 대한 풀이" enterDelay={0.18}>
               <SijinChart timing={result.oriental_timing} timeBandId={timeBandId} />
             </SectionCollapsible>
 
-            <SectionCollapsible title="이렇게 해보세요" enterDelay={0.24}>
+            <SectionCollapsible title="꿈의 기운을 살리는 법" enterDelay={0.24}>
               <AdviceCard advice={result.oriental_advice} />
             </SectionCollapsible>
 
@@ -827,7 +827,7 @@ export function DreamResultCard({ title, result, timeBandId }: Props) {
             transition={{ duration: 0.3 }}
             className="flex flex-col gap-3"
           >
-            <SectionCollapsible title="이 꿈의 정체" defaultOpen enterDelay={0}>
+            <SectionCollapsible title="이 꿈은 어떤 꿈인가요" defaultOpen enterDelay={0}>
               <ClinicalDiagnosisCard diag={result.western_diagnosis} />
             </SectionCollapsible>
 
@@ -835,7 +835,7 @@ export function DreamResultCard({ title, result, timeBandId }: Props) {
               <LatentDiptychCard latent={result.western_latent} />
             </SectionCollapsible>
 
-            <SectionCollapsible title="꿈 속 등장인물의 의미" enterDelay={0.12}>
+            <SectionCollapsible title="꿈 속 상징의 원형" enterDelay={0.12}>
               <ArchetypeCardGrid items={result.western_archetypes} />
             </SectionCollapsible>
 
