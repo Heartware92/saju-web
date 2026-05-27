@@ -7,6 +7,8 @@ import { PalaceTermLabel } from './PalaceTermLabel';
 interface DaehanTimelineProps {
   segments: DaehanSegment[];
   currentAge: number;
+  /** SectionCollapsible 안에 통합 시 헤더 숨김 (중복 방지). 기본 false. */
+  hideHeader?: boolean;
 }
 
 function colorOfScore(score: number): string {
@@ -16,7 +18,7 @@ function colorOfScore(score: number): string {
   return '#F87171';
 }
 
-export function DaehanTimeline({ segments, currentAge }: DaehanTimelineProps) {
+export function DaehanTimeline({ segments, currentAge, hideHeader = false }: DaehanTimelineProps) {
   if (segments.length === 0) return null;
 
   const current = segments.find((s) => s.isCurrent);
@@ -24,15 +26,19 @@ export function DaehanTimeline({ segments, currentAge }: DaehanTimelineProps) {
 
   return (
     <div>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
-        <span style={{ display: 'inline-block', width: 4, height: 20, borderRadius: 2, background: 'var(--cta-primary)' }} />
-        <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--text-primary)', fontFamily: 'var(--font-serif)', letterSpacing: '-0.01em' }}>
-          대한(大限) — 10년 단위의 리듬
-        </div>
-      </div>
-      <div style={{ fontSize: 13, color: 'var(--text-tertiary)', lineHeight: 1.6, marginBottom: 14, paddingLeft: 12 }}>
-        명반에서 10년마다 다른 방을 지나갑니다. 현재 머무는 방의 별자리를 강조해 표시했어요.
-      </div>
+      {!hideHeader && (
+        <>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
+            <span style={{ display: 'inline-block', width: 4, height: 20, borderRadius: 2, background: 'var(--cta-primary)' }} />
+            <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--text-primary)', fontFamily: 'var(--font-serif)', letterSpacing: '-0.01em' }}>
+              대한(大限) — 10년 단위의 리듬
+            </div>
+          </div>
+          <div style={{ fontSize: 13, color: 'var(--text-tertiary)', lineHeight: 1.6, marginBottom: 14, paddingLeft: 12 }}>
+            명반에서 10년마다 다른 방을 지나갑니다. 현재 머무는 방의 별자리를 강조해 표시했어요.
+          </div>
+        </>
+      )}
 
       {current && (
         <div

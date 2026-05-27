@@ -516,11 +516,12 @@ function renderSectionDataCards(
       );
     case 'daehan': {
       // 대한 — DaehanTimeline 시각 + DaehanTable (한 섹션에서 보여줌)
+      // SectionCollapsible 헤더가 이미 있으므로 DaehanTimeline 자체 헤더는 숨김 (중복 방지)
       const ageForCalc = currentAge ?? 0;
       const segs = calcDaehanTimeline(chart, ageForCalc);
       return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-          {segs.length > 0 && <DaehanTimeline segments={segs} currentAge={ageForCalc} />}
+          {segs.length > 0 && <DaehanTimeline segments={segs} currentAge={ageForCalc} hideHeader />}
           <DaehanTable chart={chart} currentAge={currentAge} />
         </div>
       );
@@ -753,29 +754,41 @@ export default function ZamidusuResultPage() {
     return chart ? buildZamidusuReading(chart) : null;
   }, [chart]);
 
-  // 유년(流年) 5개년 — 자운파 시기 예측 (올해부터 +4년)
-  const yearlyHoroscopes = useMemo(() => {
-    if (!birthInput || !chart) return [];
-    const currentYear = new Date().getFullYear();
-    const years = [currentYear, currentYear + 1, currentYear + 2, currentYear + 3, currentYear + 4];
-    try {
-      return getYearlyHoroscopes(birthInput, years);
-    } catch (e) {
-      console.error('[zamidusu] yearly horoscope failed', e);
-      return [];
-    }
-  }, [birthInput, chart]);
-
-  // 유월(流月) — 올해 12개월 — 즉각 위험 회피용
+  // 유년(流年) 5개년 · 유월(流月) 12개월 — 자운파 시기 예측.
+  //
+  // ★ 보관함 진입 깜빡거림 방지 (2026-05-27 사용자 보고): horoscope 계산은
+  // iztro astrolabe를 새로 만들어 12*N 번 호출하므로 동기 실행 시 첫 렌더가
+  // 무거워져 화면이 한 번 더 깜빡인다. useMemo 동기 호출 대신 useState +
+  // useEffect로 chart 마운트 직후 next tick에 비동기 계산해 첫 렌더는 빠르게
+  // 표시하고, horoscope는 뒤따라 렌더된다.
   const currentYearForMonthly = new Date().getFullYear();
-  const monthlyHoroscopes = useMemo(() => {
-    if (!birthInput || !chart) return [];
-    try {
-      return getMonthlyHoroscopes(birthInput, currentYearForMonthly);
-    } catch (e) {
-      console.error('[zamidusu] monthly horoscope failed', e);
-      return [];
+  const [yearlyHoroscopes, setYearlyHoroscopes] = useState<YearlyHoroscope[]>([]);
+  const [monthlyHoroscopes, setMonthlyHoroscopes] = useState<MonthlyHoroscope[]>([]);
+
+  useEffect(() => {
+    if (!birthInput || !chart) {
+      setYearlyHoroscopes([]);
+      setMonthlyHoroscopes([]);
+      return;
     }
+    // next tick으로 미뤄 chart 마운트 첫 렌더는 즉시 표시
+    const id = setTimeout(() => {
+      try {
+        const currentYear = new Date().getFullYear();
+        const years = [currentYear, currentYear + 1, currentYear + 2, currentYear + 3, currentYear + 4];
+        setYearlyHoroscopes(getYearlyHoroscopes(birthInput, years));
+      } catch (e) {
+        console.error('[zamidusu] yearly horoscope failed', e);
+        setYearlyHoroscopes([]);
+      }
+      try {
+        setMonthlyHoroscopes(getMonthlyHoroscopes(birthInput, currentYearForMonthly));
+      } catch (e) {
+        console.error('[zamidusu] monthly horoscope failed', e);
+        setMonthlyHoroscopes([]);
+      }
+    }, 0);
+    return () => clearTimeout(id);
   }, [birthInput, chart, currentYearForMonthly]);
 
   // ── 보관함 DB 확인 → AI 호출 (순차 실행) ──
