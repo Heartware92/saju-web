@@ -1924,11 +1924,12 @@ function MoreFortuneSectionedCard({
     : category === 'personality' ? PERSONALITY_SECTION_LABELS as Record<string, string>
     : NAME_SECTION_LABELS as Record<string, string>;
 
-  // 본문 잔여 섹션 마커 strip 패턴
-  // AI 가 가이드 어겨 본문 안에 [aptitude] / [strengths] 같은 자기 마커를 또
-  // 출력하는 사고가 발생 — parseStudySections 가 split 으로 분리해도 본문 내부
-  // 추가 등장은 strip 안 되어 화면에 그대로 노출되던 사고 차단.
-  const markerStripPattern = new RegExp(`^\\s*\\[(${keys.join('|')})\\]\\s*$`, 'gm');
+  // 본문 잔여 섹션 마커 strip 패턴 — 두 단계 방어
+  //  (1) 줄 단독 마커: 섹션 분리 후에도 본문 첫/끝에 남는 [aptitude] 등 strip
+  //  (2) 인라인 마커: AI 가 본문에 "[rename]에서 안내" 같이 직접 적는 사고 차단
+  //      (예: 이름풀이 preserve 섹션 마지막 줄에서 발견됨)
+  const markerLinePattern = new RegExp(`^\\s*\\[(${keys.join('|')})\\]\\s*$`, 'gm');
+  const markerInlinePattern = new RegExp(`\\[(${keys.join('|')})\\]`, 'g');
 
   return (
     <motion.div
@@ -1945,7 +1946,11 @@ function MoreFortuneSectionedCard({
           const raw = (sections[key] || '').trim();
           if (!raw) return null;
           // 본문 안 잔여 카테고리 마커 strip → extractMetaphor 로 [은유] 마커 + 부제 추출
-          const stripped = raw.replace(markerStripPattern, '').replace(/\n{3,}/g, '\n\n').trim();
+          const stripped = raw
+            .replace(markerLinePattern, '')
+            .replace(markerInlinePattern, '')
+            .replace(/\n{3,}/g, '\n\n')
+            .trim();
           const { metaphorTitle, bodyText } = extractMetaphor(stripped);
           // name 카테고리: 섹션별 시각 컴포넌트 (7섹션)
           // 레거시 6섹션 키로 저장된 archive 풀이는 parseNameSections 단계에서

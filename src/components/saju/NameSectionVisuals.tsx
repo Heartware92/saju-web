@@ -114,6 +114,28 @@ const SURI_NAME_KOREAN: Record<string, string> = {
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
+// 캡션 헤더 — 모든 시각 카드 공통: 작은 타이틀 + 1줄 설명
+// ─────────────────────────────────────────────────────────────────────────────
+function VisualCaption({ title, desc }: { title: string; desc: string }) {
+  return (
+    <div className="mb-2 pl-0.5">
+      <div
+        className="text-[13px] font-bold mb-0.5"
+        style={{ color: 'var(--text-primary)', fontFamily: 'var(--font-title)', letterSpacing: '0.01em' }}
+      >
+        {title}
+      </div>
+      <div
+        className="text-[11px] text-text-tertiary leading-[1.5]"
+        style={{ fontFamily: 'var(--font-body)' }}
+      >
+        {desc}
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // 1) 음령오행 — 음절별 카드 + 5오행 분포 막대
 // ─────────────────────────────────────────────────────────────────────────────
 export function EumRyeongVisual({
@@ -133,6 +155,10 @@ export function EumRyeongVisual({
 
   return (
     <div className="space-y-3 mb-3">
+      <VisualCaption
+        title="음령오행 — 한글 발음의 결"
+        desc="한글 초성(ㄱ·ㄴ·ㅁ·ㅅ·ㅇ…)을 5오행으로 본 분포. 사주의 용신 오행이 포함되면 발음이 사주를 보강해요."
+      />
       {/* 음절별 카드 */}
       <div className="flex flex-wrap gap-2">
         {chars.map((ch, i) => {
@@ -190,7 +216,12 @@ export function JaWonVisual({
 }) {
   if (hanjas.length === 0) return null;
   return (
-    <div className="grid grid-cols-3 gap-2 mb-3">
+    <div className="mb-3">
+      <VisualCaption
+        title="자원오행 — 한자 부수의 결"
+        desc="각 한자의 부수가 어떤 오행인지 보여줘요. 예) 木부 = 목, 火부 = 화. 부수 옆 점은 자원오행 색."
+      />
+    <div className="grid grid-cols-3 gap-2">
       {hanjas.map((h, i) => {
         const color = ELEMENT_COLOR[h.jawon] ?? 'transparent';
         const bg = ELEMENT_BG[h.jawon] ?? 'rgba(255,255,255,0.04)';
@@ -236,6 +267,7 @@ export function JaWonVisual({
           </div>
         );
       })}
+    </div>
     </div>
   );
 }
@@ -283,11 +315,38 @@ function gradeFromSuriGrades(grades: string[]): AxisGrade {
   return '중립';
 }
 
-function gradeToScore(g: AxisGrade): number {
-  if (g === '보강') return 2;
-  if (g === '중립') return 1;
-  if (g === '거스름') return 0;
-  return -1; // 미분석은 평균에서 제외
+/**
+ * 4축 등급 → 5점 만점 별점 + 점수 근거.
+ *
+ * 매핑 규칙 (선형):
+ *   net = (보강 개수 − 거스름 개수) / 분석가능축수
+ *   raw = 3 + net × 2        // -1.0 → 1★ / 0 → 3★ / +1.0 → 5★
+ *   stars = clamp(round(raw), 1, 5)
+ *
+ * 검증:
+ *   4보강      → 5★
+ *   2보강 2거스름 → 3★
+ *   4중립      → 3★
+ *   4거스름     → 1★  (0★ shame 회피)
+ *   미분석만     → 3★  (한글 모드에서 음령만 분석된 경우 등)
+ */
+function computeStarRating(grades: AxisGrade[]): {
+  stars: number;
+  bonusCount: number;
+  neutralCount: number;
+  penaltyCount: number;
+  analyzedCount: number;
+} {
+  const valid = grades.filter(g => g !== '미분석');
+  const bonusCount = valid.filter(g => g === '보강').length;
+  const penaltyCount = valid.filter(g => g === '거스름').length;
+  const neutralCount = valid.length - bonusCount - penaltyCount;
+  if (valid.length === 0) {
+    return { stars: 3, bonusCount: 0, neutralCount: 0, penaltyCount: 0, analyzedCount: 0 };
+  }
+  const net = (bonusCount - penaltyCount) / valid.length;
+  const stars = Math.max(1, Math.min(5, Math.round(3 + net * 2)));
+  return { stars, bonusCount, neutralCount, penaltyCount, analyzedCount: valid.length };
 }
 
 export function SummaryScoreVisual({
@@ -321,17 +380,15 @@ export function SummaryScoreVisual({
     ? gradeFromSuriGrades([suri.won, suri.hyeong, suri.i, suri.jeong].map(g => g.entry.grade))
     : '미분석' as AxisGrade;
 
-  // 종합 별점 (5점 만점) — 분석 가능한 축의 평균
-  const scores = [eumGrade, jawonGrade, suriElGrade, suriGyeokGrade].map(gradeToScore).filter(s => s >= 0);
-  const avg = scores.length > 0 ? scores.reduce((a, b) => a + b, 0) / scores.length : 1;
-  const stars = Math.round(avg * 2.5); // 0~2 → 0~5
-
   const axes: Array<{ label: string; sub: string; grade: AxisGrade }> = [
     { label: '음령',   sub: '한글 발음', grade: eumGrade },
     { label: '자원',   sub: '한자 부수', grade: jawonGrade },
     { label: '수리오행', sub: '4격 끝자리', grade: suriElGrade },
     { label: '81수리',  sub: '4격 길흉',  grade: suriGyeokGrade },
   ];
+
+  // 종합 별점 + 점수 근거 — 사용자가 별의 출처를 직접 보고 납득하도록
+  const rating = computeStarRating(axes.map(a => a.grade));
 
   return (
     <div
@@ -346,17 +403,30 @@ export function SummaryScoreVisual({
         <span className="text-[12px] text-text-tertiary mb-1" style={{ fontFamily: 'var(--font-body)' }}>
           4축 종합
         </span>
-        <div className="flex gap-1">
+        <div className="flex gap-1 mb-1.5">
           {[0, 1, 2, 3, 4].map(i => (
             <span
               key={i}
               className="text-[18px] leading-none"
-              style={{ color: i < stars ? '#FBBF24' : 'rgba(255,255,255,0.18)' }}
+              style={{ color: i < rating.stars ? '#FBBF24' : 'rgba(255,255,255,0.18)' }}
             >
               ★
             </span>
           ))}
         </div>
+        {rating.analyzedCount > 0 ? (
+          <span
+            className="text-[11px] text-text-tertiary leading-none"
+            style={{ fontFamily: 'var(--font-body)' }}
+          >
+            보강 {rating.bonusCount} · 중립 {rating.neutralCount} · 거스름 {rating.penaltyCount}
+            <span className="ml-1 opacity-60">(분석 {rating.analyzedCount}축)</span>
+          </span>
+        ) : (
+          <span className="text-[11px] text-text-tertiary leading-none" style={{ fontFamily: 'var(--font-body)' }}>
+            분석 가능한 축이 없어 중간값으로 표시
+          </span>
+        )}
       </div>
 
       {/* 4축 등급칩 */}
@@ -391,6 +461,21 @@ export function SummaryScoreVisual({
             </div>
           );
         })}
+      </div>
+
+      {/* 등급 의미 안내 — 사용자가 "보강/중립/거스름" 의미를 즉시 알 수 있게 */}
+      <div
+        className="mt-3 pt-3 text-[11px] text-text-tertiary leading-[1.6] border-t"
+        style={{ borderColor: 'rgba(255,255,255,0.08)', fontFamily: 'var(--font-body)' }}
+      >
+        <span className="font-bold" style={{ color: '#34D399' }}>보강</span>
+        <span className="mx-1">= 사주 용신을 도움</span>
+        <span className="mx-2 opacity-40">·</span>
+        <span className="font-bold" style={{ color: '#CBD5E1' }}>중립</span>
+        <span className="mx-1">= 도움·거스름 모두 약함</span>
+        <span className="mx-2 opacity-40">·</span>
+        <span className="font-bold" style={{ color: '#F87171' }}>거스름</span>
+        <span className="mx-1">= 사주 기신을 자극</span>
       </div>
 
       {!isHanjaMode && (
@@ -453,8 +538,14 @@ export function StrengthVisual({
       className="rounded-2xl p-4 border mb-3"
       style={{ background: 'rgba(52,211,153,0.06)', borderColor: 'rgba(52,211,153,0.30)' }}
     >
-      <div className="flex items-center gap-2 mb-3">
+      <div className="flex items-center gap-2 mb-1">
         <span className="text-[15px] font-bold" style={{ color: '#34D399' }}>이름의 강점 신호</span>
+      </div>
+      <div
+        className="text-[11px] text-text-tertiary mb-3 leading-[1.5]"
+        style={{ fontFamily: 'var(--font-body)' }}
+      >
+        이름의 4축 중 사주 용신({yongSinEl || '?'})을 보태는 자리 — 자동 추출
       </div>
       <ul className="space-y-2">
         {signals.map((p, i) => (
@@ -486,8 +577,14 @@ export function ShadowVisual({
       className="rounded-2xl p-4 border mb-3"
       style={{ background: 'rgba(248,113,113,0.06)', borderColor: 'rgba(248,113,113,0.30)' }}
     >
-      <div className="flex items-center gap-2 mb-3">
+      <div className="flex items-center gap-2 mb-1">
         <span className="text-[15px] font-bold" style={{ color: '#F87171' }}>주의 신호</span>
+      </div>
+      <div
+        className="text-[11px] text-text-tertiary mb-3 leading-[1.5]"
+        style={{ fontFamily: 'var(--font-body)' }}
+      >
+        이름의 4축 중 사주 기신({giSinEl || '?'})을 자극하는 자리 — 자동 추출
       </div>
       <ul className="space-y-2">
         {signals.map((c, i) => (
@@ -604,7 +701,12 @@ export function NumerologyVisual({
   ];
 
   return (
-    <div className="space-y-2 mb-3">
+    <div className="mb-3">
+      <VisualCaption
+        title="81수리 — 한자 획수로 보는 인생 4단계"
+        desc="한자 획수 조합으로 인생 시기별(초년·중년·사회·평생) 길흉을 봅니다. 등급 칩(대길~대흉)과 수리오행이 사주 용신과 맞물리는지 표시돼요."
+      />
+    <div className="space-y-2">
       {items.map((it, i) => {
         const color = GRADE_COLOR[it.data.entry.grade] ?? '#CBD5E1';
         return (
@@ -690,6 +792,7 @@ export function NumerologyVisual({
         );
       })}
     </div>
+    </div>
   );
 }
 
@@ -699,7 +802,12 @@ export function NumerologyVisual({
 export function AdviceVisual({ bullets }: { bullets: string[] }): JSX.Element | null {
   if (bullets.length === 0) return null;
   return (
-    <div className="space-y-2 mb-2">
+    <div className="mb-2">
+      <VisualCaption
+        title="실천 가이드"
+        desc="본문에서 추출한 실천 항목 — 일상에서 바로 적용 가능한 행동들이에요."
+      />
+    <div className="space-y-2">
       {bullets.map((b, i) => (
         <div
           key={i}
@@ -719,6 +827,7 @@ export function AdviceVisual({ bullets }: { bullets: string[] }): JSX.Element | 
           </span>
         </div>
       ))}
+    </div>
     </div>
   );
 }
