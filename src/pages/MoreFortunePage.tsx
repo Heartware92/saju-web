@@ -78,7 +78,7 @@ import {
   JaWonVisual,
   NumerologyVisual,
   SuriElementVisual,
-  EumYangVisual,
+  // EumYangVisual,  // [BACKLOG] 5축 부활 시 활성화
   NameMeaningVisual,
   AdviceVisual,
   StrengthVisual,
@@ -2011,10 +2011,11 @@ function MoreFortuneSectionedCard({
     : null;
   // ★ lookahead 예외:
   //  - 은유|metaphor: extractMetaphor 가 metaphorTitle 로 추출
-  //  - axis_eum|axis_jawon|axis_suri|axis_81|axis_eumyang: four_axis 섹션 5 파티션 sub-marker.
+  //  - axis_eum|axis_jawon|axis_suri|axis_81: four_axis 섹션 4 파티션 sub-marker.
   //    split 키로 사용되어야 하므로 unwrap 금지.
+  //  - [BACKLOG] 5축 부활 시 axis_eumyang 도 예외에 추가
   const nameBracketUnwrapPattern: RegExp | null = category === 'name'
-    ? /\[(?!은유|metaphor|axis_eum|axis_jawon|axis_suri|axis_81|axis_eumyang)([^\]\n]{1,30})\]/g
+    ? /\[(?!은유|metaphor|axis_eum|axis_jawon|axis_suri|axis_81)([^\]\n]{1,30})\]/g
     : null;
 
   return (
