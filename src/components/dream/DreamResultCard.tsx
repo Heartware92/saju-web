@@ -808,7 +808,17 @@ function MirrorBlock({ text }: { text: string }) {
   const { mappings, cleanText } = extractMirrorMappings(text);
   return (
     <div className="flex flex-col gap-3">
-      {/* 꿈 모티프 → 현실 영역 매핑 카드 */}
+      {/* 꿈 모티프 → 현실 영역 매핑 카드 (LLM 이 매핑 누락 시 안내문) */}
+      {mappings.length === 0 && (
+        <div className="rounded-xl p-3 border" style={{
+          background: 'rgba(96,165,250,0.04)', borderColor: 'rgba(96,165,250,0.18)',
+        }}>
+          <div className="text-[13px] text-text-tertiary mb-1">꿈 모티프 → 현재 삶</div>
+          <p className="text-[13px] text-text-tertiary leading-[1.6] break-all m-0">
+            이번 풀이엔 매핑이 본문에 자연스럽게 녹아 있어요. 본문에서 어떤 모티프가 현재 삶의 어떤 영역과 연결되는지 짚어드리고 있습니다.
+          </p>
+        </div>
+      )}
       {mappings.length > 0 && (
         <div className="rounded-xl p-3 border" style={{
           background: 'rgba(96,165,250,0.06)', borderColor: 'rgba(96,165,250,0.28)',
