@@ -1089,6 +1089,157 @@ export const DREAM_SYMBOLS: DreamSymbol[] = [
     psychology: '정체성 토대의 동요.',
     polarity: 'bad',
   },
+
+  // ─── 장소 (P1 확충) ────────────────────────────────────
+  {
+    id: 'cemetery',
+    label: '묘지·공동묘지',
+    category: '사물',
+    keywords: ['묘지', '공동묘지', '봉분군', '산소'],
+    tradition: '묘지에 정성 들여 절하거나 단정한 무덤을 보면 조상 음덕·재물 길조. 황폐한 무덤은 가운(家運) 점검.',
+    polarity: 'mixed',
+  },
+  {
+    id: 'court',
+    label: '법원·재판소',
+    category: '사물',
+    keywords: ['법원', '재판소', '판사', '재판'],
+    tradition: '법원·재판 꿈은 옳고 그름을 가리는 시기. 이기는 꿈은 묵은 시비 해결, 지는 꿈은 양보·타협 필요 신호.',
+    polarity: 'mixed',
+  },
+  {
+    id: 'police',
+    label: '경찰서·경찰',
+    category: '사물',
+    keywords: ['경찰', '경찰서', '순경'],
+    tradition: '경찰에게 보호받거나 도움받으면 귀인의 가호. 쫓기거나 잡히면 양심에 걸리는 일·숨기는 일 자백 신호.',
+    polarity: 'mixed',
+  },
+  {
+    id: 'shrine_temple',
+    label: '사찰·신당·성당',
+    category: '사물',
+    keywords: ['사찰', '절', '신당', '성당', '교회', '예배당'],
+    tradition: '절·교회·신당에 들어가 절하거나 기도하면 영적 가호·소원 성취의 강한 길조. 종교적 평안 신호.',
+    polarity: 'good',
+  },
+  {
+    id: 'hospital',
+    label: '병원·의사',
+    category: '사물',
+    keywords: ['병원', '의사', '간호사', '진료'],
+    tradition: '병원에서 진료받고 좋은 결과를 들으면 건강 회복·문제 해결. 입원·수술은 큰 변화 임박 신호.',
+    polarity: 'mixed',
+  },
+  {
+    id: 'school_class',
+    label: '학교·교실',
+    category: '사물',
+    keywords: ['학교', '교실', '강의실', '교무실', '운동장'],
+    tradition: '학교 꿈은 학습·평가·인간관계 압박의 무의식 투사. 옛 동창이 보이면 그 시절 미해결 감정 점검.',
+    polarity: 'neutral',
+  },
+  {
+    id: 'office',
+    label: '사무실·직장',
+    category: '사물',
+    keywords: ['사무실', '직장꿈', '회사꿈', '상사꿈', '동료꿈'],
+    tradition: '직장에서 인정받는 꿈은 승진·평가 길조. 상사와 다투면 현실의 권위 갈등 신호.',
+    polarity: 'mixed',
+  },
+  {
+    id: 'market',
+    label: '시장·가게',
+    category: '사물',
+    keywords: ['시장', '가게', '상점', '백화점', '마트'],
+    tradition: '시장에서 좋은 물건을 사거나 흥정 성공하면 재물·기회 획득. 빈손으로 돌아오면 기회 놓침.',
+    polarity: 'mixed',
+  },
+
+  // ─── 신체 부위 추가 (P1 확충) ──────────────────────────
+  {
+    id: 'arm_shoulder',
+    label: '팔·어깨',
+    category: '신체',
+    keywords: ['팔', '어깨', '팔꿈치', '팔뚝'],
+    tradition: '팔이 굵어지거나 강해지는 꿈은 능력·추진력 강화. 팔이 부러지면 형제·동료의 어려움 신호.',
+    polarity: 'mixed',
+  },
+  {
+    id: 'leg_knee',
+    label: '다리·무릎',
+    category: '신체',
+    keywords: ['다리꿈', '무릎', '종아리', '허벅지'],
+    tradition: '다리가 튼튼해지면 기반 확립·이동 운. 무릎이 꺾이거나 못 걸으면 기반 흔들림·진로 정체.',
+    polarity: 'mixed',
+  },
+  {
+    id: 'face',
+    label: '얼굴·이마',
+    category: '신체',
+    keywords: ['얼굴', '이마', '뺨', '턱'],
+    tradition: '얼굴이 빛나거나 좋아 보이면 명예·인기. 상처·여드름·흉터는 평판 손상이나 부끄러움 신호.',
+    polarity: 'mixed',
+  },
+  {
+    id: 'wound_pain',
+    label: '상처·통증',
+    category: '신체',
+    keywords: ['상처', '통증', '아픔', '다침', '베임'],
+    tradition: '몸에 상처가 나거나 아픈 꿈은 현실의 미해결 갈등·죄책감. 회복되거나 치유되는 꿈은 묵은 일 해결.',
+    psychology: '억압된 감정의 신체화.',
+    polarity: 'mixed',
+  },
+  {
+    id: 'sickness',
+    label: '병·질병',
+    category: '신체',
+    keywords: ['병에걸', '아팠', '질병', '발병', '병환'],
+    tradition: '자신이 병에 걸리는 꿈은 의외로 건강 회복·재생의 역몽으로 보기도 한다. 다만 가까운 사람의 병은 그 관계 점검.',
+    polarity: 'mixed',
+  },
+
+  // ─── 색·숫자 확장 (P1 확충) ────────────────────────────
+  {
+    id: 'color_purple',
+    label: '보라·자주색',
+    category: '숫자색',
+    keywords: ['보라', '자주', '퍼플', '보라색'],
+    tradition: '보라색은 영성·고귀함의 상징. 큰 보라색 꽃·옷·빛은 영적 성숙·종교적 가호의 길조.',
+    polarity: 'good',
+  },
+  {
+    id: 'color_orange',
+    label: '주황색',
+    category: '숫자색',
+    keywords: ['주황', '오렌지', '귤색'],
+    tradition: '주황은 활력·열정·창조의 상징. 노을·과일의 주황빛은 새 시작·풍요의 길조.',
+    polarity: 'good',
+  },
+  {
+    id: 'color_pink',
+    label: '분홍·핑크',
+    category: '숫자색',
+    keywords: ['분홍', '핑크', '연분홍'],
+    tradition: '분홍색은 사랑·인연·부드러움의 상징. 분홍 꽃·옷은 좋은 인연·로맨스 임박.',
+    polarity: 'good',
+  },
+  {
+    id: 'number_eight',
+    label: '8·팔(八)',
+    category: '숫자색',
+    keywords: ['8', '팔자', '팔십', '여덟'],
+    tradition: '8은 한자 문화권에서 발(發)과 발음 유사 — 재물·번창의 상징. 8이 또렷이 보이면 행운수로 기억.',
+    polarity: 'good',
+  },
+  {
+    id: 'number_four',
+    label: '4·사(四)',
+    category: '숫자색',
+    keywords: ['4', '사월', '넷', '네번'],
+    tradition: '4는 동양에서 사(死)와 발음 유사 — 전통적으로 기피되나 꿈에서는 안정·기반(사방·사주)의 의미.',
+    polarity: 'neutral',
+  },
 ];
 
 // ════════════════════════════════════════════════════════
@@ -1225,11 +1376,18 @@ export const CLINICAL_LABELS: Record<ClinicalDreamType, { ko: string; desc: stri
   false_awakening: { ko: '거짓 각성',      desc: '깬 줄 알았는데 꿈',               color: '#C9A6FF' },
 };
 
-/** 특수 규칙: 역몽(逆夢) — 흉해 보이지만 길한 것들 */
+/** 특수 규칙: 역몽(逆夢) — 흉해 보이지만 길한 것들 (한국 민속·주공해몽 전승) */
 export const REVERSE_DREAM_NOTES = [
   '꿈에서 "죽음·장례·피·똥·불"은 전통적으로 역몽(逆夢)으로, 실제로는 재생·재물·변화의 길몽으로 본다.',
   '"돈을 직접 받는 꿈"은 오히려 지출의 암시가 많고, "돈을 잃거나 쓰는 꿈"이 실제 수입의 전조인 경우가 많다.',
   '"우는 꿈"은 시원하게 울었다면 응어리 해소 후의 길몽이다.',
+  '"이가 빠지는 꿈"은 윗니=윗사람 / 아랫니=아랫사람 우환으로 보지만, 흔들리던 이를 스스로 뺐고 시원했다면 묵은 문제 해결의 신호.',
+  '"맨몸·발가벗는 꿈"이 부끄러움 없이 편안했다면 진실에의 수용·자유로의 해방으로 풀이 — 사회적 가면 벗기의 길조.',
+  '"무덤·관(棺)이 집에 들어오는 꿈"은 의외의 큰 길몽 — 관운·재물·승진. 단정한 무덤은 조상의 음덕.',
+  '"쥐·해충 떼가 들끓는 꿈"은 의외의 재물·기회의 역몽으로 풀이되기도 한다 (잡거나 없애면 더 강한 길조).',
+  '"오물·진흙에 빠지는 꿈"은 그 자체로는 흉이지만 빠진 뒤 깨끗이 씻었다면 정화·재물 획득의 길조로 전환.',
+  '"높은 곳에서 추락하는 꿈"이 바닥에 부드럽게 안착했다면 시련 뒤 안정 — 다음 단계 시작의 신호.',
+  '"칼·창에 찔리는 꿈"은 두려움 없이 받았다면 권한 위임·결단력 획득의 역몽 — 다만 피가 흥건히 흐르면 더 큰 재물.',
 ];
 
 /** 공통 해석 프레임 — 프롬프트에 상수 블록으로 주입 */
@@ -1525,21 +1683,38 @@ export function composeDreamTextFromStructured(input: StructuredDreamInput): str
 }
 
 /**
+ * 한국어 조사 제거 정규화 — 매칭 시 "뱀을", "뱀이", "뱀에게" 같은 활용형이
+ * "뱀" 키워드와 매칭되도록.
+ * - 조사 후보가 너무 짧지 않은 단어(2자 이상)에만 적용 — "이"(2인칭) 같은
+ *   짧은 단어는 조사 떼면 빈 문자열이 되어 위험.
+ */
+function normalizeKorean(text: string): string {
+  return text
+    // 한글 + (조사) 패턴 — 한글 2자 이상 뒤에 오는 조사만 제거
+    .replace(
+      /([가-힣]{2,})(으로서|으로써|으로|로서|로써|에게서|에게|에서|부터|까지|에|과|와|을|를|이|가|은|는|도|만|이나|나)(?=[^가-힣]|$)/g,
+      '$1'
+    );
+}
+
+/**
  * 사용자 꿈 설명에서 KB 상징을 매칭한다.
- * - 모든 심벌의 키워드를 포함 검색(부분 일치).
+ * - 한국어 조사 제거 정규화 후 부분 일치.
  * - 최대 5개 반환(너무 많으면 프롬프트 과대).
  */
 export function matchDreamSymbols(userText: string, maxHits: number = 5): DreamSymbol[] {
   if (!userText) return [];
   const text = userText.trim();
   if (text.length === 0) return [];
+  const normalizedText = normalizeKorean(text);
 
   const hits: { sym: DreamSymbol; rank: number }[] = [];
   for (const sym of DREAM_SYMBOLS) {
     let rank = 0;
     for (const kw of sym.keywords) {
       if (!kw) continue;
-      if (text.includes(kw)) {
+      // 원본·정규화 둘 다 매칭 시도 (원본 매칭은 비-한글 키워드용)
+      if (text.includes(kw) || normalizedText.includes(kw)) {
         // 긴 키워드(구체적) 우선
         rank += kw.length;
       }

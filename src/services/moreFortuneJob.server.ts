@@ -82,9 +82,12 @@ export async function runMoreFortuneJob(input: RunMoreFortuneJobInput): Promise<
 
   try {
     let sanitized: string;
+    let classificationMeta: DreamClassification | null = null;
     if (category === 'dream' && dreamInput) {
-      // 3-pass: 분류기 → (동양 + 서양 병렬)
-      sanitized = await runDream3Pass(dreamInput);
+      // 3-pass: 분류기 → (동양 + 서양 병렬). 분류 결과도 별도 반환.
+      const r = await runDream3Pass(dreamInput);
+      sanitized = r.text;
+      classificationMeta = r.classification;
     } else {
       // 1-pass: study / children / personality / name 또는 dream 폴백
       const tokens = maxTokens ?? DEFAULT_MAX_TOKENS[category];
@@ -96,7 +99,7 @@ export async function runMoreFortuneJob(input: RunMoreFortuneJobInput): Promise<
     if (sanitized.length < minLen) {
       throw new Error(`${CATEGORY_LABEL[category]} 응답이 비정상적으로 짧아요. 잠시 후 다시 시도해주세요.`);
     }
-    await markDone(recordId, sanitized);
+    await markDone(recordId, sanitized, classificationMeta);
   } catch (e) {
     const msg = e instanceof Error ? e.message : `${CATEGORY_LABEL[category]} 처리 중 오류`;
     console.error(`[moreFortuneJob:${category}] 치명적 에러:`, msg);
@@ -113,7 +116,7 @@ export async function runMoreFortuneJob(input: RunMoreFortuneJobInput): Promise<
  * 분류기 실패 시 → classification=null 로 폴백 (풀이 호출은 진행).
  * 동양·서양 중 하나 실패 시 → 성공한 쪽만 반환 (부분 결과라도 사용자에게).
  */
-async function runDream3Pass(input: DreamJobInput): Promise<string> {
+async function runDream3Pass(input: DreamJobInput): Promise<{ text: string; classification: DreamClassification | null }> {
   const promptOptions: DreamPromptOptions = {
     timeBandId: input.timeBandId,
     isRepeating: input.isRepeating,
@@ -171,23 +174,37 @@ async function runDream3Pass(input: DreamJobInput): Promise<string> {
   if (!westernOk) partialNotice.push('[western_partial_fail]\n서양 풀이가 일시적 오류로 생성되지 못했어요. 다시 풀이를 받아보시면 보완됩니다.');
 
   // 두 응답 합치기 — parseDreamV4 가 11 마커 모두 인식
-  return [
+  const text = [
     ...partialNotice,
     orientalContent,
     westernContent,
   ].filter(Boolean).join('\n\n');
+  return { text, classification };
 }
 
-async function markDone(recordId: string, fullContent: string): Promise<void> {
+async function markDone(recordId: string, fullContent: string, classification?: DreamClassification | null): Promise<void> {
+  const updates: Record<string, unknown> = {
+    status: 'done',
+    interpretation_detailed: fullContent,
+    interpretation_basic: fullContent,
+    completed_at: new Date().toISOString(),
+    error_message: null,
+  };
+  // dream 카테고리의 1차 분류 메타 (interpretive_hints 포함) — 보관함 복원 시 정밀도 ↑
+  // engine_result JSONB 안에 함께 저장 (별도 컬럼 마이그레이션 불필요).
+  if (classification) {
+    // engine_result 는 jobs/create 에서 이미 저장됐을 수 있음. 병합 위해 select 후 merge.
+    const { data: existing } = await supabaseAdmin
+      .from('saju_records')
+      .select('engine_result')
+      .eq('id', recordId)
+      .single();
+    const existingEr = (existing?.engine_result ?? {}) as Record<string, unknown>;
+    updates.engine_result = { ...existingEr, classification };
+  }
   const { error } = await supabaseAdmin
     .from('saju_records')
-    .update({
-      status: 'done',
-      interpretation_detailed: fullContent,
-      interpretation_basic: fullContent,
-      completed_at: new Date().toISOString(),
-      error_message: null,
-    })
+    .update(updates)
     .eq('id', recordId);
   if (error) console.error('[moreFortuneJob] done 마킹 실패:', error);
 }
