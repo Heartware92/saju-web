@@ -39,10 +39,7 @@ export function CharacterCard({ data }: Props) {
         </span>
       </div>
       <p className="text-[13px] text-cta mb-3">{data.character.role}</p>
-      <p
-        className="text-sm text-text-secondary leading-[1.65] mb-4"
-        style={{ wordBreak: 'keep-all' }}
-      >
+      <p className="text-sm text-text-secondary leading-[1.65] mb-4">
         {data.character.anecdote}
       </p>
       <div className="flex flex-wrap gap-1.5">

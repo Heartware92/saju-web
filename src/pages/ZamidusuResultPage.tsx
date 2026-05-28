@@ -90,8 +90,8 @@ const ZV = {
   sectionGap: 16,
   pad: '15px 16px',
   label: { fontSize: 13, fontWeight: 700, color: 'var(--text-tertiary)', letterSpacing: '0.04em' } as const,
-  value: { fontSize: 18, fontWeight: 700, color: 'var(--text-primary)', wordBreak: 'keep-all', overflowWrap: 'break-word' } as const,
-  sub: { fontSize: 13.5, color: 'var(--text-tertiary)', lineHeight: 1.55, wordBreak: 'keep-all', overflowWrap: 'break-word' } as const,
+  value: { fontSize: 18, fontWeight: 700, color: 'var(--text-primary)' } as const,
+  sub: { fontSize: 13.5, color: 'var(--text-tertiary)', lineHeight: 1.55 } as const,
 };
 
 function MetaPills({ items }: { items: { label: string; value: string; color?: string }[] }) {
@@ -417,15 +417,13 @@ function SoloPalaceCard({
       </div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
         <span style={{ fontSize: 12.5, color: 'var(--text-tertiary)', fontWeight: 600 }}>이 궁의 주성</span>
-        <span style={{ fontSize: 16.5, fontWeight: 600, color: 'var(--text-secondary)', wordBreak: 'keep-all', overflowWrap: 'break-word' }}>{stars}</span>
+        <span style={{ fontSize: 16.5, fontWeight: 600, color: 'var(--text-secondary)' }}>{stars}</span>
       </div>
-      {role && <div style={{ ...ZV.sub, wordBreak: 'keep-all', overflowWrap: 'break-word' }}>{role.domain}</div>}
+      {role && <div style={ZV.sub}>{role.domain}</div>}
       {note && (
         <div style={{
           fontSize: 13, color: labelColor, fontWeight: 600,
           paddingTop: 10, borderTop: `1px solid ${accentBorder}`,
-          wordBreak: 'keep-all',
-          overflowWrap: 'break-word',
           lineHeight: 1.55,
         }}>
           {note}
@@ -1162,7 +1160,7 @@ export default function ZamidusuResultPage() {
   };
 
   return (
-    <div className={styles.container} style={{ wordBreak: 'keep-all', overflowWrap: 'break-word' }}>
+    <div className={styles.container}>
       {/* Header */}
       <div className="flex items-center relative mb-5 pt-3 px-1">
         <BackButton className="absolute left-0" />

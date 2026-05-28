@@ -390,7 +390,7 @@ export function YearlyTimeline({ horoscopes, embedded = false }: YearlyProps) {
                   <div className="text-[11px] text-cta mt-0.5">{y.heavenlyStem}{y.earthlyBranch}</div>
                 </div>
                 <div className="flex-1">
-                  <div className="text-[12px] text-text-secondary mb-1.5 font-medium" style={{ wordBreak: 'keep-all' }}>
+                  <div className="text-[12px] text-text-secondary mb-1.5 font-medium">
                     {meaning}
                   </div>
                   <div className="flex flex-wrap gap-1.5">
@@ -472,10 +472,7 @@ export function MonthlyTimeline({ year, horoscopes, embedded = false }: MonthlyP
               </div>
               {/* 설명 영역 */}
               <div className="flex-1 min-w-0">
-                <div
-                  className="text-[13px] text-text-secondary font-medium mb-1.5"
-                  style={{ wordBreak: 'keep-all' }}
-                >
+                <div className="text-[13px] text-text-secondary font-medium mb-1.5">
                   {meaning}
                 </div>
                 <div className="flex flex-wrap gap-1 mb-2">

@@ -44,13 +44,14 @@ export function RadarChart({
   const n = domains.length;
   if (n < 3) return null;
 
-  // 좌우 라벨은 옆으로 길게 뻗으므로 padX를 더 확보, 위아래는 라벨 한 줄만 들어가도록 padY를 짧게
+  // 좌우 라벨은 옆으로 길게 뻗으므로 padX를 더 확보, 위아래는 라벨 한 줄 높이만큼만 (최소화)
   const padX = Math.max(44, Math.round(labelFontSize * 1.6 + 8));
-  const padY = Math.max(20, Math.round(labelFontSize * 0.7 + 4));
+  const padY = Math.max(12, Math.round(labelFontSize * 0.5));
   const cx = padX + size / 2;
   const cy = padY + size / 2;
-  const maxR = size * 0.38;
-  const labelR = size * 0.46;
+  // 차트 자체를 더 크게 — maxR 비율 ↑
+  const maxR = size * 0.42;
+  const labelR = size * 0.48;
   const vbW = size + padX * 2;
   const vbH = size + padY * 2;
   const gridLevels = [20, 40, 60, 80, 100];
