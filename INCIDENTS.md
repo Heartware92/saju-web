@@ -17,6 +17,49 @@
 
 ---
 
+## 2026-05-29 00:10 — 궁합 모달 페이지 라우팅 자체 차단 (5/22 사고 진짜 해결) `[ui]` `[code]`
+
+### 증상
+- 사용자: "다른 풀이는 모달 뒤로 홈 화면이 희미하게 비치는데 궁합만 검은색"
+- 사용자: "다음 페이지로 넘어가려다가 모달이 켜지는 현상이 혼자만 발생"
+- 다른 풀이(정통·지정일·신년·실시간·자미·토정·택일·이름·꿈·자녀·학업·성격): 클릭 → 페이지 라우팅 없이 홈 위에 모달 fade-in (홈 background 비침)
+- 궁합만: 클릭 → `/saju/gunghap` 페이지 라우팅 → 검은 background + 잠깐 스피너 → 자체 모달
+
+### 영향 범위
+- 궁합(GunghapPage) 진입 시각 UX — 모든 사용자 매 진입 시 발생
+- 2026-05-22 사고에서 "modalGateActive 도입(5ad7801)" 으로 동시 노출은 해결됐으나, **페이지 라우팅 자체가 발생한다는 근본 차이는 미해결** 상태로 남아 있었음
+
+### 진단 과정
+1. ❌ **5/22 fix 가 충분하다 가정** — modalGateActive 가 페이지 본체 안 보이게 처리하니 다른 풀이와 동일하다고 생각. 사용자 신고로 재검토
+2. ✅ **HomePage.handleServiceClick 분기 트레이스** — `buildGateConfig` 의 `GATE_SERVICES` 맵을 확인하니 `/saju/gunghap` 가 **목록에 없음**. 매칭 실패 → null 반환 → `router.push(targetPath)` 분기로 빠짐
+3. ✅ **다른 풀이와 차이 명확화** — 다른 풀이는 `setActiveGate(...)` state 변경만 → `QuickFortuneGate` 가 홈 컴포넌트 안에서 렌더 → 홈 background 위에 fade-in. 궁합은 페이지 라우팅 → GunghapPage 의 검은 background mount → 모달
+
+### 진짜 원인
+**페이지 라우팅 자체가 모달이 떠야 할 시점에 발생.** 모달이 페이지 *안*에 있어 검은 background 가 잠깐이라도 보임. 다른 풀이는 모달이 홈 *안*에 있어 홈 background 가 그대로 비침. 5/22 fix 는 모달 뜬 뒤만 다뤘고 라우팅 자체는 막지 못함.
+
+### 해결 (커밋 `ff97d19`)
+1. **`GunghapArchiveListModal.tsx` 신규** — GunghapPage 의 자체 archive 모달(line 1728~) 코드를 별도 컴포넌트로 분리. chip 100px·이름↔이름·날짜 visual 그대로 보존
+2. **HomePage 직접 호출** — 궁합 카드 클릭 시 `findGunghapArchives` 미리 fetch → archive 있으면 홈 위에 모달 fade-in (`state-only`), 없으면 입력 단계로 직행
+3. **모달 핸들러**:
+   - 항목 클릭 → `/saju/gunghap?recordId=xxx` (보관함 모드)
+   - 새로 궁합 보기 → `/saju/gunghap?fresh=1` (입력 단계)
+   - 취소·바깥 클릭 → 홈 그대로 유지 (라우팅 X)
+4. **GunghapPage `urlFresh` 분기** — `searchParams?.get('fresh') === '1'` 시 자체 archive 모달 자동 노출 차단 (홈에서 이미 봤으므로 중복 방지)
+5. **CATEGORY_LABEL_MAP export** — 분리된 모달 컴포넌트가 import 해서 라벨 해석
+
+### 재발 방지
+- 새 풀이가 홈 진입 시 archive 노출 필요하다면 **반드시 컴포넌트 분리 + 홈에서 직접 표시**. 페이지 안 자동 노출 모달을 라우팅 후 띄우는 패턴은 다른 풀이와 visual 일관성 깨짐
+- HomePage `buildGateConfig` 의 `GATE_SERVICES` 맵이 단일 진입점 — 새 카테고리 추가 시 여기에 등록 또는 (궁합처럼 자체 모달이 필요한 케이스는) `handleServiceClick` 안에 명시적 분기
+- 5/22 fix 가 "수정됐다" 고 표시됐어도 **사용자가 본 visual jank 가 진짜 사라졌는지** 가 final 판단 기준. 코드 레벨 "동시 노출 X" 만으론 부족 — 페이지 background 색·라우팅 자체도 비교
+
+### 관련
+- 커밋 `ff97d19` (이번 진짜 해결)
+- 5/22 부분 fix: `fa280e3`·`5ad7801`·`6715907`·`3c11299`
+- 신규: `src/components/GunghapArchiveListModal.tsx`
+- 수정: `src/pages/HomePage.tsx`, `src/pages/GunghapPage.tsx`
+
+---
+
 ## 2026-05-22 02:00 — 궁합 진입 모달이 카테고리 화면과 동시 노출 + 취소 시 궁합에 머무름 `[ui]` `[code]`
 
 ### 증상
