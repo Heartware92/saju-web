@@ -101,7 +101,7 @@ function BodyParagraphs({ text }: { text: string; boxed?: boolean }) {
   return (
     <div className="flex flex-col gap-3">
       {paras.map((p, i) => (
-        <p key={i} className="text-[16px] text-text-secondary leading-[1.75] tracking-[-0.005em] whitespace-pre-line break-all">
+        <p key={i} className="text-[17px] text-text-secondary leading-[1.85] tracking-[-0.005em] whitespace-pre-line break-all">
           {p}
         </p>
       ))}
@@ -777,9 +777,16 @@ function ArchetypeCardGrid({ items }: { items: DreamArchetypeCard[] }) {
  * LLM 본문 안에 "A=B" 형식 줄이 있으면 추출. 본문에서 그 줄들은 제거.
  */
 function extractMirrorMappings(text: string): { mappings: { motif: string; reality: string }[]; cleanText: string } {
+  // LLM 이 가끔 프롬프트의 구조 라벨 ("부분 1:", "부분 2:", "▣", "(1)", "(2)") 을
+  // 본문에 그대로 출력하는 사고 → 자동 strip.
+  const stripped = text
+    .replace(/^\s*[▣◆●○]+\s*(부분\s*\d+|Part\s*\d+)\s*[:：]?\s*/gmi, '')
+    .replace(/^\s*\(?\s*부분\s*\d+\s*\)?\s*[:：]?\s*/gmi, '')
+    .replace(/^\s*\(\d+\)\s*[:：]?\s*/gmi, '')
+    .replace(/\n{3,}/g, '\n\n');
   const mappings: { motif: string; reality: string }[] = [];
   const cleanLines: string[] = [];
-  for (const line of text.split('\n')) {
+  for (const line of stripped.split('\n')) {
     const t = line.trim();
     // 다양한 구분자 매칭 — "→·=·:·—·-·~" (LLM 이 화살표 무시하고 다른 구분자 쓰는 사고 흡수)
     // 본문 평범한 문장 (마침표·물음표 끝) 은 제외.
