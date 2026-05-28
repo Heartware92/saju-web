@@ -1031,7 +1031,7 @@ export function DreamResultCard({ title, result, timeBandId }: Props) {
               <ArchetypeCardGrid items={result.western_archetypes} />
             </SectionCollapsible>
 
-            <SectionCollapsible title="지금 삶과의 거울" enterDelay={0.18}>
+            <SectionCollapsible title="꿈이 비추는 현재 삶" enterDelay={0.18}>
               <MirrorBlock text={result.western_mirror} />
             </SectionCollapsible>
 
