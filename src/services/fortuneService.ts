@@ -1926,6 +1926,10 @@ export async function buildNameFortunePrompt(
     koreanName: nameInput.koreanName,
     charMeanings: nameInput.charMeanings,
     hanjaName: nameInput.hanjaName,
+    // ★ 보관함 재생 시 시각 카드(4격 계산)와 본문 4격 일치를 위해 surnameLength 필수 저장.
+    //   없으면 옛 record 재생 시 default=1 로 단성 룰 → 본문(복성 룰)과 시각 카드 불일치 사고.
+    surnameLength: nameInput.surnameLength ?? 1,
+    compoundSurnameKorean: nameInput.compoundSurnameKorean,
   };
   return { prompt, maxTokens, engineResult };
 }
@@ -1998,6 +2002,9 @@ export const getNameFortune = async (
         koreanName: nameInput.koreanName,
         charMeanings: nameInput.charMeanings,
         hanjaName: nameInput.hanjaName,
+        // ★ 보관함 시각 카드와 본문 4격 일치 보장
+        surnameLength: nameInput.surnameLength ?? 1,
+        compoundSurnameKorean: nameInput.compoundSurnameKorean,
       } as Record<string, unknown>,
       interpretation: content,
       creditType: 'moon',

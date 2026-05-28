@@ -396,6 +396,7 @@ export default function MoreFortunePage({ category }: Props) {
             koreanName?: string;
             charMeanings?: { sound?: string; meaning?: string }[];
             hanjaName?: string;
+            surnameLength?: 1 | 2;
           };
           if (typeof eng.koreanName === 'string') setKoreanName(eng.koreanName);
           if (Array.isArray(eng.charMeanings)) {
@@ -404,6 +405,15 @@ export default function MoreFortunePage({ category }: Props) {
           // 옛 record 호환: hanjaName 이 있으면 글자 단위로 분해해 selectedHanjas 복원
           if (typeof eng.hanjaName === 'string' && eng.hanjaName.length > 0) {
             setSelectedHanjas([...eng.hanjaName]);
+          }
+          // ★ 보관함 재생 시 surnameLength 복원 — 안 하면 시각 카드 4격이 단성 룰로 재계산되어 본문과 불일치.
+          //   옛 record(필드 없음) 호환: 한국 복성 화이트리스트 자동 감지로 fallback.
+          if (eng.surnameLength === 1 || eng.surnameLength === 2) {
+            setSurnameLength(eng.surnameLength);
+          } else if (typeof eng.koreanName === 'string' && detectCompoundSurname(eng.koreanName)) {
+            setSurnameLength(2);
+          } else {
+            setSurnameLength(1);
           }
         }
         // 꿈 해몽이면 저장된 꿈 텍스트·시각·반복 여부 복원

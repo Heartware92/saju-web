@@ -156,9 +156,16 @@ export function NameMeaningVisual({
 }) {
   const isHanjaMode = hanjas.length > 0;
   if (chars.length === 0) return null;
+  // 복성(4글자) 케이스에서도 한 줄 배치 — 글자 수 따라 컬럼 동적.
+  // Tailwind JIT 정적 매칭을 위해 명시적 분기.
+  const colsCls =
+    chars.length >= 4 ? 'grid-cols-4' :
+    chars.length === 3 ? 'grid-cols-3' :
+    chars.length === 2 ? 'grid-cols-2' :
+    'grid-cols-1 max-w-[120px] mx-auto';
   return (
     <div className="mb-3">
-      <div className="grid grid-cols-3 gap-2">
+      <div className={`grid gap-2 ${colsCls}`}>
         {chars.map((ch, i) => {
           if (isHanjaMode) {
             const h = hanjas[i];
@@ -308,6 +315,12 @@ export function JaWonVisual({
   hideCaptionTitle?: boolean;
 }) {
   if (hanjas.length === 0) return null;
+  // 복성(4글자) 케이스에서도 한 줄 배치 — 글자 수 따라 컬럼 동적.
+  const jawonColsCls =
+    hanjas.length >= 4 ? 'grid-cols-4' :
+    hanjas.length === 3 ? 'grid-cols-3' :
+    hanjas.length === 2 ? 'grid-cols-2' :
+    'grid-cols-1 max-w-[120px] mx-auto';
   return (
     <div className="mb-3">
       <VisualCaption
@@ -315,7 +328,7 @@ export function JaWonVisual({
         desc="한자 부수가 품은 오행이에요. 카드 좌상단 점이 그 오행 색입니다."
         hideTitle={hideCaptionTitle}
       />
-    <div className="grid grid-cols-3 gap-2">
+    <div className={`grid gap-2 ${jawonColsCls}`}>
       {hanjas.map((h, i) => {
         const color = ELEMENT_COLOR[h.jawon] ?? 'transparent';
         const bg = ELEMENT_BG[h.jawon] ?? 'rgba(255,255,255,0.04)';
