@@ -8527,7 +8527,7 @@ export const generateDreamOrientalPrompt = (
 - 강한 영역: ${classification.strong_domains.length > 0 ? classification.strong_domains.join(', ') : '(없음)'}
 - 핵심 신호: ${classification.key_signals.join(', ')}
 ${classification.interpretive_hints && classification.interpretive_hints.length > 0
-  ? `- ★ 1차 해석 힌트 (이 의미를 본문에 자연스럽게 녹여 풀이):\n${classification.interpretive_hints.map(h => `  · ${h}`).join('\n')}\n`
+  ? `- ★★ 1차 해석 힌트 — 반드시 본문에서 인용·활용 (매번 재추론 금지) ★★:\n${classification.interpretive_hints.map(h => `  · ${h}`).join('\n')}\n  ※ oriental_diagnosis 근거 본문에서 위 힌트 중 1~2개의 의미를 반드시 풀어쓰기. 무시 금지.\n`
   : ''}${classification.is_taemong_alert ? '- ★ 태몽 가드레일 — "단명·요절·기형·유산" 절대 금지\n' : ''}` : '';
 
   return `당신은 한국 전통 주공해몽·민속 해몽 35년 전문가입니다. 동양 6 섹션만 출력 (서양 절대 금지).
@@ -8626,7 +8626,7 @@ export const generateDreamWesternPrompt = (
 - 길흉: ${classification.polarity_hint}
 - 신호: ${classification.key_signals.join(', ')}
 ${classification.interpretive_hints && classification.interpretive_hints.length > 0
-  ? `- ★ 1차 해석 힌트 (이 의미를 본문에 자연스럽게 녹여 풀이 — 매번 새로 추론하지 말 것):\n${classification.interpretive_hints.map(h => `  · ${h}`).join('\n')}\n`
+  ? `- ★★ 1차 해석 힌트 — 반드시 본문에서 인용·활용 (매번 재추론 금지) ★★:\n${classification.interpretive_hints.map(h => `  · ${h}`).join('\n')}\n  ※ western_latent / western_archetypes / western_mirror 의 본문에서 위 힌트의 의미를 반드시 풀어쓰기. 무시 금지.\n`
   : ''}${classification.is_clinical_alert ? '- ★ 임상 위험 — "전문 상담 권합니다" 끝줄 필수\n' : ''}` : '';
 
   return `당신은 프로이트·융·게슈탈트·dream science 임상심리 박사입니다. 서양 5 섹션만 출력 (동양 절대 금지).

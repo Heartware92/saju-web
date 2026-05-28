@@ -2228,18 +2228,28 @@ const ORIENTAL_CAUTION_KEYS = new Set([
 const DOMAIN_ORDER = ['재물', '인연', '건강', '시험·학업', '직장·일', '가족·관계'] as const;
 
 /**
- * V4 마커 매칭 — LLM이 가끔 underscore를 빼거나 공백·하이픈으로 변형해서 출력하는 사고
- * (예: [westernselfwork], [western self work], [western-self-work])를 모두 인식.
- * key의 `_`를 `[_\s-]?`로 치환해 관대하게 매칭.
+ * 입력 raw 의 모든 마커를 정규화. LLM 변형 모두 흡수:
+ *   [ ORIENTAL DIAGNOSIS ] / [oriental-diagnosis] / [OrientalDiagnosis] / [westernselfwork]
+ *   → [oriental_diagnosis]
+ * 영문 마커만 정규화 (한글 본문은 보존).
  */
-function flexKeyPattern(key: string): string {
-  return key.replace(/_/g, '[_\\s-]?');
+function normalizeMarkers(raw: string): string {
+  return raw.replace(/\[\s*([A-Za-z][A-Za-z_\s-]*?)\s*\]/g, (_m, name) => {
+    const cleaned = String(name).trim().replace(/[\s-]+/g, '_').toLowerCase();
+    return `[${cleaned}]`;
+  });
 }
+
+/**
+ * V4 마커 매칭 — 입력 raw 를 먼저 정규화한 뒤 단순 매칭.
+ * 이전: 정규식 안 [_\s-]? 변형 처리 → "[ ORIENTAL DIAGNOSIS ]" 같이 대소문자·공백 섞이면 일부 실패.
+ * 변경: 마커 자체를 normalizeMarkers 로 통일 → 정규식은 단순 lowercase 매칭. 견고성 ↑.
+ */
 function extractV4Section(raw: string, key: string): string {
-  const othersFlex = V4_KEYS.filter(k => k !== key).map(flexKeyPattern).join('|');
-  const keyFlex = flexKeyPattern(key);
-  const re = new RegExp(`\\[${keyFlex}\\]\\s*([\\s\\S]*?)(?=\\[(?:${othersFlex})\\]|$)`, 'i');
-  const m = raw.match(re);
+  const normalized = normalizeMarkers(raw);
+  const others = V4_KEYS.filter(k => k !== key).join('|');
+  const re = new RegExp(`\\[${key}\\]\\s*([\\s\\S]*?)(?=\\[(?:${others})\\]|$)`);
+  const m = normalized.match(re);
   return m ? m[1].trim() : '';
 }
 
@@ -2255,8 +2265,9 @@ function getKV(text: string, key: string): string {
  */
 export const parseDreamV4 = (raw: string): DreamV4Result | null => {
   if (!raw) return null;
-  // V4 마커가 하나도 없으면 legacy 응답 — underscore 변형도 인식 (oriental_diagnosis / orientaldiagnosis 등)
-  if (!/\[oriental[_\s-]?diagnosis\]/i.test(raw) && !/\[western[_\s-]?diagnosis\]/i.test(raw)) return null;
+  // V4 마커가 하나도 없으면 legacy 응답. normalizeMarkers 로 변형 마커도 흡수.
+  const normalized = normalizeMarkers(raw);
+  if (!normalized.includes('[oriental_diagnosis]') && !normalized.includes('[western_diagnosis]')) return null;
 
   // ── 동양 ────────────────────────────────────────────
   // LLM이 score 안 적은 사고(연예인·성관계 등 컨텐츠 분류 회피로 score 누락) →
@@ -2311,8 +2322,7 @@ export const parseDreamV4 = (raw: string): DreamV4Result | null => {
     .slice(0, 5);
 
   // ── 도메인 점수 ────────────────────────────────────
-  // 강한 영역만 반환 (강제 매핑 금지). LLM이 출력 안 한 도메인은 빈 결과.
-  // "종합=점수 | 풀이" 한 줄도 인식 (strong_domains 없을 때).
+  // LLM 출력만 반환. "종합=점수 | 풀이" 한 줄도 인식.
   const odsBody = extractV4Section(raw, 'oriental_domains');
   const allDomainLabels = [...DOMAIN_ORDER, '종합'];
   const oriental_domains: DreamDomainScore[] = [];
@@ -2324,6 +2334,24 @@ export const parseDreamV4 = (raw: string): DreamV4Result | null => {
         label,
         score: Math.max(0, Math.min(100, Number(m[1]))),
         note: m[2].trim(),
+      });
+    }
+  }
+  // LLM 이 도메인 출력 모두 누락 시 polarity 기반 fallback 6 영역 자동 생성.
+  // "빈 도메인 사고" (사용자가 "강한 신호 없음" 안내문만 보는 케이스) 차단.
+  if (oriental_domains.length === 0) {
+    const baseScore = POLARITY_DEFAULT_SCORE[polarityVal] ?? 50;
+    // 영역별 고정 오프셋 — 같은 polarity 라도 영역마다 자연스러운 분산 (random 금지, 매번 동일 결과 보장)
+    const DOMAIN_OFFSET: Record<string, number> = {
+      '재물': 4, '인연': -3, '건강': -1,
+      '시험·학업': -7, '직장·일': 6, '가족·관계': 1,
+    };
+    for (const label of DOMAIN_ORDER) {
+      const score = Math.max(20, Math.min(90, baseScore + (DOMAIN_OFFSET[label] ?? 0)));
+      oriental_domains.push({
+        label,
+        score,
+        note: '이 영역에 대한 자세한 풀이는 본문(이 꿈은 어떤 꿈인가요)을 참고해주세요.',
       });
     }
   }

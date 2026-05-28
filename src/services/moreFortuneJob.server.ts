@@ -44,8 +44,8 @@ const CATEGORY_LABEL: Record<MoreFortuneCategory, string> = {
 
 // dream 3-pass 호출별 토큰 한도 (각자 Gemini 8192 한도 안에서 충분 분량)
 const DREAM_CLASSIFIER_TOKENS = 1500;   // JSON 작은 응답
-const DREAM_ORIENTAL_TOKENS = 8000;     // 6 섹션 풍부 분량 (Gemini 8192 한도 풀)
-const DREAM_WESTERN_TOKENS = 8000;      // 5 섹션 풍부 분량 (Gemini 8192 한도 풀)
+const DREAM_ORIENTAL_TOKENS = 7500;     // 6 섹션 풍부 분량 (Gemini 8192 한도, 잘림 위험 회피 위해 안전 마진)
+const DREAM_WESTERN_TOKENS = 7500;      // 5 섹션 동일
 
 export interface DreamJobInput {
   dreamText: string;
@@ -150,21 +150,32 @@ async function runDream3Pass(input: DreamJobInput): Promise<string> {
     callAI(westernPrompt, DREAM_WESTERN_TOKENS),
   ]);
 
-  const orientalContent = orientalRes.status === 'fulfilled' ? sanitizeAIOutput(orientalRes.value.content) : '';
-  const westernContent = westernRes.status === 'fulfilled' ? sanitizeAIOutput(westernRes.value.content) : '';
+  const orientalOk = orientalRes.status === 'fulfilled';
+  const westernOk = westernRes.status === 'fulfilled';
+  const orientalContent = orientalOk ? sanitizeAIOutput(orientalRes.value.content) : '';
+  const westernContent = westernOk ? sanitizeAIOutput(westernRes.value.content) : '';
 
   if (!orientalContent && !westernContent) {
     throw new Error('꿈해몽 동양·서양 풀이 모두 실패했어요. 잠시 후 다시 시도해주세요.');
   }
-  if (orientalRes.status === 'rejected') {
-    console.error('[dream:oriental] 실패:', orientalRes.reason);
+  if (!orientalOk) {
+    console.error('[dream:oriental] 실패:', orientalRes.status === 'rejected' ? orientalRes.reason : 'unknown');
   }
-  if (westernRes.status === 'rejected') {
-    console.error('[dream:western] 실패:', westernRes.reason);
+  if (!westernOk) {
+    console.error('[dream:western] 실패:', westernRes.status === 'rejected' ? westernRes.reason : 'unknown');
   }
 
+  // 부분 실패 시 사용자에게 보일 안내 마커 주입 — UI 에서 잡아서 안내 표시 가능
+  const partialNotice: string[] = [];
+  if (!orientalOk) partialNotice.push('[oriental_partial_fail]\n동양 풀이가 일시적 오류로 생성되지 못했어요. 다시 풀이를 받아보시면 보완됩니다.');
+  if (!westernOk) partialNotice.push('[western_partial_fail]\n서양 풀이가 일시적 오류로 생성되지 못했어요. 다시 풀이를 받아보시면 보완됩니다.');
+
   // 두 응답 합치기 — parseDreamV4 가 11 마커 모두 인식
-  return [orientalContent, westernContent].filter(Boolean).join('\n\n');
+  return [
+    ...partialNotice,
+    orientalContent,
+    westernContent,
+  ].filter(Boolean).join('\n\n');
 }
 
 async function markDone(recordId: string, fullContent: string): Promise<void> {
