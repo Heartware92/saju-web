@@ -21,14 +21,20 @@ comment on column public.user_credits.last_phone_change_month
   is 'KST 기준 마지막 변경 월 (YYYY-MM). NULL = 한 번도 변경 없음';
 
 -- 2) 변경 이력 테이블
+--    idempotency_key 를 UNIQUE 로 두어 무료/유료 분기 모두 이중 변경 차단.
+--    (credit_transactions UNIQUE 만으로는 무료 분기에서 INSERT 가 일어나지 않아 우회됨)
 create table if not exists public.phone_change_history (
   id uuid default gen_random_uuid() primary key,
   user_id uuid not null references auth.users(id) on delete cascade,
   old_phone text,
   new_phone text not null,
   credit_charged int not null default 0,
+  idempotency_key text not null,
   changed_at timestamptz not null default now()
 );
+
+create unique index if not exists uniq_phone_change_history_key
+  on public.phone_change_history (idempotency_key);
 
 create index if not exists idx_phone_change_history_user
   on public.phone_change_history (user_id, changed_at desc);
@@ -96,9 +102,10 @@ begin
     return 'invalid_input';
   end if;
 
-  -- 멱등성 1차 체크: 같은 키로 차감 기록이 있으면 즉시 duplicate
+  -- 멱등성 1차 체크: phone_change_history 의 UNIQUE 키로 무료/유료 모두 커버
+  -- (credit_transactions 만 체크하면 무료 분기에서 INSERT 가 없어 우회됨)
   select id into v_existing_id
-    from credit_transactions
+    from phone_change_history
     where idempotency_key = p_idempotency_key
     limit 1;
   if v_existing_id is not null then
@@ -149,13 +156,16 @@ begin
       where user_id = p_user_id;
   end if;
 
-  -- 이력 기록
-  insert into phone_change_history (user_id, old_phone, new_phone, credit_charged)
-    values (p_user_id, p_old_phone, p_new_phone, v_credit_charged);
+  -- 이력 기록 — idempotency_key UNIQUE 가 동시 요청 race 마지막 안전망
+  insert into phone_change_history
+    (user_id, old_phone, new_phone, credit_charged, idempotency_key)
+    values (p_user_id, p_old_phone, p_new_phone, v_credit_charged, p_idempotency_key);
 
   return 'ok';
 exception
   when unique_violation then
+    -- credit_transactions 또는 phone_change_history 의 UNIQUE 위반 모두 여기로
+    -- 트랜잭션 전체 자동 롤백 → user_credits 변경도 무효
     return 'duplicate';
 end;
 $$;

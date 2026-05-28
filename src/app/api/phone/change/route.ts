@@ -1,20 +1,25 @@
 /**
  * POST /api/phone/change
  *
- * 흐름
+ * 흐름 (실패 시 데이터 정합성 유지 순서)
  *   1) 토큰 검증
  *   2) body 파싱 (newPhone, otpCode, idempotencyKey)
- *   3) OTP 검증 (otp_codes 테이블 — 회원가입과 동일 방식)
- *   4) 새 번호가 다른 계정에 사용 중인지 체크
- *   5) change_phone_atomic RPC 호출 (월 무료 / 5달 차감 자동 처리)
- *   6) auth.users.user_metadata.phone 업데이트
- *   7) OTP row verified=true 처리
+ *   3) Rate limit 체크 (사용자 단위)
+ *   4) OTP 검증 (otp_codes 테이블)
+ *   5) 새 번호 중복 체크 (다른 계정 사용 중?)
+ *   6) OTP row verified=true 선제 마킹 — 같은 OTP 재사용 차단
+ *   7) auth.users.user_metadata.phone 업데이트 (먼저)
+ *        실패 → 4xx/5xx 반환, RPC 안 부름. OTP 는 이미 사용됨.
+ *   8) change_phone_atomic RPC 호출 (크레딧 차감)
+ *        실패 → metadata 를 oldPhone 으로 롤백 시도 + 5xx 반환
  *
- * 멱등성: idempotencyKey 가 credit_transactions 에 이미 있으면 'duplicate' 반환 → 성공으로 응답
+ * 멱등성: phone_change_history.idempotency_key UNIQUE 가 동시 요청 race 의 최종 안전망.
+ *         같은 키 재시도 시 RPC 는 'duplicate' 반환 → metadata 도 이미 갱신된 상태.
  */
 
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/services/supabaseAdmin';
+import { checkPhoneChangeRateLimit } from '@/services/rateLimit';
 
 export const runtime = 'nodejs';
 export const maxDuration = 30;
@@ -61,12 +66,20 @@ export async function POST(req: NextRequest) {
     if (!idempotencyKey || idempotencyKey.length < 8) {
       return NextResponse.json({ error: '요청 식별자가 잘못됐어요.' }, { status: 400 });
     }
-
     if (oldPhone && oldPhone === newPhone) {
       return NextResponse.json({ error: '현재 사용 중인 번호와 동일해요.' }, { status: 400 });
     }
 
-    // 3) OTP 검증
+    // 3) Rate limit (사용자 단위) — phone 단위는 /api/sms/send 에서 별도 체크
+    const rate = await checkPhoneChangeRateLimit(user.id);
+    if (!rate.ok) {
+      return NextResponse.json(
+        { error: rate.message ?? '요청이 너무 잦아요. 잠시 후 다시 시도해주세요.' },
+        { status: 429 },
+      );
+    }
+
+    // 4) OTP 검증
     const { data: otpRow, error: otpErr } = await supabaseAdmin
       .from('otp_codes')
       .select('id, expires_at')
@@ -85,7 +98,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // 4) 새 번호 중복 체크 (다른 계정에서 사용 중인지)
+    // 5) 새 번호 중복 체크
     const { data: takenData, error: takenErr } = await supabaseAdmin.rpc('check_phone_taken', {
       p_phone: newPhone,
       p_exclude_user_id: user.id,
@@ -101,7 +114,30 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // 5) 변경 RPC 호출 (월 무료 / 5달 차감 자동 분기)
+    // 6) OTP 선제 마킹 — 같은 OTP 재사용 차단
+    //    이 시점 이후 단계가 실패해도 사용자는 새 OTP 를 받아야 함 (의도).
+    const { error: otpMarkErr } = await supabaseAdmin
+      .from('otp_codes')
+      .update({ verified: true })
+      .eq('id', otpRow.id);
+    if (otpMarkErr) {
+      console.error('[phone/change] OTP mark failed:', otpMarkErr);
+      return NextResponse.json({ error: '인증 처리 중 오류가 발생했어요.' }, { status: 500 });
+    }
+
+    // 7) metadata 먼저 갱신 — 실패해도 차감 안 됐으므로 사용자 손해 0
+    const { error: updateErr } = await supabaseAdmin.auth.admin.updateUserById(user.id, {
+      user_metadata: { ...(user.user_metadata ?? {}), phone: newPhone },
+    });
+    if (updateErr) {
+      console.error('[phone/change] auth metadata update failed:', updateErr);
+      return NextResponse.json(
+        { error: '번호 갱신에 실패했어요. 인증부터 다시 받아주세요.' },
+        { status: 500 },
+      );
+    }
+
+    // 8) RPC 호출 (크레딧 차감 + 이력 기록)
     const { data: rpcData, error: rpcErr } = await supabaseAdmin.rpc('change_phone_atomic', {
       p_user_id: user.id,
       p_old_phone: oldPhone,
@@ -109,44 +145,38 @@ export async function POST(req: NextRequest) {
       p_idempotency_key: idempotencyKey,
     });
 
-    if (rpcErr) {
-      console.error('[phone/change] RPC error:', rpcErr);
-      return NextResponse.json({ error: '변경 처리 중 오류가 발생했어요.' }, { status: 500 });
-    }
+    if (rpcErr || (rpcData !== 'ok' && rpcData !== 'duplicate')) {
+      // metadata 롤백 시도 (best-effort)
+      const rollbackMeta = oldPhone
+        ? { ...(user.user_metadata ?? {}), phone: oldPhone }
+        : (() => {
+            const m = { ...(user.user_metadata ?? {}) };
+            delete (m as Record<string, unknown>).phone;
+            return m;
+          })();
+      await supabaseAdmin.auth.admin
+        .updateUserById(user.id, { user_metadata: rollbackMeta })
+        .catch((e) => console.error('[phone/change] metadata rollback failed:', e));
 
-    if (rpcData === 'insufficient') {
-      return NextResponse.json(
-        { error: '달 크레딧이 부족해요. 5달이 필요합니다.', code: 'insufficient' },
-        { status: 402 },
-      );
-    }
-    if (rpcData === 'no_user') {
-      return NextResponse.json(
-        { error: '계정 정보를 찾지 못했어요.', code: 'no_user' },
-        { status: 404 },
-      );
-    }
-    if (rpcData !== 'ok' && rpcData !== 'duplicate') {
+      if (rpcErr) {
+        console.error('[phone/change] RPC error:', rpcErr);
+        return NextResponse.json({ error: '변경 처리 중 오류가 발생했어요.' }, { status: 500 });
+      }
+      if (rpcData === 'insufficient') {
+        return NextResponse.json(
+          { error: '달 크레딧이 부족해요. 5달이 필요합니다.', code: 'insufficient' },
+          { status: 402 },
+        );
+      }
+      if (rpcData === 'no_user') {
+        return NextResponse.json(
+          { error: '계정 정보를 찾지 못했어요.', code: 'no_user' },
+          { status: 404 },
+        );
+      }
       console.error('[phone/change] unexpected RPC result:', rpcData);
       return NextResponse.json({ error: '변경 처리에 실패했어요.' }, { status: 500 });
     }
-
-    // 6) auth.users.user_metadata.phone 업데이트
-    //    'duplicate' 인 경우엔 이미 처리된 요청이므로 metadata 도 이미 갱신됐을 가능성 ↑
-    //    하지만 idempotency 안전망 차원에서 한 번 더 set (덮어쓰기 OK).
-    const { error: updateErr } = await supabaseAdmin.auth.admin.updateUserById(user.id, {
-      user_metadata: { ...(user.user_metadata ?? {}), phone: newPhone },
-    });
-    if (updateErr) {
-      console.error('[phone/change] auth metadata update failed:', updateErr);
-      // 이미 RPC 가 통과했으므로 (이력·크레딧 차감 완료) — 실패 응답하지 말고 경고만
-    }
-
-    // 7) OTP row 사용 처리
-    await supabaseAdmin
-      .from('otp_codes')
-      .update({ verified: true })
-      .eq('id', otpRow.id);
 
     return NextResponse.json({
       success: true,

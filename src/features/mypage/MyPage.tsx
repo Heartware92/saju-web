@@ -262,8 +262,48 @@ const ChangePasswordModal: React.FC<{ onClose: () => void }> = ({ onClose }) => 
       setDone(true);
       setTimeout(onClose, 1500);
     } catch (err: any) {
-      console.error('Password change error:', err);
-      setError('비밀번호 변경 중 오류가 발생했어요. 잠시 후 다시 시도해주세요.');
+      // 콘솔엔 풀 정보, UI엔 케이스별 한국어
+      console.error('Password change error:', {
+        code: err?.code,
+        status: err?.status,
+        name: err?.name,
+        message: err?.message,
+      });
+      const code = (err?.code ?? '') as string;
+      const msg = (err?.message ?? '') as string;
+      const lower = msg.toLowerCase();
+
+      if (
+        code === 'same_password' ||
+        lower.includes('different from the old password') ||
+        lower.includes('should be different')
+      ) {
+        setError('현재 비밀번호와 동일해요. 다른 비밀번호를 입력해주세요.');
+      } else if (
+        code === 'weak_password' ||
+        lower.includes('weak password') ||
+        lower.includes('password should be at least')
+      ) {
+        setError('비밀번호가 정책에 맞지 않아요. 더 강한 비밀번호를 입력해주세요.');
+      } else if (
+        code === 'over_request_rate_limit' ||
+        code === 'over_email_send_rate_limit' ||
+        lower.includes('rate limit')
+      ) {
+        setError('요청이 너무 잦아요. 잠시 후 다시 시도해주세요.');
+      } else if (
+        code === 'session_not_found' ||
+        code === 'session_expired' ||
+        lower.includes('jwt') ||
+        lower.includes('session')
+      ) {
+        setError('로그인 세션이 만료됐어요. 다시 로그인 후 시도해주세요.');
+      } else if (msg) {
+        // 알 수 없는 케이스 — 원본 메시지 노출해 사용자가 직접 단서로 활용
+        setError(`변경 실패: ${msg}`);
+      } else {
+        setError('비밀번호 변경 중 오류가 발생했어요. 잠시 후 다시 시도해주세요.');
+      }
     } finally {
       setLoading(false);
     }

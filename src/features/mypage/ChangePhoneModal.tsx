@@ -9,6 +9,7 @@
  */
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { supabase } from '@/services/supabase';
 import { useCreditStore } from '@/store/useCreditStore';
 import { Button } from '@/components/ui/Button';
@@ -41,6 +42,7 @@ function formatTimer(s: number) {
 }
 
 export const ChangePhoneModal: React.FC<Props> = ({ currentPhone, onClose, onChanged }) => {
+  const router = useRouter();
   const idempotencyKey = useMemo(() => randomKey(), []);
 
   const [stage, setStage] = useState<Stage>('info');
@@ -56,43 +58,59 @@ export const ChangePhoneModal: React.FC<Props> = ({ currentPhone, onClose, onCha
   const [submitLoading, setSubmitLoading] = useState(false);
 
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  // 언마운트·진행 중 요청 취소용
+  const unmountedRef = useRef(false);
+  const abortRef = useRef<AbortController | null>(null);
 
-  // OTP 타이머
   useEffect(() => {
-    if (otpTimer > 0) {
-      timerRef.current = setInterval(() => setOtpTimer((t) => Math.max(0, t - 1)), 1000);
-      return () => {
-        if (timerRef.current) clearInterval(timerRef.current);
-      };
-    }
-  }, [otpTimer > 0]);
+    return () => {
+      unmountedRef.current = true;
+      if (timerRef.current) clearInterval(timerRef.current);
+      if (abortRef.current) abortRef.current.abort();
+    };
+  }, []);
+
+  // OTP 타이머 — otpTimer 가 0이 되면 effect cleanup 이 자동으로 인터벌 정리
+  useEffect(() => {
+    if (otpTimer <= 0) return;
+    const id = setInterval(() => setOtpTimer((t) => Math.max(0, t - 1)), 1000);
+    timerRef.current = id;
+    return () => clearInterval(id);
+  }, [otpTimer]);
 
   // 1) 상태 로드
   useEffect(() => {
+    const ctrl = new AbortController();
     (async () => {
       try {
         const { data: { session } } = await supabase.auth.getSession();
         const token = session?.access_token;
         if (!token) {
-          setError('로그인 세션이 만료됐어요.');
-          setStatusLoading(false);
+          if (!unmountedRef.current) {
+            setError('로그인 세션이 만료됐어요.');
+            setStatusLoading(false);
+          }
           return;
         }
         const res = await fetch('/api/phone/status', {
           headers: { Authorization: `Bearer ${token}` },
+          signal: ctrl.signal,
         });
         const data = await res.json();
+        if (unmountedRef.current) return;
         if (!res.ok) {
           setError(data?.error || '상태 조회 실패');
         } else {
           setStatus(data as PhoneStatus);
         }
-      } catch (e) {
+      } catch (e: any) {
+        if (e?.name === 'AbortError' || unmountedRef.current) return;
         setError('상태 조회 중 오류가 발생했어요.');
       } finally {
-        setStatusLoading(false);
+        if (!unmountedRef.current) setStatusLoading(false);
       }
     })();
+    return () => ctrl.abort();
   }, []);
 
   const handleSendOtp = async () => {
@@ -108,20 +126,28 @@ export const ChangePhoneModal: React.FC<Props> = ({ currentPhone, onClose, onCha
     setError('');
     setOtpLoading(true);
     try {
+      // 마이페이지 변경 인증은 intent + 토큰 필수 (서버에서 솔라피 호출 전 중복 체크)
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
       const res = await fetch('/api/sms/send', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phone: cleaned }),
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({ phone: cleaned, intent: 'phone-change' }),
       });
       const data = await res.json();
+      if (unmountedRef.current) return;
       if (!res.ok) throw new Error(data?.error || '발송 실패');
       setOtpSent(true);
       setOtpTimer(300);
       setOtpCode('');
     } catch (e: any) {
+      if (unmountedRef.current) return;
       setError(e?.message || '인증번호 발송에 실패했어요.');
     } finally {
-      setOtpLoading(false);
+      if (!unmountedRef.current) setOtpLoading(false);
     }
   };
 
@@ -132,11 +158,14 @@ export const ChangePhoneModal: React.FC<Props> = ({ currentPhone, onClose, onCha
     }
     setError('');
     setSubmitLoading(true);
+    if (abortRef.current) abortRef.current.abort();
+    const ctrl = new AbortController();
+    abortRef.current = ctrl;
     try {
       const { data: { session } } = await supabase.auth.getSession();
       const token = session?.access_token;
       if (!token) {
-        setError('로그인 세션이 만료됐어요.');
+        if (!unmountedRef.current) setError('로그인 세션이 만료됐어요.');
         return;
       }
       const res = await fetch('/api/phone/change', {
@@ -150,8 +179,10 @@ export const ChangePhoneModal: React.FC<Props> = ({ currentPhone, onClose, onCha
           otpCode,
           idempotencyKey,
         }),
+        signal: ctrl.signal,
       });
       const data = await res.json();
+      if (unmountedRef.current) return;
       if (!res.ok) {
         setError(data?.error || '변경에 실패했어요.');
         return;
@@ -163,11 +194,14 @@ export const ChangePhoneModal: React.FC<Props> = ({ currentPhone, onClose, onCha
         credit.fetchTransactions().catch(() => {});
       }
       setStage('done');
-      setTimeout(() => onChanged(newPhone.replace(/[^0-9]/g, '')), 1200);
+      setTimeout(() => {
+        if (!unmountedRef.current) onChanged(newPhone.replace(/[^0-9]/g, ''));
+      }, 1200);
     } catch (e: any) {
+      if (e?.name === 'AbortError' || unmountedRef.current) return;
       setError(e?.message || '변경 처리 중 오류가 발생했어요.');
     } finally {
-      setSubmitLoading(false);
+      if (!unmountedRef.current) setSubmitLoading(false);
     }
   };
 
@@ -209,58 +243,88 @@ export const ChangePhoneModal: React.FC<Props> = ({ currentPhone, onClose, onCha
               <div className="py-6 text-center text-sm text-text-secondary">상태 확인 중...</div>
             ) : status ? (
               <>
-                <div className="space-y-3 mb-5">
-                  <div className="flex items-center justify-between py-2 border-b border-[var(--border-subtle)]">
-                    <span className="text-text-secondary text-sm">현재 번호</span>
-                    <span className="font-medium text-text-primary text-sm">
-                      {currentPhone
-                        ? currentPhone.replace(/(\d{3})(\d{3,4})(\d{4})/, '$1-$2-$3')
-                        : '-'}
-                    </span>
+                {/* 현재 번호 */}
+                <div className="mb-4">
+                  <div className="text-xs text-text-tertiary mb-1.5">현재 번호</div>
+                  <div className="text-base font-semibold text-text-primary">
+                    {currentPhone
+                      ? currentPhone.replace(/(\d{3})(\d{3,4})(\d{4})/, '$1-$2-$3')
+                      : <span className="text-text-tertiary font-normal">등록된 번호가 없어요</span>}
                   </div>
-
-                  {status.requiresCredit ? (
-                    <div className="rounded-lg bg-fire-core/10 border border-fire-core/30 p-3">
-                      <p className="text-sm text-text-primary font-semibold mb-1">
-                        이번 달 무료 변경 횟수를 모두 사용했어요
-                      </p>
-                      <p className="text-xs text-text-secondary leading-relaxed">
-                        지금 변경하려면 <span className="text-moon-halo font-bold">5 🌙</span> 크레딧이
-                        차감돼요. (현재 잔액: {status.moonBalance}🌙)
-                      </p>
-                      <p className="text-xs text-text-tertiary mt-1.5">
-                        다음 달 1일이 되면 무료 변경이 다시 가능해요.
-                      </p>
-                    </div>
-                  ) : (
-                    <div className="rounded-lg bg-status-success/10 border border-status-success/30 p-3">
-                      <p className="text-sm text-text-primary font-semibold mb-1">
-                        이번 달 무료 변경 1회 가능
-                      </p>
-                      <p className="text-xs text-text-secondary leading-relaxed">
-                        무료 변경은 매월 1일에 갱신돼요. 추가 변경 시 5🌙 크레딧이 차감돼요.
-                      </p>
-                    </div>
-                  )}
                 </div>
 
-                <div className="flex gap-2">
-                  <Button variant="outline" fullWidth onClick={onClose}>
-                    취소
-                  </Button>
-                  <Button
-                    variant="sun"
-                    fullWidth
-                    onClick={() => setStage('verify')}
-                    disabled={status.requiresCredit && !status.hasEnoughCredit}
-                  >
-                    {status.requiresCredit && !status.hasEnoughCredit
-                      ? '크레딧 부족'
-                      : status.requiresCredit
-                        ? '5🌙 동의하고 변경'
-                        : '변경하기'}
-                  </Button>
-                </div>
+                {/* 상태 카드 — 무료 / 유료 분기 */}
+                {status.requiresCredit ? (
+                  <div className="rounded-xl bg-fire-core/10 border border-fire-core/30 p-4 mb-4">
+                    <div className="flex items-baseline gap-2 mb-2">
+                      <span className="text-sm font-bold text-fire-core">이번 달 무료 변경 종료</span>
+                    </div>
+                    <div className="flex items-baseline gap-1.5 mb-2">
+                      <span className="text-2xl font-bold text-text-primary">5</span>
+                      <span className="text-base">🌙</span>
+                      <span className="text-sm text-text-secondary">차감 후 변경 가능</span>
+                    </div>
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="text-text-tertiary">내 잔액</span>
+                      <span className={status.hasEnoughCredit ? 'text-text-secondary' : 'text-fire-core font-semibold'}>
+                        {status.moonBalance}🌙
+                        {!status.hasEnoughCredit && ' (부족)'}
+                      </span>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="rounded-xl bg-status-success/10 border border-status-success/30 p-4 mb-4">
+                    <div className="text-sm font-bold text-status-success mb-2">이번 달 무료 변경 가능</div>
+                    <div className="flex items-baseline gap-1.5">
+                      <span className="text-2xl font-bold text-text-primary">1</span>
+                      <span className="text-sm text-text-secondary">회 남음</span>
+                    </div>
+                  </div>
+                )}
+
+                {/* 안내 — 불릿 형태 */}
+                <ul className="space-y-1.5 mb-5 text-xs text-text-tertiary leading-relaxed">
+                  <li className="flex gap-2">
+                    <span className="text-text-tertiary">·</span>
+                    <span>무료 변경 횟수는 매월 1일에 1회로 갱신돼요</span>
+                  </li>
+                  <li className="flex gap-2">
+                    <span className="text-text-tertiary">·</span>
+                    <span>추가 변경은 5🌙 크레딧이 차감돼요</span>
+                  </li>
+                  <li className="flex gap-2">
+                    <span className="text-text-tertiary">·</span>
+                    <span>새 번호로 SMS 인증을 진행해요</span>
+                  </li>
+                </ul>
+
+                {/* CTA */}
+                {status.requiresCredit && !status.hasEnoughCredit ? (
+                  <div className="flex gap-2">
+                    <Button variant="outline" fullWidth onClick={onClose}>
+                      취소
+                    </Button>
+                    <Button
+                      variant="sun"
+                      fullWidth
+                      onClick={() => {
+                        onClose();
+                        router.push('/credit');
+                      }}
+                    >
+                      크레딧 충전
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="flex gap-2">
+                    <Button variant="outline" fullWidth onClick={onClose}>
+                      취소
+                    </Button>
+                    <Button variant="sun" fullWidth onClick={() => setStage('verify')}>
+                      {status.requiresCredit ? '동의하고 변경' : '변경하기'}
+                    </Button>
+                  </div>
+                )}
               </>
             ) : (
               <div className="py-6 text-center text-sm text-text-secondary">상태를 불러올 수 없어요.</div>
