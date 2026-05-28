@@ -2494,8 +2494,8 @@ export const getDreamInterpretation = async (
     // 5섹션 (진단 + 상징 + 동양 + 서양 + 실천) 한국어 약 3000자 ≈ 7500 토큰 필요. 10000 으로 여유.
     const content = await callGPT(generateDreamInterpretationPrompt(dreamText), 10000, 1000);
     const parsed = parseDreamSections(content);
-    // ★ 이전 풀이 모달 리스트 라벨 — 꿈 텍스트 첫 15자 + ellipsis
-    const dreamLabel = dreamText.trim().length > 15 ? `${dreamText.trim().slice(0, 15)}…` : dreamText.trim();
+    // ★ 이전 풀이 모달 리스트 라벨 — 꿈 텍스트 첫 8자 + ellipsis (날짜 다 보이게 짧게)
+    const dreamLabel = dreamText.trim().length > 8 ? `${dreamText.trim().slice(0, 8)}…` : dreamText.trim();
     archiveSaju({ profileId, category: 'dream', engineResult: { dreamText, categoryLabel: dreamLabel } as Record<string, unknown>, interpretation: content, creditType: 'moon', creditUsed: 1 });
     return {
       success: true,

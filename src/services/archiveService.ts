@@ -276,7 +276,7 @@ export async function findArchiveList(params: {
           categoryLabel = eng.koreanName;
         } else if (params.category === 'dream' && typeof eng.dreamText === 'string') {
           const dt = eng.dreamText.trim();
-          categoryLabel = dt.length > 15 ? `${dt.slice(0, 15)}…` : dt;
+          categoryLabel = dt.length > 8 ? `${dt.slice(0, 8)}…` : dt;
         }
       }
       return {

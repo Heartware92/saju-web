@@ -269,10 +269,17 @@ export function QuickFortuneGate({
                   </p>
                   <div className="max-h-[200px] overflow-y-auto space-y-1.5 mb-4 px-1">
                     {archiveList.map(item => {
-                      const dateLabel = item.context_date
-                        ? item.context_date.replace(/-/g, '.')
-                        : new Date(item.created_at).toLocaleDateString('ko-KR');
-                      const catLabel = truncateTaekilLabel(item.context_category_label);
+                      // 결과를 본 날짜 (created_at) — 모든 카테고리 공통, 항상 표시
+                      const resultDate = new Date(item.created_at).toLocaleDateString('ko-KR');
+                      // chip 라벨 카테고리별 분기:
+                      //  · period (지정일 운세): chip = isoDate (풀이 대상 날짜)
+                      //  · taekil/name/dream 등: chip = categoryLabel (카테고리·이름·꿈 일부)
+                      let chipLabel: string | undefined;
+                      if (archiveCategory === 'period' && item.context_date) {
+                        chipLabel = item.context_date.replace(/-/g, '.');
+                      } else {
+                        chipLabel = truncateTaekilLabel(item.context_category_label) || undefined;
+                      }
                       return (
                         <button
                           key={item.id}
@@ -280,16 +287,18 @@ export function QuickFortuneGate({
                           onClick={() => navigate(`&recordId=${item.id}`)}
                           className="w-full min-h-10 py-2 px-3 rounded-lg border border-[var(--border-subtle)] text-[14px] text-text-primary font-medium hover:bg-cta/10 hover:border-cta/40 transition-all flex items-center justify-between gap-2"
                         >
-                          <span className="flex items-center gap-2 min-w-0">
-                            {catLabel && (
+                          <span className="flex items-center gap-2 min-w-0 flex-1">
+                            {/* chip 고정 너비 — 세로 정렬 통일. 라벨 길면 truncate + title 호버 */}
+                            {chipLabel && (
                               <span
-                                className="text-[12px] font-bold text-cta bg-cta/10 px-2 py-0.5 rounded-md whitespace-nowrap flex-shrink-0 truncate max-w-[140px]"
-                                title={catLabel}
+                                className="text-[12px] font-bold text-cta bg-cta/10 px-2 py-0.5 rounded-md whitespace-nowrap flex-shrink-0 truncate text-center w-[110px]"
+                                title={chipLabel}
                               >
-                                {catLabel}
+                                {chipLabel}
                               </span>
                             )}
-                            <span className="truncate">{dateLabel}</span>
+                            {/* 결과 본 날짜 — 항상 다 보이게 (truncate 없음, whitespace-nowrap) */}
+                            <span className="whitespace-nowrap text-text-secondary">{resultDate}</span>
                           </span>
                           <span className="text-[12px] text-text-tertiary flex-shrink-0">결과 보기</span>
                         </button>

@@ -710,9 +710,9 @@ export default function MoreFortunePage({ category }: Props) {
           isRepeating: dreamRepeating,
         };
         prompt = 'DREAM_3PASS';  // 서버에서 dreamInput 우선 사용. prompt 무시되지만 빈 문자열 가드 통과용.
-        // ★ 이전 풀이 모달 리스트 라벨 — 꿈 텍스트 첫 15자 + ellipsis
+        // ★ 이전 풀이 모달 리스트 라벨 — 꿈 텍스트 첫 8자 + ellipsis (날짜 다 보이게 짧게)
         const dt = dreamText.trim();
-        const dreamLabel = dt.length > 15 ? `${dt.slice(0, 15)}…` : dt;
+        const dreamLabel = dt.length > 8 ? `${dt.slice(0, 8)}…` : dt;
         engineResult = {
           dreamText: dt,
           timeBandId: dreamTimeBandId,
