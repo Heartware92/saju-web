@@ -72,8 +72,8 @@ import {
 import { SectionCollapsible } from '@/components/saju/SectionCollapsible';
 import { renderEmphasis } from '@/utils/renderEmphasis';
 import { HanjaPickerModal } from '@/components/saju/HanjaPickerModal';
-import type { HanjaCandidate } from '@/lib/data/hanjaByKoreanSound';
-import { detectCompoundSurname, lookupCompoundSurnameHanja } from '@/lib/data/koreanCompoundSurnames';
+import { lookupHanjaBySoundWithDueum, type HanjaCandidate } from '@/lib/data/hanjaByKoreanSound';
+import { detectCompoundSurname } from '@/lib/data/koreanCompoundSurnames';
 import {
   EumRyeongVisual,
   JaWonVisual,
@@ -1078,34 +1078,14 @@ export default function MoreFortunePage({ category }: Props) {
               onReset={() => {
                 // ★ 자동 풀이 카테고리 (학업·자녀·성격) 는 사용자 추가 입력이 없으므로
                 //   곧장 새 풀이 시작 (handleRefetch — fresh=1 URL 강제 reload)
-                //   이름·꿈 카테고리는 입력 필요 → manualMode=true 로 입력 화면 복귀
+                //   이름·꿈 카테고리는 handleRedo 위임 — 잡 컨텍스트 reset + URL 정리 일관 적용
+                //   (직전 onReset 분기 별도 구현이 createdJobId/URL jobId 정리 누락해
+                //    AILoadingBar 80% 시작 + 옛 이름 잔존 버그 야기)
                 if (category === 'study' || category === 'children' || category === 'personality') {
                   handleRefetch();
                   return;
                 }
-                setResult(null);
-                setResultSections(null);
-                setError(null);
-                setManualMode(true);
-                // 캐시 무효화 — 다시 풀이 시 이전 결과가 복원되지 않도록
-                if (category) {
-                  useReportCacheStore.getState().invalidate(`more:${category}` as const);
-                }
-                // 이름 풀이 입력값 초기화 — 한자 다시 선택할 수 있게
-                if (category === 'name') {
-                  setKoreanName('');
-                  setCharMeanings([]);
-                  setSelectedHanjas([]);
-                  setSurnameLength(1);
-                }
-                if (category === 'dream') {
-                  setDreamText('');
-                  setDreamValid(false);
-                  setDreamTimeBandId('unknown');
-                  setDreamRepeating(false);
-                  setDreamV4(null);
-                  setDreamInputResetKey((k) => k + 1);
-                }
+                handleRedo();
               }}
             />
           )}
@@ -1205,6 +1185,37 @@ function NameInputPanel({
   // koreanName 변경시 재평가
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [koreanName, readOnly]);
+
+  // ★ koreanName 변경 시 selectedHanjas 자동 정리 — 옛 한자가 새 글자 음에 매칭 안 되면 클리어.
+  //   예: 홍길동(洪吉童) → 이순신 으로 수정 시 [0]'洪'은 음'홍'이라 새 음'이'에 매칭 X → 클리어.
+  //   두음법칙 페어(리→이, 림→임 등) 도 매칭으로 인정.
+  //   글자 수가 변하면 (3→4 또는 4→2) 길이도 chars 에 맞춤.
+  const charsKey = chars.join('');
+  useEffect(() => {
+    if (readOnly) return;
+    if (selectedHanjas.length === 0 && chars.length === 0) return;
+    const nextHanjas: (string | null)[] = chars.map((sound, i) => {
+      const oldHanja = selectedHanjas[i] ?? null;
+      if (!oldHanja) return null;
+      const lookup = lookupHanjaBySoundWithDueum(sound);
+      const ok = lookup.primary.some(c => c.char === oldHanja)
+        || lookup.dueumGroups.some(g => g.candidates.some(c => c.char === oldHanja));
+      return ok ? oldHanja : null;
+    });
+    // 변경 있을 때만 setState (무한 루프 방지)
+    const same = nextHanjas.length === selectedHanjas.length
+      && nextHanjas.every((h, i) => h === (selectedHanjas[i] ?? null));
+    if (!same) {
+      onSelectedHanjasChange(nextHanjas);
+      // charMeanings 도 한자가 클리어된 자리 같이 비움 (사용자가 직접 입력한 뜻은 유지)
+      const nextMeanings = chars.map((_, i) => nextHanjas[i] ? (charMeanings[i] ?? '') : '');
+      const meaningsSame = nextMeanings.length === charMeanings.length
+        && nextMeanings.every((m, i) => m === (charMeanings[i] ?? ''));
+      if (!meaningsSame) onCharMeaningsChange(nextMeanings);
+    }
+  // chars 가 매 렌더 새 배열이라 charsKey(join) 로 비교
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [charsKey, readOnly]);
 
   // 모달 state
   const [pickerOpen, setPickerOpen] = useState(false);
