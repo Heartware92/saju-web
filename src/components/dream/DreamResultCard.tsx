@@ -599,18 +599,32 @@ function CautionBox({ caution }: { caution: { body: string; items: DreamAdviceIt
 // 시각 컴포넌트 — 서양 탭
 // ════════════════════════════════════════════════════════════════════
 
+// function (꿈의 기능 가설) 한글 라벨
+const FUNCTION_LABEL: Record<string, { ko: string; desc: string; color: string }> = {
+  continuity:            { ko: '일상 연속',  desc: '현실 고민·관계가 꿈으로 이어진 형태',     color: '#60A5FA' },
+  threat_sim:            { ko: '위협 연습',  desc: '안전한 환경에서 위험을 미리 시뮬레이션',   color: '#FB923C' },
+  memory_consolidation:  { ko: '기억 통합',  desc: '낮의 경험·정보를 장기 기억으로 정리',     color: '#A78BFA' },
+  emotion_processing:    { ko: '감정 처리',  desc: '낮 동안 쌓인 정서를 소화·정리',          color: '#F472B6' },
+};
+
+const INTENSITY_LABEL: Record<string, { ko: string; level: number; color: string }> = {
+  low:    { ko: '약',  level: 1, color: '#34D399' },
+  medium: { ko: '중',  level: 2, color: '#FBBF24' },
+  high:   { ko: '강',  level: 3, color: '#F87171' },
+};
+
 function ClinicalDiagnosisCard({ diag }: { diag: DreamV4Result['western_diagnosis'] }) {
   const clinical = CLINICAL_LABELS[diag.clinical as ClinicalDreamType];
+  const fn = FUNCTION_LABEL[diag.function];
+  const intensity = INTENSITY_LABEL[diag.intensity as string];
   const color = clinical?.color || '#A78BFA';
-  const intensityColor = diag.intensity === 'high' ? '#F87171'
-    : diag.intensity === 'medium' ? '#FBBF24'
-    : diag.intensity === 'low' ? '#34D399' : '#CBD5E1';
   return (
     <div className="rounded-2xl border" style={{
       padding: '14px 12px',
       background: `linear-gradient(135deg, rgba(20,12,38,0.6), ${color}12)`,
       borderColor: `${color}55`,
     }}>
+      {/* 라벨 배지들 — 임상 유형 + 기능 가설 */}
       <div className="flex flex-wrap gap-2 mb-3">
         {clinical && (
           <span className="text-[15px] font-extrabold px-3.5 py-1.5 rounded-lg border" style={{
@@ -618,16 +632,44 @@ function ClinicalDiagnosisCard({ diag }: { diag: DreamV4Result['western_diagnosi
             fontFamily: 'var(--font-title)',
           }}>{clinical.ko}</span>
         )}
-        {diag.intensity && (
+        {fn && (
           <span className="text-[13px] font-bold px-3 py-1.5 rounded-lg border" style={{
-            color: intensityColor, background: `${intensityColor}15`, borderColor: `${intensityColor}40`,
+            color: fn.color, background: `${fn.color}15`, borderColor: `${fn.color}40`,
             fontFamily: 'var(--font-title)',
-          }}>강도 {diag.intensity === 'high' ? '강' : diag.intensity === 'medium' ? '중' : '약'}</span>
+          }}>{fn.ko}</span>
         )}
       </div>
-      {clinical?.desc && (
-        <p className="text-[14px] text-text-tertiary leading-relaxed mb-2.5 break-all">{clinical.desc}</p>
+
+      {/* 강도 시각 게이지 — 텍스트 "강도 중" → 3단계 막대 */}
+      {intensity && (
+        <div className="flex items-center gap-3 mb-3 px-1">
+          <span className="text-[13px] text-text-tertiary flex-shrink-0">꿈의 강렬도</span>
+          <div className="flex gap-1 flex-1">
+            {[1, 2, 3].map(lv => (
+              <div key={lv} className="flex-1 h-2.5 rounded-full" style={{
+                background: lv <= intensity.level ? intensity.color : 'rgba(255,255,255,0.08)',
+                boxShadow: lv <= intensity.level ? `0 0 8px ${intensity.color}55` : 'none',
+                transition: 'background 0.3s',
+              }} />
+            ))}
+          </div>
+          <span className="text-[13px] font-bold flex-shrink-0" style={{
+            color: intensity.color, fontFamily: 'var(--font-title)',
+          }}>{intensity.ko}</span>
+        </div>
       )}
+
+      {/* 임상 유형 설명 (한 줄) */}
+      {clinical?.desc && (
+        <p className="text-[14px] text-text-tertiary leading-relaxed mb-1 break-all">{clinical.desc}</p>
+      )}
+      {/* 기능 가설 설명 (한 줄) */}
+      {fn?.desc && (
+        <p className="text-[13px] text-text-tertiary leading-relaxed mb-2.5 break-all" style={{ color: `${fn.color}cc` }}>
+          기능 가설 — {fn.desc}
+        </p>
+      )}
+
       {diag.reason && <BodyParagraphs text={diag.reason} />}
     </div>
   );
@@ -723,22 +765,109 @@ function ArchetypeCardGrid({ items }: { items: DreamArchetypeCard[] }) {
   );
 }
 
+/**
+ * "꿈 모티프 → 현실 영역" 매핑 라인 추출.
+ * LLM 본문 안에 "A=B" 형식 줄이 있으면 추출. 본문에서 그 줄들은 제거.
+ */
+function extractMirrorMappings(text: string): { mappings: { motif: string; reality: string }[]; cleanText: string } {
+  const mappings: { motif: string; reality: string }[] = [];
+  const cleanLines: string[] = [];
+  for (const line of text.split('\n')) {
+    const t = line.trim();
+    // "정주영 → 자기 목표" 또는 "정주영=자기 목표" 형식만 캡처
+    const m = t.match(/^([^=→]{1,30})\s*[=→]\s*(.{4,80})$/);
+    if (m && !t.startsWith('-') && !/[.!?。]$/.test(m[2])) {
+      mappings.push({ motif: m[1].trim(), reality: m[2].trim() });
+    } else {
+      cleanLines.push(line);
+    }
+  }
+  return { mappings: mappings.slice(0, 5), cleanText: cleanLines.join('\n').replace(/\n{3,}/g, '\n\n').trim() };
+}
+
 function MirrorBlock({ text }: { text: string }) {
   if (!text) return null;
-  // 다른 본문(timing/advice/caution/self_work)과 통일된 박스 스펙 — BodyParagraphs boxed 사용
-  return <BodyParagraphs text={text} boxed />;
+  const { mappings, cleanText } = extractMirrorMappings(text);
+  return (
+    <div className="flex flex-col gap-3">
+      {/* 꿈 모티프 → 현실 영역 매핑 카드 */}
+      {mappings.length > 0 && (
+        <div className="rounded-xl p-3 border" style={{
+          background: 'rgba(96,165,250,0.06)', borderColor: 'rgba(96,165,250,0.28)',
+        }}>
+          <div className="text-[13px] text-text-tertiary mb-2.5">꿈 모티프 → 현재 삶</div>
+          <div className="flex flex-col gap-2">
+            {mappings.map((m, i) => (
+              <div key={i} className="flex items-center gap-2 text-[14px] leading-snug break-all">
+                <span className="flex-shrink-0 px-2 py-0.5 rounded-md text-[13px] font-bold" style={{
+                  background: 'rgba(96,165,250,0.18)', color: '#60A5FA',
+                  fontFamily: 'var(--font-title)',
+                }}>{m.motif}</span>
+                <span className="text-text-tertiary flex-shrink-0">→</span>
+                <span className="text-text-secondary flex-1">{m.reality}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+      {/* 본문 */}
+      {cleanText && <BodyParagraphs text={cleanText} />}
+    </div>
+  );
+}
+
+/**
+ * 본문에서 따옴표 안 1인칭 대본 자동 추출.
+ * "나는 [○○]이다…" 같은 30자 이상의 큰따옴표 안 텍스트.
+ */
+function extractScript(text: string): { script: string | null; cleanText: string } {
+  // "..." 또는 '...' 안에서 30자+ 텍스트 찾기 (대본 추정)
+  const re = /["'`]([^"'`]{30,500})["'`]/;
+  const m = text.match(re);
+  if (!m) return { script: null, cleanText: text };
+  return {
+    script: m[1].trim(),
+    cleanText: text.replace(m[0], '').replace(/\n{3,}/g, '\n\n').trim(),
+  };
 }
 
 function SelfWorkCard({ text }: { text: string }) {
-  if (text) return <BodyParagraphs text={text} boxed />;
+  if (!text) {
+    return (
+      <div className="rounded-2xl border" style={{
+        padding: '14px 12px',
+        background: 'rgba(255,255,255,0.04)', borderColor: 'rgba(255,255,255,0.10)',
+      }}>
+        <p className="text-[15px] text-text-tertiary leading-[1.85] tracking-[-0.005em] break-all m-0">
+          이 섹션은 풀이 응답이 누락된 것 같아요. 새로 풀이를 받아보시면 자기 통합 워크 가이드가 채워집니다.
+        </p>
+      </div>
+    );
+  }
+  const { script, cleanText } = extractScript(text);
   return (
-    <div className="rounded-2xl border" style={{
-      padding: '14px 12px',
-      background: 'rgba(255,255,255,0.04)', borderColor: 'rgba(255,255,255,0.10)',
-    }}>
-      <p className="text-[15px] text-text-tertiary leading-[1.85] tracking-[-0.005em] break-all m-0">
-        이 섹션은 풀이 응답이 누락된 것 같아요. 새로 풀이를 받아보시면 자기 통합 워크 가이드가 채워집니다.
-      </p>
+    <div className="flex flex-col gap-3">
+      {/* 본문 (대본 인용 앞부분 안내) */}
+      {cleanText && <BodyParagraphs text={cleanText} />}
+
+      {/* 대본 인용 박스 — Gestalt 1인칭 대본 강조 */}
+      {script && (
+        <div className="rounded-2xl border-l-4 px-4 py-4" style={{
+          background: 'linear-gradient(135deg, rgba(124,92,252,0.10), rgba(252,232,178,0.06))',
+          borderLeftColor: '#FCE8B2',
+        }}>
+          <div className="text-[11px] font-extrabold mb-2 uppercase tracking-widest" style={{
+            color: '#FCE8B2', fontFamily: 'var(--font-title)',
+          }}>1인칭 대본</div>
+          <p className="text-[16px] leading-[1.85] break-all m-0" style={{
+            color: 'var(--text-primary)',
+            fontFamily: 'var(--font-serif)',
+            fontStyle: 'italic',
+          }}>
+            "{script}"
+          </p>
+        </div>
+      )}
     </div>
   );
 }
