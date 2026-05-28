@@ -490,6 +490,7 @@ export function SummaryScoreVisual({
   sounds,
   sajuElementCount,
   dayMasterElement,
+  surnameLength = 1,
 }: {
   yongSinEl: string;
   giSinEl?: string;
@@ -499,9 +500,10 @@ export function SummaryScoreVisual({
   sounds: string[];
   sajuElementCount?: { 목: number; 화: number; 토: number; 금: number; 수: number };
   dayMasterElement?: string;
+  surnameLength?: 1 | 2;
 }) {
   const isHanjaMode = hanjas.length > 0;
-  const suri = isHanjaMode ? calc4Gyeok(hanjas.map(h => h.char), sounds) : null;
+  const suri = isHanjaMode ? calc4Gyeok(hanjas.map(h => h.char), sounds, surnameLength) : null;
 
   const eumGrade = gradeFromElements(eumElements, yongSinEl, giSinEl);
   const jawonGrade = isHanjaMode ? gradeFromElements(jawonElements, yongSinEl, giSinEl) : '미분석' as AxisGrade;
@@ -1074,14 +1076,16 @@ export function SuriElementVisual({
   yongSinEl,
   giSinEl,
   hideCaptionTitle = false,
+  surnameLength = 1,
 }: {
   chars: string[];
   sounds: string[];
   yongSinEl?: string;
   giSinEl?: string;
   hideCaptionTitle?: boolean;
+  surnameLength?: 1 | 2;
 }) {
-  const result = calc4Gyeok(chars, sounds);
+  const result = calc4Gyeok(chars, sounds, surnameLength);
   if (!result) return null;
   const items = [
     { label: '원격', area: '초년',         data: result.won },
@@ -1219,6 +1223,7 @@ export function NumerologyVisual({
   yongSinEl,
   giSinEl,
   hideCaptionTitle = false,
+  surnameLength = 1,
 }: {
   chars: string[]; // 한자
   sounds: string[]; // 한국 음
@@ -1226,8 +1231,9 @@ export function NumerologyVisual({
   yongSinEl?: string;
   giSinEl?: string;
   hideCaptionTitle?: boolean;
+  surnameLength?: 1 | 2;
 }) {
-  const result = calc4Gyeok(chars, sounds);
+  const result = calc4Gyeok(chars, sounds, surnameLength);
   if (!result) return null;
 
   const items: Array<{ label: string; area: string; data: typeof result.won }> = [

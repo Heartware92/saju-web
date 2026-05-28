@@ -73,6 +73,7 @@ import { SectionCollapsible } from '@/components/saju/SectionCollapsible';
 import { renderEmphasis } from '@/utils/renderEmphasis';
 import { HanjaPickerModal } from '@/components/saju/HanjaPickerModal';
 import type { HanjaCandidate } from '@/lib/data/hanjaByKoreanSound';
+import { detectCompoundSurname, lookupCompoundSurnameHanja } from '@/lib/data/koreanCompoundSurnames';
 import {
   EumRyeongVisual,
   JaWonVisual,
@@ -151,6 +152,8 @@ export default function MoreFortunePage({ category }: Props) {
   // charMeanings: 글자별 뜻 (한자 추정용). 인덱스가 한글 이름 글자 순서와 1:1 매칭.
   //               비워두면 순우리말 또는 모름으로 처리되어 음령오행만 적용.
   const [koreanName, setKoreanName] = useState('');
+  // 복성(2글자 성씨) 여부 — 사용자 체크박스로 토글, 한글 이름 입력 시 자동 감지로 추천.
+  const [surnameLength, setSurnameLength] = useState<1 | 2>(1);
   const [charMeanings, setCharMeanings] = useState<string[]>([]);
   /** 사용자가 모달에서 선택한 한자 (글자 위치별). null = 미선택. 선택 시 charMeanings 자동 채움 */
   const [selectedHanjas, setSelectedHanjas] = useState<(string | null)[]>([]);
@@ -187,10 +190,11 @@ export default function MoreFortunePage({ category }: Props) {
       jawonElements: hanjas.map(h => h.jawon).filter(Boolean),
       sajuElementCount: saju?.elementCount,
       dayMasterElement: saju?.dayMasterElement ?? '',
+      surnameLength,
     };
   // saju 객체 자체가 매 렌더 새로 생기더라도 핵심 필드만 보고 stale 회피
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [category, koreanName, charMeanings, selectedHanjas, saju?.yongSinElement, saju?.giSin, saju?.dayMasterElement, saju?.elementCount]);
+  }, [category, koreanName, charMeanings, selectedHanjas, surnameLength, saju?.yongSinElement, saju?.giSin, saju?.dayMasterElement, saju?.elementCount]);
 
   // 꿈 해몽 전용 state — DreamInputPanel에서 onChange로 주입
   // dreamInputResetKey: "다른 꿈 풀이받기" 클릭 시 패널을 강제 remount 해 입력 초기화
@@ -301,6 +305,7 @@ export default function MoreFortunePage({ category }: Props) {
       setKoreanName('');
       setCharMeanings([]);
       setSelectedHanjas([]);
+      setSurnameLength(1);
     }
     if (category === 'dream') {
       setDreamText('');
@@ -557,6 +562,7 @@ export default function MoreFortunePage({ category }: Props) {
     setKoreanName('');
     setCharMeanings([]);
     setSelectedHanjas([]);
+    setSurnameLength(1);
     setManualMode(true);
   }, [freshParam, category, isArchiveMode]);
 
@@ -713,11 +719,16 @@ export default function MoreFortunePage({ category }: Props) {
           const meanings = sounds.map((_, i) => (charMeanings[i] || '').trim());
           const charPairs = sounds.map((sound, i) => ({ sound, meaning: meanings[i] }));
           const hanjaName = selectedHanjas.slice(0, sounds.length).filter(Boolean).join('');
+          const compoundDetected = surnameLength === 2
+            ? detectCompoundSurname(koreanName.trim())
+            : null;
           const built = await buildNameFortunePrompt(s, {
             koreanName: koreanName.trim(),
             koreanInitialsElements: kor.elements,
             charMeanings: charPairs,
             ...(hanjaName.length === sounds.length ? { hanjaName } : {}),
+            surnameLength,
+            ...(compoundDetected ? { compoundSurnameKorean: compoundDetected.korean } : {}),
           });
           prompt = built.prompt;
           maxTokens = built.maxTokens;
@@ -951,6 +962,8 @@ export default function MoreFortunePage({ category }: Props) {
                 onCharMeaningsChange={setCharMeanings}
                 selectedHanjas={selectedHanjas}
                 onSelectedHanjasChange={setSelectedHanjas}
+                surnameLength={surnameLength}
+                onSurnameLengthChange={setSurnameLength}
                 readOnly={false}
               />
             )}
@@ -1073,6 +1086,7 @@ export default function MoreFortunePage({ category }: Props) {
                   setKoreanName('');
                   setCharMeanings([]);
                   setSelectedHanjas([]);
+                  setSurnameLength(1);
                 }
                 if (category === 'dream') {
                   setDreamText('');
@@ -1141,6 +1155,8 @@ function NameInputPanel({
   onCharMeaningsChange,
   selectedHanjas,
   onSelectedHanjasChange,
+  surnameLength,
+  onSurnameLengthChange,
   readOnly,
 }: {
   koreanName: string;
@@ -1149,6 +1165,8 @@ function NameInputPanel({
   onCharMeaningsChange: (v: string[]) => void;
   selectedHanjas: (string | null)[];
   onSelectedHanjasChange: (v: (string | null)[]) => void;
+  surnameLength: 1 | 2;
+  onSurnameLengthChange: (v: 1 | 2) => void;
   readOnly: boolean;
 }) {
   // 한글 음절만 추출 (공백·한자·기호 제외) — 4글자까지
@@ -1162,6 +1180,21 @@ function NameInputPanel({
     }
     return out;
   })();
+
+  // 복성 자동 감지 — 한글 이름 앞 2글자가 한국 복성(8개) 매칭이면 자동 체크 추천.
+  // 사용자가 수동으로 토글 가능 (예: 김궁민 처럼 우연 일치는 해제).
+  const compoundHit = detectCompoundSurname(koreanName);
+  const autoDetectRanRef = useRef(false);
+  useEffect(() => {
+    if (readOnly) return;
+    if (compoundHit && !autoDetectRanRef.current) {
+      onSurnameLengthChange(2);
+      autoDetectRanRef.current = true;
+    }
+    if (!compoundHit) autoDetectRanRef.current = false;
+  // koreanName 변경시 재평가
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [koreanName, readOnly]);
 
   // 모달 state
   const [pickerOpen, setPickerOpen] = useState(false);
@@ -1232,6 +1265,50 @@ function NameInputPanel({
             }}
           />
         </div>
+
+        {/* 복성 체크박스 — 한국 8개 복성(남궁·황보·제갈 등) 자동 감지 + 사용자 토글.
+            체크 시 4격 계산이 "복성의 둘째 글자를 성씨로" 정통 룰 적용 (irum 룰). */}
+        {chars.length >= 3 && !readOnly && (
+          <label
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 8,
+              padding: '8px 10px',
+              borderRadius: 8,
+              background: surnameLength === 2 ? 'rgba(168,132,255,0.10)' : 'rgba(255,255,255,0.03)',
+              border: `1px solid ${surnameLength === 2 ? 'rgba(168,132,255,0.35)' : 'rgba(255,255,255,0.08)'}`,
+              cursor: 'pointer',
+              transition: 'background 0.2s, border-color 0.2s',
+            }}
+          >
+            <input
+              type="checkbox"
+              checked={surnameLength === 2}
+              onChange={(e) => onSurnameLengthChange(e.target.checked ? 2 : 1)}
+              style={{ width: 16, height: 16, accentColor: 'var(--cta-primary)', cursor: 'pointer' }}
+            />
+            <span style={{ flex: 1, fontSize: 13, color: 'var(--text-primary)', fontFamily: 'var(--font-body)' }}>
+              성씨가 두 글자입니다 (복성)
+              {compoundHit && surnameLength === 2 && (
+                <span style={{ marginLeft: 6, fontSize: 11, color: 'var(--cta-primary)', fontWeight: 700 }}>
+                  · 「{compoundHit.korean}」 자동 감지
+                </span>
+              )}
+            </span>
+            {compoundHit && (
+              <span style={{ fontSize: 11, color: 'var(--text-tertiary)', whiteSpace: 'nowrap' }}>
+                {compoundHit.hanja}
+              </span>
+            )}
+          </label>
+        )}
+        {surnameLength === 2 && compoundHit && !readOnly && (
+          <p style={{ fontSize: 11, color: 'var(--text-tertiary)', marginTop: -8, lineHeight: 1.6 }}>
+            앞 두 글자 「{compoundHit.korean}({compoundHit.hanja})」를 한 성씨로 묶어 4격을 계산해요.
+            정통 성명학에서는 복성의 둘째 글자를 성씨로 보고 풀이합니다.
+          </p>
+        )}
 
         {chars.length > 0 && (
           <div>
@@ -1992,6 +2069,7 @@ function MoreFortuneSectionedCard({
     jawonElements: string[];
     sajuElementCount?: { 목: number; 화: number; 토: number; 금: number; 수: number };
     dayMasterElement?: string;
+    surnameLength?: 1 | 2;
   } | null;
   childrenSaju?: SajuResult | null;
 }) {
@@ -2077,6 +2155,7 @@ function MoreFortuneSectionedCard({
                     sounds={ctx.sounds}
                     sajuElementCount={ctx.sajuElementCount}
                     dayMasterElement={ctx.dayMasterElement}
+                    surnameLength={ctx.surnameLength}
                   />
                 );
               case 'meaning':
@@ -2205,14 +2284,14 @@ function MoreFortuneSectionedCard({
                       label: '수리오행',
                       subLabel: '획수의 오행으로 보기',
                       accent: '#60A5FA',
-                      visual: isHanja ? <SuriElementVisual chars={hanjaChars} sounds={ctx.sounds} yongSinEl={ctx.yongSinEl} giSinEl={ctx.giSinEl} hideCaptionTitle /> : null,
+                      visual: isHanja ? <SuriElementVisual chars={hanjaChars} sounds={ctx.sounds} yongSinEl={ctx.yongSinEl} giSinEl={ctx.giSinEl} surnameLength={ctx.surnameLength} hideCaptionTitle /> : null,
                     },
                     {
                       key: 'axis_81',
                       label: '81수리 4격',
                       subLabel: '인생 4단계 길흉으로 보기',
                       accent: '#A78BFA',
-                      visual: isHanja ? <NumerologyVisual chars={hanjaChars} sounds={ctx.sounds} yongSinEl={ctx.yongSinEl} giSinEl={ctx.giSinEl} hideCaptionTitle /> : null,
+                      visual: isHanja ? <NumerologyVisual chars={hanjaChars} sounds={ctx.sounds} yongSinEl={ctx.yongSinEl} giSinEl={ctx.giSinEl} surnameLength={ctx.surnameLength} hideCaptionTitle /> : null,
                     },
                     // [BACKLOG] 5축 부활 시 활성화 — 수리 음양 (정통 4축 외 보조 분석)
                     // {

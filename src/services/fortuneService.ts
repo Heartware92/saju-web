@@ -1906,7 +1906,7 @@ export async function buildNameFortunePrompt(
         : { char, meaning: nameInput.charMeanings?.[i]?.meaning ?? '', radical: '', strokes: 0, jawon: '' };
     });
     const sounds = (nameInput.charMeanings ?? []).map((c) => c.sound ?? '');
-    const fourGyeok = calc4Gyeok(chars, sounds);
+    const fourGyeok = calc4Gyeok(chars, sounds, nameInput.surnameLength ?? 1);
     const numerology4Gyeok = fourGyeok
       ? {
           strokes: fourGyeok.strokes,
@@ -1970,7 +1970,7 @@ export const getNameFortune = async (
 
       // 81 수리 4격 계산 — 모든 글자가 정적 데이터에 매칭됐을 때만
       const sounds = (nameInput.charMeanings ?? []).map(c => c.sound ?? '');
-      const fourGyeok = calc4Gyeok(chars, sounds);
+      const fourGyeok = calc4Gyeok(chars, sounds, nameInput.surnameLength ?? 1);
       const numerology4Gyeok = fourGyeok
         ? {
             strokes: fourGyeok.strokes,

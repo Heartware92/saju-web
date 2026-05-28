@@ -38,19 +38,32 @@ export function strokesOf(char: string, sound: string): number {
  * 입력 형식:
  *  - chars: 한자 배열 (예: ['許', '珍', '宇']) — 첫 글자가 성씨로 간주
  *  - sounds: 한국 음 배열 (예: ['허', '진', '우'])
+ *  - surnameLength: 성씨 글자 수 (기본 1, 복성이면 2)
  *
  * 외자 성 + 외자 이름(2글자 전체): 성=1, 이름=1
  * 외자 이름(2글자 전체 = 성1 + 이름1): 원격 = 이름 끝(=1자) → 1글자 강도만
+ *
+ * 복성(surnameLength=2) 처리 — irum.com 정통 룰:
+ *   단성 공식을 그대로 쓰되 "성" = 복성의 둘째 글자만 사용.
+ *   예) 諸葛瑞珍 4자 → 성=葛(2번째), 이름=瑞·珍
+ *     · 원격 = 瑞 + 珍
+ *     · 형격 = 瑞 + 葛
+ *     · 이격 = 葛 + 珍
+ *     · 정격 = 諸 + 葛 + 瑞 + 珍 (전체)
  */
-export function calc4Gyeok(chars: string[], sounds: string[]): FourGyeokResult | null {
+export function calc4Gyeok(chars: string[], sounds: string[], surnameLength: 1 | 2 = 1): FourGyeokResult | null {
   if (chars.length === 0 || chars.length !== sounds.length) return null;
+  if (surnameLength === 2 && chars.length < 3) return null;  // 복성+이름 최소 3자
   const strokes = chars.map((c, i) => strokesOf(c, sounds[i]));
 
   // 0 획이 하나라도 있으면 계산 불가 (정적 데이터 외 한자)
   if (strokes.some(s => s === 0)) return null;
 
-  const surname = strokes[0];
-  const nameStrokes = strokes.slice(1); // 이름 부분 (성씨 제외)
+  // 복성: "성"은 복성의 둘째 글자 (strokes[1]), 이름은 strokes[2..]
+  // 단성: "성"은 strokes[0], 이름은 strokes[1..]
+  const surnameIdx = surnameLength === 2 ? 1 : 0;
+  const surname = strokes[surnameIdx];
+  const nameStrokes = strokes.slice(surnameIdx + 1);
   if (nameStrokes.length === 0) return null;
 
   const nameFirst = nameStrokes[0];
@@ -63,8 +76,8 @@ export function calc4Gyeok(chars: string[], sounds: string[]): FourGyeokResult |
   const hyeongSum = surname + nameFirst;
   // 이격 = 성씨 + 이름 끝
   const iSum = surname + nameLast;
-  // 정격 = 전체
-  const jeongSum = surname + nameSum;
+  // 정격 = 전체 (복성도 전체 합 — 첫 글자 strokes[0] 포함)
+  const jeongSum = strokes.reduce((a, b) => a + b, 0);
 
   return {
     strokes,
