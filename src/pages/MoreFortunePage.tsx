@@ -283,6 +283,19 @@ export default function MoreFortunePage({ category }: Props) {
     setResultSections(null);
     setError(null);
     setManualMode(true);
+    // ★ 잡 컨텍스트 완전 reset — 안 하면 옛 jobId 의 startedAt 으로 AILoadingBar 가 80% 등에서 시작.
+    //   1) createdJobId state reset
+    //   2) URL 의 ?jobId·?recordId·?fresh·?_t 파라미터 제거 (router.replace 대신 history.replaceState 로
+    //      페이지 리렌더 회피)
+    setCreatedJobId(null);
+    if (typeof window !== 'undefined') {
+      const u = new URL(window.location.href);
+      u.searchParams.delete('jobId');
+      u.searchParams.delete('recordId');
+      u.searchParams.delete('fresh');
+      u.searchParams.delete('_t');
+      window.history.replaceState({}, '', u.pathname + (u.search ? u.search : ''));
+    }
     if (category) useReportCacheStore.getState().invalidate(`more:${category}` as const);
     if (category === 'name') {
       setKoreanName('');
