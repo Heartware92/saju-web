@@ -8638,20 +8638,21 @@ ${classification.interpretive_hints && classification.interpretive_hints.length 
   ? `- ★★ 1차 해석 힌트 — 반드시 본문에서 인용·활용 (매번 재추론 금지) ★★:\n${classification.interpretive_hints.map(h => `  · ${h}`).join('\n')}\n  ※ western_latent / western_archetypes / western_mirror 의 본문에서 위 힌트의 의미를 반드시 풀어쓰기. 무시 금지.\n`
   : ''}${classification.is_clinical_alert ? '- ★ 임상 위험 — "전문 상담 권합니다" 끝줄 필수\n' : ''}` : '';
 
-  return `당신은 프로이트·융·게슈탈트·dream science 임상심리 박사입니다. 서양 5 섹션만 출력 (동양 절대 금지).
+  return `당신은 프로이트·융·게슈탈트·현대 dream science 임상심리 박사입니다. 서양 5 섹션만 출력 (동양 절대 금지).
 
-[★ 학자·학파 이름 노출 가이드 — 친숙성 우선]
-- 학자 이름 (Freud, Jung, Hobson, Revonsuo, Perls) / 학파 이름 (정신분석·분석심리·게슈탈트·dream science) 은
-  전체 5섹션 통틀어 ★ 최대 2~3회만 ★ 인용. 매 섹션 반복 금지.
-- "게슈탈트 치료 관점에서…" / "프로이트는…" / "융이 말한…" 같은 학술 도입구는 가급적 회피.
-- 그 대신 의미·작동 원리만 자연 한국어로 풀어쓰기. 예:
-  · 게슈탈트 워크: "꿈속 인물이 되어 1인칭으로 말해보면…"  (게슈탈트 단어 생략 OK)
-  · Freud 잠재: "표면 아래 숨은 의미는…"  (Freud 단어 생략 OK)
-  · 융 동시성: "현실의 우연한 만남·기회와 연결될 수도…"  (동시성 단어 생략 OK)
-- 단 핵심 개념은 1회만 한국어 부연과 함께 노출 OK:
-  · "에고 아이덜(Ego Ideal, 자아 이상)" — latent 섹션에서 1회
-  · "그림자(Shadow)" — archetypes 섹션에서 1회
-- 사용자 친숙성이 최우선. 학술 권위감보다 따뜻한 대화체.
+[★ 다양한 학자·학파 활용 가이드 — 풍부함 우선]
+- 5섹션 풀이에서 다양한 학자/학파를 적극 인용하고 활용. 한 학파만 반복 금지.
+- 필요한 학자/학파:
+  · 지그문트 프로이트(Sigmund Freud) — 정신분석. 표면/잠재·꿈 작업·억압·소망 성취. 주로 [western_latent]
+  · 칼 융(Carl Jung) — 분석심리. 집단 무의식·원형·동시성. 주로 [western_archetypes]·[western_mirror]
+  · 프리츠 펄스(Fritz Perls) — 게슈탈트 치료. "꿈의 모든 요소는 자기 투영". 주로 [western_self_work]
+  · 앨런 홉슨(Allan Hobson) — Activation-Synthesis. REM 신경 활동. 주로 [western_diagnosis]
+  · 안티 레본수오(Antti Revonsuo) — Threat Simulation Theory. 위협·악몽. [western_diagnosis]
+  · Hall/Domhoff — Continuity Hypothesis. 꿈=현실 연속. [western_mirror]
+  · Krakow — IRT(Imagery Rehearsal Therapy). 악몽 다시쓰기. [western_self_work] (악몽 분류 시)
+- 학자 인용 형식: "프로이트(Freud)는…" / "융이 말한…" / "게슈탈트 치료에서는…" 자연스럽게.
+- 영어 학술 용어 등장 시 한국어 부연 병기 ("에고 아이덜(Ego Ideal, 자아 이상)").
+- 사용자가 다양한 학파의 관점을 한 풀이에서 만나도록.
 
 
 [꿈] ${trimmed || '(미입력)'}
@@ -8709,14 +8710,13 @@ intensity=low|medium|high
 [western_self_work]
 ${classification?.clinical_hint === 'nightmare' || classification?.clinical_hint === 'recurring'
   ? `IRT(Imagery Rehearsal Therapy) 다시쓰기 9~13문장 (550~800자): IRT가 왜 효과적인지 + 부정적 결말 → 안전 결말 단계 (1·2·3) 구체 실천 + 낮 5분씩 2~3주 시각화 시점·환경 + 효과 시기 + 효과 없을 때 변형 방법.`
-  : `자기와 대화하기 워크 9~13문장 (550~800자):
+  : `게슈탈트 치료(프리츠 펄스, Fritz Perls)의 1인칭 워크 9~13문장 (550~800자):
+- 게슈탈트의 핵심 명제 "꿈의 모든 요소는 자기 자신의 투영" 한 줄 소개.
 - 대상 선택 + 통합 가치 (왜 이 대상인지)
 - "나는 [그 ○○]이다. 나는 ___을 원한다. 나는 너에게 ___을 전하러 왔다…" 같은 대본 형식 안내 (본문 안 자연 문장)
 - 환경·시간(5~10분)·자세
 - 워크 후 변화·통찰 구체
 - 격려 + 못 해내도 괜찮음 안내.
-※ "게슈탈트 치료 관점에서…" / "게슈탈트가 말한…" 같은 학술 도입구 ★ 금지 ★.
-   자연 한국어로 "꿈속 인물이 되어 1인칭으로 말해보면…" 같이 풀어쓰기.
 ※ 워크 진행 단계 (1·2·3·4·5)는 UI 가 별도로 표시하니 본문에 단계 번호 적지 말 것.`}
 ${classification?.is_clinical_alert ? '\n★ 본문 마지막 "혼자 다루기 어려우면 전문 상담을 권합니다" 한 줄 필수.' : ''}
 
