@@ -17,7 +17,9 @@ import {
 import { MORE_FORTUNE_CONFIGS, MORE_FORTUNE_ORDER, MOON_COST_PER_FORTUNE } from '../constants/moreFortunes';
 import { SUN_COST_BIG, MOON_COST_MORE } from '../constants/creditCosts';
 import { QuickFortuneGate, type QuickFortuneGateProps } from '../components/QuickFortuneGate';
-import type { ArchiveCategory } from '../services/archiveService';
+import { GunghapArchiveListModal } from '../components/GunghapArchiveListModal';
+import type { ArchiveCategory, GunghapArchiveItem } from '../services/archiveService';
+import { findGunghapArchives } from '../services/archiveService';
 import MoonPhase from '../components/MoonPhase';
 
 /**
@@ -158,6 +160,9 @@ export default function HomePage() {
   const { profiles, fetchProfiles, loading: profilesLoading } = useProfileStore();
   const [imgError, setImgError] = useState(false);
   const [activeGate, setActiveGate] = useState<GateConfig | null>(null);
+  // 궁합 archive list 모달 — 다른 풀이 모달처럼 홈 위에 fade-in (페이지 라우팅 없이)
+  const [gunghapModalOpen, setGunghapModalOpen] = useState(false);
+  const [gunghapArchiveList, setGunghapArchiveList] = useState<GunghapArchiveItem[]>([]);
   const router = useRouter();
 
   useEffect(() => {
@@ -204,6 +209,22 @@ export default function HomePage() {
     // (모달 안에서 fetchProfiles 후 즉시 onClose 되며 깜박이는 현상 회피)
     if (!profilesLoading && !primary) {
       router.push('/saju/input?mode=profile-only');
+      return;
+    }
+    // ★ 궁합 — 다른 풀이와 동일하게 홈 위에 모달 fade-in (페이지 라우팅 없이).
+    //   archive 있으면 archive 리스트 모달, 없으면 바로 페이지 이동 (입력 단계 진입).
+    if (targetPath === '/saju/gunghap') {
+      findGunghapArchives(20).then(list => {
+        if (list.length > 0) {
+          setGunghapArchiveList(list);
+          setGunghapModalOpen(true);
+        } else {
+          router.push('/saju/gunghap');
+        }
+      }).catch(() => {
+        // archive fetch 실패 시 그냥 페이지로 이동 (fallback)
+        router.push('/saju/gunghap');
+      });
       return;
     }
     const gate = buildGateConfig(targetPath);
@@ -534,6 +555,22 @@ export default function HomePage() {
           onClose={() => setActiveGate(null)}
         />
       )}
+
+      {/* 궁합 archive list 모달 — 홈 위에 fade-in (다른 풀이와 동일 UX) */}
+      <GunghapArchiveListModal
+        open={gunghapModalOpen}
+        archiveList={gunghapArchiveList}
+        onSelectItem={(id) => {
+          setGunghapModalOpen(false);
+          router.push(`/saju/gunghap?recordId=${id}`);
+        }}
+        onClickNew={() => {
+          // 새로 시작 — fresh=1 로 GunghapPage 진입, 자체 archive 모달 자동 노출 차단
+          setGunghapModalOpen(false);
+          router.push('/saju/gunghap?fresh=1');
+        }}
+        onClose={() => setGunghapModalOpen(false)}
+      />
 
     </div>
   );

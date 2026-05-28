@@ -150,7 +150,7 @@ const STEP_LABELS: Record<string, string> = {
   result: '결과',
 };
 
-const CATEGORY_LABEL_MAP: Record<string, string> = {
+export const CATEGORY_LABEL_MAP: Record<string, string> = {
   secret_crush: '짝사랑',
   som: '썸남·썸녀',
   lover: '연인',
@@ -287,6 +287,9 @@ export default function GunghapPage() {
   const searchParams = useSearchParams();
   const urlRecordId = searchParams?.get('recordId') ?? null;
   const urlJobId = searchParams?.get('jobId') ?? null;
+  // fresh=1 — 홈에서 archive 모달을 거쳐 "새로 궁합 보기" 클릭 후 진입한 케이스.
+  //   GunghapPage 의 자체 archive 모달 자동 노출을 차단 (홈에서 이미 모달 봤음).
+  const urlFresh = searchParams?.get('fresh') === '1';
   const { user } = useUserStore();
   const { profiles } = useProfileStore();
 
@@ -601,16 +604,17 @@ export default function GunghapPage() {
     findGunghapArchives(20).then(list => {
       if (cancelled) return;
       setArchiveList(list);
-      // 진입 모달은 '진짜 첫 진입'(카테고리 스텝·jobId 없음)에서만 자동 표시.
+      // 진입 모달은 '진짜 첫 진입'(카테고리 스텝·jobId 없음·fresh 아님)에서만 자동 표시.
       // ?jobId 결과 화면 위에 모달이 덮이지 않도록 차단.
-      if (list.length > 0 && step === 'category' && !urlJobId) {
+      // ?fresh=1 (홈에서 archive 모달 거쳐 "새로 시작" 클릭) 도 자동 표시 차단.
+      if (list.length > 0 && step === 'category' && !urlJobId && !urlFresh) {
         setShowArchiveList(true);
       }
     }).catch(() => {}).finally(() => {
       if (!cancelled) setArchiveLoading(false);
     });
     return () => { cancelled = true; };
-    // step·urlJobId 는 진입(마운트) 시점 값으로 판정 — deps 에 넣지 않음.
+    // step·urlJobId·urlFresh 는 진입(마운트) 시점 값으로 판정 — deps 에 넣지 않음.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isArchiveMode]);
 
