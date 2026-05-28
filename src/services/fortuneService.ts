@@ -1930,6 +1930,8 @@ export async function buildNameFortunePrompt(
     //   없으면 옛 record 재생 시 default=1 로 단성 룰 → 본문(복성 룰)과 시각 카드 불일치 사고.
     surnameLength: nameInput.surnameLength ?? 1,
     compoundSurnameKorean: nameInput.compoundSurnameKorean,
+    // ★ 이전 풀이 모달 리스트에 입력값 라벨 표시용 — 한글 이름 그대로
+    categoryLabel: nameInput.koreanName,
   };
   return { prompt, maxTokens, engineResult };
 }
@@ -2005,6 +2007,8 @@ export const getNameFortune = async (
         // ★ 보관함 시각 카드와 본문 4격 일치 보장
         surnameLength: nameInput.surnameLength ?? 1,
         compoundSurnameKorean: nameInput.compoundSurnameKorean,
+        // ★ 이전 풀이 모달 리스트 라벨용
+        categoryLabel: nameInput.koreanName,
       } as Record<string, unknown>,
       interpretation: content,
       creditType: 'moon',
@@ -2490,7 +2494,9 @@ export const getDreamInterpretation = async (
     // 5섹션 (진단 + 상징 + 동양 + 서양 + 실천) 한국어 약 3000자 ≈ 7500 토큰 필요. 10000 으로 여유.
     const content = await callGPT(generateDreamInterpretationPrompt(dreamText), 10000, 1000);
     const parsed = parseDreamSections(content);
-    archiveSaju({ profileId, category: 'dream', engineResult: { dreamText } as Record<string, unknown>, interpretation: content, creditType: 'moon', creditUsed: 1 });
+    // ★ 이전 풀이 모달 리스트 라벨 — 꿈 텍스트 첫 15자 + ellipsis
+    const dreamLabel = dreamText.trim().length > 15 ? `${dreamText.trim().slice(0, 15)}…` : dreamText.trim();
+    archiveSaju({ profileId, category: 'dream', engineResult: { dreamText, categoryLabel: dreamLabel } as Record<string, unknown>, interpretation: content, creditType: 'moon', creditUsed: 1 });
     return {
       success: true,
       content,

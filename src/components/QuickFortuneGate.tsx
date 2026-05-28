@@ -85,12 +85,12 @@ export function QuickFortuneGate({
     }
   }, [initialized, profiles, user, router, onClose]);
 
-  const isListMode = (
-    archiveCategory === 'period' ||
-    archiveCategory === 'taekil' ||
-    archiveCategory === 'today' ||
-    archiveCategory === 'newyear'  // 연도별 운세 — 같은 프로필의 모든 newyear 풀이 리스트로
-  ) && !archiveContext;
+  // ★ 모든 카테고리를 list 모달로 통일 (archiveContext 가 명시된 특정 컨텍스트 한정 풀이 제외).
+  //   기존엔 4개 카테고리만 list, 나머지는 단일 결과 모달 → 여러 풀이 있어도 1개만 보여서
+  //   사용자가 어느 풀이인지 구분 못 함. 이름풀이·꿈해몽·자녀·학업·성격 등 모두 list 패턴.
+  //   카테고리별 categoryLabel (engineResult.categoryLabel) 가 있으면 입력값 라벨 표시,
+  //   없으면 날짜만 표시 (UI 분기는 catLabel 유무로 자동 처리).
+  const isListMode = !archiveContext;
 
   useEffect(() => {
     if (!initialized || !primaryProfile) return;
@@ -282,7 +282,10 @@ export function QuickFortuneGate({
                         >
                           <span className="flex items-center gap-2 min-w-0">
                             {catLabel && (
-                              <span className="text-[12px] font-bold text-cta bg-cta/10 px-2 py-0.5 rounded-md whitespace-nowrap flex-shrink-0 text-center w-[120px]">
+                              <span
+                                className="text-[12px] font-bold text-cta bg-cta/10 px-2 py-0.5 rounded-md whitespace-nowrap flex-shrink-0 truncate max-w-[140px]"
+                                title={catLabel}
+                              >
                                 {catLabel}
                               </span>
                             )}
