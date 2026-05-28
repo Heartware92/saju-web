@@ -263,13 +263,30 @@ export async function findArchiveList(params: {
     }
     const { data, error } = await q;
     if (error || !data) return [];
-    return (data as { id: string; created_at: string; engine_result?: Record<string, unknown> }[]).map(row => ({
-      id: row.id,
-      created_at: row.created_at,
-      context_date: (row.engine_result?.isoDate as string) ?? undefined,
-      context_category: (row.engine_result?.category as string) ?? undefined,
-      context_category_label: (row.engine_result?.categoryLabel as string) ?? undefined,
-    }));
+    return (data as { id: string; created_at: string; engine_result?: Record<string, unknown> }[]).map(row => {
+      const eng = row.engine_result ?? {};
+      // ★ categoryLabel 옛 record 호환 fallback — 옛 풀이엔 categoryLabel 필드 자체가 없음.
+      //   카테고리별로 원본 입력값에서 추출:
+      //   · name 카테고리: koreanName
+      //   · dream 카테고리: dreamText 첫 15자 + ellipsis
+      //   · 기타: undefined (날짜만 표시)
+      let categoryLabel = eng.categoryLabel as string | undefined;
+      if (!categoryLabel) {
+        if (params.category === 'name' && typeof eng.koreanName === 'string') {
+          categoryLabel = eng.koreanName;
+        } else if (params.category === 'dream' && typeof eng.dreamText === 'string') {
+          const dt = eng.dreamText.trim();
+          categoryLabel = dt.length > 15 ? `${dt.slice(0, 15)}…` : dt;
+        }
+      }
+      return {
+        id: row.id,
+        created_at: row.created_at,
+        context_date: (eng.isoDate as string) ?? undefined,
+        context_category: (eng.category as string) ?? undefined,
+        context_category_label: categoryLabel,
+      };
+    });
   } catch (err) {
     console.error('[archive] findArchiveList failed', err);
     return [];

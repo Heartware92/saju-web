@@ -1775,7 +1775,11 @@ export default function GunghapPage() {
                         className="w-full min-h-10 py-2 px-3 rounded-lg border border-[var(--border-subtle)] text-[14px] text-text-primary font-medium hover:bg-cta/10 hover:border-cta/40 transition-all flex items-center justify-between gap-2"
                       >
                         <span className="flex items-center gap-2 min-w-0">
-                          <span className="text-[12px] font-bold text-cta bg-cta/10 px-2 py-0.5 rounded-md whitespace-nowrap flex-shrink-0">
+                          {/* 카테고리 chip 고정 너비 — "유명인과의 궁합"(7자) 기준, 모든 행 정렬 통일 */}
+                          <span
+                            className="text-[12px] font-bold text-cta bg-cta/10 px-2 py-0.5 rounded-md whitespace-nowrap flex-shrink-0 text-center truncate w-[100px]"
+                            title={catLabel}
+                          >
                             {catLabel}
                           </span>
                           <span className="truncate">{names}</span>
