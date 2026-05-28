@@ -109,13 +109,20 @@ function BodyParagraphs({ text }: { text: string; boxed?: boolean }) {
   );
 }
 
-/** 라벨-값 카드 — LuckyVisualCard 의 행운 숫자/시간대 카드와 동일 스펙 */
+/** 라벨-값 카드 — LuckyVisualCard 의 행운 숫자/시간대 카드와 동일 스펙.
+ *  값이 길어지면 (>= 18자) 폰트 자동 축소 + break-all 로 좁은 2col 카드에서 잘림 차단. */
 function LabelValueCard({ label, value, big }: { label: string; value: string; big?: boolean }) {
+  const isLong = value.length >= 18;
+  const valueClass = big
+    ? "text-[20px] font-bold text-text-primary leading-snug tracking-wider"
+    : isLong
+      ? "text-[14px] text-text-primary font-semibold leading-[1.5] break-all"
+      : "text-[16px] text-text-primary font-semibold leading-snug break-all";
   return (
     <div className="rounded-xl p-3 bg-white/5 border border-white/10">
       <div className="text-[13px] text-text-tertiary mb-1.5">{label}</div>
       <div
-        className={big ? "text-[20px] font-bold text-text-primary leading-snug tracking-wider" : "text-[16px] text-text-primary font-semibold leading-snug"}
+        className={valueClass}
         style={big ? { fontFamily: 'var(--font-serif)' } : undefined}
       >
         {value}
