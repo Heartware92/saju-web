@@ -2250,8 +2250,19 @@ export const parseDreamV4 = (raw: string): DreamV4Result | null => {
   if (!/\[oriental[_\s-]?diagnosis\]/i.test(raw) && !/\[western[_\s-]?diagnosis\]/i.test(raw)) return null;
 
   // ── 동양 ────────────────────────────────────────────
+  // LLM이 score 안 적은 사고(연예인·성관계 등 컨텐츠 분류 회피로 score 누락) →
+  // polarity 기반 default 로 보정. 0점 표시 사고 차단.
+  const POLARITY_DEFAULT_SCORE: Record<string, number> = {
+    '대길': 90, '길': 78, '중길': 62,
+    '평': 50, '중흉': 38, '흉': 22, '': 55,
+  };
   const odBody = extractV4Section(raw, 'oriental_diagnosis');
-  const scoreNum = Number((odBody.match(/score\s*=\s*(\d+)/i) || [])[1]) || 0;
+  const polarityVal = getKV(odBody, 'polarity') || '';
+  const scoreMatch = odBody.match(/score\s*=\s*(\d+)/i);
+  const rawScore = scoreMatch ? Number(scoreMatch[1]) : NaN;
+  // score 누락 또는 0 (잘못) 이면 polarity 기반 default
+  const scoreNum = (!isNaN(rawScore) && rawScore > 0) ? rawScore : (POLARITY_DEFAULT_SCORE[polarityVal] ?? 55);
+
   const odReason = (() => {
     const m = odBody.match(/근거\s*[:：]\s*([\s\S]+)/);
     if (m) return m[1].trim();
@@ -2262,7 +2273,7 @@ export const parseDreamV4 = (raw: string): DreamV4Result | null => {
   const oriental_diagnosis: DreamV4Result['oriental_diagnosis'] = {
     label: getKV(odBody, 'label'),
     kind: (getKV(odBody, 'kind') as DreamKindLabel) || '',
-    polarity: (getKV(odBody, 'polarity') as DreamPolarityLabel) || '',
+    polarity: (polarityVal as DreamPolarityLabel) || '',
     score: Math.max(0, Math.min(100, scoreNum)),
     certainty: (getKV(odBody, 'certainty') as 'high' | 'medium' | 'low' | '') || '',
     reason: odReason.slice(0, 500),

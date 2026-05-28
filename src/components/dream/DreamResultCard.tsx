@@ -817,19 +817,16 @@ function MirrorBlock({ text }: { text: string }) {
 }
 
 /**
- * 본문에서 따옴표 안 1인칭 대본 자동 추출.
- * "나는 [○○]이다…" 같은 30자 이상의 큰따옴표 안 텍스트.
+ * SelfWorkCard — 본문 + 워크 진행 단계 체크리스트 (Gestalt 1인칭 워크 / IRT 다시쓰기 공통).
+ * 기존 따옴표 자동 추출 인용 박스 폐기 (LLM이 다른 따옴표를 잡는 사고).
  */
-function extractScript(text: string): { script: string | null; cleanText: string } {
-  // "..." 또는 '...' 안에서 30자+ 텍스트 찾기 (대본 추정)
-  const re = /["'`]([^"'`]{30,500})["'`]/;
-  const m = text.match(re);
-  if (!m) return { script: null, cleanText: text };
-  return {
-    script: m[1].trim(),
-    cleanText: text.replace(m[0], '').replace(/\n{3,}/g, '\n\n').trim(),
-  };
-}
+const SELF_WORK_STEPS: { num: number; title: string; sub: string }[] = [
+  { num: 1, title: '환경 만들기',     sub: '조용한 곳·자기 전 5~10분 확보, 핸드폰 알림 끄기' },
+  { num: 2, title: '대상 고르기',     sub: '꿈에 등장한 인물·동물·사물 중 가장 강렬했던 한 가지' },
+  { num: 3, title: '되어보기',        sub: '"나는 [그 ○○]이다…" 1인칭으로 그 대상이 되어 말해보기' },
+  { num: 4, title: '머무르기',        sub: '말한 뒤 떠오르는 감정·이미지에 1~2분 머무름' },
+  { num: 5, title: '돌아오기',        sub: '워크 후 떠오른 한 줄을 메모. 다음 날 다시 읽어보기' },
+];
 
 function SelfWorkCard({ text }: { text: string }) {
   if (!text) {
@@ -844,30 +841,40 @@ function SelfWorkCard({ text }: { text: string }) {
       </div>
     );
   }
-  const { script, cleanText } = extractScript(text);
   return (
     <div className="flex flex-col gap-3">
-      {/* 본문 (대본 인용 앞부분 안내) */}
-      {cleanText && <BodyParagraphs text={cleanText} />}
+      {/* 본문 */}
+      <BodyParagraphs text={text} />
 
-      {/* 대본 인용 박스 — Gestalt 1인칭 대본 강조 */}
-      {script && (
-        <div className="rounded-2xl border-l-4 px-4 py-4" style={{
-          background: 'linear-gradient(135deg, rgba(124,92,252,0.10), rgba(252,232,178,0.06))',
-          borderLeftColor: '#FCE8B2',
-        }}>
-          <div className="text-[11px] font-extrabold mb-2 uppercase tracking-widest" style={{
-            color: '#FCE8B2', fontFamily: 'var(--font-title)',
-          }}>1인칭 대본</div>
-          <p className="text-[16px] leading-[1.85] break-all m-0" style={{
-            color: 'var(--text-primary)',
-            fontFamily: 'var(--font-serif)',
-            fontStyle: 'italic',
-          }}>
-            "{script}"
-          </p>
+      {/* 워크 진행 5단계 — 사용자가 실제로 따라할 수 있게 */}
+      <div className="rounded-2xl border" style={{
+        padding: '14px 12px',
+        background: 'linear-gradient(135deg, rgba(124,92,252,0.10), rgba(252,232,178,0.06))',
+        borderColor: 'rgba(124,92,252,0.30)',
+      }}>
+        <div className="text-[12px] font-extrabold mb-3 uppercase tracking-wider" style={{
+          color: '#FCE8B2', fontFamily: 'var(--font-title)',
+        }}>워크 진행 단계</div>
+        <div className="flex flex-col gap-2.5">
+          {SELF_WORK_STEPS.map(step => (
+            <div key={step.num} className="flex items-start gap-3">
+              <span className="flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-[12px] font-extrabold" style={{
+                background: 'rgba(252,232,178,0.20)',
+                color: '#FCE8B2',
+                fontFamily: 'var(--font-title)',
+              }}>{step.num}</span>
+              <div className="flex-1 min-w-0">
+                <div className="text-[14px] font-bold text-text-primary leading-snug break-keep" style={{
+                  fontFamily: 'var(--font-title)',
+                }}>{step.title}</div>
+                <div className="text-[13px] text-text-tertiary leading-[1.6] break-all mt-0.5">
+                  {step.sub}
+                </div>
+              </div>
+            </div>
+          ))}
         </div>
-      )}
+      </div>
     </div>
   );
 }
