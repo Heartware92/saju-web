@@ -8527,10 +8527,11 @@ export const generateDreamOrientalPrompt = (
 - 강한 영역: ${classification.strong_domains.length > 0 ? classification.strong_domains.join(', ') : '(없음)'}
 - 핵심 신호: ${classification.key_signals.join(', ')}
 ${classification.interpretive_hints && classification.interpretive_hints.length > 0
-  ? `- ★★ 1차 해석 힌트 — 반드시 본문에서 인용·활용 (매번 재추론 금지) ★★:\n${classification.interpretive_hints.map(h => `  · ${h}`).join('\n')}\n  ※ oriental_diagnosis 근거 본문에서 위 힌트 중 1~2개의 의미를 반드시 풀어쓰기. 무시 금지.\n`
+  ? `- ★★ 1차 해석 힌트 — 반드시 본문에서 인용·활용 (매번 재추론 금지) ★★:\n${classification.interpretive_hints.map(h => `  · ${h}`).join('\n')}\n  ※ oriental_diagnosis 근거 본문에서 위 힌트 중 1~2개의 의미를 반드시 풀어쓰기. 무시 금지.\n  ※ 단 영어 학술 용어(Ego Ideal·Coniunctio·Anima·Continuity 등)는 ★ 절대 사용 금지 ★ — 동양식은 한국어/한자로만. 영어 의미를 동양 어휘(자아상·결합·내면·연속성·기운 등)로 변환해서 풀이.\n`
   : ''}${classification.is_taemong_alert ? '- ★ 태몽 가드레일 — "단명·요절·기형·유산" 절대 금지\n' : ''}` : '';
 
   return `당신은 한국 전통 주공해몽·민속 해몽 35년 전문가입니다. 동양 6 섹션만 출력 (서양 절대 금지).
+★★ 영어 학술 용어 (Ego Ideal, Anima, Continuity, Synchronicity, Shadow 등) 절대 사용 금지 — 한국어/한자만 사용 (자아상·내면·연속성·동시성·그림자 등으로 변환). ★★
 
 [꿈] ${trimmed || '(미입력)'}
 ${timingBlock}${repeatingNote}

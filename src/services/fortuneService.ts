@@ -2228,16 +2228,24 @@ const ORIENTAL_CAUTION_KEYS = new Set([
 const DOMAIN_ORDER = ['재물', '인연', '건강', '시험·학업', '직장·일', '가족·관계'] as const;
 
 /**
- * 입력 raw 의 모든 마커를 정규화. LLM 변형 모두 흡수:
- *   [ ORIENTAL DIAGNOSIS ] / [oriental-diagnosis] / [OrientalDiagnosis] / [westernselfwork]
- *   → [oriental_diagnosis]
- * 영문 마커만 정규화 (한글 본문은 보존).
+ * 입력 raw 의 모든 마커를 V4_KEYS 정확 매칭으로 정규화. LLM 변형 모두 흡수:
+ *   [ ORIENTAL DIAGNOSIS ] / [oriental-diagnosis] / [OrientalDiagnosis] /
+ *   [westernselfwork] / [WesternSelfWork] / [western self work]
+ *   → [oriental_diagnosis] / [western_self_work] 등 표준형으로 통일.
+ *
+ * 이전: 공백·하이픈만 underscore 로 변환 → [westernselfwork] 같이 구분자 없이
+ *       붙은 형태는 정규화 실패.
+ * 변경: V4_KEYS 각 키마다 "[_\s-]*" (0개 이상 구분자) 정규식으로 매칭.
  */
 function normalizeMarkers(raw: string): string {
-  return raw.replace(/\[\s*([A-Za-z][A-Za-z_\s-]*?)\s*\]/g, (_m, name) => {
-    const cleaned = String(name).trim().replace(/[\s-]+/g, '_').toLowerCase();
-    return `[${cleaned}]`;
-  });
+  let result = raw;
+  for (const key of V4_KEYS) {
+    // 'oriental_diagnosis' → 'oriental[_\\s-]*diagnosis' (0개 이상 구분자 허용)
+    const flexKey = key.split('_').join('[_\\s-]*');
+    const re = new RegExp(`\\[\\s*${flexKey}\\s*\\]`, 'gi');
+    result = result.replace(re, `[${key}]`);
+  }
+  return result;
 }
 
 /**

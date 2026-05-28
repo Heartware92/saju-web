@@ -774,10 +774,21 @@ function extractMirrorMappings(text: string): { mappings: { motif: string; reali
   const cleanLines: string[] = [];
   for (const line of text.split('\n')) {
     const t = line.trim();
-    // "정주영 → 자기 목표" 또는 "정주영=자기 목표" 형식만 캡처
-    const m = t.match(/^([^=→]{1,30})\s*[=→]\s*(.{4,80})$/);
-    if (m && !t.startsWith('-') && !/[.!?。]$/.test(m[2])) {
-      mappings.push({ motif: m[1].trim(), reality: m[2].trim() });
+    // 다양한 구분자 매칭 — "→·=·:·—·-·~" (LLM 이 화살표 무시하고 다른 구분자 쓰는 사고 흡수)
+    // 본문 평범한 문장 (마침표·물음표 끝) 은 제외.
+    const m = t.match(/^([^=→:~—]{1,30})\s*[=→:~—]\s*(.{4,100})$/);
+    // 화살표 없이 공백으로만 분리된 매핑도 시도 — 짧은 명사 + 긴 풀이 패턴
+    const mLoose = !m ? t.match(/^([가-힣A-Za-z0-9·\s]{2,20})\s{2,}(.{8,100})$/) : null;
+    const matched = m || mLoose;
+    if (matched && !t.startsWith('-') && !t.startsWith('*') && !/[.!?。]$/.test(matched[2])) {
+      const motif = matched[1].trim();
+      const reality = matched[2].trim();
+      // 매핑 후보 추가 검증: motif 가 너무 길거나 본문 문장이면 제외
+      if (motif.length >= 1 && motif.length <= 25 && !motif.endsWith('것') && !motif.endsWith('수') && !motif.endsWith('을') && !motif.endsWith('이')) {
+        mappings.push({ motif, reality });
+      } else {
+        cleanLines.push(line);
+      }
     } else {
       cleanLines.push(line);
     }
