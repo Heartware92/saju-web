@@ -1205,6 +1205,16 @@ export default function PeriodFortunePage({ scope }: { scope: FortuneScope | 'da
             onClick={() => {
               setDateConfirmed(false);
               setPickedDateReport(null);
+              // ★ 잡 컨텍스트 reset — 옛 ?jobId 잔존 시 AILoadingBar 80%~ 시작 버그 차단
+              setCreatedJobId(null);
+              if (typeof window !== 'undefined') {
+                const u = new URL(window.location.href);
+                u.searchParams.delete('jobId');
+                u.searchParams.delete('recordId');
+                u.searchParams.delete('fresh');
+                u.searchParams.delete('_t');
+                window.history.replaceState({}, '', u.pathname + (u.search ? u.search : ''));
+              }
             }}
             className="text-[13px] px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 text-text-secondary hover:text-text-primary hover:border-white/20 active:scale-[0.97] transition-all"
           >
@@ -1633,6 +1643,16 @@ export default function PeriodFortunePage({ scope }: { scope: FortuneScope | 'da
                   onClick: () => {
                     setDateConfirmed(false);
                     setPickedDateReport(null);
+                    // ★ 잡 컨텍스트 reset — 옛 ?jobId 잔존 시 AILoadingBar 80%~ 시작 버그 차단
+                    setCreatedJobId(null);
+                    if (typeof window !== 'undefined') {
+                      const u = new URL(window.location.href);
+                      u.searchParams.delete('jobId');
+                      u.searchParams.delete('recordId');
+                      u.searchParams.delete('fresh');
+                      u.searchParams.delete('_t');
+                      window.history.replaceState({}, '', u.pathname + (u.search ? u.search : ''));
+                    }
                     window.scrollTo({ top: 0 });
                   },
                 }

@@ -980,6 +980,17 @@ export default function GunghapPage() {
     setCustomLabel('');
     setClassifiedRelation(null);
     setClassifyError('');
+    // ★ 잡 컨텍스트 reset — 안 하면 옛 ?jobId 가 살아남아 useFortuneJob 이 옛 startedAt 반환 →
+    //   AILoadingBar 가 80~90% 부터 시작하는 버그. 이름풀이 handleRedo 표준 패턴.
+    setCreatedJobId(null);
+    if (typeof window !== 'undefined') {
+      const u = new URL(window.location.href);
+      u.searchParams.delete('jobId');
+      u.searchParams.delete('recordId');
+      u.searchParams.delete('fresh');
+      u.searchParams.delete('_t');
+      window.history.replaceState({}, '', u.pathname + (u.search ? u.search : ''));
+    }
     window.scrollTo({ top: 0 });
   };
 
