@@ -807,15 +807,35 @@ function MirrorBlock({ text }: { text: string }) {
           background: 'rgba(96,165,250,0.06)', borderColor: 'rgba(96,165,250,0.28)',
         }}>
           <div className="text-[13px] text-text-tertiary mb-2.5">꿈 모티프 → 현재 삶</div>
-          <div className="flex flex-col gap-2">
+          {/*
+            정렬 일관성: 좌측 컬럼(모티프 칩 + 화살표) 폭을 row 간 동일하게 유지.
+            grid 2col [고정폭] [1fr] + 좌측 안 space-between 으로 화살표 우측 고정.
+          */}
+          <div className="flex flex-col gap-2.5">
             {mappings.map((m, i) => (
-              <div key={i} className="flex items-center gap-2 text-[14px] leading-snug break-all">
-                <span className="flex-shrink-0 px-2 py-0.5 rounded-md text-[13px] font-bold" style={{
-                  background: 'rgba(96,165,250,0.18)', color: '#60A5FA',
-                  fontFamily: 'var(--font-title)',
-                }}>{m.motif}</span>
-                <span className="text-text-tertiary flex-shrink-0">→</span>
-                <span className="text-text-secondary flex-1">{m.reality}</span>
+              <div
+                key={i}
+                className="grid items-start gap-3 text-[14px] leading-[1.55]"
+                style={{ gridTemplateColumns: '128px 1fr' }}
+              >
+                <div className="flex items-center justify-between gap-1.5 min-w-0">
+                  <span
+                    className="px-2 py-0.5 rounded-md text-[13px] font-bold truncate"
+                    style={{
+                      background: 'rgba(96,165,250,0.18)',
+                      color: '#60A5FA',
+                      fontFamily: 'var(--font-title)',
+                      maxWidth: 110,
+                    }}
+                    title={m.motif}
+                  >
+                    {m.motif}
+                  </span>
+                  <span className="text-text-tertiary flex-shrink-0 text-[13px]">→</span>
+                </div>
+                <span className="text-text-secondary break-all pt-0.5">
+                  {m.reality}
+                </span>
               </div>
             ))}
           </div>
