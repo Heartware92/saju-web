@@ -8432,6 +8432,9 @@ export interface DreamClassification {
   polarity_hint: '대길' | '길' | '중길' | '평' | '중흉' | '흉';
   strong_domains: string[];
   key_signals: string[];
+  /** 비표준 입력(연예인·성·욕설 등)을 심리학적/상징적 의미로 1차 가공한 해석 힌트 2~4개.
+   *  2·3차 풀이가 매번 추론하지 않고 이 힌트를 받아 일관된 풀이 생성. */
+  interpretive_hints: string[];
   clinical_hint: 'ordinary' | 'vivid' | 'lucid' | 'nightmare' | 'recurring' | 'threat_sim' | 'continuity' | 'sleep_paralysis' | 'false_awakening';
   is_taemong_alert: boolean;
   is_clinical_alert: boolean;
@@ -8460,17 +8463,24 @@ ${symbolsBlock}
 - primary_kind: 태몽(임신·동물·과일·품에안김) / 예지몽(새벽·생생·구체 미래) / 심리몽(고민·연예인·성·욕망 반영) / 일상몽(평범 단편) / 악몽(공포·도망) / 반복몽 / 영몽(조상·신령) / 혼재
 - polarity_hint: 상징 폴라리티 + 감정. 역몽(피·똥·죽음·불)은 길몽. ★ 무조건 1개 선택 (평/중길/길 등 — 빈 값 금지)
 - strong_domains: 재물/인연/건강/시험·학업/직장·일/가족·관계 중 명확한 신호만 1~3개. 신호 없으면 빈 배열 — 강제 매핑 금지
-- key_signals: 사용자 단어·장면·감정 핵심 3~6개
+- key_signals: 사용자 단어·장면·감정 핵심 3~6개 (가공 없이 그대로)
+- interpretive_hints: ★ 1차 가공 ★ — 사용자 입력의 핵심 요소를 심리학적/상징적/문화적 의미로 1차 가공한 해석 힌트 2~4개.
+  형식: "사용자 단어 = 의미·역할 (한 줄, 60~120자)"
+  ★ 가공 우선순위 룰 (이 순서로 가공할 요소 식별):
+   1) 비일반·특수 명사 (실제 인물명·연예인·역사 인물·브랜드·특정 장소) → 그 인물·대상이 사용자에게 어떤 심리적 위치인지 추론 (자아 이상·동경·권위·억압자·과거 관계 등)
+   2) 감각·신체·관계 행위 (성·키스·포옹·싸움·죽임·먹기·받기·빼앗김) → 정신분석/융 framework 으로 의미 (Coniunctio·통합·억압된 욕망·공격성·수용·의존 등)
+   3) 강한 감정/감탄어 (욕설·"나이스"·"좋다"·"무섭다"·"슬프다") → 꿈 속 정서 강도 표지 → 폴라리티에 가산/감산
+   4) 동양 전통 상징 (뱀·용·돼지·이빠짐·똥·피·불·돈) → 주공해몽 의미 (역몽 포함)
+   5) 임상 표지 (반복·쫓김·낙하·발가벗음·시험) → 현대 dream science 분류
+  ★ 일반화 룰: 어떤 단어든 위 5 카테고리 중 적합한 framework 으로 의미화. 특정 예시에 갇히지 말 것.
+  이 힌트들은 2·3차 동양·서양 풀이가 그대로 활용 — 매번 추론하지 않도록.
 - is_taemong_alert: 임신 신호 1개+ 시 true (단명·요절·기형 가드레일)
 - is_clinical_alert: PTSD·자해·심한 트라우마 키워드 시 true
 
-[★ 비표준 입력 처리 — 매우 중요]
-사용자 입력에 다음 같은 비표준·금기 요소가 있어도 절대 거부하지 말고 심리학적/상징적으로 풀이:
-- 연예인·유명인 이름 (예: 수지, 차은우) → 자아 이상(Ego Ideal) 투사, 동경의 상징
-- 성관계·키스·신체 접촉 → Coniunctio(대립 통합), 깊은 결합 욕구, 창조성·생명력
-- 욕설·비속어 ("나이스", "쩐다" 등) → 감정 강도 표지로 처리, 그대로 둠
-- 단편적·짧은 입력 → 보수적 풀이로 답을 내되 분류 자체는 진행
-어떤 입력이든 primary_kind·polarity_hint·confidence 는 무조건 채워야 함. confidence='low' 가능.
+[★ 비표준 입력 처리 — 절대 거부 금지]
+연예인·성관계·욕설·비속어·금기 단어가 있어도 거부하지 말고 위 interpretive_hints 형식으로
+심리학적/상징적 의미로 1차 가공할 것. primary_kind·polarity_hint·confidence 무조건 채울 것.
+confidence='low' 가능. 평/중길 라벨 활용 가능.
 
 [★ JSON 만 출력]
 {
@@ -8479,6 +8489,10 @@ ${symbolsBlock}
   "polarity_hint": "...",
   "strong_domains": ["..."],
   "key_signals": ["..."],
+  "interpretive_hints": [
+    "사용자 단어 = 심리학적/상징적 의미·역할",
+    "..."
+  ],
   "clinical_hint": "...",
   "is_taemong_alert": false,
   "is_clinical_alert": false
@@ -8506,7 +8520,9 @@ export const generateDreamOrientalPrompt = (
 - 길흉: ${classification.polarity_hint}
 - 강한 영역: ${classification.strong_domains.length > 0 ? classification.strong_domains.join(', ') : '(없음)'}
 - 핵심 신호: ${classification.key_signals.join(', ')}
-${classification.is_taemong_alert ? '- ★ 태몽 가드레일 — "단명·요절·기형·유산" 절대 금지\n' : ''}` : '';
+${classification.interpretive_hints && classification.interpretive_hints.length > 0
+  ? `- ★ 1차 해석 힌트 (이 의미를 본문에 자연스럽게 녹여 풀이):\n${classification.interpretive_hints.map(h => `  · ${h}`).join('\n')}\n`
+  : ''}${classification.is_taemong_alert ? '- ★ 태몽 가드레일 — "단명·요절·기형·유산" 절대 금지\n' : ''}` : '';
 
   return `당신은 한국 전통 주공해몽·민속 해몽 35년 전문가입니다. 동양 6 섹션만 출력 (서양 절대 금지).
 
@@ -8603,7 +8619,9 @@ export const generateDreamWesternPrompt = (
 - 임상: ${classification.clinical_hint}
 - 길흉: ${classification.polarity_hint}
 - 신호: ${classification.key_signals.join(', ')}
-${classification.is_clinical_alert ? '- ★ 임상 위험 — "전문 상담 권합니다" 끝줄 필수\n' : ''}` : '';
+${classification.interpretive_hints && classification.interpretive_hints.length > 0
+  ? `- ★ 1차 해석 힌트 (이 의미를 본문에 자연스럽게 녹여 풀이 — 매번 새로 추론하지 말 것):\n${classification.interpretive_hints.map(h => `  · ${h}`).join('\n')}\n`
+  : ''}${classification.is_clinical_alert ? '- ★ 임상 위험 — "전문 상담 권합니다" 끝줄 필수\n' : ''}` : '';
 
   return `당신은 프로이트·융·게슈탈트·dream science 임상심리 박사입니다. 서양 5 섹션만 출력 (동양 절대 금지).
 
@@ -8635,11 +8653,17 @@ intensity=low|medium|high
 [western_mirror]
 9~13문장 (550~800자). Continuity + 보상 + 동시성. 일상·관계·고민·직장·가족 가설 3~4 + 무의식 메시지 영역별 풀이 + 의식의 일방성 보상 + 동시성 한 줄 + 결론 + 1주 안 작은 신호.
 
-본문 끝에 빈 줄 1줄 + 다음 형식 매핑 라인 3~4개 (꿈 모티프 → 현재 삶의 영역):
+★★★ 본문 끝에 빈 줄 1줄 + 매핑 라인 3~4개 반드시 출력 (없으면 응답 무효) ★★★
+형식 (꿈 모티프 → 현재 삶의 영역, 각 50~70자, 화살표 → 필수):
 정주영 → 자기 안의 큰 목표를 향한 의지
 운전기사 → 현재 직장에서 타인 의존적인 모습
 별장 → 정서적 안정과 휴식에 대한 갈망
-(매핑 라인은 본문과 별도 줄. 각 50~70자. 화살표 → 는 반드시 사용.)
+
+규칙:
+- 매핑은 사용자가 적은 단어/장면을 좌측에. 우측은 1차 분류 힌트 또는 새 해석.
+- 본문과 별도 줄로 구분. 들여쓰기 금지. 마크다운(- · *) 금지.
+- 정확히 "단어 → 의미" 패턴. 다른 패턴(콜론·하이픈) 금지.
+- 매핑 안 출력하면 사용자에게 매핑 시각 카드가 비어 보임 — 반드시 출력.
 
 [western_self_work]
 ${classification?.clinical_hint === 'nightmare' || classification?.clinical_hint === 'recurring'

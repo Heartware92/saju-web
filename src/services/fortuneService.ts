@@ -2109,6 +2109,7 @@ export interface ParsedDreamClassification {
   polarity_hint: string;
   strong_domains: string[];
   key_signals: string[];
+  interpretive_hints: string[];
   clinical_hint: string;
   is_taemong_alert: boolean;
   is_clinical_alert: boolean;
@@ -2126,6 +2127,7 @@ export const parseDreamClassification = (raw: string): ParsedDreamClassification
       polarity_hint: String(j.polarity_hint || '평'),
       strong_domains: Array.isArray(j.strong_domains) ? j.strong_domains.map(String).slice(0, 3) : [],
       key_signals: Array.isArray(j.key_signals) ? j.key_signals.map(String).slice(0, 6) : [],
+      interpretive_hints: Array.isArray(j.interpretive_hints) ? j.interpretive_hints.map(String).slice(0, 5) : [],
       clinical_hint: String(j.clinical_hint || 'ordinary'),
       is_taemong_alert: !!j.is_taemong_alert,
       is_clinical_alert: !!j.is_clinical_alert,
