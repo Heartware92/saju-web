@@ -18,16 +18,28 @@ import { getPackageById } from '../constants/pricing';
 import type { Order } from '../types/credit';
 
 const PORTONE_STORE_ID = process.env.NEXT_PUBLIC_PORTONE_STORE_ID || '';
-const PORTONE_CHANNEL_KEY = process.env.NEXT_PUBLIC_PORTONE_CHANNEL_KEY || '';
+const ENV_CHANNEL_KEY = process.env.NEXT_PUBLIC_PORTONE_CHANNEL_KEY || '';
 const BASE_URL =
   process.env.NEXT_PUBLIC_BASE_URL ||
   (typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000');
 
-if (
-  typeof window !== 'undefined' &&
-  (!PORTONE_STORE_ID || !PORTONE_CHANNEL_KEY)
-) {
-  console.warn('PortOne credentials are not set. Payment will not work.');
+if (typeof window !== 'undefined' && !PORTONE_STORE_ID) {
+  console.warn('PortOne store ID is not set. Payment will not work.');
+}
+
+/**
+ * 활성 채널 키를 서버에서 받아옴 (어드민이 토스 ↔ 이니시스 전환 가능).
+ * DB 조회 실패 시 환경변수로 폴백.
+ */
+async function fetchActiveChannelKey(): Promise<string> {
+  try {
+    const res = await fetch('/api/payment/active-channel', { cache: 'no-store' });
+    if (!res.ok) return ENV_CHANNEL_KEY;
+    const json = await res.json();
+    return (json?.channelKey as string) || ENV_CHANNEL_KEY;
+  } catch {
+    return ENV_CHANNEL_KEY;
+  }
 }
 
 export interface PaymentRequest {
@@ -51,7 +63,8 @@ export const processPayment = async (
   request: PaymentRequest
 ): Promise<PaymentResult> => {
   try {
-    if (!PORTONE_STORE_ID || !PORTONE_CHANNEL_KEY) {
+    const channelKey = await fetchActiveChannelKey();
+    if (!PORTONE_STORE_ID || !channelKey) {
       return {
         success: false,
         error: 'CONFIG_MISSING',
@@ -85,8 +98,6 @@ export const processPayment = async (
       package_id: request.packageId,
       package_name: packageInfo.name,
       amount: request.amount,
-      // 2026-05-16 단일 달 크레딧 통합 — sun 적립 폐지
-      sun_credit_amount: 0,
       moon_credit_amount: packageInfo.moonCredit,
       status: 'pending',
     };
@@ -94,10 +105,10 @@ export const processPayment = async (
     const order = await orderDB.createOrder(orderData);
     const paymentId = order.id.replace(/-/g, '');
 
-    // 4. PortOne 결제창 호출
+    // 4. PortOne 결제창 호출 (어드민이 활성화한 채널 키 사용)
     const response = await PortOne.requestPayment({
       storeId: PORTONE_STORE_ID,
-      channelKey: PORTONE_CHANNEL_KEY,
+      channelKey,
       paymentId,
       orderName: `크레딧 ${request.creditAmount}개 (${packageInfo.name})`,
       totalAmount: request.amount,

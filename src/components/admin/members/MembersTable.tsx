@@ -1,7 +1,6 @@
 /**
  * 회원 관리 테이블 — 확장된 열.
- * 열: 이메일·provider / 성별·나이 / 가입일·마지막접속·경과일 / 프로필수 / 🌙 / 누적결제·주문수·마지막구매 / 분석수 / 세그먼트
- * 단일 달 크레딧 통합(2026-05-16) 이후 sun 표시 없음. sunBalance 필드는 API 응답 호환 유지.
+ * 열: 이메일·provider / 성별·나이 / 가입일·마지막접속·경과일 / 프로필수 / 달 / 누적결제·주문수·마지막구매 / 분석수 / 세그먼트
  */
 'use client';
 
@@ -21,7 +20,6 @@ export interface MemberRow {
   ageBucket: AgeBucketKey;
   birthPlace: string | null;
   profileCount: number;
-  sunBalance: number;
   moonBalance: number;
   totalSpent: number;
   orderCount: number;
@@ -83,7 +81,7 @@ export function MembersTable({ rows, loading, sort, order, onSortChange, onRowCl
             <Th sortable active={sort === 'joined'} order={order} onClick={() => toggleSort('joined')}>가입일</Th>
             <Th sortable active={sort === 'lastSeen'} order={order} onClick={() => toggleSort('lastSeen')}>마지막 접속</Th>
             <Th>프로필</Th>
-            <Th>🌙</Th>
+            <Th>달</Th>
             <Th sortable active={sort === 'totalSpent'} order={order} onClick={() => toggleSort('totalSpent')}>누적 결제</Th>
             <Th sortable active={sort === 'orderCount'} order={order} onClick={() => toggleSort('orderCount')}>주문</Th>
             <Th sortable active={sort === 'analysisCount'} order={order} onClick={() => toggleSort('analysisCount')}>분석</Th>
@@ -141,7 +139,7 @@ export function MembersTable({ rows, loading, sort, order, onSortChange, onRowCl
               <td className="px-3 py-2.5 text-center text-text-secondary tabular-nums">{u.profileCount}</td>
 
               <td className="px-3 py-2.5 whitespace-nowrap">
-                <span className="text-indigo-300 tabular-nums">🌙{u.moonBalance}</span>
+                <span className="text-indigo-300 tabular-nums">{fmt(u.moonBalance)}</span>
               </td>
 
               <td className="px-3 py-2.5 text-right whitespace-nowrap">

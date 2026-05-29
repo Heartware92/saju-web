@@ -1,6 +1,6 @@
 /**
  * 크레딧 시스템 관련 타입 정의
- * 해(☀️)/달(🌙) 이중 크레딧 시스템
+ * 단일 달 크레딧 (033 마이그레이션). sun 필드는 옛 row 호환을 위해 옵셔널로 남김.
  */
 
 export type CreditType = 'sun' | 'moon';
@@ -23,7 +23,7 @@ export interface Order {
   package_id: string;
   package_name: string;
   amount: number;              // 결제 금액 (원)
-  sun_credit_amount: number;   // 지급할 해 크레딧
+  sun_credit_amount?: number;  // (deprecated, 033 이후 사용 안 함)
   moon_credit_amount: number;  // 지급할 달 크레딧
   status: 'pending' | 'completed' | 'failed' | 'refunded';
   payment_method?: string;
@@ -35,11 +35,14 @@ export interface Order {
 
 export interface UserCredit {
   user_id: string;
-  sun_balance: number;
+  /** @deprecated 033 이후 항상 0 */
+  sun_balance?: number;
   moon_balance: number;
-  total_sun_purchased: number;
+  /** @deprecated 033 이후 사용 안 함 */
+  total_sun_purchased?: number;
   total_moon_purchased: number;
-  total_sun_consumed: number;
+  /** @deprecated 033 이후 사용 안 함 */
+  total_sun_consumed?: number;
   total_moon_consumed: number;
   created_at: string;
   updated_at: string;
@@ -141,7 +144,8 @@ export interface CreditPackage {
   id: string;
   name: string;
   price: number;              // 원
-  sun_amount: number;         // 해 크레딧
+  /** @deprecated 033 이후 사용 안 함 */
+  sun_amount?: number;
   moon_amount: number;        // 달 크레딧
   description: string;
   popular?: boolean;

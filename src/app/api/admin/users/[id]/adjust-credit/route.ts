@@ -1,9 +1,9 @@
 /**
  * POST /api/admin/users/[id]/adjust-credit
- * Body: { creditType: 'sun' | 'moon', delta: number, reason: string }
+ * Body: { delta: number, reason: string }
  *   delta: +로 지급, -로 차감 (양수·음수 모두 허용)
  *   reason: 필수 사유
- * 효과: user_credits 잔액 갱신 + credit_transactions insert (type='admin_adjust') + admin_audit_logs 기록
+ * 효과: user_credits.moon_balance 갱신 + credit_transactions insert (type='admin_adjust') + admin_audit_logs 기록
  */
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/services/supabaseAdmin';
@@ -18,20 +18,16 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   const { id: userId } = await params;
   if (!userId) return NextResponse.json({ error: 'id 누락' }, { status: 400 });
 
-  let body: { creditType?: 'sun' | 'moon'; delta?: number; reason?: string };
+  let body: { delta?: number; reason?: string };
   try {
     body = await request.json();
   } catch {
     return NextResponse.json({ error: 'invalid JSON' }, { status: 400 });
   }
 
-  const creditType = body.creditType;
   const delta = Number(body.delta ?? 0);
   const reason = (body.reason ?? '').trim();
 
-  if (creditType !== 'sun' && creditType !== 'moon') {
-    return NextResponse.json({ error: 'creditType은 sun 또는 moon' }, { status: 400 });
-  }
   if (!Number.isFinite(delta) || delta === 0) {
     return NextResponse.json({ error: 'delta는 0이 아닌 정수' }, { status: 400 });
   }
@@ -44,15 +40,14 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
 
   const { data: current, error: cErr } = await supabaseAdmin
     .from('user_credits')
-    .select('sun_balance, moon_balance, total_sun_purchased, total_moon_purchased, total_sun_consumed, total_moon_consumed')
+    .select('moon_balance, total_moon_purchased, total_moon_consumed')
     .eq('user_id', userId)
     .single();
   if (cErr || !current) {
     return NextResponse.json({ error: '크레딧 레코드 없음' }, { status: 404 });
   }
 
-  const balanceField = creditType === 'sun' ? 'sun_balance' : 'moon_balance';
-  const currentBalance = current[balanceField] as number;
+  const currentBalance = current.moon_balance as number;
   const newBalance = currentBalance + delta;
   if (newBalance < 0) {
     return NextResponse.json({
@@ -62,13 +57,13 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
 
   const { error: uErr } = await supabaseAdmin
     .from('user_credits')
-    .update({ [balanceField]: newBalance })
+    .update({ moon_balance: newBalance })
     .eq('user_id', userId);
   if (uErr) return NextResponse.json({ error: uErr.message }, { status: 500 });
 
   const { error: tErr } = await supabaseAdmin.from('credit_transactions').insert({
     user_id: userId,
-    credit_type: creditType,
+    credit_type: 'moon',
     type: 'admin_adjust',
     amount: delta,
     balance_after: newBalance,
@@ -85,10 +80,10 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     targetUserId: userId,
     targetEmail: target.data?.user?.email ?? null,
     action: 'credit_adjust',
-    creditType,
+    creditType: 'moon',
     amount: delta,
-    before: { [balanceField]: currentBalance },
-    after: { [balanceField]: newBalance },
+    before: { moon_balance: currentBalance },
+    after: { moon_balance: newBalance },
     reason,
     ipAddress,
     userAgent,
@@ -99,7 +94,6 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   return NextResponse.json({
     ok: true,
     userId,
-    creditType,
     delta,
     newBalance,
     reason,

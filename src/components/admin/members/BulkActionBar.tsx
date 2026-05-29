@@ -16,8 +16,6 @@ type Mode = null | 'credit' | 'note' | 'ban' | 'unban';
 
 export function BulkActionBar({ selectedIds, token, onClearSelection, onDone }: Props) {
   const [mode, setMode] = useState<Mode>(null);
-  // 단일 달 크레딧 통합(2026-05-16) 이후 sun 조정 UI 폐기. moon 만 처리.
-  const creditType = 'moon' as const;
   const [delta, setDelta] = useState(1);
   const [reason, setReason] = useState('');
   const [note, setNote] = useState('');
@@ -55,7 +53,7 @@ export function BulkActionBar({ selectedIds, token, onClearSelection, onDone }: 
     }
     if (mode === 'credit') {
       if (!reason.trim()) return alert('사유 필수');
-      run({ action: 'credit', creditType, delta, reason });
+      run({ action: 'credit', delta, reason });
     } else if (mode === 'note') {
       run({ action: 'note', note });
     } else if (mode === 'ban' || mode === 'unban') {
@@ -75,16 +73,16 @@ export function BulkActionBar({ selectedIds, token, onClearSelection, onDone }: 
         </div>
 
         <div className="flex gap-1 ml-auto">
-          <BulkBtn active={mode === 'credit'} onClick={() => setMode(mode === 'credit' ? null : 'credit')}>💰 크레딧</BulkBtn>
-          <BulkBtn active={mode === 'note'} onClick={() => setMode(mode === 'note' ? null : 'note')}>📝 메모</BulkBtn>
-          <BulkBtn active={mode === 'ban'} onClick={() => setMode(mode === 'ban' ? null : 'ban')} variant="danger">⛔ 차단</BulkBtn>
-          <BulkBtn active={mode === 'unban'} onClick={() => setMode(mode === 'unban' ? null : 'unban')} variant="success">✓ 해제</BulkBtn>
+          <BulkBtn active={mode === 'credit'} onClick={() => setMode(mode === 'credit' ? null : 'credit')}>크레딧</BulkBtn>
+          <BulkBtn active={mode === 'note'} onClick={() => setMode(mode === 'note' ? null : 'note')}>메모</BulkBtn>
+          <BulkBtn active={mode === 'ban'} onClick={() => setMode(mode === 'ban' ? null : 'ban')} variant="danger">차단</BulkBtn>
+          <BulkBtn active={mode === 'unban'} onClick={() => setMode(mode === 'unban' ? null : 'unban')} variant="success">해제</BulkBtn>
         </div>
       </div>
 
       {mode === 'credit' && (
         <div className="mt-3 flex gap-2 flex-wrap items-center">
-          <span className="px-3 py-1 rounded text-[12px] bg-indigo-500/20 text-indigo-200 border border-indigo-500/30">🌙 달 크레딧</span>
+          <span className="px-3 py-1 rounded text-[12px] bg-indigo-500/20 text-indigo-200 border border-indigo-500/30">달 크레딧</span>
           <input type="number" value={delta} onChange={e => setDelta(parseInt(e.target.value) || 0)}
             className="w-24 px-2 py-1 rounded-lg bg-white/5 border border-white/15 text-[13px] tabular-nums"
             placeholder="+10 / -5" />

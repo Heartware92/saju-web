@@ -13,6 +13,10 @@ import { CreditsFlowSection, type CreditsSummary } from '@/components/admin/cred
 import { OpsSection, type OpsSummary } from '@/components/admin/ops/OpsSection';
 import { InsightsSection, type Insights } from '@/components/admin/insights/InsightsSection';
 import { AuditLogSection, type AuditLog } from '@/components/admin/ops/AuditLogSection';
+import { InquiriesSection } from '@/components/admin/inquiries/InquiriesSection';
+import { PhoneChangesSection } from '@/components/admin/ops/PhoneChangesSection';
+import { JobsSection } from '@/components/admin/jobs/JobsSection';
+import { PaymentGatewaySection } from '@/components/admin/ops/PaymentGatewaySection';
 import { toCsv, downloadCsv, timestampSuffix } from '@/components/admin/csvExport';
 import { SAJU_CATEGORY_LABEL, TAROT_SPREAD_LABEL, ORDER_STATUS_LABEL, GENDER_LABEL, PROVIDER_LABEL, CREDIT_REASON_LABEL, DELETION_REASON_LABEL, type UserSegment, type AgeBucketKey } from '@/constants/adminLabels';
 
@@ -32,7 +36,6 @@ interface Stats {
   revenue: { total: number; thisMonth: number; prevMonth: number; refunded: number; growth: number | null };
   usage: { sajuTotal: number; sajuToday: number; tarotTotal: number; tarotToday: number; consultTotal?: number; consultToday?: number };
   credits: {
-    sun: { issued: number; consumed: number; balance: number };
     moon: { issued: number; consumed: number; balance: number };
   };
   daily?: DailyPoint[];
@@ -41,7 +44,7 @@ interface Stats {
 interface Order {
   id: string; user_id: string; userEmail: string; package_name: string; package_id: string;
   amount: number; status: string; payment_method: string; created_at: string; completed_at: string | null;
-  sun_credit_amount: number; moon_credit_amount: number;
+  moon_credit_amount: number;
 }
 
 interface UsageRecord {
@@ -59,9 +62,7 @@ interface ConsultationRecord {
 }
 
 interface DeletedMemberCredit {
-  total_sun_purchased: number;
   total_moon_purchased: number;
-  total_sun_consumed: number;
   total_moon_consumed: number;
 }
 
@@ -81,7 +82,7 @@ interface DeletedMember {
   deleted_at: string;
 }
 
-type Tab = 'overview' | 'members' | 'orders' | 'usage' | 'credits' | 'records' | 'consultations' | 'ops' | 'insights';
+type Tab = 'overview' | 'members' | 'orders' | 'usage' | 'credits' | 'records' | 'consultations' | 'ops' | 'inquiries' | 'jobs' | 'insights';
 type SortKey = 'joined' | 'lastSeen' | 'totalSpent' | 'analysisCount' | 'orderCount';
 
 // ── 유틸 ──────────────────────────────────────────────────
@@ -89,12 +90,13 @@ const fmt = (n: number) => n.toLocaleString('ko-KR');
 const fmtWon = (n: number) => `${n.toLocaleString('ko-KR')}원`;
 const fmtDate = (s: string | null) => s ? new Date(s).toLocaleDateString('ko-KR', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }) : '-';
 
-function MetricCard({ label, value, sub, color }: { label: string; value: string; sub?: string; color?: string }) {
+function MetricCard({ label, value, sub, color, warn }: { label: string; value: string; sub?: string; color?: string; warn?: string }) {
   return (
-    <div className="bg-white/5 border border-white/10 rounded-xl p-4">
-      <p className="text-[13px] text-text-tertiary uppercase tracking-wider mb-1">{label}</p>
-      <p className={`text-[22px] font-bold ${color ?? 'text-text-primary'}`}>{value}</p>
-      {sub && <p className="text-[13px] text-text-tertiary mt-0.5">{sub}</p>}
+    <div className="bg-white/[0.04] border border-white/10 rounded-xl p-4 hover:border-white/15 transition-colors">
+      <p className="text-[12px] text-text-tertiary tracking-wide mb-2">{label}</p>
+      <p className={`text-[26px] font-bold leading-tight tabular-nums ${color ?? 'text-text-primary'}`}>{value}</p>
+      {sub && <p className="text-[12px] text-text-tertiary mt-1.5 leading-snug">{sub}</p>}
+      {warn && <p className="text-[11px] text-amber-300 mt-1.5 leading-snug">{warn}</p>}
     </div>
   );
 }
@@ -553,6 +555,8 @@ export default function AdminPage() {
     { key: 'records',  label: `이용 기록 (${recordTotal || '…'})` },
     { key: 'consultations', label: `상담소 (${consultTotal || '…'})` },
     { key: 'ops',      label: `운영${opsSummary?.kpi ? ` (${(opsSummary.kpi.bannedCount ?? 0) + (opsSummary.kpi.notedCount ?? 0)})` : ''}` },
+    { key: 'inquiries', label: '문의함' },
+    { key: 'jobs',      label: '잡 상태' },
     { key: 'insights', label: '인사이트' },
   ];
 
@@ -582,7 +586,7 @@ export default function AdminPage() {
       ]);
       const csv = toCsv(
         ['이메일', '가입경로', '성별', '나이', '생년월일', '연령대', '세그먼트',
-         '🌙 잔액', '누적결제', '주문수', '사주이용', '타로이용',
+         '달 잔액', '누적결제', '주문수', '사주이용', '타로이용',
          '가입일', '최종로그인', '최종이용', '미접속일'],
         rows,
       );
@@ -607,7 +611,7 @@ export default function AdminPage() {
         o.payment_method ?? '', o.created_at, o.completed_at ?? '',
       ]);
       const csv = toCsv(
-        ['주문ID', '이메일', '상태', '패키지', '패키지ID', '금액', '🌙', '결제수단', '생성일', '완료일'],
+        ['주문ID', '이메일', '상태', '패키지', '패키지ID', '금액', '달 크레딧', '결제수단', '생성일', '완료일'],
         rows,
       );
       downloadCsv(`orders-${timestampSuffix()}.csv`, csv);
@@ -630,7 +634,7 @@ export default function AdminPage() {
           : (TAROT_SPREAD_LABEL[r.spread_type ?? ''] ?? r.spread_type ?? ''),
         r.credit_used, r.created_at,
       ]);
-      const csv = toCsv(['이메일', '서비스', '🌙 소비량', '일시'], rows);
+      const csv = toCsv(['이메일', '서비스', '달 소비량', '일시'], rows);
       downloadCsv(`${recordType}-records-${timestampSuffix()}.csv`, csv);
     } catch (e: any) { setError(e.message); }
     finally { setExporting(false); }
@@ -654,23 +658,11 @@ export default function AdminPage() {
 
   return (
     <div className="min-h-screen bg-[#0a0614] text-text-primary">
-      {/* 헤더 — 뒤로가기 + 타이틀 */}
+      {/* 헤더 */}
       <div className="border-b border-white/10 px-6 py-4 flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          {/* 어드민 → 홈 빠른 이동. (단순 a 태그 — 이 파일에서 router 미참조라 의존 추가 안 함) */}
-          <a
-            href="/"
-            aria-label="홈으로"
-            className="w-9 h-9 flex items-center justify-center rounded-lg text-text-secondary hover:text-text-primary -ml-2"
-          >
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
-              <path d="M15 18l-6-6 6-6" />
-            </svg>
-          </a>
-          <div>
-            <h1 className="text-[18px] font-bold text-text-primary">사주 어드민</h1>
-            <p className="text-[13px] text-text-tertiary mt-0.5">Admin Dashboard</p>
-          </div>
+        <div className="flex items-baseline gap-3">
+          <h1 className="text-[18px] font-bold text-text-primary tracking-tight">사주 어드민</h1>
+          <span className="text-[12px] text-text-tertiary">내부 운영 콘솔</span>
         </div>
         <div className="flex items-center gap-2">
           {(tab === 'members' || tab === 'orders' || tab === 'records' || tab === 'consultations') && (
@@ -679,12 +671,12 @@ export default function AdminPage() {
               disabled={exporting}
               className="text-[13px] text-text-secondary hover:text-text-primary border border-white/15 hover:border-white/30 px-3 py-1.5 rounded-lg transition-all disabled:opacity-40"
             >
-              {exporting ? '다운로드 중…' : '📥 CSV 다운로드'}
+              {exporting ? '다운로드 중…' : 'CSV 다운로드'}
             </button>
           )}
           <button
             onClick={refreshCurrentTab}
-            className="text-[14px] text-cta hover:text-cta/80 border border-cta/30 hover:border-cta/60 px-3 py-1.5 rounded-lg transition-all"
+            className="text-[13px] text-cta hover:text-cta/80 border border-cta/30 hover:border-cta/60 px-3 py-1.5 rounded-lg transition-all"
           >
             새로고침
           </button>
@@ -724,17 +716,17 @@ export default function AdminPage() {
         {tab === 'overview' && stats && (
           <div className="space-y-6">
             <div>
-              <h2 className="text-[15px] font-semibold text-text-secondary mb-3 uppercase tracking-wider">사용자</h2>
+              <h2 className="text-[13px] font-semibold text-text-tertiary mb-3 tracking-wider">사용자</h2>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                 <MetricCard label="총 사용자" value={fmt(stats.users.total)} />
                 <MetricCard label="오늘 신규" value={fmt(stats.users.today)} color="text-cta" />
                 <MetricCard label="이번 달 신규" value={fmt(stats.users.thisMonth)} />
-                <MetricCard label="총 결제 완료" value={fmt(stats.orders.completed)} sub={`환불 ${stats.orders.refunded}건 (${stats.orders.refundRate}%)`} />
+                <MetricCard label="결제 완료" value={fmt(stats.orders.completed)} sub={`환불 ${stats.orders.refunded}건 · ${stats.orders.refundRate}%`} />
               </div>
             </div>
 
             <div>
-              <h2 className="text-[15px] font-semibold text-text-secondary mb-3 uppercase tracking-wider">매출</h2>
+              <h2 className="text-[13px] font-semibold text-text-tertiary mb-3 tracking-wider">매출</h2>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                 <MetricCard label="총 매출" value={fmtWon(stats.revenue.total)} />
                 <MetricCard
@@ -749,22 +741,35 @@ export default function AdminPage() {
             </div>
 
             <div>
-              <h2 className="text-[15px] font-semibold text-text-secondary mb-3 uppercase tracking-wider">서비스 이용</h2>
+              <h2 className="text-[13px] font-semibold text-text-tertiary mb-3 tracking-wider">서비스 이용</h2>
               <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                <MetricCard label="사주 분석 (누적)" value={fmt(stats.usage.sajuTotal)} sub={`오늘 ${fmt(stats.usage.sajuToday)}`} />
-                <MetricCard label="타로 분석 (누적)" value={fmt(stats.usage.tarotTotal)} sub={`오늘 ${fmt(stats.usage.tarotToday)}`} />
-                <MetricCard label="상담소 대화 (누적)" value={fmt(stats.usage.consultTotal ?? 0)} sub={`오늘 ${fmt(stats.usage.consultToday ?? 0)}`} />
+                <MetricCard label="사주 분석" value={fmt(stats.usage.sajuTotal)} sub={`오늘 ${fmt(stats.usage.sajuToday)}`} />
+                <MetricCard label="타로 분석" value={fmt(stats.usage.tarotTotal)} sub={`오늘 ${fmt(stats.usage.tarotToday)}`} />
+                <MetricCard label="상담소 대화" value={fmt(stats.usage.consultTotal ?? 0)} sub={`오늘 ${fmt(stats.usage.consultToday ?? 0)}`} />
               </div>
             </div>
 
             <div>
-              <h2 className="text-[15px] font-semibold text-text-secondary mb-3 uppercase tracking-wider">크레딧 현황 (🌙 단일 단위)</h2>
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                <MetricCard label="🌙 달 발행" value={fmt(stats.credits.moon.issued)} sub={`소비 ${fmt(stats.credits.moon.consumed)} / 잔여 ${fmt(stats.credits.moon.balance)}`} />
-                <MetricCard
-                  label="크레딧 소비율"
-                  value={stats.credits.moon.issued > 0 ? `🌙 ${Math.round(stats.credits.moon.consumed / stats.credits.moon.issued * 100)}%` : '-'}
-                />
+              <h2 className="text-[13px] font-semibold text-text-tertiary mb-3 tracking-wider">크레딧 (달)</h2>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                <MetricCard label="발행" value={fmt(stats.credits.moon.issued)} />
+                <MetricCard label="소비" value={fmt(stats.credits.moon.consumed)} />
+                <MetricCard label="잔여" value={fmt(stats.credits.moon.balance)} color="text-indigo-300" />
+                {(() => {
+                  const ratio = stats.credits.moon.issued > 0
+                    ? stats.credits.moon.consumed / stats.credits.moon.issued * 100
+                    : null;
+                  if (ratio === null) return <MetricCard label="소비율" value="-" />;
+                  const isOver = ratio > 100;
+                  return (
+                    <MetricCard
+                      label="소비율"
+                      value={`${Math.round(ratio)}%`}
+                      color={isOver ? 'text-amber-300' : undefined}
+                      warn={isOver ? '발행보다 소비가 많음 — 보너스/조정 누락 의심' : undefined}
+                    />
+                  );
+                })()}
               </div>
             </div>
 
@@ -942,7 +947,7 @@ export default function AdminPage() {
               <table className="w-full text-[14px]">
                 <thead>
                   <tr className="border-b border-white/10 bg-white/3">
-                    {['상태', '사용자', '패키지', '결제금액', '🌙 크레딧', '결제수단', '결제일시'].map(h => (
+                    {['상태', '사용자', '패키지', '결제금액', '달 크레딧', '결제수단', '결제일시'].map(h => (
                       <th key={h} className="px-3 py-2.5 text-left text-[12px] text-text-tertiary uppercase tracking-wider font-medium">{h}</th>
                     ))}
                   </tr>
@@ -954,7 +959,7 @@ export default function AdminPage() {
                       <td className="px-3 py-2.5 text-text-secondary max-w-[180px] truncate">{o.userEmail}</td>
                       <td className="px-3 py-2.5 text-text-primary">{o.package_name}</td>
                       <td className="px-3 py-2.5 text-text-primary font-medium">{fmtWon(o.amount)}</td>
-                      <td className="px-3 py-2.5 text-indigo-300">🌙 {o.moon_credit_amount}</td>
+                      <td className="px-3 py-2.5 text-indigo-300 tabular-nums">달 {o.moon_credit_amount}</td>
                       <td className="px-3 py-2.5 text-text-tertiary">{o.payment_method ?? '-'}</td>
                       <td className="px-3 py-2.5 text-text-tertiary">{fmtDate(o.created_at)}</td>
                     </tr>
@@ -983,9 +988,21 @@ export default function AdminPage() {
         {/* ── 운영 ── */}
         {tab === 'ops' && (
           <div className="space-y-6">
+            <PaymentGatewaySection token={token} />
             <OpsSection summary={opsSummary} onOpenUser={setSelectedUserId} />
+            <PhoneChangesSection token={token} onOpenUser={setSelectedUserId} />
             <AuditLogSection logs={auditLogs} warning={auditWarning} onOpenUser={setSelectedUserId} />
           </div>
+        )}
+
+        {/* ── 문의함 ── */}
+        {tab === 'inquiries' && (
+          <InquiriesSection token={token} />
+        )}
+
+        {/* ── 잡 상태 ── */}
+        {tab === 'jobs' && (
+          <JobsSection token={token} onOpenUser={setSelectedUserId} />
         )}
 
         {/* ── 인사이트 ── */}
@@ -1048,7 +1065,7 @@ export default function AdminPage() {
               <table className="w-full text-[14px]">
                 <thead>
                   <tr className="border-b border-white/10 bg-white/3">
-                    {['사용자', '프로필', '서비스', '🌙 소비', '일시'].map(h => (
+                    {['사용자', '프로필', '서비스', '달 소비', '일시'].map(h => (
                       <th key={h} className="px-3 py-2.5 text-left text-[12px] text-text-tertiary uppercase tracking-wider font-medium">{h}</th>
                     ))}
                   </tr>
@@ -1061,7 +1078,7 @@ export default function AdminPage() {
                       <td className="px-3 py-2.5 text-text-primary">
                         {SAJU_CATEGORY_LABEL[r.category ?? ''] ?? TAROT_SPREAD_LABEL[r.spread_type ?? ''] ?? (r.category ?? r.spread_type ?? '-')}
                       </td>
-                      <td className="px-3 py-2.5 text-text-secondary tabular-nums">🌙 {r.credit_used}</td>
+                      <td className="px-3 py-2.5 text-text-secondary tabular-nums">달 {r.credit_used}</td>
                       <td className="px-3 py-2.5 text-text-tertiary">{fmtDate(r.created_at)}</td>
                     </tr>
                   ))}
@@ -1251,8 +1268,8 @@ function DeletedMembersPanel({
           <tbody>
             {items.map(m => {
               const credit = m.metadata?.credit;
-              const totalPurchased = credit ? credit.total_sun_purchased + credit.total_moon_purchased : 0;
-              const totalConsumed = credit ? credit.total_sun_consumed + credit.total_moon_consumed : 0;
+              const totalPurchased = credit?.total_moon_purchased ?? 0;
+              const totalConsumed = credit?.total_moon_consumed ?? 0;
               const orderCount = m.metadata?.order_count ?? 0;
               const joinedAt = m.metadata?.created_at ?? null;
               return (
@@ -1276,7 +1293,7 @@ function DeletedMembersPanel({
                   <td className="px-3 py-2.5 whitespace-nowrap">
                     {totalPurchased > 0 || totalConsumed > 0 ? (
                       <span className="text-indigo-300 tabular-nums">
-                        🌙{credit?.total_moon_consumed ?? 0}
+                        달 {credit?.total_moon_consumed ?? 0}
                       </span>
                     ) : (
                       <span className="text-text-tertiary">-</span>

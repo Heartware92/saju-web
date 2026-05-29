@@ -34,7 +34,7 @@ export class AdminErrorBoundary extends Component<Props, State> {
       <div className="min-h-screen bg-[#0a0614] text-text-primary p-6">
         <div className="max-w-3xl mx-auto space-y-4">
           <div className="rounded-xl border border-red-500/40 bg-red-500/10 p-5">
-            <h1 className="text-[18px] font-bold text-red-300 mb-2">⚠️ 어드민 렌더 오류</h1>
+            <h1 className="text-[18px] font-bold text-red-300 mb-2">어드민 렌더 오류</h1>
             <p className="text-[14px] text-text-secondary mb-3">
               페이지를 렌더링하는 중 예외가 발생했습니다. 아래 메시지를 확인하고 개발팀에 전달하세요.
             </p>

@@ -39,12 +39,12 @@ const fmtWon = (n: number) => `${n.toLocaleString('ko-KR')}원`;
 const fmtTime = (s: string) => new Date(s).toLocaleString('ko-KR', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
 
 const EVENT_STYLE: Record<string, { icon: string; cls: string }> = {
-  signup:           { icon: '🟢', cls: 'text-green-300' },
-  order_completed:  { icon: '💰', cls: 'text-amber-300' },
-  order_failed:     { icon: '❌', cls: 'text-red-300' },
-  order_refunded:   { icon: '↩️', cls: 'text-gray-400' },
-  saju:             { icon: '🔮', cls: 'text-purple-300' },
-  tarot:            { icon: '🃏', cls: 'text-pink-300' },
+  signup:           { icon: '가입',   cls: 'text-green-300 bg-green-500/10 border-green-500/30' },
+  order_completed:  { icon: '결제',   cls: 'text-amber-300 bg-amber-500/10 border-amber-500/30' },
+  order_failed:     { icon: '실패',   cls: 'text-red-300 bg-red-500/10 border-red-500/30' },
+  order_refunded:   { icon: '환불',   cls: 'text-gray-400 bg-gray-500/10 border-gray-500/30' },
+  saju:             { icon: '사주',   cls: 'text-purple-300 bg-purple-500/10 border-purple-500/30' },
+  tarot:            { icon: '타로',   cls: 'text-pink-300 bg-pink-500/10 border-pink-500/30' },
 };
 
 export function InsightsSection({
@@ -68,7 +68,7 @@ export function InsightsSection({
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           <Kpi
             label="DB 상태"
-            value={health.dbOk ? '✓ 정상' : '❌ 오류'}
+            value={health.dbOk ? '정상' : '오류'}
             sub={`응답 ${health.dbLatencyMs}ms`}
             color={health.dbOk ? 'text-green-300' : 'text-red-300'}
           />
@@ -94,20 +94,20 @@ export function InsightsSection({
       {/* ── 이상치 경고 ── */}
       {totalAnomalies > 0 && (
         <div className="rounded-xl border border-red-500/30 bg-red-500/10 p-4">
-          <h2 className="text-[14px] font-semibold text-red-300 mb-3">⚠️ 이상치 감지 ({totalAnomalies}건)</h2>
+          <h2 className="text-[14px] font-semibold text-red-300 mb-3">이상치 감지 ({totalAnomalies}건)</h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
             <AnomalyList
-              title="🔥 1시간 내 10회+ 풀이"
+              title="1시간 내 10회+ 풀이"
               items={anomalies.heavyUsers}
               onClick={onOpenUser}
             />
             <AnomalyList
-              title="↩️ 30일 내 3회+ 환불"
+              title="30일 내 3회+ 환불"
               items={anomalies.repeatRefunders}
               onClick={onOpenUser}
             />
             <AnomalyList
-              title="❌ 24시간 결제 실패 5회+"
+              title="24시간 결제 실패 5회+"
               items={anomalies.failHeavy}
               onClick={onOpenUser}
             />
@@ -166,7 +166,7 @@ export function InsightsSection({
                 <tr key={q.category} className="border-t border-white/5">
                   <td className="px-2.5 py-2 text-text-primary">
                     {q.category.startsWith('tarot:')
-                      ? `🃏 ${TAROT_SPREAD_LABEL[q.category.slice(6)] ?? q.category.slice(6)}`
+                      ? `[타로] ${TAROT_SPREAD_LABEL[q.category.slice(6)] ?? q.category.slice(6)}`
                       : (SAJU_CATEGORY_LABEL[q.category] ?? q.category)}
                   </td>
                   <td className="px-2.5 py-2 text-right text-text-secondary tabular-nums">{fmt(q.count)}</td>

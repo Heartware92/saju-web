@@ -1,7 +1,7 @@
 /**
  * POST /api/admin/users/bulk
  * Body: { userIds: string[], action: 'credit' | 'note' | 'ban' | 'unban',
- *         creditType?: 'sun'|'moon', delta?: number, reason?: string, note?: string }
+ *         delta?: number, reason?: string, note?: string }
  *
  * 다수 회원에 일괄 적용. 각 회원마다 동일 내부 로직을 직렬 호출.
  * 최대 200명 제한. 감사 로그 자동 기록.
@@ -21,7 +21,6 @@ export async function POST(request: NextRequest) {
   let body: {
     userIds?: string[];
     action?: 'credit' | 'note' | 'ban' | 'unban';
-    creditType?: 'sun' | 'moon';
     delta?: number;
     reason?: string;
     note?: string;
@@ -42,8 +41,8 @@ export async function POST(request: NextRequest) {
   for (const uid of userIds) {
     try {
       if (action === 'credit') {
-        if (!body.creditType || !body.delta || !body.reason?.trim()) {
-          results.push({ userId: uid, ok: false, error: 'creditType/delta/reason 필요' });
+        if (!body.delta || !body.reason?.trim()) {
+          results.push({ userId: uid, ok: false, error: 'delta/reason 필요' });
           continue;
         }
         if (Math.abs(body.delta) > 10_000) {
@@ -51,23 +50,22 @@ export async function POST(request: NextRequest) {
           continue;
         }
         const { data: cur } = await supabaseAdmin.from('user_credits')
-          .select('sun_balance, moon_balance').eq('user_id', uid).single();
+          .select('moon_balance').eq('user_id', uid).single();
         if (!cur) { results.push({ userId: uid, ok: false, error: '크레딧 없음' }); continue; }
-        const field = body.creditType === 'sun' ? 'sun_balance' : 'moon_balance';
-        const before = cur[field] as number;
+        const before = cur.moon_balance as number;
         const after = before + body.delta;
         if (after < 0) { results.push({ userId: uid, ok: false, error: '잔액 부족' }); continue; }
-        await supabaseAdmin.from('user_credits').update({ [field]: after }).eq('user_id', uid);
+        await supabaseAdmin.from('user_credits').update({ moon_balance: after }).eq('user_id', uid);
         await supabaseAdmin.from('credit_transactions').insert({
-          user_id: uid, credit_type: body.creditType, type: 'admin_adjust',
+          user_id: uid, credit_type: 'moon', type: 'admin_adjust',
           amount: body.delta, balance_after: after, reason: body.reason,
         });
         const target = await supabaseAdmin.auth.admin.getUserById(uid);
         await writeAudit({
           actorUserId: undefined, actorEmail: auth.email,
           targetUserId: uid, targetEmail: target.data?.user?.email ?? null,
-          action: 'credit_adjust', creditType: body.creditType, amount: body.delta,
-          before: { [field]: before }, after: { [field]: after },
+          action: 'credit_adjust', creditType: 'moon', amount: body.delta,
+          before: { moon_balance: before }, after: { moon_balance: after },
           reason: `[벌크] ${body.reason}`, ipAddress, userAgent,
         });
       } else if (action === 'note') {

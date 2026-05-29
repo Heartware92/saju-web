@@ -10,7 +10,7 @@ export interface AuditLog {
   target_user_id: string | null;
   target_email: string | null;
   action: 'credit_adjust' | 'note_update' | 'ban' | 'unban';
-  credit_type: 'sun' | 'moon' | null;
+  credit_type: 'moon' | null;
   amount: number | null;
   before_value: Record<string, unknown> | null;
   after_value: Record<string, unknown> | null;
@@ -41,13 +41,13 @@ export function AuditLogSection({
   return (
     <div className="bg-white/5 border border-white/10 rounded-xl p-4">
       <div className="flex items-baseline justify-between mb-3">
-        <h3 className="text-[14px] font-semibold text-text-primary">📜 관리자 감사 로그</h3>
+        <h3 className="text-[14px] font-semibold text-text-primary">관리자 감사 로그</h3>
         <p className="text-[12px] text-text-tertiary">최근 {logs.length}건</p>
       </div>
 
       {warning && (
         <div className="mb-3 px-3 py-2 rounded-lg bg-amber-500/10 border border-amber-500/30 text-[12px] text-amber-300">
-          ⚠️ {warning}
+          {warning}
         </div>
       )}
 
@@ -69,7 +69,7 @@ export function AuditLogSection({
               {logs.map(log => {
                 const s = ACTION_LABEL[log.action] ?? { text: log.action, cls: 'bg-gray-500/20 text-gray-400 border-gray-500/30' };
                 const content = log.action === 'credit_adjust'
-                  ? `🌙 ${log.amount! > 0 ? '+' : ''}${log.amount}`
+                  ? `달 ${log.amount! > 0 ? '+' : ''}${log.amount}`
                   : log.action === 'note_update'
                   ? `"${(log.after_value?.note as string)?.slice(0, 60) ?? ''}${((log.after_value?.note as string) ?? '').length > 60 ? '…' : ''}"`
                   : log.action === 'ban' ? `~${(log.after_value?.bannedUntil as string)?.slice(0, 10) ?? ''}`

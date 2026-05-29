@@ -1,6 +1,6 @@
 /**
  * GET /api/admin/usage/summary
- * 이용 분석: 카테고리 랭킹, 30일 추이, 시간×요일 히트맵, 해/달 소비 비중
+ * 이용 분석: 카테고리 랭킹, 30일 추이, 시간×요일 히트맵, 달 크레딧 소비
  */
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/services/supabaseAdmin';
@@ -36,9 +36,9 @@ async function computeSummary() {
   const thirty = new Date(Date.now() - 30 * 86400_000).toISOString();
 
   const [sajuRes, tarotRes, creditRes, consultRes] = await Promise.all([
-    supabaseAdmin.from('saju_records').select('user_id, category, credit_used, credit_type, created_at'),
-    supabaseAdmin.from('tarot_records').select('user_id, spread_type, credit_used, credit_type, created_at'),
-    supabaseAdmin.from('credit_transactions').select('credit_type, amount, reason, type, created_at').eq('type', 'consume'),
+    supabaseAdmin.from('saju_records').select('user_id, category, credit_used, created_at'),
+    supabaseAdmin.from('tarot_records').select('user_id, spread_type, credit_used, created_at'),
+    supabaseAdmin.from('credit_transactions').select('amount, reason, type, created_at').eq('type', 'consume').eq('credit_type', 'moon'),
     supabaseAdmin.from('consultation_records').select('user_id, message_count, created_at, updated_at'),
   ]);
 
@@ -113,22 +113,13 @@ async function computeSummary() {
     heatmap[weekday][hour]++;
   }
 
-  // ── 해/달 소비 비중 ──
-  let sunConsumed = 0, moonConsumed = 0;
-  for (const r of saju) {
-    if (r.credit_type === 'sun') sunConsumed += r.credit_used ?? 0;
-    else if (r.credit_type === 'moon') moonConsumed += r.credit_used ?? 0;
-  }
-  for (const r of tarot) {
-    if (r.credit_type === 'sun') sunConsumed += r.credit_used ?? 0;
-    else if (r.credit_type === 'moon') moonConsumed += r.credit_used ?? 0;
-  }
-  // credit_transactions 기반 재검증 값도 함께 제공
-  let sunTxn = 0, moonTxn = 0;
-  for (const t of creditConsumed) {
-    if (t.credit_type === 'sun') sunTxn += Math.abs(t.amount ?? 0);
-    else if (t.credit_type === 'moon') moonTxn += Math.abs(t.amount ?? 0);
-  }
+  // ── 달 크레딧 소비 ──
+  let moonConsumed = 0;
+  for (const r of saju) moonConsumed += r.credit_used ?? 0;
+  for (const r of tarot) moonConsumed += r.credit_used ?? 0;
+  // credit_transactions 기반 재검증 값
+  let moonTxn = 0;
+  for (const t of creditConsumed) moonTxn += Math.abs(t.amount ?? 0);
 
   const totalConsultMessages = consult.reduce((s, c) => s + (c.message_count ?? 0), 0);
 
@@ -148,9 +139,7 @@ async function computeSummary() {
     daily,
     heatmap,
     credit: {
-      sunConsumed,
       moonConsumed,
-      sunTxn,
       moonTxn,
     },
   };

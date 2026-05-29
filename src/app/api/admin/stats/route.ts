@@ -67,7 +67,7 @@ async function computeStats() {
     supabaseAdmin.from('saju_records').select('id', { count: 'exact', head: true }).gte('created_at', todayStart),
     supabaseAdmin.from('tarot_records').select('id', { count: 'exact', head: true }),
     supabaseAdmin.from('tarot_records').select('id', { count: 'exact', head: true }).gte('created_at', todayStart),
-    supabaseAdmin.from('user_credits').select('total_sun_purchased, total_moon_purchased, total_sun_consumed, total_moon_consumed, sun_balance, moon_balance'),
+    supabaseAdmin.from('user_credits').select('total_moon_purchased, total_moon_consumed, moon_balance'),
     supabaseAdmin.from('consultation_records').select('id', { count: 'exact', head: true }),
     supabaseAdmin.from('consultation_records').select('id', { count: 'exact', head: true }).gte('created_at', todayStart),
     // 30일 시계열
@@ -86,11 +86,8 @@ async function computeStats() {
   const refundedRevenue = refundedOrders.reduce((s, o) => s + (o.amount ?? 0), 0);
 
   const credits = creditsRes.data ?? [];
-  const totalSunIssued = credits.reduce((s, c) => s + (c.total_sun_purchased ?? 0), 0);
   const totalMoonIssued = credits.reduce((s, c) => s + (c.total_moon_purchased ?? 0), 0);
-  const totalSunConsumed = credits.reduce((s, c) => s + (c.total_sun_consumed ?? 0), 0);
   const totalMoonConsumed = credits.reduce((s, c) => s + (c.total_moon_consumed ?? 0), 0);
-  const totalSunBalance = credits.reduce((s, c) => s + (c.sun_balance ?? 0), 0);
   const totalMoonBalance = credits.reduce((s, c) => s + (c.moon_balance ?? 0), 0);
 
   // ── 30일 일별 시계열 집계 (KST 기준) ──
@@ -158,7 +155,6 @@ async function computeStats() {
       consultToday: todayConsultRes.count ?? 0,
     },
     credits: {
-      sun: { issued: totalSunIssued, consumed: totalSunConsumed, balance: totalSunBalance },
       moon: { issued: totalMoonIssued, consumed: totalMoonConsumed, balance: totalMoonBalance },
     },
     daily,

@@ -32,10 +32,8 @@ export interface AggregatedUser {
   ageBucket: AgeBucketKey;
   birthPlace: string | null;
   profileCount: number;
-  // 크레딧
-  sunBalance: number;
+  // 크레딧 (2026-05-16 달 단일 통합 — sun 필드 제거)
   moonBalance: number;
-  totalSunPurchased: number;
   totalMoonPurchased: number;
   // 매출
   totalSpent: number;
@@ -95,7 +93,7 @@ export async function loadAdminBundle(): Promise<RawBundle> {
       .select('user_id, name, relation, birth_date, birth_time, birth_place, gender, calendar_type, is_primary, memo, created_at')
       .in('user_id', userIds),
     supabaseAdmin.from('user_credits')
-      .select('user_id, sun_balance, moon_balance, total_sun_purchased, total_moon_purchased, total_sun_consumed, total_moon_consumed, created_at')
+      .select('user_id, moon_balance, total_moon_purchased, total_moon_consumed, created_at')
       .in('user_id', userIds),
     supabaseAdmin.from('orders')
       .select('user_id, status, amount, package_id, package_name, created_at')
@@ -221,9 +219,7 @@ export function aggregateUsers(bundle: RawBundle): AggregatedUser[] {
       ageBucket: bucketizeAge(primary?.birth_date),
       birthPlace: primary?.birth_place ?? null,
       profileCount: profileCountByUser.get(u.id) ?? 0,
-      sunBalance: credit?.sun_balance ?? 0,
       moonBalance: credit?.moon_balance ?? 0,
-      totalSunPurchased: credit?.total_sun_purchased ?? 0,
       totalMoonPurchased: credit?.total_moon_purchased ?? 0,
       totalSpent,
       orderCount: orders.length,

@@ -9,19 +9,17 @@ import { CREDIT_REASON_LABEL } from '@/constants/adminLabels';
 
 export interface CreditsSummary {
   kpi: {
-    sunIssued: number; sunConsumed: number; sunBalance: number;
     moonIssued: number; moonConsumed: number; moonBalance: number;
-    sunConsumeRate: number; moonConsumeRate: number;
+    moonConsumeRate: number;
     debtWon: number;
-    withSun: number; withMoon: number; withAny: number;
+    withMoon: number;
     txnCount: number;
   };
-  reasonBreakdown: { reason: string; sun: number; moon: number; total: number }[];
+  reasonBreakdown: { reason: string; moon: number; total: number }[];
   monthly: {
     month: string;
-    sunIssued: number; sunConsumed: number;
     moonIssued: number; moonConsumed: number;
-    netSun: number; netMoon: number;
+    netMoon: number;
   }[];
   txnTypes: { type: string; count: number }[];
 }
@@ -41,11 +39,10 @@ export function CreditsFlowSection({ summary }: { summary: CreditsSummary | null
   if (!summary) return <div className="text-[14px] text-text-tertiary py-6">로딩 중…</div>;
 
   const kpi = summary.kpi ?? {
-    sunIssued: 0, sunConsumed: 0, sunBalance: 0,
     moonIssued: 0, moonConsumed: 0, moonBalance: 0,
-    sunConsumeRate: 0, moonConsumeRate: 0,
+    moonConsumeRate: 0,
     debtWon: 0,
-    withSun: 0, withMoon: 0, withAny: 0,
+    withMoon: 0,
     txnCount: 0,
   };
   const reasonBreakdown = Array.isArray(summary.reasonBreakdown) ? summary.reasonBreakdown : [];
@@ -58,8 +55,6 @@ export function CreditsFlowSection({ summary }: { summary: CreditsSummary | null
     value: r.total,
   }));
 
-  // 월별 순발행 = 발행 - 소비 (양수면 부채 증가, 음수면 소진)
-  // 단일 달 크레딧 통합(2026-05-16) 이후 moon 만 표시. sun bars 는 dead code 제거.
   const moonNetBars = monthly.map(m => ({
     key: m.month,
     label: m.month.slice(5),
@@ -74,20 +69,19 @@ export function CreditsFlowSection({ summary }: { summary: CreditsSummary | null
 
   return (
     <div className="space-y-6">
-      {/* KPI — 단일 달 크레딧 (2026-05-16 통합) */}
       <div>
-        <h2 className="text-[15px] font-semibold text-text-secondary mb-3 uppercase tracking-wider">🌙 달 크레딧</h2>
+        <h2 className="text-[15px] font-semibold text-text-secondary mb-3 uppercase tracking-wider">달 크레딧</h2>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           <Kpi label="발행" value={fmt(kpi.moonIssued)} />
           <Kpi label="소비" value={fmt(kpi.moonConsumed)} sub={`소진율 ${kpi.moonConsumeRate}%`} />
           <Kpi label="잔여" value={fmt(kpi.moonBalance)} sub={`${fmt(kpi.withMoon)}명 보유`} color="text-indigo-300" />
-          <Kpi label="추정 부채" value={fmtWon(kpi.moonBalance * 200)} sub="달 1 = 200원" />
+          <Kpi label="추정 부채" value={fmtWon(kpi.debtWon)} sub="달 1 ≈ 300원" />
         </div>
       </div>
 
       <div className="bg-white/5 border border-white/10 rounded-xl p-4">
         <div className="flex items-baseline justify-between">
-          <h3 className="text-[14px] font-semibold text-text-primary">💰 총 크레딧 부채 (추정)</h3>
+          <h3 className="text-[14px] font-semibold text-text-primary">총 크레딧 부채 (추정)</h3>
           <p className="text-[22px] font-bold text-amber-300">{fmtWon(kpi.debtWon)}</p>
         </div>
         <p className="text-[12px] text-text-tertiary mt-1">
@@ -95,15 +89,13 @@ export function CreditsFlowSection({ summary }: { summary: CreditsSummary | null
         </p>
       </div>
 
-      {/* 12개월 흐름 — 단일 달 단위 */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
         <div className="bg-white/5 border border-white/10 rounded-xl p-4">
-          <h3 className="text-[14px] font-semibold text-text-primary mb-3">🌙 달 월별 순증감 (발행-소비)</h3>
+          <h3 className="text-[14px] font-semibold text-text-primary mb-3">달 월별 순증감 (발행-소비)</h3>
           <VerticalBarChart bars={moonNetBars} color="rgba(129, 140, 248, 0.75)" height={120} />
         </div>
       </div>
 
-      {/* reason 분포 */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
         <div className="bg-white/5 border border-white/10 rounded-xl p-4">
           <h3 className="text-[14px] font-semibold text-text-primary mb-3">소비 사유(reason) 랭킹</h3>

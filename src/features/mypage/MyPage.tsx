@@ -627,8 +627,7 @@ const OrdersTab: React.FC<{ orders: Order[]; loading: boolean }> = ({ orders, lo
                 </div>
                 <div className="font-bold text-text-primary">
                   {order.amount.toLocaleString()}원
-                  {order.sun_credit_amount > 0 && <span className="text-sun-core ml-2">+{order.sun_credit_amount} ☀️</span>}
-                  {order.moon_credit_amount > 0 && <span className="text-moon-halo ml-2">+{order.moon_credit_amount} 🌙</span>}
+                  {order.moon_credit_amount > 0 && <span className="text-moon-halo ml-2">+{order.moon_credit_amount} 달</span>}
                 </div>
               </div>
             </div>

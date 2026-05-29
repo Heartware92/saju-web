@@ -65,7 +65,7 @@ export function OpsSection({
                 {adjustments.map((a, i) => (
                   <tr key={i} className="border-t border-white/5 hover:bg-white/3 cursor-pointer" onClick={() => onOpenUser(a.user_id)}>
                     <td className="px-2.5 py-2 text-text-secondary max-w-[200px] truncate">{a.userEmail}</td>
-                    <td className="px-2.5 py-2">🌙 달</td>
+                    <td className="px-2.5 py-2 text-text-secondary">달</td>
                     <td className={`px-2.5 py-2 tabular-nums font-medium ${a.amount > 0 ? 'text-green-300' : 'text-red-300'}`}>
                       {a.amount > 0 ? '+' : ''}{a.amount}
                     </td>
@@ -82,7 +82,7 @@ export function OpsSection({
 
       {/* 차단 회원 */}
       <div className="bg-white/5 border border-white/10 rounded-xl p-4">
-        <h3 className="text-[14px] font-semibold text-text-primary mb-3">⛔ 차단된 회원</h3>
+        <h3 className="text-[14px] font-semibold text-text-primary mb-3">차단된 회원</h3>
         {banned.length === 0 ? (
           <p className="text-[13px] text-text-tertiary py-2">차단 회원 없음</p>
         ) : (
@@ -103,7 +103,7 @@ export function OpsSection({
 
       {/* 메모 보유 회원 */}
       <div className="bg-white/5 border border-white/10 rounded-xl p-4">
-        <h3 className="text-[14px] font-semibold text-text-primary mb-3">📝 관리자 메모가 있는 회원</h3>
+        <h3 className="text-[14px] font-semibold text-text-primary mb-3">관리자 메모가 있는 회원</h3>
         {noted.length === 0 ? (
           <p className="text-[13px] text-text-tertiary py-2">메모 없음</p>
         ) : (

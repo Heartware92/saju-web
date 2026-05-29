@@ -199,7 +199,7 @@ function OverviewTab({ data }: { data: DetailData }) {
           <Row label="타로" value={`${aggregates.tarotTotal}회`} />
           <Row label="상담소" value={`${aggregates.consultationTotal ?? 0}건`} />
           {credit && (
-            <Row label="🌙 달" value={<>잔액 <b>{credit.moon_balance}</b> · 발행 {credit.total_moon_purchased} · 소비 {credit.total_moon_consumed}</>} />
+            <Row label="달 크레딧" value={<>잔액 <b>{credit.moon_balance}</b> · 발행 {credit.total_moon_purchased} · 소비 {credit.total_moon_consumed}</>} />
           )}
         </Grid>
       </Section>
@@ -259,7 +259,7 @@ function OrdersTab({ data }: { data: DetailData }) {
       <table className="w-full text-[13px]">
         <thead className="bg-white/3 text-[11px] text-text-tertiary uppercase">
           <tr>
-            {['상태', '패키지', '금액', '🌙', '결제수단', '일시'].map(h =>
+            {['상태', '패키지', '금액', '달', '결제수단', '일시'].map(h =>
               <th key={h} className="px-2.5 py-2 text-left font-medium">{h}</th>
             )}
           </tr>
@@ -305,8 +305,8 @@ function RecordsTab({ data }: { data: DetailData }) {
             </span>
             <span className="text-text-primary font-medium">{label}</span>
             {r.profile_name && <span className="text-[11px] text-text-tertiary">({r.profile_name})</span>}
-            <span className="text-text-tertiary">
-              🌙{r.credit_used}
+            <span className="text-text-tertiary tabular-nums">
+              달 {r.credit_used}
             </span>
             <span className="ml-auto text-text-tertiary text-[11px] whitespace-nowrap">{fmtDate(r.created_at)}</span>
           </div>
@@ -396,7 +396,7 @@ function TransactionsTab({ data }: { data: DetailData }) {
             return (
               <tr key={t.id} className="border-t border-white/5">
                 <td className="px-2.5 py-2"><span className={`px-1.5 py-0.5 rounded-full text-[11px] border ${s.cls}`}>{s.text}</span></td>
-                <td className="px-2.5 py-2">{t.credit_type === 'sun' ? '☀ 해' : '🌙 달'}</td>
+                <td className="px-2.5 py-2 text-text-secondary">달</td>
                 <td className={`px-2.5 py-2 tabular-nums font-medium ${t.type === 'consume' ? 'text-red-300' : 'text-green-300'}`}>
                   {t.type === 'consume' ? '-' : '+'}{t.amount}
                 </td>
@@ -415,8 +415,6 @@ function TransactionsTab({ data }: { data: DetailData }) {
 // ── 관리자 작업 ──────────────────────────────────────
 
 function OpsTab({ data, token, onRefresh }: { data: DetailData; token: string | null; onRefresh: () => void }) {
-  // 단일 달 크레딧 통합(2026-05-16) 이후 sun 조정 UI 폐기. moon 만 처리.
-  const creditType = 'moon' as const;
   const [delta, setDelta] = useState<number>(1);
   const [creditReason, setCreditReason] = useState('');
   const [note, setNote] = useState(data.user.adminNote ?? '');
@@ -449,7 +447,7 @@ function OpsTab({ data, token, onRefresh }: { data: DetailData; token: string | 
     run('크레딧 조정', () => fetch(`/api/admin/users/${data.user.id}/adjust-credit`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-admin-key': token ?? '' },
-      body: JSON.stringify({ creditType, delta, reason: creditReason }),
+      body: JSON.stringify({ delta, reason: creditReason }),
     }));
   };
 
@@ -483,7 +481,7 @@ function OpsTab({ data, token, onRefresh }: { data: DetailData; token: string | 
       <Section title="크레딧 수동 조정">
         <div className="space-y-2.5">
           <div className="flex gap-2">
-            <span className="px-3 py-1.5 rounded text-[13px] font-medium bg-indigo-500/20 text-indigo-200 border border-indigo-500/30">🌙 달 크레딧</span>
+            <span className="px-3 py-1.5 rounded text-[13px] font-medium bg-indigo-500/20 text-indigo-200 border border-indigo-500/30">달 크레딧</span>
             <input
               type="number"
               value={delta}
@@ -539,8 +537,8 @@ function OpsTab({ data, token, onRefresh }: { data: DetailData; token: string | 
       <Section title="계정 차단">
         <div className="flex items-center justify-between gap-3">
           <div>
-            <p className="text-[13px] text-text-primary font-medium">
-              {isBanned ? '⛔ 차단됨' : '✓ 정상'}
+            <p className={`text-[13px] font-medium ${isBanned ? 'text-red-300' : 'text-green-300'}`}>
+              {isBanned ? '차단됨' : '정상'}
             </p>
             {isBanned && data.user.bannedUntil && (
               <p className="text-[11px] text-text-tertiary mt-0.5">해제일: {fmtDate(data.user.bannedUntil)}</p>

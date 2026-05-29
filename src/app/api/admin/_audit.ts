@@ -4,7 +4,7 @@
  */
 import { supabaseAdmin } from '@/services/supabaseAdmin';
 
-export type AuditAction = 'credit_adjust' | 'note_update' | 'ban' | 'unban';
+export type AuditAction = 'credit_adjust' | 'note_update' | 'ban' | 'unban' | 'payment_gateway_switch';
 
 export interface AuditEntry {
   actorUserId?: string;
@@ -12,7 +12,7 @@ export interface AuditEntry {
   targetUserId?: string | null;
   targetEmail?: string | null;
   action: AuditAction;
-  creditType?: 'sun' | 'moon';
+  creditType?: 'moon';
   amount?: number;
   before?: Record<string, unknown> | null;
   after?: Record<string, unknown> | null;

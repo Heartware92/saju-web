@@ -1,5 +1,5 @@
 /**
- * 이용 분석 — 서비스 랭킹, 30일 추이, 시간×요일 히트맵, 해/달 비중
+ * 이용 분석 — 서비스 랭킹, 30일 추이, 시간×요일 히트맵, 달 크레딧 소비
  */
 'use client';
 
@@ -27,7 +27,7 @@ export interface UsageSummary {
   tarotRanking: { spread: string; count: number; uniqueUsers: number }[];
   daily: { date: string; saju: number; tarot: number; consult?: number; total: number }[];
   heatmap: number[][];
-  credit: { sunConsumed: number; moonConsumed: number; sunTxn: number; moonTxn: number };
+  credit: { moonConsumed: number; moonTxn: number };
 }
 
 const fmt = (n: number) => n.toLocaleString('ko-KR');
@@ -43,7 +43,7 @@ export function UsageAnalyticsSection({ summary }: { summary: UsageSummary | nul
   const tarotRanking = Array.isArray(summary.tarotRanking) ? summary.tarotRanking : [];
   const daily = Array.isArray(summary.daily) ? summary.daily : [];
   const heatmap = Array.isArray(summary.heatmap) ? summary.heatmap : [];
-  const credit = summary.credit ?? { sunConsumed: 0, moonConsumed: 0, sunTxn: 0, moonTxn: 0 };
+  const credit = summary.credit ?? { moonConsumed: 0, moonTxn: 0 };
 
   // 사주 랭킹 분리 (큰 8 vs 더많은 10)
   const bigSajuBars = sajuRanking
@@ -75,7 +75,7 @@ export function UsageAnalyticsSection({ summary }: { summary: UsageSummary | nul
   }));
 
   const creditSlices = [
-    { key: 'moon', label: '🌙 달', value: credit.moonConsumed, color: 'rgba(129, 140, 248, 0.85)' },
+    { key: 'moon', label: '달', value: credit.moonConsumed, color: 'rgba(129, 140, 248, 0.85)' },
   ];
 
   return (
@@ -88,7 +88,7 @@ export function UsageAnalyticsSection({ summary }: { summary: UsageSummary | nul
           <Kpi label="사주 이용" value={fmt(kpi.sajuTotal)} sub={`${fmt(kpi.uniqueSajuUsers)}명`} />
           <Kpi label="타로 이용" value={fmt(kpi.tarotTotal)} sub={`${fmt(kpi.uniqueTarotUsers)}명`} />
           <Kpi label="상담소 대화" value={fmt(kpi.consultTotal ?? 0)} sub={`${fmt(kpi.uniqueConsultUsers ?? 0)}명 · ${fmt(kpi.consultMessages ?? 0)}메시지`} />
-          <Kpi label="🌙 달 소비" value={fmt(credit.moonConsumed)} sub={`거래장부 ${fmt(credit.moonTxn)}`} />
+          <Kpi label="달 소비" value={fmt(credit.moonConsumed)} sub={`거래장부 ${fmt(credit.moonTxn)}`} />
         </div>
       </div>
 
@@ -105,7 +105,7 @@ export function UsageAnalyticsSection({ summary }: { summary: UsageSummary | nul
         </div>
 
         <div className="bg-white/5 border border-white/10 rounded-xl p-4">
-          <h3 className="text-[14px] font-semibold text-text-primary mb-3">🌙 달 소비</h3>
+          <h3 className="text-[14px] font-semibold text-text-primary mb-3">달 소비</h3>
           <DonutChart
             slices={creditSlices}
             centerValue={fmt(credit.moonConsumed)}
@@ -124,14 +124,14 @@ export function UsageAnalyticsSection({ summary }: { summary: UsageSummary | nul
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
         <div className="bg-white/5 border border-white/10 rounded-xl p-4">
           <h3 className="text-[14px] font-semibold text-text-primary mb-3">
-            큰 운세 랭킹 <span className="text-text-tertiary font-normal">(해 1 소모 · 8종)</span>
+            본격 운세 랭킹 <span className="text-text-tertiary font-normal">(달 10 소모 · 8종)</span>
           </h3>
           <HorizontalBarChart bars={bigSajuBars} />
         </div>
 
         <div className="bg-white/5 border border-white/10 rounded-xl p-4">
           <h3 className="text-[14px] font-semibold text-text-primary mb-3">
-            더 많은 운세 랭킹 <span className="text-text-tertiary font-normal">(달 1 소모 · 10종)</span>
+            더 많은 운세 랭킹 <span className="text-text-tertiary font-normal">(달 5 소모 · 10종)</span>
           </h3>
           <HorizontalBarChart bars={moreSajuBars} defaultColor="rgba(129, 140, 248, 0.7)" />
         </div>
