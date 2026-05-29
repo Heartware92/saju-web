@@ -76,7 +76,7 @@ export const MyPage: React.FC = () => {
   return (
     <div className="min-h-screen bg-space-deep px-4 pt-4 pb-8">
         {/* 헤더 */}
-        <div className="mb-5">
+        <div className="mb-5 text-center">
           <h1 className="text-xl font-bold text-text-primary mb-1">내 정보</h1>
           <p className="text-sm text-text-secondary">내 정보와 활동 내역을 확인하세요</p>
         </div>
