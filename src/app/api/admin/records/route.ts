@@ -5,6 +5,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/services/supabaseAdmin';
 import { requireAdmin } from '../_auth';
+import { cachedEmailMap } from '../_emailMap';
+import { shouldForce } from '../_cache';
 
 const DEFAULT_PAGE_SIZE = 30;
 const MAX_PAGE_SIZE = 10_000;
@@ -45,13 +47,8 @@ export async function GET(request: NextRequest) {
     count = res.count ?? 0;
   }
 
-  // 이메일 매핑
-  const userIds = [...new Set(data.map(r => r.user_id))];
-  let emailMap = new Map<string, string>();
-  if (userIds.length > 0) {
-    const { data: authUsers } = await supabaseAdmin.auth.admin.listUsers({ perPage: 1000 });
-    emailMap = new Map((authUsers?.users ?? []).map(u => [u.id, u.email ?? '']));
-  }
+  // 이메일 매핑 (30초 공유 캐시)
+  const emailMap = await cachedEmailMap({ force: shouldForce(request) });
 
   // 카테고리별 집계 (페이지 무관)
   const [sajuCatRes, tarotCatRes] = await Promise.all([

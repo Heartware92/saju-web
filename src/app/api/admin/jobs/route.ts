@@ -8,6 +8,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/services/supabaseAdmin';
 import { requireAdmin } from '../_auth';
+import { cachedEmailMap } from '../_emailMap';
+import { shouldForce } from '../_cache';
 
 const DEFAULT_PAGE_SIZE = 30;
 const MAX_PAGE_SIZE = 500;
@@ -65,8 +67,7 @@ export async function GET(request: NextRequest) {
     supabaseAdmin.from('tarot_records').select('status'),
   ]);
 
-  const { data: authUsers } = await supabaseAdmin.auth.admin.listUsers({ perPage: 1000 });
-  const emailMap = new Map((authUsers?.users ?? []).map(u => [u.id, u.email ?? '']));
+  const emailMap = await cachedEmailMap({ force: shouldForce(request) });
 
   const sajuJobs: UnifiedJob[] = (sajuRes.data ?? []).map(r => ({
     kind: 'saju',

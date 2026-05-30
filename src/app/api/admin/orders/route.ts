@@ -5,6 +5,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/services/supabaseAdmin';
 import { requireAdmin } from '../_auth';
+import { cachedEmailMap } from '../_emailMap';
+import { shouldForce } from '../_cache';
 
 const DEFAULT_PAGE_SIZE = 20;
 const MAX_PAGE_SIZE = 10_000;
@@ -31,10 +33,8 @@ export async function GET(request: NextRequest) {
   const { data: orders, count, error } = await query;
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
-  // 사용자 이메일 조회 (user_id 기준)
-  const userIds = [...new Set((orders ?? []).map(o => o.user_id))];
-  const { data: authUsers } = await supabaseAdmin.auth.admin.listUsers({ perPage: 1000 });
-  const emailMap = new Map((authUsers?.users ?? []).map(u => [u.id, u.email ?? '']));
+  // 사용자 이메일 조회 (30초 공유 캐시)
+  const emailMap = await cachedEmailMap({ force: shouldForce(request) });
 
   // search 필터 (email 기반)
   let result = (orders ?? []).map(o => ({

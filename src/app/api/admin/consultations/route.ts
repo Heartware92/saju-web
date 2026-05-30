@@ -5,6 +5,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/services/supabaseAdmin';
 import { requireAdmin } from '../_auth';
+import { cachedEmailMap } from '../_emailMap';
+import { shouldForce } from '../_cache';
 
 const PAGE_SIZE = 30;
 const MAX_PAGE_SIZE = 10_000;
@@ -36,12 +38,7 @@ export async function GET(request: NextRequest) {
   }
 
   const records = data ?? [];
-  const userIds = [...new Set(records.map(r => r.user_id))];
-  let emailMap = new Map<string, string>();
-  if (userIds.length > 0) {
-    const { data: authUsers } = await supabaseAdmin.auth.admin.listUsers({ perPage: 1000 });
-    emailMap = new Map((authUsers?.users ?? []).map(u => [u.id, u.email ?? '']));
-  }
+  const emailMap = await cachedEmailMap({ force: shouldForce(request) });
 
   const totalRes = await supabaseAdmin
     .from('consultation_records')
