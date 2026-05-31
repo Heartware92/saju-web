@@ -215,7 +215,7 @@ export default function InquiryPage() {
     <Layout>
       <div className="px-5 pt-3 pb-12">
       {/* 헤더 */}
-      <div className="flex items-center relative mb-6 pt-3 px-1">
+      <div className="relative flex items-center justify-center mb-6 pt-3 px-1">
         <Link
           href="/"
           aria-label="뒤로"
@@ -225,17 +225,14 @@ export default function InquiryPage() {
             <path d="M15 18l-6-6 6-6" />
           </svg>
         </Link>
-        <div className="flex-1 text-center">
-          <h1 className="text-2xl font-bold text-text-primary" style={{ fontFamily: 'var(--font-serif)' }}>
-            문의하기
-          </h1>
-        </div>
-        <div className="w-9" />
+        <h1 className="text-2xl font-bold text-text-primary" style={{ fontFamily: 'var(--font-serif)' }}>
+          문의하기
+        </h1>
       </div>
 
       {/* 안내 */}
       <p className="text-[13px] text-text-tertiary leading-relaxed mb-5 px-1">
-        결제·계정·오류 등 어떤 문의든 편하게 남겨주세요. 평일 기준 1~2 영업일 안에 답변드려요.
+        결제·계정·오류 등 어떤 문의든 편하게 남겨주세요. 빠른 시간 내에 답변 드리겠습니다.
       </p>
 
       {/* 카테고리 선택 */}

@@ -60,7 +60,7 @@ export async function POST(req: NextRequest) {
     }
 
     // ── 5) 탈퇴 로그 INSERT (먼저 로그를 저장 — 사용자 삭제 후엔 user_id 참조 못함) ──
-    const { error: logErr } = await supabaseAdmin
+    const { data: logRow, error: logErr } = await supabaseAdmin
       .from('account_deletion_logs')
       .insert({
         user_id: user.id,
@@ -68,10 +68,63 @@ export async function POST(req: NextRequest) {
         reason: body.reason ?? null,
         reason_code: body.reasonCode ?? null,
         metadata,
-      });
+      })
+      .select('id')
+      .maybeSingle();
     if (logErr) {
       console.error('[delete-account] log insert failed:', logErr);
       // 로그 실패해도 탈퇴는 진행 (사용자 권리 보호 우선)
+    }
+
+    // ── 5.5) 거래 기록 보존 (분쟁/차지백 대응 + 전자상거래법 5년 보존) ──
+    // auth.users 삭제 시 orders·credit_transactions 가 CASCADE 로 사라지므로,
+    // 삭제 직전 결제·거래 원장을 preserved_transactions 로 스냅샷한다.
+    try {
+      const [{ data: orders }, { data: creditTx }] = await Promise.all([
+        supabaseAdmin.from('orders').select('*').eq('user_id', user.id),
+        supabaseAdmin.from('credit_transactions').select('*').eq('user_id', user.id),
+      ]);
+
+      const preserved = [
+        ...(orders ?? []).map((o: any) => ({
+          deletion_log_id: logRow?.id ?? null,
+          original_user_id: user.id,
+          email: user.email,
+          kind: 'order' as const,
+          original_id: o.id,
+          amount: o.amount ?? null,
+          status: o.status ?? null,
+          payment_method: o.payment_method ?? null,
+          portone_payment_id: o.portone_payment_id ?? null,
+          occurred_at: o.created_at ?? null,
+          payload: o,
+        })),
+        ...(creditTx ?? []).map((t: any) => ({
+          deletion_log_id: logRow?.id ?? null,
+          original_user_id: user.id,
+          email: user.email,
+          kind: 'credit_transaction' as const,
+          original_id: t.id,
+          amount: t.amount ?? null,
+          status: null,
+          payment_method: null,
+          portone_payment_id: null,
+          occurred_at: t.created_at ?? null,
+          payload: t,
+        })),
+      ];
+
+      if (preserved.length > 0) {
+        const { error: preserveErr } = await supabaseAdmin
+          .from('preserved_transactions')
+          .insert(preserved);
+        if (preserveErr) {
+          // 보존 실패는 탈퇴를 막지 않되, 결제 기록 유실 위험이므로 강하게 로깅
+          console.error('[delete-account] preserve transactions failed:', preserveErr);
+        }
+      }
+    } catch (e) {
+      console.error('[delete-account] preserve transactions threw (non-blocking):', e);
     }
 
     // ── 6) Supabase auth user 삭제 — RLS CASCADE 로 연관 데이터(profiles, records, ...) 같이 삭제 ──

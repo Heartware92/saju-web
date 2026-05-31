@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback, useRef } from 'react';
+import { useEffect, useState, useCallback, useRef, Fragment } from 'react';
 import { DemographicsSummary, type MemberSummary } from '@/components/admin/members/DemographicsSummary';
 import { MembersFilterBar } from '@/components/admin/members/MembersFilterBar';
 import { MembersTable, type MemberRow } from '@/components/admin/members/MembersTable';
@@ -912,6 +912,7 @@ export default function AdminPage() {
                 loading={loading}
                 onSearchChange={v => { setDeletedSearch(v); setDeletedPage(1); }}
                 onPageChange={setDeletedPage}
+                adminFetch={adminFetch}
               />
             )}
           </div>
@@ -1202,6 +1203,17 @@ function fmtDuration(from: string | null | undefined, to: string): string {
 }
 
 // ── 탈퇴 회원 패널 ─────────────────────────────────────────────
+interface PreservedTransaction {
+  id: string;
+  kind: 'order' | 'credit_transaction';
+  amount: number | null;
+  status: string | null;
+  payment_method: string | null;
+  portone_payment_id: string | null;
+  occurred_at: string | null;
+  payload: Record<string, unknown> | null;
+}
+
 interface DeletedMembersPanelProps {
   items: DeletedMember[];
   total: number;
@@ -1211,11 +1223,33 @@ interface DeletedMembersPanelProps {
   loading: boolean;
   onSearchChange: (v: string) => void;
   onPageChange: (p: number) => void;
+  adminFetch: <T,>(path: string, force?: boolean) => Promise<T | null>;
 }
 
 function DeletedMembersPanel({
-  items, total, page, search, reasonCounts, loading, onSearchChange, onPageChange,
+  items, total, page, search, reasonCounts, loading, onSearchChange, onPageChange, adminFetch,
 }: DeletedMembersPanelProps) {
+  // 보존 거래(분쟁/차지백) — 행 펼침 시 지연 로드
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [txByLog, setTxByLog] = useState<Record<string, PreservedTransaction[]>>({});
+  const [txLoading, setTxLoading] = useState<string | null>(null);
+
+  const toggleTx = useCallback(async (logId: string) => {
+    if (expandedId === logId) { setExpandedId(null); return; }
+    setExpandedId(logId);
+    if (txByLog[logId]) return; // 이미 로드됨
+    setTxLoading(logId);
+    try {
+      const data = await adminFetch<{ items: PreservedTransaction[] }>(
+        `/api/admin/preserved-transactions?deletionLogId=${encodeURIComponent(logId)}`,
+      );
+      setTxByLog(prev => ({ ...prev, [logId]: data?.items ?? [] }));
+    } catch {
+      setTxByLog(prev => ({ ...prev, [logId]: [] }));
+    } finally {
+      setTxLoading(null);
+    }
+  }, [expandedId, txByLog, adminFetch]);
   const grandTotal = Object.values(reasonCounts).reduce((s, n) => s + n, 0);
   const reasonOrder = ['not_useful', 'rarely_used', 'hard_to_use', 'other', 'too_expensive', 'privacy', 'unknown'];
   const sortedReasons = Object.entries(reasonCounts).sort(([a], [b]) => {
@@ -1260,7 +1294,7 @@ function DeletedMembersPanel({
         <table className="w-full text-[14px]">
           <thead>
             <tr className="border-b border-white/10 bg-white/3">
-              {['이메일', '탈퇴 사유', '가입일', '탈퇴일', '이용기간', '누적결제', '크레딧 사용'].map(h => (
+              {['이메일', '탈퇴 사유', '가입일', '탈퇴일', '이용기간', '누적결제', '크레딧 사용', '거래내역'].map(h => (
                 <th key={h} className="px-3 py-2.5 text-left text-[12px] text-text-tertiary uppercase tracking-wider font-medium whitespace-nowrap">{h}</th>
               ))}
             </tr>
@@ -1272,8 +1306,11 @@ function DeletedMembersPanel({
               const totalConsumed = credit?.total_moon_consumed ?? 0;
               const orderCount = m.metadata?.order_count ?? 0;
               const joinedAt = m.metadata?.created_at ?? null;
+              const isExpanded = expandedId === m.id;
+              const txs = txByLog[m.id];
               return (
-                <tr key={m.id} className="border-b border-white/5 hover:bg-white/3 transition-colors">
+                <Fragment key={m.id}>
+                <tr className="border-b border-white/5 hover:bg-white/3 transition-colors">
                   <td className="px-3 py-2.5 text-text-secondary max-w-[200px] truncate">{m.email}</td>
                   <td className="px-3 py-2.5 text-text-primary whitespace-nowrap">
                     {DELETION_REASON_LABEL[m.reason_code ?? 'unknown'] ?? (m.reason_code ?? '미선택')}
@@ -1299,11 +1336,61 @@ function DeletedMembersPanel({
                       <span className="text-text-tertiary">-</span>
                     )}
                   </td>
+                  <td className="px-3 py-2.5 whitespace-nowrap">
+                    <button
+                      onClick={() => toggleTx(m.id)}
+                      className="px-2.5 py-1 rounded-md text-[13px] bg-white/5 border border-white/15 text-text-secondary hover:border-cta/50 transition-colors"
+                    >
+                      {isExpanded ? '닫기' : '보기'}
+                    </button>
+                  </td>
                 </tr>
+                {isExpanded && (
+                  <tr className="bg-black/20">
+                    <td colSpan={8} className="px-4 py-3">
+                      {txLoading === m.id ? (
+                        <p className="text-[13px] text-text-tertiary">불러오는 중...</p>
+                      ) : !txs || txs.length === 0 ? (
+                        <p className="text-[13px] text-text-tertiary">보존된 거래 기록 없음 (이 기능 도입 이전 탈퇴이거나 결제 이력 없음)</p>
+                      ) : (
+                        <div className="overflow-x-auto">
+                          <table className="w-full text-[13px]">
+                            <thead>
+                              <tr className="text-text-tertiary">
+                                {['종류', '금액', '상태', '결제수단', 'PG 거래번호', '일시'].map(h => (
+                                  <th key={h} className="px-2 py-1.5 text-left font-medium whitespace-nowrap">{h}</th>
+                                ))}
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {txs.map(t => (
+                                <tr key={t.id} className="border-t border-white/5">
+                                  <td className="px-2 py-1.5 whitespace-nowrap text-text-secondary">
+                                    {t.kind === 'order' ? '결제' : '크레딧'}
+                                  </td>
+                                  <td className="px-2 py-1.5 tabular-nums whitespace-nowrap text-text-primary">
+                                    {t.amount != null ? t.amount.toLocaleString('ko-KR') : '-'}
+                                  </td>
+                                  <td className="px-2 py-1.5 whitespace-nowrap text-text-secondary">{t.status ?? '-'}</td>
+                                  <td className="px-2 py-1.5 whitespace-nowrap text-text-secondary">{t.payment_method ?? '-'}</td>
+                                  <td className="px-2 py-1.5 whitespace-nowrap text-text-tertiary font-mono text-[12px]">{t.portone_payment_id ?? '-'}</td>
+                                  <td className="px-2 py-1.5 whitespace-nowrap text-text-tertiary">
+                                    {t.occurred_at ? new Date(t.occurred_at).toLocaleString('ko-KR') : '-'}
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      )}
+                    </td>
+                  </tr>
+                )}
+                </Fragment>
               );
             })}
             {items.length === 0 && !loading && (
-              <tr><td colSpan={7} className="px-3 py-8 text-center text-text-tertiary">탈퇴 회원 데이터 없음</td></tr>
+              <tr><td colSpan={8} className="px-3 py-8 text-center text-text-tertiary">탈퇴 회원 데이터 없음</td></tr>
             )}
           </tbody>
         </table>

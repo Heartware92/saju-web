@@ -61,9 +61,10 @@ export default function ResetPasswordPage() {
             {sent ? (
               <div className="space-y-4">
                 <div className="rounded-lg bg-status-success/10 border border-status-success/20 p-4 text-center">
-                  <p className="text-status-success font-semibold mb-1">메일을 보냈어요!</p>
-                  <p className="text-sm text-text-secondary">
-                    <strong>{email}</strong> 받은편지함을 확인해주세요.
+                  <p className="text-status-success font-semibold mb-2">메일을 보냈어요!</p>
+                  <p className="text-sm text-text-secondary leading-relaxed">
+                    <strong className="block text-text-primary mb-0.5 break-all">{email}</strong>
+                    받은편지함을 확인해 주세요.
                   </p>
                 </div>
                 <button
@@ -73,8 +74,9 @@ export default function ResetPasswordPage() {
                 >
                   로그인 페이지로
                 </button>
-                <p className="text-xs text-text-tertiary text-center">
-                  메일이 안 오면 스팸함도 확인해주세요. 1~2분 후에도 안 오면 다시 시도하세요.
+                <p className="text-xs text-text-tertiary text-center leading-relaxed">
+                  메일이 안 오면 스팸함도 확인해 주세요.<br />
+                  1~2분 후에도 안 오면 다시 시도해 주세요.
                 </p>
               </div>
             ) : (
