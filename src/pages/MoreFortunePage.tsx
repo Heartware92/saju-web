@@ -298,7 +298,7 @@ export default function MoreFortunePage({ category }: Props) {
       u.searchParams.delete('recordId');
       u.searchParams.delete('fresh');
       u.searchParams.delete('_t');
-      window.history.replaceState({}, '', u.pathname + (u.search ? u.search : ''));
+      window.history.replaceState(null, '', u.pathname + (u.search ? u.search : ''));
     }
     if (category) useReportCacheStore.getState().invalidate(`more:${category}` as const);
     if (category === 'name') {

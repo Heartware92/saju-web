@@ -390,7 +390,12 @@ export default function GunghapPage() {
   // (UI BackButton 은 handleGunghapBack 으로 별도 처리)
   useEffect(() => {
     if (step !== 'input' || typeof window === 'undefined') return;
-    window.history.pushState({ gunghapStep: 'input' }, '');
+    // Next 16 App Router 는 history.state 에 라우터 마커(__NA/key)를 저장한다.
+    // 커스텀 state 객체 + URL 누락 조합으로 pushState 하면 그 마커가 사라져,
+    // Safari(WebKit)에서 popstate 시 Next 가 클라 라우팅 대신 하드 네비게이션(풀 리로드)으로
+    // 폴백 → "흰 화면 번쩍 + 첫 단계 복귀" 버그가 났다.
+    // Next 공식 shallow 패턴(state=null + 현재 URL)으로 back 가능한 엔트리만 추가한다.
+    window.history.pushState(null, '', window.location.href);
     const onPop = () => setStep('category');
     window.addEventListener('popstate', onPop);
     return () => window.removeEventListener('popstate', onPop);
@@ -993,7 +998,7 @@ export default function GunghapPage() {
       u.searchParams.delete('recordId');
       u.searchParams.delete('fresh');
       u.searchParams.delete('_t');
-      window.history.replaceState({}, '', u.pathname + (u.search ? u.search : ''));
+      window.history.replaceState(null, '', u.pathname + (u.search ? u.search : ''));
     }
     window.scrollTo({ top: 0 });
   };

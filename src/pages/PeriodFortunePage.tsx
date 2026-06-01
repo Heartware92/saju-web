@@ -1213,7 +1213,7 @@ export default function PeriodFortunePage({ scope }: { scope: FortuneScope | 'da
                 u.searchParams.delete('recordId');
                 u.searchParams.delete('fresh');
                 u.searchParams.delete('_t');
-                window.history.replaceState({}, '', u.pathname + (u.search ? u.search : ''));
+                window.history.replaceState(null, '', u.pathname + (u.search ? u.search : ''));
               }
             }}
             className="text-[13px] px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 text-text-secondary hover:text-text-primary hover:border-white/20 active:scale-[0.97] transition-all"
@@ -1651,7 +1651,7 @@ export default function PeriodFortunePage({ scope }: { scope: FortuneScope | 'da
                       u.searchParams.delete('recordId');
                       u.searchParams.delete('fresh');
                       u.searchParams.delete('_t');
-                      window.history.replaceState({}, '', u.pathname + (u.search ? u.search : ''));
+                      window.history.replaceState(null, '', u.pathname + (u.search ? u.search : ''));
                     }
                     window.scrollTo({ top: 0 });
                   },
