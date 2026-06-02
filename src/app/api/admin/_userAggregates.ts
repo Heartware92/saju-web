@@ -13,6 +13,7 @@ import {
   bucketizeAge, type AgeBucketKey, type UserSegment,
 } from '@/constants/adminLabels';
 import { cached, type CachedOptions } from './_cache';
+import { excludedUserIds, filterExcludedUsers } from './_excluded';
 
 /** loadAdminBundle 캐시 키 — 전역 단일 (어드민 전체 집계는 한 덩어리) */
 export const ADMIN_BUNDLE_CACHE_KEY = 'admin:bundle:v1';
@@ -76,7 +77,10 @@ export async function cachedLoadAdminBundle(opts?: CachedOptions): Promise<RawBu
 export async function loadAdminBundle(): Promise<RawBundle> {
   // auth.users — Supabase는 서버사이드 email 검색을 직접 지원하지 않아 전체 가져와 메모리 필터
   const { data: authList } = await supabaseAdmin.auth.admin.listUsers({ perPage: 1000 });
-  const users = authList?.users ?? [];
+  // 슈퍼/테스트 계정 제외 — 여기서 걸러내면 회원 목록·인구통계·세그먼트·LTV 등
+  // 이 번들을 쓰는 모든 라우트(users, users/summary, users/[id])에 일괄 반영된다.
+  const excluded = await excludedUserIds();
+  const users = filterExcludedUsers(authList?.users ?? [], excluded);
 
   const userIds = users.map(u => u.id);
   if (userIds.length === 0) {

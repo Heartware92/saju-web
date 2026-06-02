@@ -7,6 +7,7 @@ import { supabaseAdmin } from '@/services/supabaseAdmin';
 import { requireAdmin } from '../_auth';
 import { cachedEmailMap } from '../_emailMap';
 import { shouldForce } from '../_cache';
+import { excludedUserIds, excludeUsers } from '../_excluded';
 
 const DEFAULT_PAGE_SIZE = 30;
 const MAX_PAGE_SIZE = 10_000;
@@ -22,25 +23,28 @@ export async function GET(request: NextRequest) {
   const category = searchParams.get('category') ?? '';
   const from = (page - 1) * pageSize;
 
+  // 슈퍼/테스트 계정 제외
+  const ex = await excludedUserIds();
+
   let data: any[] = [];
   let count = 0;
 
   if (type === 'tarot') {
-    let q = supabaseAdmin
+    let q = excludeUsers(supabaseAdmin
       .from('tarot_records')
       .select('id, user_id, spread_type, credit_type, credit_used, created_at', { count: 'exact' })
       .order('created_at', { ascending: false })
-      .range(from, from + pageSize - 1);
+      .range(from, from + pageSize - 1), ex);
     if (category) q = q.eq('spread_type', category);
     const res = await q;
     data = res.data ?? [];
     count = res.count ?? 0;
   } else {
-    let q = supabaseAdmin
+    let q = excludeUsers(supabaseAdmin
       .from('saju_records')
       .select('id, user_id, category, gender, calendar_type, credit_type, credit_used, profile_name, created_at', { count: 'exact' })
       .order('created_at', { ascending: false })
-      .range(from, from + pageSize - 1);
+      .range(from, from + pageSize - 1), ex);
     if (category) q = q.eq('category', category);
     const res = await q;
     data = res.data ?? [];
@@ -52,8 +56,8 @@ export async function GET(request: NextRequest) {
 
   // 카테고리별 집계 (페이지 무관)
   const [sajuCatRes, tarotCatRes] = await Promise.all([
-    supabaseAdmin.from('saju_records').select('category'),
-    supabaseAdmin.from('tarot_records').select('spread_type'),
+    excludeUsers(supabaseAdmin.from('saju_records').select('category'), ex),
+    excludeUsers(supabaseAdmin.from('tarot_records').select('spread_type'), ex),
   ]);
 
   const sajuCategories = countBy(sajuCatRes.data ?? [], 'category');

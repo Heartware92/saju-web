@@ -6,21 +6,25 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/services/supabaseAdmin';
 import { requireAdmin } from '../../_auth';
 import { cached, shouldForce } from '../../_cache';
+import { excludedUserIds, excludeUsers, filterExcludedUsers } from '../../_excluded';
 
 const CACHE_KEY = 'admin:ops:summary:v1';
 const TTL_SECONDS = 30;
 
 async function computeOps() {
+  // 슈퍼/테스트 계정 제외
+  const ex = await excludedUserIds();
+
   const [adjustRes, authList] = await Promise.all([
-    supabaseAdmin.from('credit_transactions')
+    excludeUsers(supabaseAdmin.from('credit_transactions')
       .select('user_id, credit_type, amount, balance_after, reason, created_at')
       .eq('type', 'admin_adjust')
       .order('created_at', { ascending: false })
-      .limit(100),
+      .limit(100), ex),
     supabaseAdmin.auth.admin.listUsers({ perPage: 1000 }),
   ]);
 
-  const users = authList.data?.users ?? [];
+  const users = filterExcludedUsers(authList.data?.users ?? [], ex);
   const emailById = new Map(users.map(u => [u.id, u.email ?? '']));
 
   const adjustments = (adjustRes.data ?? []).map(a => ({

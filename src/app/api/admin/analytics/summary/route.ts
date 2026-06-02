@@ -11,6 +11,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/services/supabaseAdmin';
 import { requireAdmin } from '../../_auth';
 import { cached, shouldForce } from '../../_cache';
+import { excludedUserIds, filterExcludedRows } from '../../_excluded';
 
 const CACHE_KEY = 'admin:analytics:summary:v1';
 const TTL_SECONDS = 60;
@@ -110,7 +111,10 @@ function topN(counts: Map<string, number>, n: number) {
 
 async function computeSummary() {
   const sinceIso = new Date(Date.now() - WINDOW_DAYS * 86_400_000).toISOString();
-  const { rows, truncated } = await fetchWindowRows(sinceIso);
+  const { rows: allRows, truncated } = await fetchWindowRows(sinceIso);
+  // 슈퍼/테스트 계정(로그인 상태)의 페이지뷰 제외. 비로그인(user_id=null)은 식별 불가라 유지.
+  const excluded = await excludedUserIds();
+  const rows = filterExcludedRows(allRows, excluded);
 
   // ── 세션별 첫/마지막 이벤트 (rows 는 created_at asc 정렬) ──
   interface Sess { first: EventRow; last: EventRow; count: number; }

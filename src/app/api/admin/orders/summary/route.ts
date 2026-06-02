@@ -6,6 +6,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/services/supabaseAdmin';
 import { requireAdmin } from '../../_auth';
 import { cached, shouldForce } from '../../_cache';
+import { excludedUserIds, excludeUsers } from '../../_excluded';
 
 const CACHE_KEY = 'admin:orders:summary:v1';
 const TTL_SECONDS = 30;
@@ -30,9 +31,12 @@ function lastNMonths(n: number, tzOffsetMin = 540): string[] {
 }
 
 async function computeSummary() {
+  // 슈퍼/테스트 계정 제외
+  const ex = await excludedUserIds();
+
   const [ordersRes, usersRes] = await Promise.all([
-    supabaseAdmin.from('orders').select('user_id, status, amount, package_id, package_name, payment_method, created_at, completed_at'),
-    supabaseAdmin.from('birth_profiles').select('user_id', { count: 'exact', head: true }).eq('is_primary', true),
+    excludeUsers(supabaseAdmin.from('orders').select('user_id, status, amount, package_id, package_name, payment_method, created_at, completed_at'), ex),
+    excludeUsers(supabaseAdmin.from('birth_profiles').select('user_id', { count: 'exact', head: true }).eq('is_primary', true), ex),
   ]);
 
   const orders = ordersRes.data ?? [];

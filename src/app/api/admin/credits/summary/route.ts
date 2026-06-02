@@ -6,6 +6,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/services/supabaseAdmin';
 import { requireAdmin } from '../../_auth';
 import { cached, shouldForce } from '../../_cache';
+import { excludedUserIds, excludeUsers } from '../../_excluded';
 
 const CACHE_KEY = 'admin:credits:summary:v1';
 const TTL_SECONDS = 30;
@@ -31,9 +32,12 @@ function lastNMonths(n: number): string[] {
 }
 
 async function computeSummary() {
+  // 슈퍼/테스트 계정 제외
+  const ex = await excludedUserIds();
+
   const [creditsRes, txnRes] = await Promise.all([
-    supabaseAdmin.from('user_credits').select('user_id, moon_balance, total_moon_purchased, total_moon_consumed, updated_at'),
-    supabaseAdmin.from('credit_transactions').select('credit_type, type, amount, reason, created_at, order_id').eq('credit_type', 'moon'),
+    excludeUsers(supabaseAdmin.from('user_credits').select('user_id, moon_balance, total_moon_purchased, total_moon_consumed, updated_at'), ex),
+    excludeUsers(supabaseAdmin.from('credit_transactions').select('credit_type, type, amount, reason, created_at, order_id').eq('credit_type', 'moon'), ex),
   ]);
 
   const credits = creditsRes.data ?? [];

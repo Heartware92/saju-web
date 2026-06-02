@@ -8,6 +8,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/services/supabaseAdmin';
 import { requireAdmin } from '../_auth';
 import { cached, shouldForce } from '../_cache';
+import { excludedUserIds, excludeUsers, filterExcludedUsers } from '../_excluded';
 
 const CACHE_KEY = 'admin:insights:v1';
 const TTL_SECONDS = 30;
@@ -43,36 +44,39 @@ async function compute() {
   const dbPing = await supabaseAdmin.from('user_credits').select('user_id', { count: 'exact', head: true });
   const dbLatencyMs = Date.now() - dbStart;
 
+  // 슈퍼/테스트 계정 제외 — 모든 활동/주문 쿼리 + 회원 배열에 적용
+  const ex = await excludedUserIds();
+
   const [
     authListRes, recentSajuRes, recentTarotRes, last24hSajuRes, last24hTarotRes,
     recentOrdersRes, recentFailedRes, last24hSignupsRes,
     cohortUsersRes, allSajuRes, allTarotRes, allOrdersRes,
   ] = await Promise.all([
     supabaseAdmin.auth.admin.listUsers({ perPage: 1000 }),
-    supabaseAdmin.from('saju_records')
+    excludeUsers(supabaseAdmin.from('saju_records')
       .select('user_id, category, credit_type, credit_used, created_at')
       .gte('created_at', d7)
-      .order('created_at', { ascending: false }),
-    supabaseAdmin.from('tarot_records')
+      .order('created_at', { ascending: false }), ex),
+    excludeUsers(supabaseAdmin.from('tarot_records')
       .select('user_id, spread_type, credit_type, credit_used, created_at')
       .gte('created_at', d7)
-      .order('created_at', { ascending: false }),
-    supabaseAdmin.from('saju_records').select('user_id, category, credit_used, created_at').gte('created_at', h24),
-    supabaseAdmin.from('tarot_records').select('user_id, spread_type, credit_used, created_at').gte('created_at', h24),
-    supabaseAdmin.from('orders')
+      .order('created_at', { ascending: false }), ex),
+    excludeUsers(supabaseAdmin.from('saju_records').select('user_id, category, credit_used, created_at').gte('created_at', h24), ex),
+    excludeUsers(supabaseAdmin.from('tarot_records').select('user_id, spread_type, credit_used, created_at').gte('created_at', h24), ex),
+    excludeUsers(supabaseAdmin.from('orders')
       .select('user_id, status, amount, package_name, created_at')
       .gte('created_at', h24)
-      .order('created_at', { ascending: false }),
-    supabaseAdmin.from('orders').select('user_id, status, created_at').gte('created_at', d30),
-    supabaseAdmin.from('user_credits').select('user_id, created_at').gte('created_at', h24),
+      .order('created_at', { ascending: false }), ex),
+    excludeUsers(supabaseAdmin.from('orders').select('user_id, status, created_at').gte('created_at', d30), ex),
+    excludeUsers(supabaseAdmin.from('user_credits').select('user_id, created_at').gte('created_at', h24), ex),
     // 코호트: 90일치 가입자 + 전체 활동
-    supabaseAdmin.from('user_credits').select('user_id, created_at').gte('created_at', d90),
-    supabaseAdmin.from('saju_records').select('user_id, created_at').gte('created_at', d90),
-    supabaseAdmin.from('tarot_records').select('user_id, created_at').gte('created_at', d90),
-    supabaseAdmin.from('orders').select('user_id, status, amount, created_at').gte('created_at', d90),
+    excludeUsers(supabaseAdmin.from('user_credits').select('user_id, created_at').gte('created_at', d90), ex),
+    excludeUsers(supabaseAdmin.from('saju_records').select('user_id, created_at').gte('created_at', d90), ex),
+    excludeUsers(supabaseAdmin.from('tarot_records').select('user_id, created_at').gte('created_at', d90), ex),
+    excludeUsers(supabaseAdmin.from('orders').select('user_id, status, amount, created_at').gte('created_at', d90), ex),
   ]);
 
-  const users = authListRes.data?.users ?? [];
+  const users = filterExcludedUsers(authListRes.data?.users ?? [], ex);
   const emailById = new Map(users.map(u => [u.id, u.email ?? '']));
 
   // ── 1. 시스템 헬스 ──

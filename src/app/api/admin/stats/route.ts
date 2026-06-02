@@ -6,6 +6,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/services/supabaseAdmin';
 import { requireAdmin } from '../_auth';
 import { cached, shouldForce } from '../_cache';
+import { excludedUserIds, excludeUsers } from '../_excluded';
 
 const STATS_CACHE_KEY = 'admin:stats:v1';
 const STATS_TTL_SECONDS = 30;
@@ -37,6 +38,9 @@ async function computeStats() {
   const prevMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1).toISOString();
   const thirtyDaysAgo = new Date(Date.now() - 30 * 86400_000).toISOString();
 
+  // 슈퍼/테스트 계정 제외 — 모든 카운트/합산/시계열 쿼리에 user_id not-in 필터 적용
+  const ex = await excludedUserIds();
+
   const [
     usersRes,
     todayUsersRes,
@@ -57,24 +61,24 @@ async function computeStats() {
     dailySajuRes,
     dailyTarotRes,
   ] = await Promise.all([
-    supabaseAdmin.from('birth_profiles').select('user_id', { count: 'exact', head: true }).eq('is_primary', true),
-    supabaseAdmin.from('user_credits').select('user_id', { count: 'exact', head: true }).gte('created_at', todayStart),
-    supabaseAdmin.from('user_credits').select('user_id', { count: 'exact', head: true }).gte('created_at', monthStart),
-    supabaseAdmin.from('orders').select('status, amount').not('status', 'eq', 'pending'),
-    supabaseAdmin.from('orders').select('amount').eq('status', 'completed').gte('created_at', monthStart),
-    supabaseAdmin.from('orders').select('amount').eq('status', 'completed').gte('created_at', prevMonthStart).lt('created_at', monthStart),
-    supabaseAdmin.from('saju_records').select('id', { count: 'exact', head: true }),
-    supabaseAdmin.from('saju_records').select('id', { count: 'exact', head: true }).gte('created_at', todayStart),
-    supabaseAdmin.from('tarot_records').select('id', { count: 'exact', head: true }),
-    supabaseAdmin.from('tarot_records').select('id', { count: 'exact', head: true }).gte('created_at', todayStart),
-    supabaseAdmin.from('user_credits').select('total_moon_purchased, total_moon_consumed, moon_balance'),
-    supabaseAdmin.from('consultation_records').select('id', { count: 'exact', head: true }),
-    supabaseAdmin.from('consultation_records').select('id', { count: 'exact', head: true }).gte('created_at', todayStart),
+    excludeUsers(supabaseAdmin.from('birth_profiles').select('user_id', { count: 'exact', head: true }).eq('is_primary', true), ex),
+    excludeUsers(supabaseAdmin.from('user_credits').select('user_id', { count: 'exact', head: true }).gte('created_at', todayStart), ex),
+    excludeUsers(supabaseAdmin.from('user_credits').select('user_id', { count: 'exact', head: true }).gte('created_at', monthStart), ex),
+    excludeUsers(supabaseAdmin.from('orders').select('status, amount').not('status', 'eq', 'pending'), ex),
+    excludeUsers(supabaseAdmin.from('orders').select('amount').eq('status', 'completed').gte('created_at', monthStart), ex),
+    excludeUsers(supabaseAdmin.from('orders').select('amount').eq('status', 'completed').gte('created_at', prevMonthStart).lt('created_at', monthStart), ex),
+    excludeUsers(supabaseAdmin.from('saju_records').select('id', { count: 'exact', head: true }), ex),
+    excludeUsers(supabaseAdmin.from('saju_records').select('id', { count: 'exact', head: true }).gte('created_at', todayStart), ex),
+    excludeUsers(supabaseAdmin.from('tarot_records').select('id', { count: 'exact', head: true }), ex),
+    excludeUsers(supabaseAdmin.from('tarot_records').select('id', { count: 'exact', head: true }).gte('created_at', todayStart), ex),
+    excludeUsers(supabaseAdmin.from('user_credits').select('total_moon_purchased, total_moon_consumed, moon_balance'), ex),
+    excludeUsers(supabaseAdmin.from('consultation_records').select('id', { count: 'exact', head: true }), ex),
+    excludeUsers(supabaseAdmin.from('consultation_records').select('id', { count: 'exact', head: true }).gte('created_at', todayStart), ex),
     // 30일 시계열
-    supabaseAdmin.from('orders').select('amount, created_at').eq('status', 'completed').gte('created_at', thirtyDaysAgo),
-    supabaseAdmin.from('user_credits').select('created_at').gte('created_at', thirtyDaysAgo),
-    supabaseAdmin.from('saju_records').select('created_at').gte('created_at', thirtyDaysAgo),
-    supabaseAdmin.from('tarot_records').select('created_at').gte('created_at', thirtyDaysAgo),
+    excludeUsers(supabaseAdmin.from('orders').select('amount, created_at').eq('status', 'completed').gte('created_at', thirtyDaysAgo), ex),
+    excludeUsers(supabaseAdmin.from('user_credits').select('created_at').gte('created_at', thirtyDaysAgo), ex),
+    excludeUsers(supabaseAdmin.from('saju_records').select('created_at').gte('created_at', thirtyDaysAgo), ex),
+    excludeUsers(supabaseAdmin.from('tarot_records').select('created_at').gte('created_at', thirtyDaysAgo), ex),
   ]);
 
   const orders = ordersRes.data ?? [];
