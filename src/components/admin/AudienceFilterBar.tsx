@@ -106,7 +106,10 @@ export function AudienceFilterBar({
           </button>
         )}
       </div>
-      {note && <p className="text-[11px] text-text-tertiary mt-2">{note}</p>}
+      <p className="text-[11px] text-text-tertiary mt-2 leading-snug">
+        나이·성별은 <span className="text-text-secondary">사주 프로필(본인 아닐 수 있음) 기준 추정</span>입니다. 계정 단위 정확값은 가입경로·가입기간·세그먼트.
+        {note ? <><br />{note}</> : null}
+      </p>
     </div>
   );
 }
