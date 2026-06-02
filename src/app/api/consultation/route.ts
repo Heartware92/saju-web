@@ -17,6 +17,9 @@ import { NextRequest } from 'next/server';
 import { supabaseAdmin } from '@/services/supabaseAdmin';
 
 export const runtime = 'edge';
+// edge 함수는 vercel.json regions가 적용되지 않으므로 Seoul로 명시 고정
+// (Supabase 인증 호출이 Seoul이라 동일 리전이 유리)
+export const preferredRegion = 'icn1';
 
 const GEMINI_STREAM_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:streamGenerateContent';
 
