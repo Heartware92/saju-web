@@ -22,6 +22,8 @@ import Layout from '../../../components/Layout';
 import { CREDIT_PACKAGES } from '../../../constants/pricing';
 import AttachmentPicker from '../../../components/inquiry/AttachmentPicker';
 import { uploadInquiryAttachments } from '../../../services/inquiryAttachments';
+import { Modal } from '../../../components/ui/Modal';
+import { Button } from '../../../components/ui/Button';
 
 type PaymentMethod = 'simple_card';
 
@@ -326,12 +328,6 @@ export default function RefundInquiryPage() {
               {error}
             </div>
           )}
-          {successMsg && (
-            <div className="rounded-lg px-3 py-2.5 bg-emerald-500/10 border border-emerald-500/40 text-[13px] text-emerald-200">
-              {successMsg}
-            </div>
-          )}
-
           <button
             type="button"
             onClick={submit}
@@ -347,6 +343,20 @@ export default function RefundInquiryPage() {
             {submitting ? '접수 중...' : '환불 문의 접수하기'}
           </button>
         </div>
+
+        <Modal
+          isOpen={!!successMsg}
+          onClose={() => router.push('/inquiry')}
+          title="환불 문의 접수 완료"
+          size="sm"
+        >
+          <div className="space-y-6">
+            <p className="text-text-secondary leading-relaxed">{successMsg}</p>
+            <Button variant="primary" fullWidth onClick={() => router.push('/inquiry')}>
+              확인
+            </Button>
+          </div>
+        </Modal>
       </div>
     </Layout>
   );

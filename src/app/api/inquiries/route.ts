@@ -86,7 +86,7 @@ export async function GET(request: NextRequest) {
 
   const { data, error } = await supabaseAdmin
     .from('inquiries')
-    .select('id, category, content, status, admin_reply, admin_replied_at, created_at')
+    .select('id, category, content, status, admin_reply, admin_replied_at, created_at, attachments')
     .eq('user_id', userId)
     .order('created_at', { ascending: false })
     .limit(100);
@@ -95,5 +95,29 @@ export async function GET(request: NextRequest) {
     console.error('[inquiries:GET]', error);
     return NextResponse.json({ error: '목록을 불러오지 못했어요.' }, { status: 500 });
   }
-  return NextResponse.json({ items: data ?? [] });
+
+  const rows = data ?? [];
+  // 본인 첨부(비공개 버킷) → 서명 URL(10분). 본인 문의만 조회하므로 노출 안전.
+  const allPaths = rows.flatMap((r) =>
+    Array.isArray((r as { attachments?: unknown }).attachments)
+      ? ((r as { attachments: unknown[] }).attachments.filter((p): p is string => typeof p === 'string'))
+      : [],
+  );
+  const urlMap = new Map<string, string>();
+  if (allPaths.length > 0) {
+    const { data: signed } = await supabaseAdmin.storage
+      .from('inquiry-attachments')
+      .createSignedUrls(allPaths, 600);
+    for (const s of signed ?? []) {
+      if (s.signedUrl && s.path) urlMap.set(s.path, s.signedUrl);
+    }
+  }
+  const items = rows.map((r) => {
+    const paths = Array.isArray((r as { attachments?: unknown }).attachments)
+      ? ((r as { attachments: unknown[] }).attachments.filter((p): p is string => typeof p === 'string'))
+      : [];
+    return { ...r, attachmentUrls: paths.map((p) => urlMap.get(p)).filter((u): u is string => !!u) };
+  });
+
+  return NextResponse.json({ items });
 }

@@ -3,24 +3,21 @@
 /**
  * 문의하기 — 햄버거 메뉴 진입.
  * 유형 카드(환불/오류·버그/제안·피드백/기타) → 각 전용 페이지로 이동.
- * 하단에 내 문의 내역.
+ * 내 문의 내역은 별도 페이지(/inquiry/history)로 진입.
  *
  * UX 원칙:
- * - 이모지 0개. 텍스트 기반 + 좌측 4px CTA 띠로 카테고리 표시.
+ * - 이모지 0개. 텍스트 기반 + 우측 chevron.
  * - 인라인 입력 폼 없음. 각 유형은 자체 페이지에서 작성.
  */
 
-import { useCallback, useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useUserStore } from '../../store/useUserStore';
-import { supabase } from '../../services/supabase';
 import Layout from '../../components/Layout';
 
-type CategoryKey = 'payment' | 'bug' | 'account' | 'feedback' | 'other';
-
 interface CategoryCard {
-  key: CategoryKey;
+  key: string;
   label: string;
   desc: string;
   href: string;
@@ -54,45 +51,10 @@ const CATEGORY_CARDS: CategoryCard[] = [
   },
 ];
 
-// 내 문의 내역 표시용 라벨 — 과거에 쌓인 'account' 등 모든 키 커버.
-const CATEGORY_LABEL: Record<CategoryKey, string> = {
-  payment: '환불 문의',
-  bug: '오류·버그',
-  account: '계정·로그인',
-  feedback: '제안·피드백',
-  other: '기타',
-};
-
-interface InquiryItem {
-  id: string;
-  category: CategoryKey;
-  content: string;
-  status: 'open' | 'in_progress' | 'resolved' | 'closed';
-  admin_reply: string | null;
-  admin_replied_at: string | null;
-  created_at: string;
-}
-
-const STATUS_LABEL: Record<InquiryItem['status'], { text: string; cls: string }> = {
-  open: { text: '접수', cls: 'bg-amber-500/15 border-amber-500/40 text-amber-200' },
-  in_progress: { text: '확인 중', cls: 'bg-sky-500/15 border-sky-500/40 text-sky-200' },
-  resolved: { text: '답변 완료', cls: 'bg-emerald-500/15 border-emerald-500/40 text-emerald-200' },
-  closed: { text: '종료', cls: 'bg-white/8 border-white/15 text-text-tertiary' },
-};
-
-function formatDate(iso: string): string {
-  const d = new Date(iso);
-  return d.toLocaleString('ko-KR', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
-}
-
 export default function InquiryPage() {
   const router = useRouter();
   const { user } = useUserStore();
   const userLoading = useUserStore((s) => s.loading);
-
-  const [items, setItems] = useState<InquiryItem[]>([]);
-  const [listLoading, setListLoading] = useState(true);
-  const [openIds, setOpenIds] = useState<Set<string>>(new Set());
 
   // 비로그인 사용자는 로그인 페이지로 유도 — loading 끝난 후에만 판단 (hydration race 방지)
   useEffect(() => {
@@ -100,40 +62,6 @@ export default function InquiryPage() {
       router.replace('/login?from=/inquiry');
     }
   }, [user, userLoading, router]);
-
-  const loadInquiries = useCallback(async () => {
-    setListLoading(true);
-    try {
-      const { data: sessionData } = await supabase.auth.getSession();
-      const token = sessionData?.session?.access_token;
-      if (!token) {
-        setItems([]);
-        return;
-      }
-      const res = await fetch('/api/inquiries', {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      const json = await res.json();
-      if (res.ok) setItems(json.items ?? []);
-    } catch {
-      /* ignore */
-    } finally {
-      setListLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    if (user) loadInquiries();
-  }, [user, loadInquiries]);
-
-  const toggleOpen = (id: string) => {
-    setOpenIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
-  };
 
   return (
     <Layout>
@@ -160,7 +88,7 @@ export default function InquiryPage() {
         </p>
 
         {/* 유형 카드 */}
-        <section className="mb-7">
+        <section className="mb-5">
           <div className="space-y-2">
             {CATEGORY_CARDS.map((cat) => (
               <Link
@@ -170,12 +98,8 @@ export default function InquiryPage() {
               >
                 <span className="w-1 shrink-0 bg-transparent" />
                 <span className="flex-1 px-4 py-3">
-                  <span className="block text-[15px] font-semibold text-text-primary">
-                    {cat.label}
-                  </span>
-                  <span className="block text-[12.5px] text-text-tertiary mt-0.5 leading-snug">
-                    {cat.desc}
-                  </span>
+                  <span className="block text-[15px] font-semibold text-text-primary">{cat.label}</span>
+                  <span className="block text-[12.5px] text-text-tertiary mt-0.5 leading-snug">{cat.desc}</span>
                 </span>
                 <span className="self-center pr-4 text-text-tertiary">
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
@@ -187,87 +111,18 @@ export default function InquiryPage() {
           </div>
         </section>
 
-        {/* 내 문의 내역 */}
-        <section>
-          <h2 className="text-[13px] font-semibold text-text-tertiary uppercase tracking-wider mb-3 px-1">
-            내 문의 내역
-          </h2>
-          {listLoading ? (
-            <p className="text-[13px] text-text-tertiary px-1">불러오는 중…</p>
-          ) : items.length === 0 ? (
-            <p className="text-[13px] text-text-tertiary px-1">아직 문의 내역이 없어요.</p>
-          ) : (
-            <div className="space-y-2">
-              {items.map((it) => {
-                const s = STATUS_LABEL[it.status];
-                const open = openIds.has(it.id);
-                return (
-                  <div
-                    key={it.id}
-                    className="rounded-xl bg-[rgba(20,12,38,0.55)] border border-[var(--border-subtle)] overflow-hidden"
-                  >
-                    <button
-                      onClick={() => toggleOpen(it.id)}
-                      className="w-full flex items-start justify-between gap-3 px-4 py-3 text-left hover:bg-white/[0.03]"
-                    >
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-2 mb-1">
-                          <span className="text-[13px] font-semibold text-text-primary">
-                            {CATEGORY_LABEL[it.category] ?? it.category}
-                          </span>
-                          <span
-                            className={`px-1.5 py-0.5 rounded-full border text-[11px] font-medium ${s.cls}`}
-                          >
-                            {s.text}
-                          </span>
-                        </div>
-                        <p className="text-[12.5px] text-text-tertiary line-clamp-1">
-                          {it.content}
-                        </p>
-                        <p className="text-[11px] text-text-tertiary/80 mt-1">
-                          {formatDate(it.created_at)}
-                        </p>
-                      </div>
-                      <svg
-                        width="14"
-                        height="14"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2.5"
-                        strokeLinecap="round"
-                        className="text-text-tertiary mt-1 shrink-0"
-                        style={{ transform: open ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }}
-                      >
-                        <path d="M6 9l6 6 6-6" />
-                      </svg>
-                    </button>
-                    {open && (
-                      <div className="border-t border-[var(--border-subtle)] px-4 py-3 bg-white/[0.02]">
-                        <p className="text-[13px] text-text-secondary leading-relaxed whitespace-pre-line">
-                          {it.content}
-                        </p>
-                        {it.admin_reply && (
-                          <div className="mt-3 pt-3 border-t border-[var(--border-subtle)]">
-                            <p className="text-[11px] font-semibold text-cta mb-1.5">관리자 답변</p>
-                            <p className="text-[13px] text-text-secondary leading-relaxed whitespace-pre-line">
-                              {it.admin_reply}
-                            </p>
-                            {it.admin_replied_at && (
-                              <p className="text-[11px] text-text-tertiary mt-1.5">
-                                {formatDate(it.admin_replied_at)}
-                              </p>
-                            )}
-                          </div>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </section>
+        {/* 내 문의 내역 진입 */}
+        <Link
+          href="/inquiry/history"
+          className="w-full text-left flex items-center justify-between rounded-xl px-4 py-3.5 bg-[rgba(124,92,252,0.08)] border border-[rgba(124,92,252,0.22)] hover:border-cta/50 transition-colors"
+        >
+          <span className="text-[14px] font-semibold text-text-primary">내 문의 내역</span>
+          <span className="text-text-tertiary">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+              <path d="M9 18l6-6-6-6" />
+            </svg>
+          </span>
+        </Link>
       </div>
     </Layout>
   );

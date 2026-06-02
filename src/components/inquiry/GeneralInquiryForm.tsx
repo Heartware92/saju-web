@@ -14,6 +14,8 @@ import { useRouter } from 'next/navigation';
 import { useUserStore } from '@/store/useUserStore';
 import { supabase } from '@/services/supabase';
 import Layout from '@/components/Layout';
+import { Modal } from '@/components/ui/Modal';
+import { Button } from '@/components/ui/Button';
 import AttachmentPicker from '@/components/inquiry/AttachmentPicker';
 import { uploadInquiryAttachments } from '@/services/inquiryAttachments';
 
@@ -144,11 +146,6 @@ export default function GeneralInquiryForm({
               {error}
             </div>
           )}
-          {successMsg && (
-            <div className="rounded-lg bg-emerald-500/10 border border-emerald-500/30 px-3 py-2 text-[13px] text-emerald-300">
-              {successMsg}
-            </div>
-          )}
 
           <button
             type="button"
@@ -166,13 +163,19 @@ export default function GeneralInquiryForm({
           </button>
         </div>
 
-        {successMsg && (
-          <div className="text-center mt-5">
-            <Link href="/inquiry" className="text-[13px] text-cta hover:underline">
-              내 문의 내역 보기
-            </Link>
+        <Modal
+          isOpen={!!successMsg}
+          onClose={() => router.push('/inquiry')}
+          title="문의 접수 완료"
+          size="sm"
+        >
+          <div className="space-y-6">
+            <p className="text-text-secondary leading-relaxed">{successMsg}</p>
+            <Button variant="primary" fullWidth onClick={() => router.push('/inquiry')}>
+              확인
+            </Button>
           </div>
-        )}
+        </Modal>
       </div>
     </Layout>
   );
