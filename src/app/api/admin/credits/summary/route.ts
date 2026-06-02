@@ -66,9 +66,10 @@ function computeDepletion(txns: TxnRow[]) {
     const lots: { remaining: number; time: number; isPurchase: boolean }[] = [];
     for (const t of sorted) {
       const amt = t.amount ?? 0;
-      const isConsume = t.type === 'consume' || amt < 0;
+      const isDrain = t.type === 'consume' || amt < 0; // 소비 또는 음수(환불·조정 회수)
+      const isRealConsume = t.type === 'consume';       // 실제 서비스 이용 소비만 "소진"으로 인정
       const ts = new Date(t.created_at).getTime();
-      if (isConsume) {
+      if (isDrain) {
         let need = Math.abs(amt);
         while (need > 0 && lots.length > 0) {
           const lot = lots[0];
@@ -76,7 +77,8 @@ function computeDepletion(txns: TxnRow[]) {
           lot.remaining -= take;
           need -= take;
           if (lot.remaining <= 1e-9) {
-            if (lot.isPurchase) depletionDays.push((ts - lot.time) / DAY);
+            // 충전 lot 이 '소비'로 완전히 비워질 때만 소진일 기록. 환불·관리자회수는 제외.
+            if (lot.isPurchase && isRealConsume) depletionDays.push((ts - lot.time) / DAY);
             lots.shift();
           }
         }
