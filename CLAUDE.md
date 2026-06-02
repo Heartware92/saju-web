@@ -5,6 +5,13 @@
 - **기술 스택**: Next.js 16 + TypeScript + Tailwind 4 + Supabase
 - **경로**: `/Users/hjw/Desktop/Real_Project/saju-project/saju-web`
 
+## 인프라 규칙 — 함수 리전 (반드시 준수)
+- **모든 함수는 Seoul(icn1)에서 실행한다.** Supabase가 Seoul이라 리전이 다르면 호출마다 태평양 왕복으로 레이턴시가 폭증한다.
+- `vercel.json`의 `"regions": ["icn1"]`를 **절대 제거하지 말 것.**
+- 새 **edge 라우트**(`export const runtime = 'edge'`)는 반드시 `export const preferredRegion = 'icn1'`를 추가한다 (edge는 vercel.json의 regions가 적용되지 않음).
+- 배포 후 `vercel inspect <url> | grep iad1` 로 미국 리전 잔존 함수가 없는지 확인.
+- 경위: `incidents.md` 2026-06-03 entry 참고.
+
 ## 완료된 작업 (Phase 1: 만세력 계산 엔진)
 
 ### 1. 프로젝트 생성 ✅
