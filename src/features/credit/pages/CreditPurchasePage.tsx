@@ -10,6 +10,8 @@ import { useRouter } from 'next/navigation';
 import { useCreditStore } from '@/store/useCreditStore';
 import { CREDIT_PACKAGES } from '@/constants/pricing';
 import { processPayment } from '@/services/payment';
+import { Modal } from '@/components/ui/Modal';
+import { Button } from '@/components/ui/Button';
 import type { CreditPackage } from '@/constants/pricing';
 
 export const CreditPurchasePage: React.FC = () => {
@@ -86,13 +88,6 @@ export const CreditPurchasePage: React.FC = () => {
           </div>
         </div>
 
-        {/* 결제창 뒤로가기(취소) 안내 */}
-        {canceledNotice && (
-          <div className="mb-4 px-4 py-3 rounded-2xl bg-[rgba(230,57,70,0.08)] border border-[rgba(230,57,70,0.25)] text-[13px] text-text-secondary leading-relaxed">
-            결제가 취소되었습니다. 다시 시도해 주세요.
-          </div>
-        )}
-
         {/* 소진기한·환불 안내 (PG사 환금성 업종 입점 필수 명시) */}
         <div className="mb-5 px-4 py-3 rounded-2xl bg-[rgba(124,92,252,0.06)] border border-[rgba(124,92,252,0.15)] text-[12.5px] text-text-secondary leading-relaxed">
           <p>
@@ -117,6 +112,23 @@ export const CreditPurchasePage: React.FC = () => {
             />
           ))}
         </div>
+
+        {/* 결제창 뒤로가기(취소) 안내 모달 */}
+        <Modal
+          isOpen={canceledNotice}
+          onClose={() => setCanceledNotice(false)}
+          title="결제가 취소되었습니다"
+          size="sm"
+        >
+          <div className="space-y-6">
+            <p className="text-text-secondary leading-relaxed">
+              결제가 완료되지 않았어요. 다시 시도하시려면 원하는 패키지의 구매 버튼을 눌러 주세요.
+            </p>
+            <Button variant="primary" fullWidth onClick={() => setCanceledNotice(false)}>
+              확인
+            </Button>
+          </div>
+        </Modal>
 
     </div>
   );
