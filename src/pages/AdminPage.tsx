@@ -95,7 +95,7 @@ const fmtDate = (s: string | null) => s ? new Date(s).toLocaleDateString('ko-KR'
 function MetricCard({ label, value, sub, color, warn }: { label: string; value: string; sub?: string; color?: string; warn?: string }) {
   return (
     <div className="bg-white/[0.04] border border-white/10 rounded-xl p-4 hover:border-white/15 transition-colors">
-      <p className="text-[12px] text-text-tertiary tracking-wide mb-2">{label}</p>
+      <p className="text-[13px] text-text-secondary mb-2">{label}</p>
       <p className={`text-[26px] font-bold leading-tight tabular-nums ${color ?? 'text-text-primary'}`}>{value}</p>
       {sub && <p className="text-[12px] text-text-tertiary mt-1.5 leading-snug">{sub}</p>}
       {warn && <p className="text-[11px] text-amber-300 mt-1.5 leading-snug">{warn}</p>}
@@ -826,7 +826,7 @@ export default function AdminPage() {
         {tab === 'overview' && stats && (
           <div className="space-y-6">
             <div>
-              <h2 className="text-[13px] font-semibold text-text-tertiary mb-3 tracking-wider">사용자</h2>
+              <h2 className="text-[14px] font-semibold text-text-secondary mb-3">사용자</h2>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                 <MetricCard label="총 사용자" value={fmt(stats.users.total)} />
                 <MetricCard label="오늘 신규" value={fmt(stats.users.today)} color="text-cta" />
@@ -836,14 +836,14 @@ export default function AdminPage() {
             </div>
 
             <div>
-              <h2 className="text-[13px] font-semibold text-text-tertiary mb-3 tracking-wider">매출</h2>
+              <h2 className="text-[14px] font-semibold text-text-secondary mb-3">매출</h2>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                 <MetricCard label="총 매출" value={fmtWon(stats.revenue.total)} />
                 <MetricCard
                   label="이번 달 매출"
                   value={fmtWon(stats.revenue.thisMonth)}
                   sub={stats.revenue.growth !== null ? `전월 대비 ${stats.revenue.growth > 0 ? '+' : ''}${stats.revenue.growth}%` : undefined}
-                  color={stats.revenue.growth !== null && stats.revenue.growth > 0 ? 'text-green-300' : undefined}
+                  color={stats.revenue.growth !== null ? (stats.revenue.growth >= 0 ? 'text-green-300' : 'text-red-300') : undefined}
                 />
                 <MetricCard label="지난 달 매출" value={fmtWon(stats.revenue.prevMonth)} />
                 <MetricCard label="환불 금액" value={fmtWon(stats.revenue.refunded)} color="text-red-300" />
@@ -851,7 +851,7 @@ export default function AdminPage() {
             </div>
 
             <div>
-              <h2 className="text-[13px] font-semibold text-text-tertiary mb-3 tracking-wider">서비스 이용</h2>
+              <h2 className="text-[14px] font-semibold text-text-secondary mb-3">서비스 이용</h2>
               <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                 <MetricCard label="사주 분석" value={fmt(stats.usage.sajuTotal)} sub={`오늘 ${fmt(stats.usage.sajuToday)}`} />
                 <MetricCard label="타로 분석" value={fmt(stats.usage.tarotTotal)} sub={`오늘 ${fmt(stats.usage.tarotToday)}`} />
@@ -860,7 +860,7 @@ export default function AdminPage() {
             </div>
 
             <div>
-              <h2 className="text-[13px] font-semibold text-text-tertiary mb-3 tracking-wider">크레딧 (달)</h2>
+              <h2 className="text-[14px] font-semibold text-text-secondary mb-3">크레딧 (달)</h2>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                 <MetricCard label="발행" value={fmt(stats.credits.moon.issued)} />
                 <MetricCard label="소비" value={fmt(stats.credits.moon.consumed)} />
@@ -887,7 +887,7 @@ export default function AdminPage() {
             {stats.daily && stats.daily.length > 0 && (
               <div>
                 <div className="flex items-center justify-between mb-3">
-                  <h2 className="text-[15px] font-semibold text-text-secondary uppercase tracking-wider">일별 추이</h2>
+                  <h2 className="text-[14px] font-semibold text-text-secondary">일별 추이</h2>
                   <div className="flex gap-1 p-1 bg-white/5 rounded-lg border border-white/10">
                     {([7, 30] as const).map(r => (
                       <button

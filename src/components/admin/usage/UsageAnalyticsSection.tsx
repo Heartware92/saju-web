@@ -5,7 +5,6 @@
 
 import { HorizontalBarChart } from '@/components/admin/charts/HorizontalBarChart';
 import { VerticalBarChart } from '@/components/admin/charts/VerticalBarChart';
-import { DonutChart } from '@/components/admin/charts/DonutChart';
 import { HeatmapChart } from '@/components/admin/charts/HeatmapChart';
 import {
   SAJU_CATEGORY_LABEL, TAROT_SPREAD_LABEL,
@@ -74,10 +73,6 @@ export function UsageAnalyticsSection({ summary }: { summary: UsageSummary | nul
     value: d.total,
   }));
 
-  const creditSlices = [
-    { key: 'moon', label: '달', value: credit.moonConsumed, color: 'rgba(129, 140, 248, 0.85)' },
-  ];
-
   return (
     <div className="space-y-6">
       {/* KPI */}
@@ -104,13 +99,12 @@ export function UsageAnalyticsSection({ summary }: { summary: UsageSummary | nul
           <VerticalBarChart bars={dailyBars} color="rgba(96, 165, 250, 0.75)" height={140} />
         </div>
 
-        <div className="bg-white/5 border border-white/10 rounded-xl p-4">
+        <div className="bg-white/5 border border-white/10 rounded-xl p-4 flex flex-col">
           <h3 className="text-[14px] font-semibold text-text-primary mb-3">달 소비</h3>
-          <DonutChart
-            slices={creditSlices}
-            centerValue={fmt(credit.moonConsumed)}
-            centerLabel="총 소비"
-          />
+          <div className="flex-1 flex flex-col items-center justify-center py-4">
+            <p className="text-[30px] font-bold text-indigo-300 tabular-nums leading-none">{fmt(credit.moonConsumed)}</p>
+            <p className="text-[12px] text-text-tertiary mt-2">최근 30일 소비된 달 · 거래 {fmt(credit.moonTxn)}건</p>
+          </div>
         </div>
       </div>
 
@@ -148,7 +142,7 @@ export function UsageAnalyticsSection({ summary }: { summary: UsageSummary | nul
 function Kpi({ label, value, sub }: { label: string; value: string; sub?: string }) {
   return (
     <div className="bg-white/5 border border-white/10 rounded-xl p-4">
-      <p className="text-[13px] text-text-tertiary uppercase tracking-wider mb-1">{label}</p>
+      <p className="text-[13px] text-text-secondary mb-1">{label}</p>
       <p className="text-[22px] font-bold text-text-primary">{value}</p>
       {sub && <p className="text-[12px] text-text-tertiary mt-0.5">{sub}</p>}
     </div>

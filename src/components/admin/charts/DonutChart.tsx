@@ -73,7 +73,7 @@ export function DonutChart({ slices, size = 140, thickness = 22, centerLabel, ce
           const pct = total > 0 ? Math.round((s.value / total) * 100) : 0;
           return (
             <div key={s.key} className="flex items-center gap-2">
-              <span className="w-2.5 h-2.5 rounded-sm" style={{ background: s.color }} />
+              <span className="w-3 h-3 rounded-sm shrink-0" style={{ background: s.color }} />
               <span className="text-text-secondary min-w-[56px]">{s.label}</span>
               <span className="text-text-primary font-medium">{s.value.toLocaleString()}</span>
               <span className="text-text-tertiary">({pct}%)</span>

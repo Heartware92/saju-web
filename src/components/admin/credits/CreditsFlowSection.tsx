@@ -74,7 +74,7 @@ export function CreditsFlowSection({ summary }: { summary: CreditsSummary | null
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-[15px] font-semibold text-text-secondary mb-3 uppercase tracking-wider">달 크레딧</h2>
+        <h2 className="text-[14px] font-semibold text-text-secondary mb-3">달 크레딧</h2>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           <Kpi label="발행" value={fmt(kpi.moonIssued)} />
           <Kpi label="소비" value={fmt(kpi.moonConsumed)} sub={`소진율 ${kpi.moonConsumeRate}%`} />
@@ -126,7 +126,7 @@ export function CreditsFlowSection({ summary }: { summary: CreditsSummary | null
 function Kpi({ label, value, sub, color }: { label: string; value: string; sub?: string; color?: string }) {
   return (
     <div className="bg-white/5 border border-white/10 rounded-xl p-4">
-      <p className="text-[13px] text-text-tertiary uppercase tracking-wider mb-1">{label}</p>
+      <p className="text-[13px] text-text-secondary mb-1">{label}</p>
       <p className={`text-[22px] font-bold ${color ?? 'text-text-primary'}`}>{value}</p>
       {sub && <p className="text-[12px] text-text-tertiary mt-0.5">{sub}</p>}
     </div>

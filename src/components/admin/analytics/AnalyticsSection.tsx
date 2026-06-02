@@ -51,7 +51,7 @@ function Card({ children, title, sub }: { children: React.ReactNode; title: stri
 function Metric({ label, value, sub, color }: { label: string; value: string; sub?: string; color?: string }) {
   return (
     <div className="bg-white/[0.04] border border-white/10 rounded-xl p-4">
-      <p className="text-[12px] text-text-tertiary tracking-wide mb-2">{label}</p>
+      <p className="text-[13px] text-text-secondary mb-2">{label}</p>
       <p className={`text-[26px] font-bold leading-tight tabular-nums ${color ?? 'text-text-primary'}`}>{value}</p>
       {sub && <p className="text-[12px] text-text-tertiary mt-1.5 leading-snug">{sub}</p>}
     </div>
@@ -112,14 +112,14 @@ export function AnalyticsSection({ summary }: { summary: AnalyticsSummary | null
       <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
         <Metric
           label="재방문율 D7"
-          value={`${kpi.d7Rate ?? 0}%`}
-          sub={`최초 방문 후 7일 내 재방문 · 대상 ${fmt(kpi.d7Cohort ?? 0)}명`}
+          value={kpi.d7Cohort ? `${kpi.d7Rate ?? 0}%` : '-'}
+          sub={kpi.d7Cohort ? `최초 방문 후 7일 내 재방문 · 대상 ${fmt(kpi.d7Cohort)}명` : '7일 코호트 데이터 부족'}
           color="text-sky-300"
         />
         <Metric
           label="재방문율 D30"
-          value={`${kpi.d30Rate ?? 0}%`}
-          sub={`최초 방문 후 30일 내 재방문 · 대상 ${fmt(kpi.d30Cohort ?? 0)}명`}
+          value={kpi.d30Cohort ? `${kpi.d30Rate ?? 0}%` : '-'}
+          sub={kpi.d30Cohort ? `최초 방문 후 30일 내 재방문 · 대상 ${fmt(kpi.d30Cohort)}명` : '30일 코호트 데이터 부족'}
           color="text-sky-300"
         />
         <Metric
