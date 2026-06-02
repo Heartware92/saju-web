@@ -186,7 +186,9 @@ export async function grantCreditsForOrder(
       moon_credit_amount: moonTotal,
     })
     .eq('id', order.id)
-    .eq('status', 'pending') // pending → completed 에만 허용
+    // pending(대기) 또는 cancelled(취소: 이탈로 자동전환됐으나 실제 결제는 성공한 경우)만 완료 허용.
+    // failed/refunded/completed 는 전환 불가 → 멱등·안전.
+    .in('status', ['pending', 'cancelled'])
     .select()
     .maybeSingle();
 

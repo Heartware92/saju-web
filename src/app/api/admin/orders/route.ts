@@ -7,6 +7,7 @@ import { supabaseAdmin } from '@/services/supabaseAdmin';
 import { requireAdmin } from '../_auth';
 import { cachedEmailMap } from '../_emailMap';
 import { shouldForce } from '../_cache';
+import { expireStalePendingOrders } from '../_expirePending';
 
 const DEFAULT_PAGE_SIZE = 20;
 const MAX_PAGE_SIZE = 10_000;
@@ -14,6 +15,9 @@ const MAX_PAGE_SIZE = 10_000;
 export async function GET(request: NextRequest) {
   const auth = await requireAdmin(request);
   if (auth instanceof Response) return auth;
+
+  // 이탈로 방치된 오래된 pending → cancelled 정리(조회 시점 스윕)
+  await expireStalePendingOrders();
 
   const { searchParams } = new URL(request.url);
   const page = Math.max(1, parseInt(searchParams.get('page') ?? '1'));

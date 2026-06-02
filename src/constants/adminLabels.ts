@@ -92,6 +92,7 @@ export const ORDER_STATUS_LABEL: Record<string, { text: string; cls: string }> =
   pending:   { text: '대기',  cls: 'bg-yellow-500/20 text-yellow-300 border-yellow-500/30' },
   refunded:  { text: '환불',  cls: 'bg-red-500/20 text-red-300 border-red-500/30' },
   failed:    { text: '실패',  cls: 'bg-gray-500/20 text-gray-400 border-gray-500/30' },
+  cancelled: { text: '취소',  cls: 'bg-slate-500/20 text-slate-300 border-slate-500/30' },
 };
 
 // ── 인구통계 ─────────────────────────────────────────────────

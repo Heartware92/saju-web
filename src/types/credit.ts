@@ -25,7 +25,7 @@ export interface Order {
   amount: number;              // 결제 금액 (원)
   sun_credit_amount?: number;  // (deprecated, 033 이후 사용 안 함)
   moon_credit_amount: number;  // 지급할 달 크레딧
-  status: 'pending' | 'completed' | 'failed' | 'refunded';
+  status: 'pending' | 'completed' | 'failed' | 'refunded' | 'cancelled';
   payment_method?: string;
   payment_key?: string;
   portone_payment_id?: string;

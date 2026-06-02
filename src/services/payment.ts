@@ -127,10 +127,11 @@ export const processPayment = async (
       },
     });
 
-    // 5. 결제 실패
+    // 5. 결제 실패 / 취소
     if (response?.code !== undefined) {
       const isCanceled = response.code === 'PAY_PROCESS_CANCELED' || response.code === 'USER_CANCEL';
-      await orderDB.updateOrderStatus(order.id, 'failed');
+      // 사용자 취소는 '취소', 그 외 기술적 실패는 '실패'로 구분 기록
+      await orderDB.updateOrderStatus(order.id, isCanceled ? 'cancelled' : 'failed');
       return {
         success: false,
         error: response.code,
