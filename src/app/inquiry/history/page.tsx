@@ -53,6 +53,41 @@ export default function InquiryHistoryPage() {
   const [items, setItems] = useState<InquiryItem[]>([]);
   const [listLoading, setListLoading] = useState(true);
   const [openIds, setOpenIds] = useState<Set<string>>(new Set());
+  const [viewer, setViewer] = useState<{ url: string; index: number } | null>(null);
+  const [downloading, setDownloading] = useState(false);
+
+  // 뷰어 열렸을 때 Esc로 닫기 + 바디 스크롤 잠금
+  useEffect(() => {
+    if (!viewer) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setViewer(null); };
+    window.addEventListener('keydown', onKey);
+    document.body.style.overflow = 'hidden';
+    return () => {
+      window.removeEventListener('keydown', onKey);
+      document.body.style.overflow = '';
+    };
+  }, [viewer]);
+
+  const downloadImage = async (url: string, index: number) => {
+    setDownloading(true);
+    try {
+      const res = await fetch(url);
+      const blob = await res.blob();
+      const ext = (blob.type.split('/')[1] || 'jpg').replace('jpeg', 'jpg');
+      const objUrl = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = objUrl;
+      a.download = `문의사진-${index + 1}.${ext}`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(objUrl);
+    } catch {
+      window.open(url, '_blank'); // 폴백: 다운로드 실패 시 새 탭
+    } finally {
+      setDownloading(false);
+    }
+  };
 
   useEffect(() => {
     if (!userLoading && user === null) {
@@ -167,16 +202,16 @@ export default function InquiryHistoryPage() {
                       {it.attachmentUrls && it.attachmentUrls.length > 0 && (
                         <div className="mt-3 flex flex-wrap gap-2">
                           {it.attachmentUrls.map((url, i) => (
-                            <a
+                            <button
                               key={i}
-                              href={url}
-                              target="_blank"
-                              rel="noopener noreferrer"
+                              type="button"
+                              onClick={() => setViewer({ url, index: i })}
                               className="block w-24 h-24 rounded-lg overflow-hidden border border-[var(--border-subtle)] bg-black/20"
+                              aria-label={`첨부 ${i + 1} 크게 보기`}
                             >
                               {/* eslint-disable-next-line @next/next/no-img-element */}
                               <img src={url} alt={`첨부 ${i + 1}`} className="w-full h-full object-cover hover:opacity-80 transition-opacity" />
-                            </a>
+                            </button>
                           ))}
                         </div>
                       )}
@@ -200,6 +235,46 @@ export default function InquiryHistoryPage() {
           </div>
         )}
       </div>
+
+      {/* 사진 뷰어 (라이트박스) */}
+      {viewer && (
+        <div
+          className="fixed inset-0 z-[70] flex flex-col items-center justify-center bg-black/85 backdrop-blur-sm p-4"
+          onClick={() => setViewer(null)}
+        >
+          <div className="relative max-w-full" onClick={(e) => e.stopPropagation()}>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={viewer.url}
+              alt={`첨부 ${viewer.index + 1}`}
+              className="max-w-full max-h-[72vh] object-contain rounded-lg"
+            />
+          </div>
+
+          <div className="flex gap-2.5 mt-5" onClick={(e) => e.stopPropagation()}>
+            <button
+              type="button"
+              onClick={() => downloadImage(viewer.url, viewer.index)}
+              disabled={downloading}
+              className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-cta text-white text-[13px] font-semibold disabled:opacity-50"
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" />
+                <polyline points="7 10 12 15 17 10" />
+                <line x1="12" y1="15" x2="12" y2="3" />
+              </svg>
+              {downloading ? '다운로드 중…' : '다운로드'}
+            </button>
+            <button
+              type="button"
+              onClick={() => setViewer(null)}
+              className="px-4 py-2.5 rounded-xl border border-white/25 text-white/90 text-[13px] font-medium hover:bg-white/10"
+            >
+              닫기
+            </button>
+          </div>
+        </div>
+      )}
     </Layout>
   );
 }
