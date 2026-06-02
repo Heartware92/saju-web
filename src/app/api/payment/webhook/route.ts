@@ -184,12 +184,58 @@ async function handlePaid(paymentId: string, orderId: string) {
 }
 
 async function handleFailedOrCancelled(orderId: string, type: string) {
-  const newStatus = type === 'Transaction.Cancelled' ? 'refunded' : 'failed';
+  const { data: order } = await supabaseAdmin
+    .from('orders')
+    .select('*')
+    .eq('id', orderId)
+    .maybeSingle();
+
+  if (!order) {
+    return NextResponse.json({ ok: true, ignored: 'order_not_found' });
+  }
+
+  // 이미 환불 처리된 주문은 멱등하게 무시
+  if (order.status === 'refunded') {
+    return NextResponse.json({ ok: true, alreadyRefunded: true });
+  }
+
+  // 결제 취소(Transaction.Cancelled)인데 이미 크레딧이 지급된(completed) 주문이면
+  // 지급된 크레딧을 원자적으로 회수한다. (PG 콘솔 직접 취소·차지백 등 외부 취소 자동 대응)
+  // refund_order_atomic 이 내부에서 주문 상태를 'refunded'로 갱신한다.
+  if (type === 'Transaction.Cancelled' && order.status === 'completed') {
+    const { data: rpcResult, error: rpcErr } = await supabaseAdmin.rpc('refund_order_atomic', {
+      p_order_id: orderId,
+      p_user_id: order.user_id,
+      p_sun_granted: order.sun_credit_amount ?? 0,
+      p_moon_granted: order.moon_credit_amount ?? 0,
+      p_package_name: order.package_name ?? '',
+      p_idempotency_key: `refund-${orderId}`,
+    });
+
+    if (rpcErr) {
+      console.error('[webhook] refund_order_atomic error', rpcErr);
+      return NextResponse.json({ ok: false, error: 'refund_failed' }, { status: 500 });
+    }
+    // 'ok'(회수 완료) | 'duplicate'(앱 환불 등으로 이미 회수됨) 만 정상으로 간주.
+    // 그 외(no_user 등)는 비정상 → 500 반환으로 PortOne 재시도를 유도한다.
+    if (rpcResult !== 'ok' && rpcResult !== 'duplicate') {
+      console.error('[webhook] refund_order_atomic unexpected result:', rpcResult);
+      return NextResponse.json({ ok: false, error: `refund_${rpcResult}` }, { status: 500 });
+    }
+
+    return NextResponse.json({ ok: true, refunded: true, rpc: rpcResult });
+  }
+
+  // 크레딧 지급 전(pending) 주문의 취소/실패는 상태만 정리한다.
+  //  - 명시적 취소(Transaction.Cancelled) → 'cancelled'
+  //  - 기술적 실패(Transaction.Failed)     → 'failed'
+  // (completed → 'cancelled' 으로 잘못 떨어뜨려 크레딧이 남는 일이 없도록 pending 만 대상으로 한다)
+  const newStatus = type === 'Transaction.Cancelled' ? 'cancelled' : 'failed';
   await supabaseAdmin
     .from('orders')
     .update({ status: newStatus })
     .eq('id', orderId)
-    .in('status', ['pending', 'completed']);
+    .eq('status', 'pending');
 
   return NextResponse.json({ ok: true });
 }
