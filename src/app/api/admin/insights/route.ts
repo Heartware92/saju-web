@@ -9,6 +9,7 @@ import { supabaseAdmin } from '@/services/supabaseAdmin';
 import { requireAdmin } from '../_auth';
 import { cached, shouldForce } from '../_cache';
 import { excludedUserIds, excludeUsers, filterExcludedUsers } from '../_excluded';
+import { resolveAudience, includeAudience } from '../_audience';
 
 const CACHE_KEY = 'admin:insights:v1';
 const TTL_SECONDS = 30;
@@ -31,7 +32,7 @@ function lastNMonths(n: number): string[] {
   return out;
 }
 
-async function compute() {
+async function compute(audience: Set<string> | null) {
   const now = Date.now();
   const h1  = new Date(now - 1 * 3600_000).toISOString();
   const h24 = new Date(now - 24 * 3600_000).toISOString();
@@ -53,27 +54,27 @@ async function compute() {
     cohortUsersRes, allSajuRes, allTarotRes, allOrdersRes,
   ] = await Promise.all([
     supabaseAdmin.auth.admin.listUsers({ perPage: 1000 }),
-    excludeUsers(supabaseAdmin.from('saju_records')
+    includeAudience(excludeUsers(supabaseAdmin.from('saju_records')
       .select('user_id, category, credit_type, credit_used, created_at')
       .gte('created_at', d7)
-      .order('created_at', { ascending: false }), ex),
-    excludeUsers(supabaseAdmin.from('tarot_records')
+      .order('created_at', { ascending: false }), ex), audience),
+    includeAudience(excludeUsers(supabaseAdmin.from('tarot_records')
       .select('user_id, spread_type, credit_type, credit_used, created_at')
       .gte('created_at', d7)
-      .order('created_at', { ascending: false }), ex),
-    excludeUsers(supabaseAdmin.from('saju_records').select('user_id, category, credit_used, created_at').gte('created_at', h24), ex),
-    excludeUsers(supabaseAdmin.from('tarot_records').select('user_id, spread_type, credit_used, created_at').gte('created_at', h24), ex),
-    excludeUsers(supabaseAdmin.from('orders')
+      .order('created_at', { ascending: false }), ex), audience),
+    includeAudience(excludeUsers(supabaseAdmin.from('saju_records').select('user_id, category, credit_used, created_at').gte('created_at', h24), ex), audience),
+    includeAudience(excludeUsers(supabaseAdmin.from('tarot_records').select('user_id, spread_type, credit_used, created_at').gte('created_at', h24), ex), audience),
+    includeAudience(excludeUsers(supabaseAdmin.from('orders')
       .select('user_id, status, amount, package_name, created_at')
       .gte('created_at', h24)
-      .order('created_at', { ascending: false }), ex),
-    excludeUsers(supabaseAdmin.from('orders').select('user_id, status, created_at').gte('created_at', d30), ex),
-    excludeUsers(supabaseAdmin.from('user_credits').select('user_id, created_at').gte('created_at', h24), ex),
+      .order('created_at', { ascending: false }), ex), audience),
+    includeAudience(excludeUsers(supabaseAdmin.from('orders').select('user_id, status, created_at').gte('created_at', d30), ex), audience),
+    includeAudience(excludeUsers(supabaseAdmin.from('user_credits').select('user_id, created_at').gte('created_at', h24), ex), audience),
     // 코호트: 90일치 가입자 + 전체 활동
-    excludeUsers(supabaseAdmin.from('user_credits').select('user_id, created_at').gte('created_at', d90), ex),
-    excludeUsers(supabaseAdmin.from('saju_records').select('user_id, created_at').gte('created_at', d90), ex),
-    excludeUsers(supabaseAdmin.from('tarot_records').select('user_id, created_at').gte('created_at', d90), ex),
-    excludeUsers(supabaseAdmin.from('orders').select('user_id, status, amount, created_at').gte('created_at', d90), ex),
+    includeAudience(excludeUsers(supabaseAdmin.from('user_credits').select('user_id, created_at').gte('created_at', d90), ex), audience),
+    includeAudience(excludeUsers(supabaseAdmin.from('saju_records').select('user_id, created_at').gte('created_at', d90), ex), audience),
+    includeAudience(excludeUsers(supabaseAdmin.from('tarot_records').select('user_id, created_at').gte('created_at', d90), ex), audience),
+    includeAudience(excludeUsers(supabaseAdmin.from('orders').select('user_id, status, amount, created_at').gte('created_at', d90), ex), audience),
   ]);
 
   const users = filterExcludedUsers(authListRes.data?.users ?? [], ex);
@@ -299,7 +300,8 @@ export async function GET(request: NextRequest) {
   const auth = await requireAdmin(request);
   if (auth instanceof Response) return auth;
 
-  const data = await cached(CACHE_KEY, compute, {
+  const { cacheSuffix, audience } = await resolveAudience(request);
+  const data = await cached(`${CACHE_KEY}${cacheSuffix}`, () => compute(audience), {
     ttl: TTL_SECONDS,
     force: shouldForce(request),
   });

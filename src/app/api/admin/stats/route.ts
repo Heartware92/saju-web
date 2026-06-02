@@ -7,6 +7,7 @@ import { supabaseAdmin } from '@/services/supabaseAdmin';
 import { requireAdmin } from '../_auth';
 import { cached, shouldForce } from '../_cache';
 import { excludedUserIds, excludeUsers } from '../_excluded';
+import { resolveAudience, includeAudience } from '../_audience';
 
 const STATS_CACHE_KEY = 'admin:stats:v1';
 const STATS_TTL_SECONDS = 30;
@@ -31,7 +32,7 @@ function lastNDays(n: number, tzOffsetMin = 540): string[] {
   return out;
 }
 
-async function computeStats() {
+async function computeStats(audience: Set<string> | null) {
   const now = new Date();
   const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
@@ -61,24 +62,24 @@ async function computeStats() {
     dailySajuRes,
     dailyTarotRes,
   ] = await Promise.all([
-    excludeUsers(supabaseAdmin.from('birth_profiles').select('user_id', { count: 'exact', head: true }).eq('is_primary', true), ex),
-    excludeUsers(supabaseAdmin.from('user_credits').select('user_id', { count: 'exact', head: true }).gte('created_at', todayStart), ex),
-    excludeUsers(supabaseAdmin.from('user_credits').select('user_id', { count: 'exact', head: true }).gte('created_at', monthStart), ex),
-    excludeUsers(supabaseAdmin.from('orders').select('status, amount').not('status', 'eq', 'pending'), ex),
-    excludeUsers(supabaseAdmin.from('orders').select('amount').eq('status', 'completed').gte('created_at', monthStart), ex),
-    excludeUsers(supabaseAdmin.from('orders').select('amount').eq('status', 'completed').gte('created_at', prevMonthStart).lt('created_at', monthStart), ex),
-    excludeUsers(supabaseAdmin.from('saju_records').select('id', { count: 'exact', head: true }), ex),
-    excludeUsers(supabaseAdmin.from('saju_records').select('id', { count: 'exact', head: true }).gte('created_at', todayStart), ex),
-    excludeUsers(supabaseAdmin.from('tarot_records').select('id', { count: 'exact', head: true }), ex),
-    excludeUsers(supabaseAdmin.from('tarot_records').select('id', { count: 'exact', head: true }).gte('created_at', todayStart), ex),
-    excludeUsers(supabaseAdmin.from('user_credits').select('total_moon_purchased, total_moon_consumed, moon_balance'), ex),
-    excludeUsers(supabaseAdmin.from('consultation_records').select('id', { count: 'exact', head: true }), ex),
-    excludeUsers(supabaseAdmin.from('consultation_records').select('id', { count: 'exact', head: true }).gte('created_at', todayStart), ex),
+    includeAudience(excludeUsers(supabaseAdmin.from('birth_profiles').select('user_id', { count: 'exact', head: true }).eq('is_primary', true), ex), audience),
+    includeAudience(excludeUsers(supabaseAdmin.from('user_credits').select('user_id', { count: 'exact', head: true }).gte('created_at', todayStart), ex), audience),
+    includeAudience(excludeUsers(supabaseAdmin.from('user_credits').select('user_id', { count: 'exact', head: true }).gte('created_at', monthStart), ex), audience),
+    includeAudience(excludeUsers(supabaseAdmin.from('orders').select('status, amount').not('status', 'eq', 'pending'), ex), audience),
+    includeAudience(excludeUsers(supabaseAdmin.from('orders').select('amount').eq('status', 'completed').gte('created_at', monthStart), ex), audience),
+    includeAudience(excludeUsers(supabaseAdmin.from('orders').select('amount').eq('status', 'completed').gte('created_at', prevMonthStart).lt('created_at', monthStart), ex), audience),
+    includeAudience(excludeUsers(supabaseAdmin.from('saju_records').select('id', { count: 'exact', head: true }), ex), audience),
+    includeAudience(excludeUsers(supabaseAdmin.from('saju_records').select('id', { count: 'exact', head: true }).gte('created_at', todayStart), ex), audience),
+    includeAudience(excludeUsers(supabaseAdmin.from('tarot_records').select('id', { count: 'exact', head: true }), ex), audience),
+    includeAudience(excludeUsers(supabaseAdmin.from('tarot_records').select('id', { count: 'exact', head: true }).gte('created_at', todayStart), ex), audience),
+    includeAudience(excludeUsers(supabaseAdmin.from('user_credits').select('total_moon_purchased, total_moon_consumed, moon_balance'), ex), audience),
+    includeAudience(excludeUsers(supabaseAdmin.from('consultation_records').select('id', { count: 'exact', head: true }), ex), audience),
+    includeAudience(excludeUsers(supabaseAdmin.from('consultation_records').select('id', { count: 'exact', head: true }).gte('created_at', todayStart), ex), audience),
     // 30일 시계열
-    excludeUsers(supabaseAdmin.from('orders').select('amount, created_at').eq('status', 'completed').gte('created_at', thirtyDaysAgo), ex),
-    excludeUsers(supabaseAdmin.from('user_credits').select('created_at').gte('created_at', thirtyDaysAgo), ex),
-    excludeUsers(supabaseAdmin.from('saju_records').select('created_at').gte('created_at', thirtyDaysAgo), ex),
-    excludeUsers(supabaseAdmin.from('tarot_records').select('created_at').gte('created_at', thirtyDaysAgo), ex),
+    includeAudience(excludeUsers(supabaseAdmin.from('orders').select('amount, created_at').eq('status', 'completed').gte('created_at', thirtyDaysAgo), ex), audience),
+    includeAudience(excludeUsers(supabaseAdmin.from('user_credits').select('created_at').gte('created_at', thirtyDaysAgo), ex), audience),
+    includeAudience(excludeUsers(supabaseAdmin.from('saju_records').select('created_at').gte('created_at', thirtyDaysAgo), ex), audience),
+    includeAudience(excludeUsers(supabaseAdmin.from('tarot_records').select('created_at').gte('created_at', thirtyDaysAgo), ex), audience),
   ]);
 
   const orders = ordersRes.data ?? [];
@@ -169,7 +170,8 @@ export async function GET(request: NextRequest) {
   const auth = await requireAdmin(request);
   if (auth instanceof Response) return auth;
 
-  const stats = await cached(STATS_CACHE_KEY, computeStats, {
+  const { cacheSuffix, audience } = await resolveAudience(request);
+  const stats = await cached(`${STATS_CACHE_KEY}${cacheSuffix}`, () => computeStats(audience), {
     ttl: STATS_TTL_SECONDS,
     force: shouldForce(request),
   });

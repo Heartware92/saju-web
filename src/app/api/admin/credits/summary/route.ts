@@ -7,6 +7,7 @@ import { supabaseAdmin } from '@/services/supabaseAdmin';
 import { requireAdmin } from '../../_auth';
 import { cached, shouldForce } from '../../_cache';
 import { excludedUserIds, excludeUsers } from '../../_excluded';
+import { resolveAudience, includeAudience } from '../../_audience';
 
 const CACHE_KEY = 'admin:credits:summary:v1';
 const TTL_SECONDS = 30;
@@ -101,13 +102,13 @@ function computeDepletion(txns: TxnRow[]) {
   };
 }
 
-async function computeSummary() {
-  // 슈퍼/테스트 계정 제외
+async function computeSummary(audience: Set<string> | null) {
+  // 슈퍼/테스트 계정 제외 + (선택) 오디언스 코호트로 한정
   const ex = await excludedUserIds();
 
   const [creditsRes, txnRes] = await Promise.all([
-    excludeUsers(supabaseAdmin.from('user_credits').select('user_id, moon_balance, total_moon_purchased, total_moon_consumed, updated_at'), ex),
-    excludeUsers(supabaseAdmin.from('credit_transactions').select('user_id, credit_type, type, amount, reason, created_at, order_id').eq('credit_type', 'moon'), ex),
+    includeAudience(excludeUsers(supabaseAdmin.from('user_credits').select('user_id, moon_balance, total_moon_purchased, total_moon_consumed, updated_at'), ex), audience),
+    includeAudience(excludeUsers(supabaseAdmin.from('credit_transactions').select('user_id, credit_type, type, amount, reason, created_at, order_id').eq('credit_type', 'moon'), ex), audience),
   ]);
 
   const credits = creditsRes.data ?? [];
@@ -181,7 +182,8 @@ export async function GET(request: NextRequest) {
   const auth = await requireAdmin(request);
   if (auth instanceof Response) return auth;
 
-  const data = await cached(CACHE_KEY, computeSummary, {
+  const { cacheSuffix, audience } = await resolveAudience(request);
+  const data = await cached(`${CACHE_KEY}${cacheSuffix}`, () => computeSummary(audience), {
     ttl: TTL_SECONDS,
     force: shouldForce(request),
   });

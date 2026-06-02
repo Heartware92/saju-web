@@ -8,6 +8,7 @@ import { requireAdmin } from '../_auth';
 import { cachedEmailMap } from '../_emailMap';
 import { shouldForce } from '../_cache';
 import { excludedUserIds, excludeUsers } from '../_excluded';
+import { audienceUserIds, includeAudience } from '../_audience';
 
 const DEFAULT_PAGE_SIZE = 30;
 const MAX_PAGE_SIZE = 10_000;
@@ -23,28 +24,29 @@ export async function GET(request: NextRequest) {
   const category = searchParams.get('category') ?? '';
   const from = (page - 1) * pageSize;
 
-  // 슈퍼/테스트 계정 제외
+  // 슈퍼/테스트 계정 제외 + (선택) 오디언스 코호트로 한정
   const ex = await excludedUserIds();
+  const audience = await audienceUserIds(request);
 
   let data: any[] = [];
   let count = 0;
 
   if (type === 'tarot') {
-    let q = excludeUsers(supabaseAdmin
+    let q = includeAudience(excludeUsers(supabaseAdmin
       .from('tarot_records')
       .select('id, user_id, spread_type, credit_type, credit_used, created_at', { count: 'exact' })
       .order('created_at', { ascending: false })
-      .range(from, from + pageSize - 1), ex);
+      .range(from, from + pageSize - 1), ex), audience);
     if (category) q = q.eq('spread_type', category);
     const res = await q;
     data = res.data ?? [];
     count = res.count ?? 0;
   } else {
-    let q = excludeUsers(supabaseAdmin
+    let q = includeAudience(excludeUsers(supabaseAdmin
       .from('saju_records')
       .select('id, user_id, category, gender, calendar_type, credit_type, credit_used, profile_name, created_at', { count: 'exact' })
       .order('created_at', { ascending: false })
-      .range(from, from + pageSize - 1), ex);
+      .range(from, from + pageSize - 1), ex), audience);
     if (category) q = q.eq('category', category);
     const res = await q;
     data = res.data ?? [];
@@ -56,8 +58,8 @@ export async function GET(request: NextRequest) {
 
   // 카테고리별 집계 (페이지 무관)
   const [sajuCatRes, tarotCatRes] = await Promise.all([
-    excludeUsers(supabaseAdmin.from('saju_records').select('category'), ex),
-    excludeUsers(supabaseAdmin.from('tarot_records').select('spread_type'), ex),
+    includeAudience(excludeUsers(supabaseAdmin.from('saju_records').select('category'), ex), audience),
+    includeAudience(excludeUsers(supabaseAdmin.from('tarot_records').select('spread_type'), ex), audience),
   ]);
 
   const sajuCategories = countBy(sajuCatRes.data ?? [], 'category');

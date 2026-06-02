@@ -8,6 +8,7 @@ import { requireAdmin } from '../_auth';
 import { cachedEmailMap } from '../_emailMap';
 import { shouldForce } from '../_cache';
 import { excludedUserIds, excludeUsers } from '../_excluded';
+import { audienceUserIds, includeAudience } from '../_audience';
 
 const PAGE_SIZE = 30;
 const MAX_PAGE_SIZE = 10_000;
@@ -22,14 +23,15 @@ export async function GET(request: NextRequest) {
   const search = searchParams.get('search') ?? '';
   const from = (page - 1) * pageSize;
 
-  // 슈퍼/테스트 계정 제외
+  // 슈퍼/테스트 계정 제외 + (선택) 오디언스 코호트로 한정
   const ex = await excludedUserIds();
+  const audience = await audienceUserIds(request);
 
-  let q = excludeUsers(supabaseAdmin
+  let q = includeAudience(excludeUsers(supabaseAdmin
     .from('consultation_records')
     .select('id, user_id, profile_id, profile_name, conversation_id, title, message_count, last_message_at, created_at, updated_at', { count: 'exact' })
     .order('updated_at', { ascending: false })
-    .range(from, from + pageSize - 1), ex);
+    .range(from, from + pageSize - 1), ex), audience);
 
   if (search) {
     q = q.or(`title.ilike.%${search}%,profile_name.ilike.%${search}%`);
@@ -44,9 +46,9 @@ export async function GET(request: NextRequest) {
   const records = data ?? [];
   const emailMap = await cachedEmailMap({ force: shouldForce(request) });
 
-  const totalRes = await excludeUsers(supabaseAdmin
+  const totalRes = await includeAudience(excludeUsers(supabaseAdmin
     .from('consultation_records')
-    .select('id', { count: 'exact', head: true }), ex);
+    .select('id', { count: 'exact', head: true }), ex), audience);
 
   return NextResponse.json({
     records: records.map(r => ({

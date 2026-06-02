@@ -280,11 +280,11 @@ export default function AdminPage() {
     if (!token) return;
     setLoading(true);
     try {
-      const data = await adminFetch<Stats>('/api/admin/stats', force);
+      const data = await adminFetch<Stats>(`/api/admin/stats${audQS ? `?${audQS}` : ''}`, force);
       if (data) setStats(data);
     } catch (e: any) { setError(e.message); }
     finally { setLoading(false); }
-  }, [token, adminFetch]);
+  }, [token, adminFetch, audQS]);
 
   const fetchMemberSummary = useCallback(async (force = false) => {
     if (!token) return;
@@ -362,11 +362,11 @@ export default function AdminPage() {
     if (!token) return;
     setLoading(true);
     try {
-      const data = await adminFetch<CreditsSummary>('/api/admin/credits/summary', force);
+      const data = await adminFetch<CreditsSummary>(`/api/admin/credits/summary${audQS ? `?${audQS}` : ''}`, force);
       if (data) setCreditsSummary(data);
     } catch (e: any) { setError(e.message); }
     finally { setLoading(false); }
-  }, [token, adminFetch]);
+  }, [token, adminFetch, audQS]);
 
   const fetchOpsSummary = useCallback(async (force = false) => {
     if (!token) return;
@@ -393,11 +393,11 @@ export default function AdminPage() {
     if (!token) return;
     setLoading(true);
     try {
-      const data = await adminFetch<Insights>('/api/admin/insights', force);
+      const data = await adminFetch<Insights>(`/api/admin/insights${audQS ? `?${audQS}` : ''}`, force);
       if (data) setInsights(data);
     } catch (e: any) { setError(e.message); }
     finally { setLoading(false); }
-  }, [token, adminFetch]);
+  }, [token, adminFetch, audQS]);
 
   const fetchAnalytics = useCallback(async (force = false) => {
     if (!token) return;
@@ -414,11 +414,11 @@ export default function AdminPage() {
     setLoading(true);
     try {
       const params = new URLSearchParams({ page: String(consultPage), search: consultSearch });
-      const data = await adminFetch<{ records: ConsultationRecord[]; total: number; grandTotal: number }>(`/api/admin/consultations?${params}`, force);
+      const data = await adminFetch<{ records: ConsultationRecord[]; total: number; grandTotal: number }>(`/api/admin/consultations?${params}${audQS ? `&${audQS}` : ''}`, force);
       if (data) { setConsultations(data.records); setConsultTotal(data.total); }
     } catch (e: any) { setError(e.message); }
     finally { setLoading(false); }
-  }, [token, adminFetch, consultPage, consultSearch]);
+  }, [token, adminFetch, consultPage, consultSearch, audQS]);
 
   const fetchConsultDetail = useCallback(async (id: string) => {
     if (!token) return;
@@ -435,11 +435,11 @@ export default function AdminPage() {
     setLoading(true);
     try {
       const params = new URLSearchParams({ page: String(recordPage), type: recordType, category: recordCategory });
-      const data = await adminFetch<{ records: UsageRecord[]; total: number; categorySummary: Record<string, number> }>(`/api/admin/records?${params}`, force);
+      const data = await adminFetch<{ records: UsageRecord[]; total: number; categorySummary: Record<string, number> }>(`/api/admin/records?${params}${audQS ? `&${audQS}` : ''}`, force);
       if (data) { setRecords(data.records); setRecordTotal(data.total); setCategorySummary(data.categorySummary ?? {}); }
     } catch (e: any) { setError(e.message); }
     finally { setLoading(false); }
-  }, [token, adminFetch, recordPage, recordType, recordCategory]);
+  }, [token, adminFetch, recordPage, recordType, recordCategory, audQS]);
 
   // ── 탭 진입 시: 이미 state 에 데이터 있으면 스킵, 없으면 fetch
   useEffect(() => { if (tab === 'overview' && !stats) fetchStats(); }, [tab, stats, fetchStats]);
@@ -712,8 +712,8 @@ export default function AdminPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [audQS]);
 
-  // 오디언스 필터를 지원하는 탭 (Phase 1: 유입·매출·이용)
-  const AUDIENCE_TABS = new Set<Tab>(['analytics', 'orders', 'usage']);
+  // 오디언스(코호트) 필터를 지원하는 탭 — 현황·매출·크레딧·이용·기록·상담·분석·인사이트
+  const AUDIENCE_TABS = new Set<Tab>(['overview', 'orders', 'credits', 'usage', 'records', 'consultations', 'analytics', 'insights']);
 
   return (
     <div className="min-h-screen bg-[#0a0614] text-text-primary">
