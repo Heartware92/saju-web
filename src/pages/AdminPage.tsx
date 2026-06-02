@@ -276,6 +276,23 @@ export default function AdminPage() {
     return p.toString();
   }, [audFilter]);
 
+  // 오디언스 필터가 바뀌면 오디언스 적용 탭들의 캐시를 모두 비운다(최초 렌더 1회는 스킵).
+  // → 현재 탭은 진입 useEffect가 즉시 재조회, 다른 탭은 재진입 시 재조회되어 이전(미필터) 데이터 잔존 방지.
+  // ※ 반드시 로그인 게이트(early return) 위에 둔다 — 조건부 훅 호출 방지(React #310).
+  const audFirstRun = useRef(true);
+  useEffect(() => {
+    if (audFirstRun.current) { audFirstRun.current = false; return; }
+    setStats(null);
+    setOrdersSummary(null);
+    setUsageSummary(null);
+    setCreditsSummary(null);
+    setInsights(null);
+    setAnalytics(null);
+    setOrders([]);
+    setRecords([]);
+    setConsultations([]);
+  }, [audQS]);
+
   const fetchStats = useCallback(async (force = false) => {
     if (!token) return;
     setLoading(true);
@@ -719,23 +736,6 @@ export default function AdminPage() {
     else if (tab === 'analytics') fetchAnalytics(true);
     else fetchRecords(true);
   };
-
-  // 오디언스 필터가 바뀌면 오디언스 적용 탭들의 캐시를 모두 비운다(최초 렌더 1회는 스킵).
-  // → 현재 탭은 해당 탭의 진입 useEffect가 즉시 재조회하고, 다른 탭은 재진입 시 재조회되어
-  //    이전(미필터) 데이터가 남는 문제를 막는다.
-  const audFirstRun = useRef(true);
-  useEffect(() => {
-    if (audFirstRun.current) { audFirstRun.current = false; return; }
-    setStats(null);
-    setOrdersSummary(null);
-    setUsageSummary(null);
-    setCreditsSummary(null);
-    setInsights(null);
-    setAnalytics(null);
-    setOrders([]);
-    setRecords([]);
-    setConsultations([]);
-  }, [audQS]);
 
   // 오디언스(코호트) 필터를 지원하는 탭 — 현황·매출·크레딧·이용·기록·상담·분석·인사이트
   const AUDIENCE_TABS = new Set<Tab>(['overview', 'orders', 'credits', 'usage', 'records', 'consultations', 'analytics', 'insights']);
