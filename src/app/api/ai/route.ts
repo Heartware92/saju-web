@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { callAI } from '@/lib/ai/aiClients';
+import { checkRateLimit, clientIp } from '@/services/rateLimitGeneric';
 
 // Vercel Pro 플랜 maxDuration 한도 활용 — 300s 무료
 // 정통사주 2차(8섹션 동시) + Gemini stall + retry + OpenAI 폴백 모두 수용
@@ -9,6 +10,15 @@ export const maxDuration = 300;
 // 백그라운드 잡 처리기는 이 route 를 거치지 않고 callAI() 를 직접 import 해서 호출.
 export async function POST(request: NextRequest) {
   try {
+    // 어뷰징 방어 — 무인증·무차감 LLM 엔드포인트. IP 기준 관대한 레이트리밋(fail-open).
+    const rate = await checkRateLimit(`ai:ip:${clientIp(request)}`, [
+      { windowSec: 60, max: 30 },
+      { windowSec: 3600, max: 300 },
+    ]);
+    if (!rate.ok) {
+      return NextResponse.json({ error: rate.message }, { status: 429 });
+    }
+
     const { prompt, maxTokens = 1000, systemPrompt, temperature = 0.4, jsonMode = false } =
       await request.json();
 

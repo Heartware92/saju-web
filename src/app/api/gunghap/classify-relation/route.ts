@@ -16,6 +16,7 @@ import {
   buildRelationClassifyPrompt,
   type RelationClassification,
 } from '@/constants/prompts';
+import { checkRateLimit, clientIp } from '@/services/rateLimitGeneric';
 
 const MAX_LABEL_LEN = 40;
 
@@ -86,6 +87,16 @@ export async function POST(req: NextRequest) {
   }
   if (label.length > MAX_LABEL_LEN) {
     return NextResponse.json({ error: 'LABEL_TOO_LONG' }, { status: 400 });
+  }
+
+  // 어뷰징 방어 — 무인증 LLM 엔드포인트. IP 기준 관대한 레이트리밋(fail-open).
+  // 한도 초과 시 429 → 클라이언트는 키워드 매칭으로 폴백(graceful degradation).
+  const rate = await checkRateLimit(`gunghap-classify:ip:${clientIp(req)}`, [
+    { windowSec: 60, max: 10 },
+    { windowSec: 3600, max: 60 },
+  ]);
+  if (!rate.ok) {
+    return NextResponse.json({ error: rate.message }, { status: 429 });
   }
 
   try {
