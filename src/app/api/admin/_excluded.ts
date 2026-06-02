@@ -15,6 +15,7 @@
  */
 import { cached, type CachedOptions } from './_cache';
 import { cachedEmailMap } from './_emailMap';
+import { supabaseAdmin } from '@/services/supabaseAdmin';
 
 /** 코드 기본 제외 계정 */
 const DEFAULT_EXCLUDED_EMAILS = ['test@test.com'];
@@ -30,26 +31,35 @@ function configuredEmails(): Set<string> {
 export const EXCLUDED_IDS_CACHE_KEY = 'admin:excluded-ids:v1';
 const TTL_SECONDS = 30;
 
-/** 제외 대상 user_id 집합 (이메일 → id 해석, 30초 캐시). 못 찾으면 빈 집합. */
+/**
+ * 제외 대상 user_id 집합 = (env/기본 이메일 → id) ∪ (admin_excluded_users 테이블, UI 토글).
+ * 30초 캐시. 토글 시 invalidate(EXCLUDED_IDS_CACHE_KEY) 로 즉시 갱신.
+ * 해석 실패해도 집계는 동작해야 하므로 빈 집합으로 degrade.
+ */
 export async function excludedUserIds(opts?: CachedOptions): Promise<Set<string>> {
-  const emails = configuredEmails();
-  if (emails.size === 0) return new Set();
   try {
     const ids = await cached<string[]>(
       EXCLUDED_IDS_CACHE_KEY,
       async () => {
-        const map = await cachedEmailMap(opts); // Map<id, email>
-        const out: string[] = [];
-        for (const [id, email] of map) {
-          if (email && emails.has(email.toLowerCase())) out.push(id);
+        const out = new Set<string>();
+        // 1) env/기본 이메일 → user_id
+        const emails = configuredEmails();
+        if (emails.size > 0) {
+          const map = await cachedEmailMap(opts); // Map<id, email>
+          for (const [id, email] of map) {
+            if (email && emails.has(email.toLowerCase())) out.add(id);
+          }
         }
-        return out;
+        // 2) DB 토글(admin_excluded_users)
+        const { data, error } = await supabaseAdmin.from('admin_excluded_users').select('user_id');
+        if (error) console.error('[admin/_excluded] DB 제외목록 조회 실패(무시):', error.message);
+        for (const r of data ?? []) if (r.user_id) out.add(r.user_id as string);
+        return [...out];
       },
       { ttl: TTL_SECONDS, ...opts },
     );
     return new Set(ids);
   } catch (e) {
-    // 해석 실패 시 제외 못 하더라도 집계 자체는 동작해야 함(가용성 우선)
     console.error('[admin/_excluded] user_id 해석 실패 — 제외 미적용:', e);
     return new Set();
   }

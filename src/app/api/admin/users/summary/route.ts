@@ -14,7 +14,8 @@ export async function GET(request: NextRequest) {
   if (auth instanceof Response) return auth;
 
   const bundle = await cachedLoadAdminBundle({ force: shouldForce(request) });
-  const users = aggregateUsers(bundle);
+  // 분석 제외 계정은 회원 KPI/인구통계 집계에서 빼고, 회원 목록 라우트에서만 보인다.
+  const users = aggregateUsers(bundle).filter(u => !u.analyticsExcluded);
   const now = Date.now();
 
   // ── 성별 분포 ─────────────────────────────

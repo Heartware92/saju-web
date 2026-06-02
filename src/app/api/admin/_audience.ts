@@ -72,7 +72,8 @@ export async function audienceUserIds(req: NextRequest): Promise<Set<string> | n
   if (!hasAudienceFilter(f)) return null;
 
   const bundle = await cachedLoadAdminBundle({ force: shouldForce(req) });
-  let users = aggregateUsers(bundle);
+  // 분석 제외 계정은 코호트에서 제외(집계 라우트의 excludeUsers 와 이중 안전)
+  let users = aggregateUsers(bundle).filter(u => !u.analyticsExcluded);
 
   if (f.gender) users = users.filter((u) => u.gender === f.gender);
   if (f.ageBucket) {

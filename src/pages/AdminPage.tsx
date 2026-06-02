@@ -331,6 +331,28 @@ export default function AdminPage() {
     finally { setLoading(false); }
   }, [token, adminFetch, memberPage, memberSearch, memberGender, memberAgeBucket, memberSegment, memberProvider, memberSort, memberOrder]);
 
+  // 분석 제외 토글 — 낙관적 갱신 후 서버 반영. 실패 시 롤백. 성공 시 회원 KPI 재조회(집계 변동).
+  const handleToggleExclude = useCallback(async (id: string, excluded: boolean) => {
+    if (!token) return;
+    setMembers(prev => prev.map(m => m.id === id ? { ...m, analyticsExcluded: excluded } : m));
+    try {
+      const res = await fetch(`/api/admin/users/${id}/exclude`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-admin-key': token },
+        body: JSON.stringify({ excluded }),
+      });
+      if (!res.ok) {
+        const j = await res.json().catch(() => ({}));
+        throw new Error(j.error ?? '제외 토글 실패');
+      }
+      // 집계가 바뀌므로 회원 요약 갱신(다른 분석 탭은 재진입 시 30초 캐시 후 반영)
+      fetchMemberSummary(true);
+    } catch (e: any) {
+      setMembers(prev => prev.map(m => m.id === id ? { ...m, analyticsExcluded: !excluded } : m));
+      setError(e.message);
+    }
+  }, [token, fetchMemberSummary]);
+
   const fetchDeletedMembers = useCallback(async (force = false) => {
     if (!token) return;
     setLoading(true);
@@ -1005,6 +1027,7 @@ export default function AdminPage() {
                         return next;
                       });
                     }}
+                    onToggleExclude={handleToggleExclude}
                   />
                   <Pagination page={memberPage} total={memberTotal} pageSize={20} onChange={setMemberPage} />
                 </div>

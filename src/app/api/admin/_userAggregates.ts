@@ -13,7 +13,7 @@ import {
   bucketizeAge, type AgeBucketKey, type UserSegment,
 } from '@/constants/adminLabels';
 import { cached, type CachedOptions } from './_cache';
-import { excludedUserIds, filterExcludedUsers } from './_excluded';
+import { excludedUserIds } from './_excluded';
 
 /** loadAdminBundle 캐시 키 — 전역 단일 (어드민 전체 집계는 한 덩어리) */
 export const ADMIN_BUNDLE_CACHE_KEY = 'admin:bundle:v1';
@@ -48,10 +48,13 @@ export interface AggregatedUser {
   // 세그먼트
   segments: UserSegment[];
   daysSinceLastActivity: number | null;
+  // 분석 제외 여부 (env ∪ DB 토글) — 회원목록엔 표시하되 모든 분석 집계에선 빠짐
+  analyticsExcluded: boolean;
 }
 
 export interface RawBundle {
-  users: any[];                    // auth.users
+  users: any[];                    // auth.users (제외 계정 포함 — 플래그로만 구분)
+  excludedIds: Set<string>;        // 분석 제외 계정 user_id (env ∪ DB 토글)
   profiles: any[];                 // birth_profiles (primary + non-primary 모두)
   credits: Map<string, any>;
   ordersByUser: Map<string, any[]>; // completed만
@@ -77,15 +80,15 @@ export async function cachedLoadAdminBundle(opts?: CachedOptions): Promise<RawBu
 export async function loadAdminBundle(): Promise<RawBundle> {
   // auth.users — Supabase는 서버사이드 email 검색을 직접 지원하지 않아 전체 가져와 메모리 필터
   const { data: authList } = await supabaseAdmin.auth.admin.listUsers({ perPage: 1000 });
-  // 슈퍼/테스트 계정 제외 — 여기서 걸러내면 회원 목록·인구통계·세그먼트·LTV 등
-  // 이 번들을 쓰는 모든 라우트(users, users/summary, users/[id])에 일괄 반영된다.
+  // 분석 제외 계정도 회원목록엔 표시(체크 토글용)하므로 여기서 거르지 않고 플래그만 단다.
+  // 실제 제외는 분석 소비처(users/summary·_audience)와 집계 라우트(excludeUsers)에서 적용된다.
   const excluded = await excludedUserIds();
-  const users = filterExcludedUsers(authList?.users ?? [], excluded);
+  const users = authList?.users ?? [];
 
   const userIds = users.map(u => u.id);
   if (userIds.length === 0) {
     return {
-      users: [], profiles: [],
+      users: [], excludedIds: excluded, profiles: [],
       credits: new Map(), ordersByUser: new Map(),
       sajuCountByUser: new Map(), sajuLastAtByUser: new Map(),
       tarotCountByUser: new Map(), tarotLastAtByUser: new Map(),
@@ -140,7 +143,7 @@ export async function loadAdminBundle(): Promise<RawBundle> {
   }
 
   return {
-    users, profiles,
+    users, excludedIds: excluded, profiles,
     credits, ordersByUser,
     sajuCountByUser, sajuLastAtByUser,
     tarotCountByUser, tarotLastAtByUser,
@@ -234,6 +237,7 @@ export function aggregateUsers(bundle: RawBundle): AggregatedUser[] {
       lastAnalysisAt,
       segments,
       daysSinceLastActivity: lastActivity ? Math.floor(daysSinceAct) : null,
+      analyticsExcluded: bundle.excludedIds.has(u.id),
     };
   });
 }

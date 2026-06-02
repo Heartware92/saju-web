@@ -30,6 +30,7 @@ export interface MemberRow {
   lastAnalysisAt: string | null;
   segments: UserSegment[];
   daysSinceLastActivity: number | null;
+  analyticsExcluded?: boolean;
 }
 
 type SortKey = 'joined' | 'lastSeen' | 'totalSpent' | 'analysisCount' | 'orderCount';
@@ -44,6 +45,8 @@ interface Props {
   selectedIds?: Set<string>;
   onToggleSelect?: (id: string) => void;
   onToggleAll?: () => void;
+  /** 분석 제외 토글 — 제공 시 "분석 제외" 체크박스 열 노출 */
+  onToggleExclude?: (id: string, excluded: boolean) => void;
 }
 
 const fmt = (n: number) => n.toLocaleString('ko-KR');
@@ -52,7 +55,7 @@ const fmtDate = (s: string | null) => s
   ? new Date(s).toLocaleDateString('ko-KR', { year: '2-digit', month: '2-digit', day: '2-digit' })
   : '-';
 
-export function MembersTable({ rows, loading, sort, order, onSortChange, onRowClick, selectedIds, onToggleSelect, onToggleAll }: Props) {
+export function MembersTable({ rows, loading, sort, order, onSortChange, onRowClick, selectedIds, onToggleSelect, onToggleAll, onToggleExclude }: Props) {
   const toggleSort = (key: SortKey) => {
     if (sort === key) onSortChange(key, order === 'asc' ? 'desc' : 'asc');
     else onSortChange(key, 'desc');
@@ -86,6 +89,7 @@ export function MembersTable({ rows, loading, sort, order, onSortChange, onRowCl
             <Th sortable active={sort === 'orderCount'} order={order} onClick={() => toggleSort('orderCount')}>주문</Th>
             <Th sortable active={sort === 'analysisCount'} order={order} onClick={() => toggleSort('analysisCount')}>분석</Th>
             <Th>세그먼트</Th>
+            {onToggleExclude && <Th>분석 제외</Th>}
           </tr>
         </thead>
         <tbody>
@@ -93,7 +97,7 @@ export function MembersTable({ rows, loading, sort, order, onSortChange, onRowCl
             <tr
               key={u.id}
               onClick={() => onRowClick(u.id)}
-              className={`border-b border-white/5 hover:bg-white/5 transition-colors cursor-pointer ${selectedIds?.has(u.id) ? 'bg-cta/5' : ''}`}
+              className={`border-b border-white/5 hover:bg-white/5 transition-colors cursor-pointer ${selectedIds?.has(u.id) ? 'bg-cta/5' : ''} ${u.analyticsExcluded ? 'opacity-50' : ''}`}
             >
               {showCheckbox && (
                 <td className="px-3 py-2.5 w-[36px]" onClick={e => e.stopPropagation()}>
@@ -165,10 +169,22 @@ export function MembersTable({ rows, loading, sort, order, onSortChange, onRowCl
                   ))}
                 </div>
               </td>
+
+              {onToggleExclude && (
+                <td className="px-3 py-2.5 text-center" onClick={e => e.stopPropagation()}>
+                  <input
+                    type="checkbox"
+                    checked={!!u.analyticsExcluded}
+                    onChange={() => onToggleExclude(u.id, !u.analyticsExcluded)}
+                    className="accent-amber-500 cursor-pointer w-4 h-4 align-middle"
+                    title="체크 시 이 계정을 모든 어드민 분석 집계에서 제외(회원 목록엔 계속 표시)"
+                  />
+                </td>
+              )}
             </tr>
           ))}
           {rows.length === 0 && !loading && (
-            <tr><td colSpan={10} className="px-3 py-8 text-center text-text-tertiary">데이터 없음</td></tr>
+            <tr><td colSpan={12} className="px-3 py-8 text-center text-text-tertiary">데이터 없음</td></tr>
           )}
         </tbody>
       </table>
