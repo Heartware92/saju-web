@@ -6,7 +6,8 @@
 import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/services/supabaseAdmin';
 
-export const revalidate = 30;
+// 결제 채널은 어드민에서 전환 시 즉시 반영돼야 하므로 정적 프리렌더/캐시 금지 (항상 라이브 DB 조회)
+export const dynamic = 'force-dynamic';
 
 export async function GET() {
   try {
@@ -21,7 +22,7 @@ export async function GET() {
     if (error || !data) {
       return NextResponse.json(
         { activeChannel: 'tosspayments', channelKey: fallbackKey, source: 'env-fallback' },
-        { headers: { 'Cache-Control': 'public, max-age=30, stale-while-revalidate=60' } },
+        { headers: { 'Cache-Control': 'no-store' } },
       );
     }
 
