@@ -258,8 +258,9 @@ function InputForm({
   const [hobbyCustomOpen, setHobbyCustomOpen] = useState(false);
 
   // 직업·연애 상태는 프로필에서 받아 props 로 주입 — 폼 내부 state 제거
-  const effectiveJobState = (profileCustomJobState && profileCustomJobState.trim()) || profileJobState || '직장인';
-  const effectiveLoveState = (profileCustomLoveState && profileCustomLoveState.trim()) || profileLoveState || '연애 중';
+  // 직업·연애 미선택(null)이면 강제로 '직장인'/'연애 중'을 지어내지 않고 중립값(기타/공개 안 함)으로 풀이.
+  const effectiveJobState = (profileCustomJobState && profileCustomJobState.trim()) || profileJobState || '기타';
+  const effectiveLoveState = (profileCustomLoveState && profileCustomLoveState.trim()) || profileLoveState || '공개 안 함';
 
   // Progressive disclosure — 취미만 단계 의미. 직업·연애는 프로필 데이터라 자동 done
   const hobbyDone = hobbies.length > 0 || customHobby.trim().length > 0;
@@ -318,9 +319,9 @@ function InputForm({
       hobbies,
       customHobby: customHobby.trim() || undefined,
       // 프로필에 저장된 직업·연애 상태를 사용. 사용자가 매번 선택할 필요 없음.
-      jobState: (profileJobState || '직장인') as TodayJobState,
+      jobState: (profileJobState || '기타') as TodayJobState,
       customJobState: (profileCustomJobState && profileCustomJobState.trim()) || undefined,
-      loveState: (profileLoveState || '연애 중') as TodayLoveState,
+      loveState: (profileLoveState || '공개 안 함') as TodayLoveState,
       customLoveState: (profileCustomLoveState && profileCustomLoveState.trim()) || undefined,
       timeSlot: initialSlot,
       q1Text: q1.q,
@@ -848,9 +849,9 @@ export default function TodayFortunePage() {
         </div>
         <InputForm
           initialSlot={initialSlot}
-          profileJobState={targetProfile?.job_state || '직장인'}
+          profileJobState={targetProfile?.job_state || '기타'}
           profileCustomJobState={targetProfile?.custom_job_state ?? null}
-          profileLoveState={targetProfile?.love_state || '연애 중'}
+          profileLoveState={targetProfile?.love_state || '공개 안 함'}
           profileCustomLoveState={targetProfile?.custom_love_state ?? null}
           onSubmit={handleSubmitForm}
         />

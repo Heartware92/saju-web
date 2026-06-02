@@ -80,7 +80,7 @@ export default function SajuInputPage() {
     memo: '',
   })
   // 직업·연애 상태 — 새 프로필 추가 시 칩 미선택 상태로 시작.
-  // 사용자가 명시적으로 고르지 않으면 저장 시 DB DEFAULT('직장인'/'연애 중') 으로 fallback.
+  // 미선택이면 저장 시 null 로 들어감 (둘 다 선택 필수 아님. DB nullable — migration 040).
   const [jobState, setJobState] = useState('')
   const [customJobState, setCustomJobState] = useState('')
   const [loveState, setLoveState] = useState('')

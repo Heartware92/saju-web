@@ -56,7 +56,7 @@ export function JobLoveStateInput({
                 key={s}
                 type="button"
                 onClick={() => {
-                  // 이미 선택된 칩을 다시 클릭하면 선택 해제 (저장 시 DB DEFAULT '직장인' 으로 채워짐)
+                  // 이미 선택된 칩을 다시 클릭하면 선택 해제 (미선택 = null 저장. 직업 상태는 선택 필수 아님)
                   onJobStateChange(on ? '' : s);
                   onCustomJobStateChange('');
                   setJobCustomOpen(false);
@@ -80,8 +80,9 @@ export function JobLoveStateInput({
                 if (next) {
                   onJobStateChange('');
                 } else {
+                  // 직접 입력 닫으면 미선택 상태로 복귀 (강제 디폴트 금지 — 직업 상태 선택 필수 아님)
                   onCustomJobStateChange('');
-                  onJobStateChange('직장인');
+                  onJobStateChange('');
                 }
                 return next;
               });
@@ -121,7 +122,7 @@ export function JobLoveStateInput({
                 key={s}
                 type="button"
                 onClick={() => {
-                  // 이미 선택된 칩을 다시 클릭하면 선택 해제 (저장 시 DB DEFAULT '연애 중' 으로 채워짐)
+                  // 이미 선택된 칩을 다시 클릭하면 선택 해제 (미선택 = null 저장. 연애 상태는 선택 필수 아님)
                   onLoveStateChange(on ? '' : s);
                   onCustomLoveStateChange('');
                   setLoveCustomOpen(false);
@@ -145,8 +146,9 @@ export function JobLoveStateInput({
                 if (next) {
                   onLoveStateChange('');
                 } else {
+                  // 직접 입력 닫으면 미선택 상태로 복귀 (강제 디폴트 금지 — 연애 상태 선택 필수 아님)
                   onCustomLoveStateChange('');
-                  onLoveStateChange('연애 중');
+                  onLoveStateChange('');
                 }
                 return next;
               });
