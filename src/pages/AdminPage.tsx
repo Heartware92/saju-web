@@ -645,7 +645,7 @@ export default function AdminPage() {
     setExporting(true);
     try {
       const params = new URLSearchParams({ page: '1', pageSize: '10000', status: orderStatus, search: orderSearch });
-      const res = await fetch(`/api/admin/orders?${params}`, { headers: { 'x-admin-key': token ?? '' } });
+      const res = await fetch(`/api/admin/orders?${params}${audQS ? `&${audQS}` : ''}`, { headers: { 'x-admin-key': token ?? '' } });
       const json = await res.json();
       if (!res.ok) throw new Error(json.error ?? '실패');
       const rows = (json.orders as Order[]).map(o => [
@@ -669,7 +669,7 @@ export default function AdminPage() {
     setExporting(true);
     try {
       const params = new URLSearchParams({ page: '1', pageSize: '10000', type: recordType, category: recordCategory });
-      const res = await fetch(`/api/admin/records?${params}`, { headers: { 'x-admin-key': token ?? '' } });
+      const res = await fetch(`/api/admin/records?${params}${audQS ? `&${audQS}` : ''}`, { headers: { 'x-admin-key': token ?? '' } });
       const json = await res.json();
       if (!res.ok) throw new Error(json.error ?? '실패');
       const rows = (json.records as UsageRecord[]).map(r => [
@@ -681,6 +681,24 @@ export default function AdminPage() {
       ]);
       const csv = toCsv(['이메일', '서비스', '달 소비량', '일시'], rows);
       downloadCsv(`${recordType}-records-${timestampSuffix()}.csv`, csv);
+    } catch (e: any) { setError(e.message); }
+    finally { setExporting(false); }
+  };
+
+  const exportConsultationsCsv = async () => {
+    if (!token) return;
+    setExporting(true);
+    try {
+      const params = new URLSearchParams({ page: '1', pageSize: '10000', search: consultSearch });
+      const res = await fetch(`/api/admin/consultations?${params}${audQS ? `&${audQS}` : ''}`, { headers: { 'x-admin-key': token ?? '' } });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error ?? '실패');
+      const rows = (json.records as ConsultationRecord[]).map(c => [
+        c.userEmail, c.profile_name ?? '', c.title ?? '',
+        c.message_count, c.last_message_at ?? '', c.created_at,
+      ]);
+      const csv = toCsv(['이메일', '프로필', '대화 제목', '메시지 수', '마지막 메시지', '생성일'], rows);
+      downloadCsv(`consultations-${timestampSuffix()}.csv`, csv);
     } catch (e: any) { setError(e.message); }
     finally { setExporting(false); }
   };
@@ -702,14 +720,21 @@ export default function AdminPage() {
     else fetchRecords(true);
   };
 
-  // 오디언스 필터가 바뀌면 현재 탭을 강제 재조회 (최초 렌더 1회는 스킵)
-  const refreshRef = useRef(refreshCurrentTab);
-  refreshRef.current = refreshCurrentTab;
+  // 오디언스 필터가 바뀌면 오디언스 적용 탭들의 캐시를 모두 비운다(최초 렌더 1회는 스킵).
+  // → 현재 탭은 해당 탭의 진입 useEffect가 즉시 재조회하고, 다른 탭은 재진입 시 재조회되어
+  //    이전(미필터) 데이터가 남는 문제를 막는다.
   const audFirstRun = useRef(true);
   useEffect(() => {
     if (audFirstRun.current) { audFirstRun.current = false; return; }
-    if (token) refreshRef.current();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    setStats(null);
+    setOrdersSummary(null);
+    setUsageSummary(null);
+    setCreditsSummary(null);
+    setInsights(null);
+    setAnalytics(null);
+    setOrders([]);
+    setRecords([]);
+    setConsultations([]);
   }, [audQS]);
 
   // 오디언스(코호트) 필터를 지원하는 탭 — 현황·매출·크레딧·이용·기록·상담·분석·인사이트
@@ -726,7 +751,7 @@ export default function AdminPage() {
         <div className="flex items-center gap-2">
           {(tab === 'members' || tab === 'orders' || tab === 'records' || tab === 'consultations') && (
             <button
-              onClick={tab === 'members' ? exportMembersCsv : tab === 'orders' ? exportOrdersCsv : tab === 'consultations' ? exportRecordsCsv : exportRecordsCsv}
+              onClick={tab === 'members' ? exportMembersCsv : tab === 'orders' ? exportOrdersCsv : tab === 'consultations' ? exportConsultationsCsv : exportRecordsCsv}
               disabled={exporting}
               className="text-[13px] text-text-secondary hover:text-text-primary border border-white/15 hover:border-white/30 px-3 py-1.5 rounded-lg transition-all disabled:opacity-40"
             >

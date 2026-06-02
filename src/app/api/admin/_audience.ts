@@ -14,8 +14,13 @@
  * 한계: analytics_events 는 비로그인 페이지뷰의 user_id 가 null 이라, 인구통계 필터를 걸면
  *       로그인 상태 트래픽만 잡힌다(익명 방문은 나이/성별 식별 불가 — 불가피). UI 에 명시.
  *
- * 규모 주의: 현재는 user_id 집합을 .in() 으로 거는 단순 방식. 회원 수가 수만 이상이 되면
- *           join/RPC 기반으로 전환 필요(지금 규모엔 충분).
+ * 규모 주의:
+ *  1) 모집단 절단: 오디언스는 _userAggregates 번들에서 유도되는데, 그 번들의
+ *     auth.admin.listUsers 가 perPage 1000 단일 페이지라 회원이 1000명을 넘으면
+ *     1001번째부터 코호트에서 무성 누락된다(코호트 필터가 "앞 1000명"으로 조용히 좁혀짐).
+ *     회원 1000 접근 시 listUsers 페이지네이션 + truncated 경고 도입 필요.
+ *  2) .in() 크기: user_id 집합을 .in() 으로 거는 단순 방식이라 코호트가 수천 명이면
+ *     쿼리가 비대해진다. 그 규모에선 join/RPC 기반으로 전환 필요(지금 규모엔 충분).
  */
 import type { NextRequest } from 'next/server';
 import { cachedLoadAdminBundle, aggregateUsers } from './_userAggregates';
