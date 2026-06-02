@@ -52,6 +52,28 @@ export async function GET(request: NextRequest) {
     );
   }
 
+  // 첨부 사진(비공개 버킷) → 서명 URL 생성. 어드민만 열람(service_role). 10분 유효.
+  const allPaths = result.flatMap((r) =>
+    Array.isArray((r as { attachments?: unknown }).attachments)
+      ? ((r as { attachments: unknown[] }).attachments.filter((p): p is string => typeof p === 'string'))
+      : [],
+  );
+  const urlMap = new Map<string, string>();
+  if (allPaths.length > 0) {
+    const { data: signed } = await supabaseAdmin.storage
+      .from('inquiry-attachments')
+      .createSignedUrls(allPaths, 600);
+    for (const s of signed ?? []) {
+      if (s.signedUrl && s.path) urlMap.set(s.path, s.signedUrl);
+    }
+  }
+  const resultWithUrls = result.map((r) => {
+    const paths = Array.isArray((r as { attachments?: unknown }).attachments)
+      ? ((r as { attachments: unknown[] }).attachments.filter((p): p is string => typeof p === 'string'))
+      : [];
+    return { ...r, attachmentUrls: paths.map((p) => urlMap.get(p)).filter((u): u is string => !!u) };
+  });
+
   // 상태별 카운트 (필터 적용 전 전체 기준)
   const { data: statusCounts } = await supabaseAdmin
     .from('inquiries')
@@ -62,7 +84,7 @@ export async function GET(request: NextRequest) {
   }
 
   return NextResponse.json({
-    inquiries: result,
+    inquiries: resultWithUrls,
     total: count ?? result.length,
     page, pageSize,
     statusCounts: counts,

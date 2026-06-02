@@ -23,11 +23,12 @@ export async function POST(request: NextRequest) {
   }
 
   const body = await request.json().catch(() => ({}));
-  const { category, content, contact_phone, contact_email } = body as {
+  const { category, content, contact_phone, contact_email, attachments } = body as {
     category?: string;
     content?: string;
     contact_phone?: string;
     contact_email?: string;
+    attachments?: unknown;
   };
 
   if (!category || !VALID_CATEGORIES.includes(category as (typeof VALID_CATEGORIES)[number])) {
@@ -44,15 +45,29 @@ export async function POST(request: NextRequest) {
   const phone = (contact_phone ?? '').trim().slice(0, 30) || null;
   const email = (contact_email ?? '').trim().slice(0, 254) || null;
 
+  // 첨부 경로 검증 — 최대 3개, 각 문자열이며 반드시 본인 uid 폴더로 시작해야 함(타인 폴더 참조 차단)
+  let attachPaths: string[] = [];
+  if (Array.isArray(attachments)) {
+    attachPaths = attachments
+      .filter((p): p is string => typeof p === 'string' && p.length > 0 && p.length <= 300)
+      .filter((p) => p.startsWith(`${userId}/`))
+      .slice(0, 3);
+  }
+
+  const insertPayload: Record<string, unknown> = {
+    user_id: userId,
+    category,
+    content: trimmedContent,
+    contact_phone: phone,
+    contact_email: email,
+  };
+  // attachments 컬럼 마이그레이션(050) 적용 전 안전성: 첨부가 있을 때만 포함.
+  // (컬럼 미적용 상태에서도 사진 없는 일반 문의는 정상 접수)
+  if (attachPaths.length > 0) insertPayload.attachments = attachPaths;
+
   const { data, error } = await supabaseAdmin
     .from('inquiries')
-    .insert({
-      user_id: userId,
-      category,
-      content: trimmedContent,
-      contact_phone: phone,
-      contact_email: email,
-    })
+    .insert(insertPayload)
     .select('id, created_at')
     .single();
 

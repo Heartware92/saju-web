@@ -18,6 +18,7 @@ interface Inquiry {
   admin_replied_at: string | null;
   created_at: string;
   updated_at: string;
+  attachmentUrls?: string[];
 }
 
 interface StatusCounts {
@@ -229,6 +230,20 @@ function InquiryDetailModal({ inquiry, token, onClose, onUpdated }: {
               {inquiry.content}
             </div>
           </div>
+
+          {inquiry.attachmentUrls && inquiry.attachmentUrls.length > 0 && (
+            <div>
+              <p className="text-[12px] text-text-tertiary mb-1.5">첨부 사진 ({inquiry.attachmentUrls.length})</p>
+              <div className="flex flex-wrap gap-2">
+                {inquiry.attachmentUrls.map((url, i) => (
+                  <a key={i} href={url} target="_blank" rel="noopener noreferrer" className="block w-24 h-24 rounded-lg overflow-hidden border border-white/10 bg-black/20">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={url} alt={`첨부 ${i + 1}`} className="w-full h-full object-cover hover:opacity-80 transition-opacity" />
+                  </a>
+                ))}
+              </div>
+            </div>
+          )}
 
           <div>
             <p className="text-[12px] text-text-tertiary mb-1.5">상태</p>

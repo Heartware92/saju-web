@@ -20,6 +20,8 @@ import { useUserStore } from '../../../store/useUserStore';
 import { supabase } from '../../../services/supabase';
 import Layout from '../../../components/Layout';
 import { CREDIT_PACKAGES } from '../../../constants/pricing';
+import AttachmentPicker from '../../../components/inquiry/AttachmentPicker';
+import { uploadInquiryAttachments } from '../../../services/inquiryAttachments';
 
 type PaymentMethod = 'simple_card';
 
@@ -46,6 +48,7 @@ export default function RefundInquiryPage() {
   const [purchaseDate, setPurchaseDate] = useState('');
   const [reason, setReason] = useState('');
   const [memo, setMemo] = useState('');
+  const [attachFiles, setAttachFiles] = useState<File[]>([]);
   const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
 
@@ -111,10 +114,21 @@ export default function RefundInquiryPage() {
     try {
       const { data: sessionData } = await supabase.auth.getSession();
       const token = sessionData?.session?.access_token;
-      if (!token) {
+      if (!token || !user) {
         router.replace('/login?from=/inquiry/refund');
         return;
       }
+
+      let attachments: string[] = [];
+      if (attachFiles.length > 0) {
+        try {
+          attachments = await uploadInquiryAttachments(user.id, attachFiles);
+        } catch {
+          setError('사진 업로드에 실패했어요. 잠시 후 다시 시도해주세요.');
+          return;
+        }
+      }
+
       const res = await fetch('/api/inquiries', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
@@ -123,6 +137,7 @@ export default function RefundInquiryPage() {
           content,
           contact_phone: phone.trim() || undefined,
           contact_email: email.trim() || undefined,
+          attachments,
         }),
       });
       const json = await res.json();
@@ -136,6 +151,7 @@ export default function RefundInquiryPage() {
       setPurchaseDate('');
       setReason('');
       setMemo('');
+      setAttachFiles([]);
     } finally {
       setSubmitting(false);
     }
@@ -271,6 +287,9 @@ export default function RefundInquiryPage() {
             />
             <p className="text-[11px] text-text-tertiary mt-1 text-right">{memo.length} / 1000</p>
           </div>
+
+          {/* 사진 첨부 — 결제 화면 캡처 등 */}
+          <AttachmentPicker files={attachFiles} onChange={setAttachFiles} disabled={submitting} />
 
           {/* 연락처 */}
           <div className="grid grid-cols-1 gap-3 pt-2 border-t border-[var(--border-subtle)]">

@@ -14,6 +14,8 @@ import { useRouter } from 'next/navigation';
 import { useUserStore } from '@/store/useUserStore';
 import { supabase } from '@/services/supabase';
 import Layout from '@/components/Layout';
+import AttachmentPicker from '@/components/inquiry/AttachmentPicker';
+import { uploadInquiryAttachments } from '@/services/inquiryAttachments';
 
 interface GeneralInquiryFormProps {
   category: 'bug' | 'feedback' | 'other';
@@ -33,6 +35,7 @@ export default function GeneralInquiryForm({
   const userLoading = useUserStore((s) => s.loading);
 
   const [content, setContent] = useState('');
+  const [attachFiles, setAttachFiles] = useState<File[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
@@ -60,14 +63,25 @@ export default function GeneralInquiryForm({
     try {
       const { data: sessionData } = await supabase.auth.getSession();
       const token = sessionData?.session?.access_token;
-      if (!token) {
+      if (!token || !user) {
         router.replace(`/login?from=/inquiry/${category}`);
         return;
       }
+
+      let attachments: string[] = [];
+      if (attachFiles.length > 0) {
+        try {
+          attachments = await uploadInquiryAttachments(user.id, attachFiles);
+        } catch {
+          setError('사진 업로드에 실패했어요. 잠시 후 다시 시도해주세요.');
+          return;
+        }
+      }
+
       const res = await fetch('/api/inquiries', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ category, content: trimmed }),
+        body: JSON.stringify({ category, content: trimmed, attachments }),
       });
       const json = await res.json();
       if (!res.ok) {
@@ -76,6 +90,7 @@ export default function GeneralInquiryForm({
       }
       setSuccessMsg('문의가 정상 접수되었어요. 답변은 문의하기의 "내 문의 내역"에서 확인하실 수 있어요.');
       setContent('');
+      setAttachFiles([]);
     } finally {
       setSubmitting(false);
     }
@@ -117,6 +132,8 @@ export default function GeneralInquiryForm({
             />
             <p className="text-[11px] text-text-tertiary mt-1 text-right">{content.length} / 2000</p>
           </div>
+
+          <AttachmentPicker files={attachFiles} onChange={setAttachFiles} disabled={submitting} />
 
           <p className="text-[11.5px] text-text-tertiary leading-relaxed">
             답변은 로그인하신 계정으로 안내되며, 문의하기의 &ldquo;내 문의 내역&rdquo;에서도 확인하실 수 있어요.
