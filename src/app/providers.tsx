@@ -3,6 +3,7 @@
 import { useEffect } from 'react';
 import { useUserStore } from '@/store/useUserStore';
 import { useScrollSafeTap } from '@/hooks/useScrollSafeTap';
+import { AnalyticsTracker } from '@/components/AnalyticsTracker';
 
 export function Providers({ children }: { children: React.ReactNode }) {
   const { initialize } = useUserStore();
@@ -13,5 +14,10 @@ export function Providers({ children }: { children: React.ReactNode }) {
     initialize();
   }, [initialize]);
 
-  return <>{children}</>;
+  return (
+    <>
+      <AnalyticsTracker />
+      {children}
+    </>
+  );
 }

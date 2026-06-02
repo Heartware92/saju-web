@@ -12,6 +12,7 @@ import { UsageAnalyticsSection, type UsageSummary } from '@/components/admin/usa
 import { CreditsFlowSection, type CreditsSummary } from '@/components/admin/credits/CreditsFlowSection';
 import { OpsSection, type OpsSummary } from '@/components/admin/ops/OpsSection';
 import { InsightsSection, type Insights } from '@/components/admin/insights/InsightsSection';
+import { AnalyticsSection, type AnalyticsSummary } from '@/components/admin/analytics/AnalyticsSection';
 import { AuditLogSection, type AuditLog } from '@/components/admin/ops/AuditLogSection';
 import { InquiriesSection } from '@/components/admin/inquiries/InquiriesSection';
 import { PhoneChangesSection } from '@/components/admin/ops/PhoneChangesSection';
@@ -82,7 +83,7 @@ interface DeletedMember {
   deleted_at: string;
 }
 
-type Tab = 'overview' | 'members' | 'orders' | 'usage' | 'credits' | 'records' | 'consultations' | 'ops' | 'inquiries' | 'jobs' | 'insights';
+type Tab = 'overview' | 'members' | 'orders' | 'usage' | 'credits' | 'records' | 'consultations' | 'ops' | 'inquiries' | 'jobs' | 'insights' | 'analytics';
 type SortKey = 'joined' | 'lastSeen' | 'totalSpent' | 'analysisCount' | 'orderCount';
 
 // ── 유틸 ──────────────────────────────────────────────────
@@ -192,6 +193,8 @@ export default function AdminPage() {
 
   // Insights
   const [insights, setInsights] = useState<Insights | null>(null);
+
+  const [analytics, setAnalytics] = useState<AnalyticsSummary | null>(null);
 
   // Records
   const [records, setRecords] = useState<UsageRecord[]>([]);
@@ -382,6 +385,16 @@ export default function AdminPage() {
     finally { setLoading(false); }
   }, [token, adminFetch]);
 
+  const fetchAnalytics = useCallback(async (force = false) => {
+    if (!token) return;
+    setLoading(true);
+    try {
+      const data = await adminFetch<AnalyticsSummary>('/api/admin/analytics/summary', force);
+      if (data) setAnalytics(data);
+    } catch (e: any) { setError(e.message); }
+    finally { setLoading(false); }
+  }, [token, adminFetch]);
+
   const fetchConsultations = useCallback(async (force = false) => {
     if (!token) return;
     setLoading(true);
@@ -438,6 +451,7 @@ export default function AdminPage() {
     if (auditLogs.length === 0 && !auditWarning) fetchAuditLogs();
   }, [tab, opsSummary, auditLogs.length, auditWarning, fetchOpsSummary, fetchAuditLogs]);
   useEffect(() => { if (tab === 'insights' && !insights) fetchInsights(); }, [tab, insights, fetchInsights]);
+  useEffect(() => { if (tab === 'analytics' && !analytics) fetchAnalytics(); }, [tab, analytics, fetchAnalytics]);
   useEffect(() => { if (tab === 'records' && records.length === 0) fetchRecords(); }, [tab, records.length, fetchRecords]);
   useEffect(() => { if (tab === 'consultations' && consultations.length === 0) fetchConsultations(); }, [tab, consultations.length, fetchConsultations]);
 
@@ -558,6 +572,7 @@ export default function AdminPage() {
     { key: 'inquiries', label: '문의함' },
     { key: 'jobs',      label: '잡 상태' },
     { key: 'insights', label: '인사이트' },
+    { key: 'analytics', label: '유입·이탈' },
   ];
 
   // ── CSV export ──
@@ -653,6 +668,7 @@ export default function AdminPage() {
     else if (tab === 'consultations') fetchConsultations(true);
     else if (tab === 'ops') { fetchOpsSummary(true); fetchAuditLogs(true); }
     else if (tab === 'insights') fetchInsights(true);
+    else if (tab === 'analytics') fetchAnalytics(true);
     else fetchRecords(true);
   };
 
@@ -1009,6 +1025,11 @@ export default function AdminPage() {
         {/* ── 인사이트 ── */}
         {tab === 'insights' && (
           <InsightsSection insights={insights} onOpenUser={setSelectedUserId} />
+        )}
+
+        {/* ── 유입·이탈 분석 ── */}
+        {tab === 'analytics' && (
+          <AnalyticsSection summary={analytics} />
         )}
 
         {/* ── 이용 기록 ── */}
