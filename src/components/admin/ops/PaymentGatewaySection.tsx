@@ -265,8 +265,8 @@ export function PaymentGatewaySection({ token }: { token: string | null }) {
 
       {/* 전환 확인 모달 */}
       {pendingSwitch && config && (
-        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4" onClick={() => setPendingSwitch(null)}>
-          <div className="bg-bg-primary border border-white/10 rounded-2xl max-w-[420px] w-full" onClick={e => e.stopPropagation()}>
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={() => setPendingSwitch(null)}>
+          <div className="bg-[#0a0614] border border-white/15 rounded-2xl max-w-[420px] w-full shadow-2xl" onClick={e => e.stopPropagation()}>
             <div className="px-5 py-4 border-b border-white/10">
               <h3 className="text-[15px] font-semibold text-text-primary">결제 게이트웨이 전환</h3>
             </div>

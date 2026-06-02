@@ -211,8 +211,8 @@ function InquiryDetailModal({ inquiry, token, onClose, onUpdated }: {
   };
 
   return (
-    <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4" onClick={onClose}>
-      <div className="bg-bg-primary border border-white/10 rounded-2xl max-w-[640px] w-full max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+    <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={onClose}>
+      <div className="bg-[#0a0614] border border-white/15 rounded-2xl max-w-[640px] w-full max-h-[90vh] overflow-y-auto shadow-2xl" onClick={e => e.stopPropagation()}>
         <div className="px-6 py-4 border-b border-white/10 flex items-center justify-between">
           <h3 className="text-[16px] font-semibold text-text-primary">문의 상세</h3>
           <button onClick={onClose} className="text-text-tertiary hover:text-text-primary">닫기</button>
