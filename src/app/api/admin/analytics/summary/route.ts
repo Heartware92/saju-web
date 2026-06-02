@@ -24,6 +24,7 @@ interface EventRow {
   session_id: string;
   visitor_id: string | null;
   user_id: string | null;
+  event_type: string;
   path: string;
   referrer: string | null;
   utm_source: string | null;
@@ -86,7 +87,7 @@ async function fetchWindowRows(sinceIso: string): Promise<{ rows: EventRow[]; tr
   for (let from = 0; from < MAX_ROWS; from += PAGE) {
     const { data, error } = await supabaseAdmin
       .from('analytics_events')
-      .select('session_id,visitor_id,user_id,path,referrer,utm_source,device,created_at')
+      .select('session_id,visitor_id,user_id,event_type,path,referrer,utm_source,device,created_at')
       .gte('created_at', sinceIso)
       .order('created_at', { ascending: true })
       .range(from, from + PAGE - 1);
@@ -109,12 +110,83 @@ function topN(counts: Map<string, number>, n: number) {
     .slice(0, n);
 }
 
+/**
+ * 범위(range) 재방문율 D7/D30.
+ *  - 코호트: 최초 방문(visitor 기준)이 N일 이전이라 N일 관찰창이 확보된 방문자.
+ *  - 재방문: 최초 방문일 이후 ~ 최초+N일 사이에 다른 날(달력일) 방문이 1회 이상.
+ *  - 데이터: 최근 60일 visitor_id/created_at. (서비스 초기엔 전체 이력과 사실상 동일)
+ *  - 한계: 60일보다 오래된 첫 방문은 관측 불가 → 초기에는 표본이 작을 수 있음.
+ */
+async function computeRetention(excluded: Set<string>) {
+  const RET_DAYS = 60;
+  const sinceIso = new Date(Date.now() - RET_DAYS * 86_400_000).toISOString();
+  const rows: { visitor_id: string | null; user_id: string | null; created_at: string }[] = [];
+  for (let from = 0; from < MAX_ROWS; from += PAGE) {
+    const { data, error } = await supabaseAdmin
+      .from('analytics_events')
+      .select('visitor_id,user_id,created_at')
+      .eq('event_type', 'pageview')
+      .gte('created_at', sinceIso)
+      .order('created_at', { ascending: true })
+      .range(from, from + PAGE - 1);
+    if (error || !data || data.length === 0) break;
+    rows.push(...data);
+    if (data.length < PAGE) break;
+  }
+  // visitor 별 방문 타임스탬프 모음 (슈퍼/테스트 계정 제외)
+  const byVisitor = new Map<string, number[]>();
+  for (const r of rows) {
+    if (!r.visitor_id) continue;
+    if (r.user_id && excluded.has(r.user_id)) continue;
+    const ts = new Date(r.created_at).getTime();
+    const arr = byVisitor.get(r.visitor_id);
+    if (arr) arr.push(ts);
+    else byVisitor.set(r.visitor_id, [ts]);
+  }
+  const dayOf = (ms: number) => Math.floor((ms + KST_OFFSET_MIN * 60_000) / 86_400_000);
+  const now = Date.now();
+  const calc = (n: number) => {
+    let cohort = 0;
+    let returned = 0;
+    const windowMs = n * 86_400_000;
+    for (const visits of byVisitor.values()) {
+      const first = Math.min(...visits);
+      if (now - first < windowMs) continue; // 관찰창 미확보
+      cohort++;
+      const firstDay = dayOf(first);
+      if (visits.some((t) => t > first && t <= first + windowMs && dayOf(t) !== firstDay)) returned++;
+    }
+    return { cohort, rate: cohort ? Math.round((returned / cohort) * 1000) / 10 : 0 };
+  };
+  const d7 = calc(7);
+  const d30 = calc(30);
+  return {
+    d7Rate: d7.rate,
+    d7Cohort: d7.cohort,
+    d30Rate: d30.rate,
+    d30Cohort: d30.cohort,
+  };
+}
+
 async function computeSummary() {
   const sinceIso = new Date(Date.now() - WINDOW_DAYS * 86_400_000).toISOString();
   const { rows: allRows, truncated } = await fetchWindowRows(sinceIso);
   // 슈퍼/테스트 계정(로그인 상태)의 페이지뷰 제외. 비로그인(user_id=null)은 식별 불가라 유지.
   const excluded = await excludedUserIds();
-  const rows = filterExcludedRows(allRows, excluded);
+  const filtered = filterExcludedRows(allRows, excluded);
+  // 페이지뷰 집계와 공유(상호작용) 이벤트를 분리 — 공유 이벤트가 방문/이탈 통계를 오염시키지 않게.
+  const rows = filtered.filter((r) => r.event_type === 'pageview');
+  const shareRows = filtered.filter((r) => r.event_type === 'share_kakao' || r.event_type === 'share_url');
+
+  // ── 공유 페이지 집계: 어느 화면을 가장 많이 공유하는지 + 채널 분포 ──
+  const sharePageCount = new Map<string, number>();
+  let shareKakao = 0;
+  let shareUrl = 0;
+  for (const r of shareRows) {
+    sharePageCount.set(r.path, (sharePageCount.get(r.path) ?? 0) + 1);
+    if (r.event_type === 'share_kakao') shareKakao++;
+    else shareUrl++;
+  }
 
   // ── 세션별 첫/마지막 이벤트 (rows 는 created_at asc 정렬) ──
   interface Sess { first: EventRow; last: EventRow; count: number; }
@@ -166,6 +238,7 @@ async function computeSummary() {
   });
 
   const totalSessions = sessions.size;
+  const retention = await computeRetention(excluded);
 
   return {
     truncated,
@@ -175,6 +248,7 @@ async function computeSummary() {
       pageviews: rows.length,
       bounceRate: totalSessions ? Math.round((bounceSessions / totalSessions) * 1000) / 10 : 0,
       loggedInRate: totalSessions ? Math.round((loggedInSessions / totalSessions) * 1000) / 10 : 0,
+      ...retention,
     },
     sources: topN(sourceCount, 12),
     daily,
@@ -182,6 +256,8 @@ async function computeSummary() {
     exitPages: topN(exitCount, 12),
     topPages: topN(pagePv, 12),
     devices: topN(deviceCount, 5),
+    sharePages: topN(sharePageCount, 12),
+    shareChannels: { kakao: shareKakao, url: shareUrl, total: shareKakao + shareUrl },
   };
 }
 

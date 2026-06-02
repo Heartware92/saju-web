@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import type { ShareRecordType } from '@/services/shareService';
 import { supabase } from '@/services/supabase';
 import { shareToKakao } from '@/lib/kakao';
+import { trackEvent } from '@/lib/analytics/track';
 
 interface ShareBarProps {
   recordId: string;
@@ -185,6 +186,7 @@ export function ShareBar({
   const handleCopyLink = async () => {
     const url = await getShareLink();
     if (!url) return;
+    trackEvent('share_url'); // 공유(링크 복사) 페이지 집계
 
     const ok = await copyTextToClipboard(url);
     if (ok) {
@@ -201,6 +203,7 @@ export function ShareBar({
   const handleKakaoShare = async () => {
     const url = await getShareLink();
     if (!url) return;
+    trackEvent('share_kakao'); // 공유(카카오톡) 페이지 집계
 
     const title = shareTitle || '이천점 — 우주의 기운을 드려요';
     const description = shareDescription || '우주의 기운으로 풀어낸 운세 결과를 확인해보세요';

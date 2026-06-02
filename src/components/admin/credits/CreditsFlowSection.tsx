@@ -14,6 +14,10 @@ export interface CreditsSummary {
     debtWon: number;
     withMoon: number;
     txnCount: number;
+    avgDepletionDays?: number;
+    medianDepletionDays?: number;
+    depletedLots?: number;
+    outstandingPurchaseLots?: number;
   };
   reasonBreakdown: { reason: string; moon: number; total: number }[];
   monthly: {
@@ -76,6 +80,14 @@ export function CreditsFlowSection({ summary }: { summary: CreditsSummary | null
           <Kpi label="소비" value={fmt(kpi.moonConsumed)} sub={`소진율 ${kpi.moonConsumeRate}%`} />
           <Kpi label="잔여" value={fmt(kpi.moonBalance)} sub={`${fmt(kpi.withMoon)}명 보유`} color="text-indigo-300" />
           <Kpi label="추정 부채" value={fmtWon(kpi.debtWon)} sub="달 1 ≈ 300원" />
+          <Kpi
+            label="충전 후 평균 소진일"
+            value={kpi.depletedLots ? `${kpi.avgDepletionDays ?? 0}일` : '-'}
+            sub={kpi.depletedLots
+              ? `중앙값 ${kpi.medianDepletionDays ?? 0}일 · 표본 ${fmt(kpi.depletedLots)}건 · 진행중 ${fmt(kpi.outstandingPurchaseLots ?? 0)}`
+              : '완전 소진된 충전 없음'}
+            color="text-emerald-300"
+          />
         </div>
       </div>
 

@@ -176,6 +176,78 @@ export const DELETION_REASON_LABEL: Record<string, string> = {
   unknown:     '미선택',
 };
 
+// ── 화면 경로(pathname) → 사람 친화 라벨 ─────────────────────
+/**
+ * usePathname() 으로 수집된 raw 경로를 운영자가 읽을 수 있는 한글 화면명으로 변환.
+ * - 유입·이탈 분석(진입/이탈/인기/공유 페이지)에서 `/saju/zamidusu` 대신 "자미두수"로 표시.
+ * - 서비스 화면은 우리 탭 표기(정통사주/자미두수/궁합…)와 동일한 명칭 사용.
+ * - 데이터(analytics_events.path)는 raw 로 보존하고 표시할 때만 변환한다.
+ */
+export const PATH_LABEL: Record<string, string> = {
+  '/': '홈',
+  '/login': '로그인',
+  '/signup': '회원가입',
+  '/credit': '충전소(결제)',
+  '/mypage': '마이페이지',
+  '/archive': '보관함',
+  '/company': '회사 소개',
+  '/inquiry': '문의하기',
+  '/inquiry/refund': '환불 문의',
+  '/licenses': '오픈소스 라이선스',
+  '/privacy': '개인정보처리방침',
+  '/terms': '이용약관',
+  '/admin': '어드민',
+  // 인증 플로우
+  '/auth/callback': '소셜 로그인 콜백',
+  '/auth/consent': '약관 동의',
+  '/auth/phone-verify': '휴대폰 인증',
+  '/auth/reset': '비밀번호 재설정',
+  '/auth/update-password': '비밀번호 변경',
+  '/payment/callback': '결제 완료',
+  // 사주 서비스 (탭 표기와 동일)
+  '/saju': '사주 홈',
+  '/saju/input': '사주 정보입력',
+  '/saju/profile': '사주 프로필',
+  '/saju/result': '정통사주',
+  '/saju/manseryeok': '만세력',
+  '/saju/gunghap': '궁합',
+  '/saju/zamidusu': '자미두수',
+  '/saju/tojeong': '토정비결',
+  '/saju/taekil': '택일',
+  '/saju/taekil/result': '택일 결과',
+  '/saju/today': '실시간 운세',
+  '/saju/newyear': '신년운세',
+  '/saju/year-fortune': '신년운세',
+  '/saju/date': '지정일 운세',
+  // 상담소 · 타로
+  '/sangdamso': '상담소',
+  '/sangdamso/chat': '상담소 대화',
+  '/tarot': '타로',
+  '/tarot/result': '타로 결과',
+};
+
+/** 동적 라우트 접두사 → 라벨 (정적 맵에 없을 때 prefix 매칭) */
+const PATH_PREFIX_LABEL: { prefix: string; label: string }[] = [
+  { prefix: '/saju/more/', label: '더 많은 운세' },
+  { prefix: '/share/', label: '공유 결과' },
+];
+
+/** raw 경로를 한글 화면명으로. 미정의 경로는 원문 유지(추적 누락 식별용). */
+export function pathLabel(path: string | null | undefined): string {
+  if (!path) return '-';
+  const clean = path.split('?')[0].split('#')[0];
+  if (PATH_LABEL[clean]) return PATH_LABEL[clean];
+  // 더 많은 운세는 카테고리까지: /saju/more/love → "더 많은 운세 · 애정운"
+  for (const { prefix, label } of PATH_PREFIX_LABEL) {
+    if (clean.startsWith(prefix)) {
+      const sub = clean.slice(prefix.length).split('/')[0];
+      const subLabel = SAJU_CATEGORY_LABEL[sub];
+      return subLabel ? `${label} · ${subLabel}` : label;
+    }
+  }
+  return clean; // 미정의 → raw 경로 (새 페이지 추가 시 누락 발견용)
+}
+
 // ── 통합 라벨 조회 ───────────────────────────────────────────
 /** saju category / tarot spread / credit reason 을 모두 커버하는 단일 조회 */
 export function lookupServiceLabel(key: string | null | undefined): string {

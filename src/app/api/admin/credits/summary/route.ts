@@ -31,13 +31,81 @@ function lastNMonths(n: number): string[] {
   return out;
 }
 
+interface TxnRow {
+  user_id: string | null;
+  type: string;
+  amount: number | null;
+  created_at: string;
+}
+
+/**
+ * "충전한 달을 다 쓰기까지 걸린 평균 일수" (충전 배치 FIFO 소진).
+ *  - 유저별 거래를 시간순으로 보며 FIFO 큐(lot)를 굴린다. 양수 거래 = 적립 lot, consume = 소비.
+ *  - 소비는 가장 오래된 lot 부터 차감하고, lot 이 0 이 되는 순간 "소진 완료"로 본다.
+ *  - 일수는 충전(purchase) lot 에 대해서만 기록한다(가입보너스/조정 lot 은 소비순서엔 반영하되 집계 제외).
+ *  - 아직 다 못 쓴 충전 lot 은 진행중(outstanding)으로 분리.
+ */
+function computeDepletion(txns: TxnRow[]) {
+  const DAY = 86_400_000;
+  const byUser = new Map<string, TxnRow[]>();
+  for (const t of txns) {
+    if (!t.user_id) continue;
+    const arr = byUser.get(t.user_id);
+    if (arr) arr.push(t);
+    else byUser.set(t.user_id, [t]);
+  }
+
+  const depletionDays: number[] = [];
+  let outstandingPurchaseLots = 0; // 아직 소진중인 충전 배치 수
+
+  for (const list of byUser.values()) {
+    const sorted = [...list].sort(
+      (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime(),
+    );
+    // FIFO 큐: 적립 lot {remaining, time, isPurchase}
+    const lots: { remaining: number; time: number; isPurchase: boolean }[] = [];
+    for (const t of sorted) {
+      const amt = t.amount ?? 0;
+      const isConsume = t.type === 'consume' || amt < 0;
+      const ts = new Date(t.created_at).getTime();
+      if (isConsume) {
+        let need = Math.abs(amt);
+        while (need > 0 && lots.length > 0) {
+          const lot = lots[0];
+          const take = Math.min(lot.remaining, need);
+          lot.remaining -= take;
+          need -= take;
+          if (lot.remaining <= 1e-9) {
+            if (lot.isPurchase) depletionDays.push((ts - lot.time) / DAY);
+            lots.shift();
+          }
+        }
+      } else if (amt > 0) {
+        lots.push({ remaining: amt, time: ts, isPurchase: t.type === 'purchase' });
+      }
+    }
+    outstandingPurchaseLots += lots.filter((l) => l.isPurchase).length;
+  }
+
+  const n = depletionDays.length;
+  const avg = n ? depletionDays.reduce((s, d) => s + d, 0) / n : 0;
+  const sortedDays = [...depletionDays].sort((a, b) => a - b);
+  const median = n ? sortedDays[Math.floor((n - 1) / 2)] : 0;
+  return {
+    avgDepletionDays: Math.round(avg * 10) / 10,
+    medianDepletionDays: Math.round(median * 10) / 10,
+    depletedLots: n,             // 완전 소진된 충전 배치 수(표본)
+    outstandingPurchaseLots,     // 아직 소진중인 충전 배치 수
+  };
+}
+
 async function computeSummary() {
   // 슈퍼/테스트 계정 제외
   const ex = await excludedUserIds();
 
   const [creditsRes, txnRes] = await Promise.all([
     excludeUsers(supabaseAdmin.from('user_credits').select('user_id, moon_balance, total_moon_purchased, total_moon_consumed, updated_at'), ex),
-    excludeUsers(supabaseAdmin.from('credit_transactions').select('credit_type, type, amount, reason, created_at, order_id').eq('credit_type', 'moon'), ex),
+    excludeUsers(supabaseAdmin.from('credit_transactions').select('user_id, credit_type, type, amount, reason, created_at, order_id').eq('credit_type', 'moon'), ex),
   ]);
 
   const credits = creditsRes.data ?? [];
@@ -89,6 +157,9 @@ async function computeSummary() {
   }
   const txnTypes = [...typeMap.entries()].map(([type, count]) => ({ type, count }));
 
+  // 충전 후 평균 소진 일수 (FIFO 배치 소진)
+  const depletion = computeDepletion(txns as TxnRow[]);
+
   return {
     kpi: {
       moonIssued, moonConsumed, moonBalance,
@@ -96,6 +167,7 @@ async function computeSummary() {
       debtWon,
       withMoon,
       txnCount: txns.length,
+      ...depletion,
     },
     reasonBreakdown,
     monthly,

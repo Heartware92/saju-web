@@ -21,6 +21,9 @@ const BOT_RE =
 const MOBILE_RE = /mobile|android|iphone|ipad|ipod/i;
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
+// 허용 이벤트 타입(화이트리스트). 페이지뷰 + 공유 버튼 클릭(카카오/링크).
+const EVENT_TYPES = new Set(['pageview', 'share_kakao', 'share_url']);
+
 function trunc(v: unknown, n: number): string | null {
   if (typeof v !== 'string') return null;
   const s = v.trim();
@@ -55,12 +58,14 @@ export async function POST(request: Request) {
     const device = MOBILE_RE.test(ua) ? 'mobile' : 'desktop';
     const rawUid = trunc(body.userId, 64);
     const userId = rawUid && UUID_RE.test(rawUid) ? rawUid : null;
+    const rawType = trunc(body.eventType, 32);
+    const eventType = rawType && EVENT_TYPES.has(rawType) ? rawType : 'pageview';
 
     const { error } = await supabaseAdmin.from('analytics_events').insert({
       session_id: sessionId,
       visitor_id: trunc(body.visitorId, 64),
       user_id: userId,
-      event_type: 'pageview',
+      event_type: eventType,
       path,
       referrer: trunc(body.referrer, 1000),
       utm_source: trunc(body.utm_source, 200),

@@ -101,6 +101,18 @@ async function computeSummary() {
     net: monthlyRevenue[i] - monthlyRefund[i],
   }));
 
+  // 시간대별 결제 분포 (0~23시, KST) — 어느 시간에 결제가 가장 많은지
+  const hourly = new Array(24).fill(0);
+  for (const o of completed) {
+    const iso = o.completed_at ?? o.created_at;
+    if (!iso) continue;
+    const kst = new Date(new Date(iso).getTime() + 540 * 60_000);
+    hourly[kst.getUTCHours()]++;
+  }
+  const peakHour = completed.length > 0
+    ? hourly.reduce((best, c, h) => (c > hourly[best] ? h : best), 0)
+    : null;
+
   // 결제회원 수 (중복 제거)
   const payingUsers = new Set(completed.map(o => o.user_id)).size;
   const arpu = payingUsers > 0 ? Math.round(totalRevenue / payingUsers) : 0;
@@ -133,6 +145,8 @@ async function computeSummary() {
     packages,
     methods,
     monthly,
+    hourly,
+    peakHour,
   };
 }
 

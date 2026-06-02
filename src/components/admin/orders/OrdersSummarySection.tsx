@@ -27,6 +27,8 @@ export interface OrdersSummary {
   packages: { id: string; name: string; count: number; revenue: number }[];
   methods: { method: string; count: number; revenue: number }[];
   monthly: { month: string; revenue: number; refund: number; count: number; net: number }[];
+  hourly?: number[];      // 0~23시(KST) 결제 건수
+  peakHour?: number | null;
 }
 
 const DONUT_COLORS = [
@@ -94,6 +96,16 @@ export function OrdersSummarySection({ summary }: { summary: OrdersSummary | nul
     value: m.net,
   }));
 
+  const hourly = Array.isArray(summary.hourly) && summary.hourly.length === 24
+    ? summary.hourly
+    : new Array(24).fill(0);
+  const hourlyBars = hourly.map((c, h) => ({
+    key: String(h),
+    label: h % 3 === 0 ? `${h}시` : '', // 3시간 간격만 라벨(가독성)
+    value: c,
+  }));
+  const peakHour = summary.peakHour ?? null;
+
   return (
     <div className="space-y-6">
       {/* KPI */}
@@ -139,6 +151,19 @@ export function OrdersSummarySection({ summary }: { summary: OrdersSummary | nul
           </p>
         </div>
         <VerticalBarChart bars={monthlyBars} color="rgba(52, 211, 153, 0.75)" height={140} />
+      </div>
+
+      {/* 시간대별 결제 분포 (24시간, KST) */}
+      <div className="bg-white/5 border border-white/10 rounded-xl p-4">
+        <div className="flex items-baseline justify-between mb-3">
+          <h3 className="text-[14px] font-semibold text-text-primary">시간대별 결제 분포</h3>
+          <p className="text-[13px] text-text-tertiary">
+            {peakHour !== null
+              ? <>피크 <span className="text-text-primary font-medium">{peakHour}시대</span> · 완료 결제 기준(KST)</>
+              : '완료 결제 기준(KST)'}
+          </p>
+        </div>
+        <VerticalBarChart bars={hourlyBars} color="rgba(96, 165, 250, 0.75)" height={140} />
       </div>
     </div>
   );

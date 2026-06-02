@@ -7,6 +7,7 @@
 'use client';
 
 import { VerticalBarChart } from '@/components/admin/charts/VerticalBarChart';
+import { pathLabel } from '@/constants/adminLabels';
 
 interface Counted { key: string; count: number; }
 
@@ -18,6 +19,10 @@ export interface AnalyticsSummary {
     pageviews: number;
     bounceRate: number;
     loggedInRate: number;
+    d7Rate: number;
+    d7Cohort: number;
+    d30Rate: number;
+    d30Cohort: number;
   };
   sources: Counted[];
   daily: { date: string; sessions: number; visitors: number; pageviews: number }[];
@@ -25,6 +30,8 @@ export interface AnalyticsSummary {
   exitPages: Counted[];
   topPages: Counted[];
   devices: Counted[];
+  sharePages: Counted[];
+  shareChannels: { kakao: number; url: number; total: number };
 }
 
 const fmt = (n: number) => n.toLocaleString('ko-KR');
@@ -51,8 +58,8 @@ function Metric({ label, value, sub, color }: { label: string; value: string; su
   );
 }
 
-/** 가로 막대 랭킹 (유입 출처/경로 목록용) */
-function RankBars({ items, color, empty }: { items: Counted[]; color: string; empty: string }) {
+/** 가로 막대 랭킹 (유입 출처/경로 목록용). labelFn 지정 시 key 를 친화 라벨로 표시(원본은 title 툴팁). */
+function RankBars({ items, color, empty, labelFn }: { items: Counted[]; color: string; empty: string; labelFn?: (key: string) => string }) {
   const max = Math.max(1, ...items.map((i) => i.count));
   if (items.length === 0) {
     return <p className="text-[13px] text-text-tertiary py-6 text-center">{empty}</p>;
@@ -61,7 +68,7 @@ function RankBars({ items, color, empty }: { items: Counted[]; color: string; em
     <div className="space-y-2">
       {items.map((it) => (
         <div key={it.key} className="flex items-center gap-3">
-          <span className="text-[13px] text-text-secondary w-[42%] truncate" title={it.key}>{it.key}</span>
+          <span className="text-[13px] text-text-secondary w-[42%] truncate" title={it.key}>{labelFn ? labelFn(it.key) : it.key}</span>
           <div className="flex-1 h-[18px] bg-white/5 rounded overflow-hidden">
             <div className="h-full rounded" style={{ width: `${(it.count / max) * 100}%`, background: color }} />
           </div>
@@ -79,6 +86,8 @@ export function AnalyticsSection({ summary }: { summary: AnalyticsSummary | null
 
   const { kpi } = summary;
   const visitorBars = summary.daily.map((d) => ({ key: d.date, label: d.date.slice(5), value: d.visitors }));
+  const sharePages = Array.isArray(summary.sharePages) ? summary.sharePages : [];
+  const shareChannels = summary.shareChannels ?? { kakao: 0, url: 0, total: 0 };
 
   return (
     <div className="space-y-6">
@@ -99,6 +108,28 @@ export function AnalyticsSection({ summary }: { summary: AnalyticsSummary | null
         <Metric label="로그인 세션" value={`${kpi.loggedInRate}%`} sub="로그인 상태 방문 비율" color="text-emerald-300" />
       </div>
 
+      {/* 재방문율 (코호트 범위 리텐션) */}
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+        <Metric
+          label="재방문율 D7"
+          value={`${kpi.d7Rate ?? 0}%`}
+          sub={`최초 방문 후 7일 내 재방문 · 대상 ${fmt(kpi.d7Cohort ?? 0)}명`}
+          color="text-sky-300"
+        />
+        <Metric
+          label="재방문율 D30"
+          value={`${kpi.d30Rate ?? 0}%`}
+          sub={`최초 방문 후 30일 내 재방문 · 대상 ${fmt(kpi.d30Cohort ?? 0)}명`}
+          color="text-sky-300"
+        />
+        <Metric
+          label="공유 횟수"
+          value={fmt(shareChannels.total)}
+          sub={`카카오 ${fmt(shareChannels.kakao)} · 링크복사 ${fmt(shareChannels.url)}`}
+          color="text-pink-300"
+        />
+      </div>
+
       {/* 일별 방문자 추이 */}
       <Card title="일별 방문자 추이" sub="최근 30일 고유 방문자(visitor) 기준">
         <VerticalBarChart bars={visitorBars} color="rgba(96, 165, 250, 0.75)" height={180} />
@@ -117,17 +148,22 @@ export function AnalyticsSection({ summary }: { summary: AnalyticsSummary | null
       {/* 진입 / 이탈 경로 */}
       <div className="grid md:grid-cols-2 gap-4">
         <Card title="진입 경로 (랜딩)" sub="세션이 처음 도착한 화면">
-          <RankBars items={summary.entryPages} color="rgba(96, 165, 250, 0.7)" empty="데이터 없음" />
+          <RankBars items={summary.entryPages} color="rgba(96, 165, 250, 0.7)" empty="데이터 없음" labelFn={pathLabel} />
         </Card>
         <Card title="이탈 경로" sub="세션의 마지막 화면 = 이탈 지점">
-          <RankBars items={summary.exitPages} color="rgba(248, 113, 113, 0.7)" empty="데이터 없음" />
+          <RankBars items={summary.exitPages} color="rgba(248, 113, 113, 0.7)" empty="데이터 없음" labelFn={pathLabel} />
         </Card>
       </div>
 
-      {/* 인기 페이지 */}
-      <Card title="인기 페이지" sub="페이지뷰 상위">
-        <RankBars items={summary.topPages} color="rgba(251, 191, 36, 0.7)" empty="데이터 없음" />
-      </Card>
+      {/* 인기 페이지 + 공유 많은 페이지 */}
+      <div className="grid md:grid-cols-2 gap-4">
+        <Card title="인기 페이지" sub="페이지뷰 상위">
+          <RankBars items={summary.topPages} color="rgba(251, 191, 36, 0.7)" empty="데이터 없음" labelFn={pathLabel} />
+        </Card>
+        <Card title="공유 많은 페이지" sub="카카오톡·링크복사 공유 버튼 클릭 기준">
+          <RankBars items={sharePages} color="rgba(236, 72, 153, 0.7)" empty="공유 데이터 없음" labelFn={pathLabel} />
+        </Card>
+      </div>
     </div>
   );
 }

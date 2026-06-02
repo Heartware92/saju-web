@@ -575,6 +575,22 @@ export default function AdminPage() {
     { key: 'analytics', label: '유입·이탈' },
   ];
 
+  // ── 상위 7개 그룹 (각 탭 = 그룹 내 서브탭). 의미축을 하나로 통일 ──
+  //   현황 / 회원 / 매출·크레딧 / 서비스 이용 / 고객 지원 / 분석 / 시스템
+  const labelOf = (key: Tab) => TABS.find(t => t.key === key)?.label ?? key;
+  const GROUPS: { key: string; label: string; tabs: Tab[] }[] = [
+    { key: 'g-status',    label: '현황',        tabs: ['overview'] },
+    { key: 'g-members',   label: '회원',        tabs: ['members'] },
+    { key: 'g-revenue',   label: '매출·크레딧', tabs: ['orders', 'credits'] },
+    { key: 'g-usage',     label: '서비스 이용', tabs: ['usage', 'records', 'consultations'] },
+    { key: 'g-support',   label: '고객 지원',   tabs: ['inquiries'] },
+    { key: 'g-analytics', label: '분석',        tabs: ['analytics', 'insights'] },
+    { key: 'g-system',    label: '시스템',      tabs: ['ops', 'jobs'] },
+  ];
+  const activeGroup = GROUPS.find(g => g.tabs.includes(tab)) ?? GROUPS[0];
+  // 단일 서브탭 그룹은 그 탭 라벨(카운트 포함)을, 복수면 그룹명을 상단에 노출
+  const groupLabel = (g: { label: string; tabs: Tab[] }) => (g.tabs.length === 1 ? labelOf(g.tabs[0]) : g.label);
+
   // ── CSV export ──
   const exportMembersCsv = async () => {
     if (!token) return;
@@ -705,18 +721,33 @@ export default function AdminPage() {
         </div>
       </div>
 
-      {/* 탭 */}
+      {/* 상위 그룹 탭 */}
       <div className="border-b border-white/10 px-6 flex gap-1 overflow-x-auto">
-        {TABS.map(t => (
+        {GROUPS.map(g => (
           <button
-            key={t.key}
-            onClick={() => { setTab(t.key); setError(''); }}
-            className={`px-4 py-3 text-[15px] font-medium border-b-2 whitespace-nowrap transition-colors ${tab === t.key ? 'border-cta text-cta' : 'border-transparent text-text-tertiary hover:text-text-secondary'}`}
+            key={g.key}
+            onClick={() => { setTab(g.tabs[0]); setError(''); }}
+            className={`px-4 py-3 text-[15px] font-medium border-b-2 whitespace-nowrap transition-colors ${activeGroup.key === g.key ? 'border-cta text-cta' : 'border-transparent text-text-tertiary hover:text-text-secondary'}`}
           >
-            {t.label}
+            {groupLabel(g)}
           </button>
         ))}
       </div>
+
+      {/* 서브탭 (서브탭이 2개 이상인 그룹에서만 노출) */}
+      {activeGroup.tabs.length > 1 && (
+        <div className="border-b border-white/10 px-6 py-2 flex gap-1 overflow-x-auto bg-white/[0.02]">
+          {activeGroup.tabs.map(k => (
+            <button
+              key={k}
+              onClick={() => { setTab(k); setError(''); }}
+              className={`px-3 py-1.5 rounded-lg text-[14px] font-medium whitespace-nowrap transition-colors ${tab === k ? 'bg-cta text-white' : 'text-text-tertiary hover:text-text-secondary hover:bg-white/5'}`}
+            >
+              {labelOf(k)}
+            </button>
+          ))}
+        </div>
+      )}
 
       <div className="px-6 py-6 max-w-[1400px] mx-auto">
         {error && (
