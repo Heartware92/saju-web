@@ -5,7 +5,7 @@
  * 패키지: 달 → 화성 → 지구 → 토성 → 목성 → 은하 → 우주
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useCreditStore } from '@/store/useCreditStore';
 import { CREDIT_PACKAGES } from '@/constants/pricing';
@@ -16,8 +16,25 @@ export const CreditPurchasePage: React.FC = () => {
   const router = useRouter();
   const { moonBalance } = useCreditStore();
   const [loading, setLoading] = useState<string | null>(null);
+  const [canceledNotice, setCanceledNotice] = useState(false);
+
+  // 모바일: PortOne이 결제창으로 전체 페이지를 리다이렉트하므로, 결제창에서
+  // 브라우저 뒤로가기를 누르면 이 페이지가 bfcache에서 복원된다. 이때 loading('...')
+  // 상태가 그대로 멈춰 버튼이 눌리지 않으므로, 복원을 감지해 로딩을 해제하고 안내한다.
+  useEffect(() => {
+    const onPageShow = (e: PageTransitionEvent) => {
+      if (!e.persisted) return;
+      setLoading((prev) => {
+        if (prev) setCanceledNotice(true);
+        return null;
+      });
+    };
+    window.addEventListener('pageshow', onPageShow);
+    return () => window.removeEventListener('pageshow', onPageShow);
+  }, []);
 
   const handlePurchase = async (pkg: CreditPackage) => {
+    setCanceledNotice(false);
     setLoading(pkg.id);
     try {
       const result = await processPayment({
@@ -68,6 +85,13 @@ export const CreditPurchasePage: React.FC = () => {
             <span className="text-[12px] text-text-tertiary">달</span>
           </div>
         </div>
+
+        {/* 결제창 뒤로가기(취소) 안내 */}
+        {canceledNotice && (
+          <div className="mb-4 px-4 py-3 rounded-2xl bg-[rgba(230,57,70,0.08)] border border-[rgba(230,57,70,0.25)] text-[13px] text-text-secondary leading-relaxed">
+            결제가 취소되었습니다. 다시 시도해 주세요.
+          </div>
+        )}
 
         {/* 소진기한·환불 안내 (PG사 환금성 업종 입점 필수 명시) */}
         <div className="mb-5 px-4 py-3 rounded-2xl bg-[rgba(124,92,252,0.06)] border border-[rgba(124,92,252,0.15)] text-[12.5px] text-text-secondary leading-relaxed">
