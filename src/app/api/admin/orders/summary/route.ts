@@ -7,6 +7,7 @@ import { supabaseAdmin } from '@/services/supabaseAdmin';
 import { requireAdmin } from '../../_auth';
 import { cached, shouldForce } from '../../_cache';
 import { excludedUserIds, excludeUsers } from '../../_excluded';
+import { resolveAudience, includeAudience } from '../../_audience';
 
 const CACHE_KEY = 'admin:orders:summary:v1';
 const TTL_SECONDS = 30;
@@ -30,13 +31,13 @@ function lastNMonths(n: number, tzOffsetMin = 540): string[] {
   return out;
 }
 
-async function computeSummary() {
-  // 슈퍼/테스트 계정 제외
+async function computeSummary(audience: Set<string> | null) {
+  // 슈퍼/테스트 계정 제외 + (선택) 오디언스 코호트로 한정
   const ex = await excludedUserIds();
 
   const [ordersRes, usersRes] = await Promise.all([
-    excludeUsers(supabaseAdmin.from('orders').select('user_id, status, amount, package_id, package_name, payment_method, created_at, completed_at'), ex),
-    excludeUsers(supabaseAdmin.from('birth_profiles').select('user_id', { count: 'exact', head: true }).eq('is_primary', true), ex),
+    includeAudience(excludeUsers(supabaseAdmin.from('orders').select('user_id, status, amount, package_id, package_name, payment_method, created_at, completed_at'), ex), audience),
+    includeAudience(excludeUsers(supabaseAdmin.from('birth_profiles').select('user_id', { count: 'exact', head: true }).eq('is_primary', true), ex), audience),
   ]);
 
   const orders = ordersRes.data ?? [];
@@ -154,7 +155,8 @@ export async function GET(request: NextRequest) {
   const auth = await requireAdmin(request);
   if (auth instanceof Response) return auth;
 
-  const data = await cached(CACHE_KEY, computeSummary, {
+  const { cacheSuffix, audience } = await resolveAudience(request);
+  const data = await cached(`${CACHE_KEY}${cacheSuffix}`, () => computeSummary(audience), {
     ttl: TTL_SECONDS,
     force: shouldForce(request),
   });

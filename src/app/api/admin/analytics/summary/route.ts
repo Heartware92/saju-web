@@ -12,6 +12,7 @@ import { supabaseAdmin } from '@/services/supabaseAdmin';
 import { requireAdmin } from '../../_auth';
 import { cached, shouldForce } from '../../_cache';
 import { excludedUserIds, filterExcludedRows } from '../../_excluded';
+import { resolveAudience } from '../../_audience';
 
 const CACHE_KEY = 'admin:analytics:summary:v1';
 const TTL_SECONDS = 60;
@@ -117,7 +118,7 @@ function topN(counts: Map<string, number>, n: number) {
  *  - 데이터: 최근 60일 visitor_id/created_at. (서비스 초기엔 전체 이력과 사실상 동일)
  *  - 한계: 60일보다 오래된 첫 방문은 관측 불가 → 초기에는 표본이 작을 수 있음.
  */
-async function computeRetention(excluded: Set<string>) {
+async function computeRetention(excluded: Set<string>, audience: Set<string> | null) {
   const RET_DAYS = 60;
   const sinceIso = new Date(Date.now() - RET_DAYS * 86_400_000).toISOString();
   const rows: { visitor_id: string | null; user_id: string | null; created_at: string }[] = [];
@@ -138,6 +139,8 @@ async function computeRetention(excluded: Set<string>) {
   for (const r of rows) {
     if (!r.visitor_id) continue;
     if (r.user_id && excluded.has(r.user_id)) continue;
+    // 오디언스 필터 활성 시: 코호트 user_id 만(비로그인 방문은 인구통계 식별 불가 → 제외)
+    if (audience && !(r.user_id && audience.has(r.user_id))) continue;
     const ts = new Date(r.created_at).getTime();
     const arr = byVisitor.get(r.visitor_id);
     if (arr) arr.push(ts);
@@ -168,12 +171,14 @@ async function computeRetention(excluded: Set<string>) {
   };
 }
 
-async function computeSummary() {
+async function computeSummary(audience: Set<string> | null) {
   const sinceIso = new Date(Date.now() - WINDOW_DAYS * 86_400_000).toISOString();
   const { rows: allRows, truncated } = await fetchWindowRows(sinceIso);
   // 슈퍼/테스트 계정(로그인 상태)의 페이지뷰 제외. 비로그인(user_id=null)은 식별 불가라 유지.
   const excluded = await excludedUserIds();
-  const filtered = filterExcludedRows(allRows, excluded);
+  let filtered = filterExcludedRows(allRows, excluded);
+  // 오디언스 필터 활성 시: 해당 코호트 user_id 이벤트만. 비로그인(user_id=null)은 인구통계 식별 불가 → 제외.
+  if (audience) filtered = filtered.filter((r) => r.user_id !== null && audience.has(r.user_id));
   // 페이지뷰 집계와 공유(상호작용) 이벤트를 분리 — 공유 이벤트가 방문/이탈 통계를 오염시키지 않게.
   const rows = filtered.filter((r) => r.event_type === 'pageview');
   const shareRows = filtered.filter((r) => r.event_type === 'share_kakao' || r.event_type === 'share_url');
@@ -238,7 +243,7 @@ async function computeSummary() {
   });
 
   const totalSessions = sessions.size;
-  const retention = await computeRetention(excluded);
+  const retention = await computeRetention(excluded, audience);
 
   return {
     truncated,
@@ -265,7 +270,8 @@ export async function GET(request: NextRequest) {
   const auth = await requireAdmin(request);
   if (auth instanceof Response) return auth;
 
-  const data = await cached(CACHE_KEY, computeSummary, {
+  const { cacheSuffix, audience } = await resolveAudience(request);
+  const data = await cached(`${CACHE_KEY}${cacheSuffix}`, () => computeSummary(audience), {
     ttl: TTL_SECONDS,
     force: shouldForce(request),
   });

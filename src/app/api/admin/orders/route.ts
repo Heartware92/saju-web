@@ -8,6 +8,7 @@ import { requireAdmin } from '../_auth';
 import { cachedEmailMap } from '../_emailMap';
 import { shouldForce } from '../_cache';
 import { expireStalePendingOrders } from '../_expirePending';
+import { audienceUserIds, includeAudience } from '../_audience';
 
 const DEFAULT_PAGE_SIZE = 20;
 const MAX_PAGE_SIZE = 10_000;
@@ -26,6 +27,8 @@ export async function GET(request: NextRequest) {
   const search = searchParams.get('search')?.trim() ?? '';
   const from = (page - 1) * pageSize;
 
+  const audience = await audienceUserIds(request);
+
   let query = supabaseAdmin
     .from('orders')
     .select('*, user_id', { count: 'exact' })
@@ -33,6 +36,7 @@ export async function GET(request: NextRequest) {
     .range(from, from + pageSize - 1);
 
   if (status) query = query.eq('status', status);
+  query = includeAudience(query, audience);
 
   const { data: orders, count, error } = await query;
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });

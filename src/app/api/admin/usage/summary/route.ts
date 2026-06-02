@@ -7,6 +7,7 @@ import { supabaseAdmin } from '@/services/supabaseAdmin';
 import { requireAdmin } from '../../_auth';
 import { cached, shouldForce } from '../../_cache';
 import { excludedUserIds, excludeUsers } from '../../_excluded';
+import { resolveAudience, includeAudience } from '../../_audience';
 
 const CACHE_KEY = 'admin:usage:summary:v1';
 const TTL_SECONDS = 30;
@@ -33,17 +34,17 @@ function lastNDays(n: number): string[] {
   return out;
 }
 
-async function computeSummary() {
+async function computeSummary(audience: Set<string> | null) {
   const thirty = new Date(Date.now() - 30 * 86400_000).toISOString();
 
-  // 슈퍼/테스트 계정 제외
+  // 슈퍼/테스트 계정 제외 + (선택) 오디언스 코호트로 한정
   const ex = await excludedUserIds();
 
   const [sajuRes, tarotRes, creditRes, consultRes] = await Promise.all([
-    excludeUsers(supabaseAdmin.from('saju_records').select('user_id, category, credit_used, created_at'), ex),
-    excludeUsers(supabaseAdmin.from('tarot_records').select('user_id, spread_type, credit_used, created_at'), ex),
-    excludeUsers(supabaseAdmin.from('credit_transactions').select('amount, reason, type, created_at').eq('type', 'consume').eq('credit_type', 'moon'), ex),
-    excludeUsers(supabaseAdmin.from('consultation_records').select('user_id, message_count, created_at, updated_at'), ex),
+    includeAudience(excludeUsers(supabaseAdmin.from('saju_records').select('user_id, category, credit_used, created_at'), ex), audience),
+    includeAudience(excludeUsers(supabaseAdmin.from('tarot_records').select('user_id, spread_type, credit_used, created_at'), ex), audience),
+    includeAudience(excludeUsers(supabaseAdmin.from('credit_transactions').select('amount, reason, type, created_at').eq('type', 'consume').eq('credit_type', 'moon'), ex), audience),
+    includeAudience(excludeUsers(supabaseAdmin.from('consultation_records').select('user_id, message_count, created_at, updated_at'), ex), audience),
   ]);
 
   const saju = sajuRes.data ?? [];
@@ -153,7 +154,8 @@ export async function GET(request: NextRequest) {
   const auth = await requireAdmin(request);
   if (auth instanceof Response) return auth;
 
-  const data = await cached(CACHE_KEY, computeSummary, {
+  const { cacheSuffix, audience } = await resolveAudience(request);
+  const data = await cached(`${CACHE_KEY}${cacheSuffix}`, () => computeSummary(audience), {
     ttl: TTL_SECONDS,
     force: shouldForce(request),
   });

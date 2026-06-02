@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback, useRef, Fragment } from 'react';
+import { useEffect, useState, useCallback, useMemo, useRef, Fragment } from 'react';
 import { DemographicsSummary, type MemberSummary } from '@/components/admin/members/DemographicsSummary';
 import { MembersFilterBar } from '@/components/admin/members/MembersFilterBar';
 import { MembersTable, type MemberRow } from '@/components/admin/members/MembersTable';
@@ -18,6 +18,7 @@ import { InquiriesSection } from '@/components/admin/inquiries/InquiriesSection'
 import { PhoneChangesSection } from '@/components/admin/ops/PhoneChangesSection';
 import { JobsSection } from '@/components/admin/jobs/JobsSection';
 import { PaymentGatewaySection } from '@/components/admin/ops/PaymentGatewaySection';
+import { AudienceFilterBar, EMPTY_AUDIENCE, type AudienceFilterValue } from '@/components/admin/AudienceFilterBar';
 import { toCsv, downloadCsv, timestampSuffix } from '@/components/admin/csvExport';
 import { SAJU_CATEGORY_LABEL, TAROT_SPREAD_LABEL, ORDER_STATUS_LABEL, GENDER_LABEL, PROVIDER_LABEL, CREDIT_REASON_LABEL, DELETION_REASON_LABEL, type UserSegment, type AgeBucketKey } from '@/constants/adminLabels';
 
@@ -143,6 +144,7 @@ export default function AdminPage() {
   const [token, setToken] = useState<string | null>(null);
   const [tab, setTab] = useState<Tab>('overview');
   const [loading, setLoading] = useState(false);
+  const [audFilter, setAudFilter] = useState<AudienceFilterValue>(EMPTY_AUDIENCE);
   const [error, setError] = useState('');
 
   // Overview
@@ -262,6 +264,18 @@ export default function AdminPage() {
     return (json ?? staleData) as T;
   }, [token]);
 
+  // ── 글로벌 오디언스(코호트) 필터 — 모든 분석을 같은 유저군으로 슬라이스 ──
+  const audQS = useMemo(() => {
+    const p = new URLSearchParams();
+    if (audFilter.gender) p.set('f_gender', audFilter.gender);
+    if (audFilter.ageBucket) p.set('f_ageBucket', audFilter.ageBucket);
+    if (audFilter.segment) p.set('f_segment', audFilter.segment);
+    if (audFilter.provider) p.set('f_provider', audFilter.provider);
+    if (audFilter.joinedFrom) p.set('f_joinedFrom', audFilter.joinedFrom);
+    if (audFilter.joinedTo) p.set('f_joinedTo', audFilter.joinedTo);
+    return p.toString();
+  }, [audFilter]);
+
   const fetchStats = useCallback(async (force = false) => {
     if (!token) return;
     setLoading(true);
@@ -320,29 +334,29 @@ export default function AdminPage() {
     setLoading(true);
     try {
       const params = new URLSearchParams({ page: String(orderPage), status: orderStatus, search: orderSearch });
-      const data = await adminFetch<{ orders: Order[]; total: number }>(`/api/admin/orders?${params}`, force);
+      const data = await adminFetch<{ orders: Order[]; total: number }>(`/api/admin/orders?${params}${audQS ? `&${audQS}` : ''}`, force);
       if (data) { setOrders(data.orders); setOrderTotal(data.total); }
     } catch (e: any) { setError(e.message); }
     finally { setLoading(false); }
-  }, [token, adminFetch, orderPage, orderStatus, orderSearch]);
+  }, [token, adminFetch, orderPage, orderStatus, orderSearch, audQS]);
 
   const fetchOrdersSummary = useCallback(async (force = false) => {
     if (!token) return;
     try {
-      const data = await adminFetch<OrdersSummary>('/api/admin/orders/summary', force);
+      const data = await adminFetch<OrdersSummary>(`/api/admin/orders/summary${audQS ? `?${audQS}` : ''}`, force);
       if (data) setOrdersSummary(data);
     } catch (e: any) { setError(e.message); }
-  }, [token, adminFetch]);
+  }, [token, adminFetch, audQS]);
 
   const fetchUsageSummary = useCallback(async (force = false) => {
     if (!token) return;
     setLoading(true);
     try {
-      const data = await adminFetch<UsageSummary>('/api/admin/usage/summary', force);
+      const data = await adminFetch<UsageSummary>(`/api/admin/usage/summary${audQS ? `?${audQS}` : ''}`, force);
       if (data) setUsageSummary(data);
     } catch (e: any) { setError(e.message); }
     finally { setLoading(false); }
-  }, [token, adminFetch]);
+  }, [token, adminFetch, audQS]);
 
   const fetchCreditsSummary = useCallback(async (force = false) => {
     if (!token) return;
@@ -389,11 +403,11 @@ export default function AdminPage() {
     if (!token) return;
     setLoading(true);
     try {
-      const data = await adminFetch<AnalyticsSummary>('/api/admin/analytics/summary', force);
+      const data = await adminFetch<AnalyticsSummary>(`/api/admin/analytics/summary${audQS ? `?${audQS}` : ''}`, force);
       if (data) setAnalytics(data);
     } catch (e: any) { setError(e.message); }
     finally { setLoading(false); }
-  }, [token, adminFetch]);
+  }, [token, adminFetch, audQS]);
 
   const fetchConsultations = useCallback(async (force = false) => {
     if (!token) return;
@@ -688,6 +702,19 @@ export default function AdminPage() {
     else fetchRecords(true);
   };
 
+  // 오디언스 필터가 바뀌면 현재 탭을 강제 재조회 (최초 렌더 1회는 스킵)
+  const refreshRef = useRef(refreshCurrentTab);
+  refreshRef.current = refreshCurrentTab;
+  const audFirstRun = useRef(true);
+  useEffect(() => {
+    if (audFirstRun.current) { audFirstRun.current = false; return; }
+    if (token) refreshRef.current();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [audQS]);
+
+  // 오디언스 필터를 지원하는 탭 (Phase 1: 유입·매출·이용)
+  const AUDIENCE_TABS = new Set<Tab>(['analytics', 'orders', 'usage']);
+
   return (
     <div className="min-h-screen bg-[#0a0614] text-text-primary">
       {/* 헤더 */}
@@ -750,6 +777,17 @@ export default function AdminPage() {
       )}
 
       <div className="px-6 py-6 max-w-[1400px] mx-auto">
+        {/* 글로벌 코호트 필터 (Phase 1: 유입·매출·이용 탭) */}
+        {AUDIENCE_TABS.has(tab) && (
+          <AudienceFilterBar
+            value={audFilter}
+            onChange={setAudFilter}
+            note={tab === 'analytics'
+              ? '코호트 필터 적용 시 로그인 상태 방문만 집계됩니다(비로그인 익명 방문은 나이·성별 식별 불가).'
+              : undefined}
+          />
+        )}
+
         {error && (
           <div className="mb-4 px-4 py-3 rounded-xl bg-red-500/10 border border-red-500/30 text-[15px] text-red-300">
             {error}
