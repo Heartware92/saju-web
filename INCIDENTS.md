@@ -17,6 +17,43 @@
 
 ---
 
+## 2026-06-03 — 서버리스 함수 리전 미스매치(iad1↔Seoul)로 전반 레이턴시 증가 `[infra]` `[config]`
+
+### 증상
+- 사용자: "내 문의 내역 불러오는데 레이턴시가 너무 오래 걸린다"
+- DB를 호출하는 화면 전반이 느렸음 (특히 왕복이 여러 번인 페이지)
+
+### 영향 범위
+- Supabase(DB·Auth·Storage)를 호출하는 **모든 서버리스 함수** — 호출당 ~180ms 추가 지연
+- 내 문의 내역 GET은 토큰검증 + 조회 + 첨부 서명URL = 3회 왕복이라 체감이 특히 큼
+
+### 진단 과정
+1. `vercel inspect <prod>` 로 함수 리전 확인 → 전부 `iad1`(미 동부)
+2. `vercel.json`에 `regions` 설정 없음 → Vercel 기본값 iad1로 배포되고 있었음
+3. Supabase는 Seoul(ebrk), 사용자도 한국 → 함수↔DB가 매 호출 태평양 횡단
+
+### 진짜 원인
+**리전 미스매치.** 2026-05-15 Supabase를 Mumbai→Seoul로 옮겼지만 Vercel 함수 리전을 맞추지 않아, 함수(iad1)와 DB(Seoul)가 떨어져 모든 Supabase 호출이 태평양을 왕복했다.
+
+### 해결
+- `vercel.json`에 `"regions": ["icn1"]` 추가 → 모든 nodejs 서버리스 함수 Seoul 실행 (커밋 `e4779e9`)
+- 전역 `regions`는 edge 런타임에 적용 안 됨 → 유일한 edge 라우트 `src/app/api/consultation/route.ts`에 `export const preferredRegion = 'icn1'` 추가 (커밋 `cc7a7ce`)
+- 검증: `vercel inspect` 결과 icn1만, iad1 0개
+
+### 재발 방지 (반드시 준수)
+- **모든 함수는 Seoul(icn1)에서 실행한다.** `vercel.json`의 `"regions": ["icn1"]`를 절대 제거하지 말 것.
+- **새 edge 라우트(`runtime = 'edge'`)는 반드시 `export const preferredRegion = 'icn1'` 추가** (edge는 vercel.json regions 미적용).
+- 그 외 라우트(런타임 미지정·`nodejs`)는 전역 regions로 자동 Seoul.
+- DB 리전을 옮길 때는 **Vercel 함수 리전도 함께 변경**할 것.
+- 배포 후 `vercel inspect <url> | grep iad1` 로 미국 잔존 함수 0개 확인.
+
+### 관련
+- 커밋: `e4779e9`(전역 regions icn1), `cc7a7ce`(consultation edge 핀)
+- 파일: `vercel.json`, `src/app/api/consultation/route.ts`
+- 선행: 2026-05-15 Supabase Mumbai→Seoul 마이그레이션
+
+---
+
 ## 2026-05-29 00:10 — 궁합 모달 페이지 라우팅 자체 차단 (5/22 사고 진짜 해결) `[ui]` `[code]`
 
 ### 증상
