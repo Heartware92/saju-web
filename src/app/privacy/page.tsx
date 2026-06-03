@@ -24,7 +24,7 @@ export default async function PrivacyPage({ searchParams }: { searchParams: Prom
 
       <div className="rounded-2xl p-6 bg-[rgba(20,12,38,0.55)] border border-[var(--border-subtle)]">
         <p className="text-[13px] text-text-tertiary mb-4">
-          시행일: 2026-05-01 / 최종 개정일: 2026-05-02 / 버전 1.1
+          시행일: 2026-05-01 / 최종 개정일: 2026-06-03 / 버전 1.2
         </p>
 
         <section className="space-y-6 text-[14px] text-text-secondary leading-relaxed">
@@ -62,18 +62,18 @@ export default async function PrivacyPage({ searchParams }: { searchParams: Prom
                   <td className="px-3 py-2">카카오 로그인</td>
                   <td className="px-3 py-2">이메일, 닉네임, 카카오 회원번호, 휴대폰 번호</td>
                 </tr>
-                <tr className="border-t border-[var(--border-subtle)]">
-                  <td className="px-3 py-2">네이버 로그인</td>
-                  <td className="px-3 py-2">이메일, 이름, 네이버 회원번호, 휴대폰 번호</td>
-                </tr>
               </tbody>
             </table>
 
             <h4 className="text-[13px] font-bold text-text-primary mt-3 mb-1">2. 서비스 이용 시 (이용자가 직접 입력)</h4>
             <ul className="list-disc pl-5 space-y-1">
-              <li>이름(프로필명), 생년월일, 태어난 시간, 성별</li>
+              <li>이름(프로필명), 생년월일, 태어난 시간, 성별, (선택) 직업 상태·연애 상태</li>
               <li>궁합 서비스: 상대방 이름, 생년월일, 태어난 시간, 성별</li>
+              <li>이름풀이 서비스: 풀이할 이름(한글·한자)</li>
+              <li>꿈해몽 서비스: 꿈 내용(텍스트)</li>
+              <li>상담소(AI 채팅 상담): 이용자가 입력한 대화 내용</li>
             </ul>
+            <p className="text-[12px] text-text-tertiary mt-1">* (선택) 마케팅 정보 수신 동의 여부 — 동의 시 이벤트·혜택 안내에 이용</p>
 
             <h4 className="text-[13px] font-bold text-text-primary mt-3 mb-1">3. 결제 시</h4>
             <ul className="list-disc pl-5 space-y-1">
@@ -116,6 +116,10 @@ export default async function PrivacyPage({ searchParams }: { searchParams: Prom
                 <tr className="border-t border-[var(--border-subtle)]">
                   <td className="px-3 py-2">서비스 개선</td>
                   <td className="px-3 py-2">접속 빈도 파악, 이용 통계 분석</td>
+                </tr>
+                <tr className="border-t border-[var(--border-subtle)]">
+                  <td className="px-3 py-2">마케팅 (선택 동의 시)</td>
+                  <td className="px-3 py-2">이벤트·혜택 등 정보 안내</td>
                 </tr>
               </tbody>
             </table>
@@ -200,15 +204,23 @@ export default async function PrivacyPage({ searchParams }: { searchParams: Prom
               <tbody>
                 <tr className="border-t border-[var(--border-subtle)]">
                   <td className="px-3 py-2">PortOne (포트원)</td>
-                  <td className="px-3 py-2">결제 처리 대행</td>
+                  <td className="px-3 py-2">결제 연동 및 처리</td>
                 </tr>
                 <tr className="border-t border-[var(--border-subtle)]">
-                  <td className="px-3 py-2">Supabase (AWS)</td>
-                  <td className="px-3 py-2">데이터 저장 및 인증 처리</td>
+                  <td className="px-3 py-2">KG이니시스, 토스페이먼츠</td>
+                  <td className="px-3 py-2">신용카드·간편결제 등 결제대행(PG)</td>
                 </tr>
                 <tr className="border-t border-[var(--border-subtle)]">
-                  <td className="px-3 py-2">Google (Gemini AI)</td>
-                  <td className="px-3 py-2">AI 풀이 결과 생성</td>
+                  <td className="px-3 py-2">주식회사 누리고 (솔라피)</td>
+                  <td className="px-3 py-2">휴대폰 본인인증(SMS)·카카오 알림톡 발송</td>
+                </tr>
+                <tr className="border-t border-[var(--border-subtle)]">
+                  <td className="px-3 py-2">Supabase</td>
+                  <td className="px-3 py-2">데이터 저장 및 인증 처리 (AWS 서울 리전)</td>
+                </tr>
+                <tr className="border-t border-[var(--border-subtle)]">
+                  <td className="px-3 py-2">Google (Gemini), OpenAI</td>
+                  <td className="px-3 py-2">AI 풀이·상담 결과 생성</td>
                 </tr>
                 <tr className="border-t border-[var(--border-subtle)]">
                   <td className="px-3 py-2">Vercel</td>
@@ -220,6 +232,45 @@ export default async function PrivacyPage({ searchParams }: { searchParams: Prom
               회사는 위탁 계약 시 개인정보보호 관련 법규의 준수, 개인정보 비밀 유지, 제3자 제공 금지,
               사고 시 책임 부담 등을 명확히 규정합니다.
             </p>
+          </Article>
+
+          {/* ── 제6조의2 ── */}
+          <Article title="제6조의2 (개인정보의 국외 이전)">
+            <p>
+              회사는 서비스 제공을 위해 다음과 같이 개인정보를 국외로 이전(처리위탁)하고 있습니다.
+              이용자는 본 이전에 대한 동의를 거부할 수 있으나, 이 경우 AI 풀이 등 일부 서비스 이용이 제한될 수 있습니다.
+              (데이터 저장·인증을 담당하는 Supabase는 국내 리전(AWS 서울)에 보관되어 국외 이전 대상이 아닙니다.)
+            </p>
+            <table className="w-full text-[13px] border border-[var(--border-subtle)] rounded-lg overflow-hidden mt-2">
+              <thead>
+                <tr className="bg-[rgba(124,92,252,0.08)]">
+                  <th className="text-left px-3 py-2 text-text-tertiary font-medium">이전받는 자</th>
+                  <th className="text-left px-3 py-2 text-text-tertiary font-medium">국가</th>
+                  <th className="text-left px-3 py-2 text-text-tertiary font-medium">이전 항목 / 목적</th>
+                  <th className="text-left px-3 py-2 text-text-tertiary font-medium">이전 일시·방법 / 보유기간</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr className="border-t border-[var(--border-subtle)]">
+                  <td className="px-3 py-2">Google LLC (Gemini)</td>
+                  <td className="px-3 py-2">미국</td>
+                  <td className="px-3 py-2">풀이 입력정보(생년월일·태어난 시간·성별 등) / AI 풀이 결과 생성</td>
+                  <td className="px-3 py-2">풀이 요청 시 네트워크 전송 / 결과 생성 후 별도 보관하지 않음(제공사 정책상 단기 보관될 수 있음)</td>
+                </tr>
+                <tr className="border-t border-[var(--border-subtle)]">
+                  <td className="px-3 py-2">OpenAI, L.L.C.</td>
+                  <td className="px-3 py-2">미국</td>
+                  <td className="px-3 py-2">풀이·상담 입력정보 / AI 풀이·상담 결과 생성(보조)</td>
+                  <td className="px-3 py-2">요청 시 네트워크 전송 / 결과 생성 후 별도 보관하지 않음(제공사 정책상 단기 보관될 수 있음)</td>
+                </tr>
+                <tr className="border-t border-[var(--border-subtle)]">
+                  <td className="px-3 py-2">Vercel Inc.</td>
+                  <td className="px-3 py-2">미국</td>
+                  <td className="px-3 py-2">서비스 이용·접속 정보 / 웹 서비스 호스팅</td>
+                  <td className="px-3 py-2">서비스 접속 시 / 처리 목적 달성 시까지</td>
+                </tr>
+              </tbody>
+            </table>
           </Article>
 
           {/* ── 제7조 ── */}
@@ -284,7 +335,9 @@ export default async function PrivacyPage({ searchParams }: { searchParams: Prom
             <p>
               회사는 이용자의 개인정보(생년월일, 출생 시간, 성별 등 사주 정보 포함)를
               AI 모델의 학습 데이터로 활용하지 않습니다. 이용자의 정보는 오직 해당 이용자의
-              풀이 결과 생성 목적으로만 사용되며, 결과 생성 후 AI 시스템에 보존되지 않습니다.
+              풀이·상담 결과 생성 목적으로만 사용되며, 회사는 결과 생성 외의 목적으로 이를
+              보관·이용하지 않습니다. 다만 AI 처리 과정에서 AI 제공사(Google, OpenAI)의
+              자체 정책에 따라 오·남용 모니터링 목적으로 일시적으로 보관될 수 있습니다.
             </p>
           </Article>
 
@@ -299,7 +352,8 @@ export default async function PrivacyPage({ searchParams }: { searchParams: Prom
               <p className="font-medium text-text-primary">개인정보보호책임자</p>
               <ul className="mt-1 space-y-0.5 text-[13px]">
                 <li>회사명: (주)하트웨어</li>
-                <li>이메일: [추후 기재]</li>
+                <li>책임자: 허진우 (대표자 겸임)</li>
+                <li>이메일: heojinwoo@heartware.co.kr</li>
                 <li>전화: [추후 기재]</li>
               </ul>
             </div>

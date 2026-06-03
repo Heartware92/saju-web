@@ -24,7 +24,7 @@ export default async function TermsPage({ searchParams }: { searchParams: Promis
 
       <div className="rounded-2xl p-6 bg-[rgba(20,12,38,0.55)] border border-[var(--border-subtle)]">
         <p className="text-[13px] text-text-tertiary mb-4">
-          시행일: 2026-05-01 / 최종 개정일: 2026-05-01
+          시행일: 2026-05-01 / 최종 개정일: 2026-06-03
         </p>
 
         <section className="space-y-6 text-[14px] text-text-secondary leading-relaxed">
@@ -43,10 +43,10 @@ export default async function TermsPage({ searchParams }: { searchParams: Promis
           <Article title="제2조 (정의)">
             <p>본 약관에서 사용하는 용어의 정의는 다음과 같습니다.</p>
             <ol className="list-decimal pl-5 mt-2 space-y-1">
-              <li>&quot;서비스&quot;란 회사가 웹사이트 및 모바일 앱을 통해 제공하는 정통사주, 신년운세, 실시간 운세, 지정일 운세, 궁합, 택일, 토정비결, 자미두수, 타로 등 모든 사주명리·운세 풀이 콘텐츠 및 부가 기능을 의미합니다.</li>
+              <li>&quot;서비스&quot;란 회사가 웹사이트 및 모바일 앱을 통해 제공하는 정통사주, 신년운세, 실시간 운세, 지정일 운세, 연도별 운세, 궁합, 택일, 토정비결, 자미두수, 타로, 이름풀이, 꿈해몽, 상담소(AI 채팅 상담) 등 모든 사주명리·운세 풀이 콘텐츠 및 부가 기능을 의미합니다.</li>
               <li>&quot;콘텐츠&quot;란 회사가 유·무상으로 제공하는 텍스트, 이미지, 데이터 등 모든 정보 및 서비스를 말하며, 생성형 AI를 통해 생성됩니다.</li>
               <li>&quot;회원&quot;이란 본 약관에 동의하고 회사와 서비스 이용 계약을 체결한 자를 말합니다.</li>
-              <li>&quot;달 크레딧&quot;(또는 &quot;크레딧&quot;)이란 서비스 내에서 콘텐츠 이용을 위해 사용되는 가상 재화로, 모든 풀이 콘텐츠(정통사주, 신년운세, 실시간 운세, 지정일 운세, 궁합, 택일, 토정비결, 자미두수, 타로, 더 많은 운세 등)에 차감 단위로 사용됩니다.</li>
+              <li>&quot;달 크레딧&quot;(또는 &quot;크레딧&quot;)이란 서비스 내에서 콘텐츠 이용을 위해 사용되는 가상 재화로, 모든 풀이 콘텐츠(정통사주, 신년운세, 실시간 운세, 지정일 운세, 연도별 운세, 궁합, 택일, 토정비결, 자미두수, 타로, 이름풀이, 꿈해몽, 상담소, 더 많은 운세 등)에 차감 단위로 사용됩니다.</li>
               <li>&quot;충전 패키지&quot;란 달 크레딧을 유료로 구매할 수 있는 상품 단위를 말합니다.</li>
             </ol>
           </Article>
@@ -87,7 +87,7 @@ export default async function TermsPage({ searchParams }: { searchParams: Promis
 
           <Article title="제6조 (회원가입)">
             <ol className="list-decimal pl-5 space-y-1">
-              <li>회원가입은 이메일 회원가입 또는 소셜 로그인(Google, 카카오, 네이버)을 통해 이루어집니다.</li>
+              <li>회원가입은 이메일 회원가입 또는 소셜 로그인(Google, 카카오)을 통해 이루어지며, 이메일 회원가입 시 휴대폰 본인인증(SMS)을 거칩니다.</li>
               <li>회원은 가입 시 정확한 정보를 기재하여야 하며, 변경 사항이 있을 경우 즉시 수정하여야 합니다.</li>
               <li>회원이 제공한 정보가 부정확하여 발생하는 불이익에 대하여 회사는 책임을 지지 않습니다.</li>
             </ol>
@@ -107,7 +107,7 @@ export default async function TermsPage({ searchParams }: { searchParams: Promis
             <ol className="list-decimal pl-5 space-y-1">
               <li>회사는 다음의 서비스를 제공합니다.
                 <ul className="list-disc pl-5 mt-1 space-y-0.5">
-                  <li>사주명리 기반 운세·풀이 콘텐츠 (정통사주, 신년운세, 실시간 운세, 지정일 운세, 궁합, 택일, 토정비결, 자미두수, 타로, 더 많은 운세 등)</li>
+                  <li>사주명리 기반 운세·풀이 콘텐츠 (정통사주, 신년운세, 실시간 운세, 지정일 운세, 연도별 운세, 궁합, 택일, 토정비결, 자미두수, 타로, 이름풀이, 꿈해몽, 상담소, 더 많은 운세 등)</li>
                   <li>만세력 계산 및 사주 원국 분석</li>
                   <li>생년월일 프로필 관리</li>
                   <li>풀이 결과 보관함</li>
@@ -122,6 +122,7 @@ export default async function TermsPage({ searchParams }: { searchParams: Promis
             <ol className="list-decimal pl-5 space-y-1">
               <li>서비스의 이용은 연중무휴, 1일 24시간을 원칙으로 합니다.</li>
               <li>다만, 시스템 점검, 설비 보수, 기타 부득이한 사유가 있는 경우 일시적으로 서비스 제공을 중단할 수 있으며, 이 경우 사전에 공지합니다. 긴급한 경우에는 사후에 공지할 수 있습니다.</li>
+              <li>회사가 경영상·기술상의 이유로 서비스 전부를 종료하는 경우, 종료일로부터 30일 전에 서비스 내 공지하며, 미사용 유료 크레딧에 대해서는 관련 법령 및 제16조에 따라 처리합니다.</li>
             </ol>
           </Article>
 
@@ -141,6 +142,13 @@ export default async function TermsPage({ searchParams }: { searchParams: Promis
               <li>회원이 입력한 생년월일, 출생 시간, 성별 등의 정보는 사주명리 계산 및 AI 풀이 결과 생성에 활용됩니다.</li>
               <li>회사는 이용자의 개인정보를 AI 모델 학습 목적으로 활용하지 않습니다.</li>
               <li>서비스 이용 기록은 서비스 품질 개선 및 통계 분석 목적으로 비식별화하여 활용될 수 있습니다.</li>
+            </ol>
+          </Article>
+
+          <Article title="제11조의2 (광고 및 알림 메시지)">
+            <ol className="list-decimal pl-5 space-y-1">
+              <li>회사는 서비스 내에 광고를 게재할 수 있으며, 마케팅 정보 수신에 동의한 회원에게 이벤트·혜택 등 광고성 정보를 전자적 방법으로 전송할 수 있습니다. 회원은 언제든지 수신을 거부할 수 있습니다.</li>
+              <li>회사는 회원가입, 문의 답변 등 거래 및 서비스 이용에 관한 정보성 메시지(카카오 알림톡, 문자메시지 등)를 발송할 수 있으며, 이는 광고성 정보 수신 동의 여부와 무관하게 발송될 수 있습니다.</li>
             </ol>
           </Article>
 
@@ -196,6 +204,13 @@ export default async function TermsPage({ searchParams }: { searchParams: Promis
               <li><strong>환불 처리는 결제 시 사용한 결제 수단으로만 가능하며(예: 신용카드 결제 → 신용카드 환불, 간편결제 → 동일 간편결제 환불), 다른 수단으로의 환급은 불가합니다.</strong></li>
               <li>환불은 결제 건 단위 전액으로 처리되며, 결제 수수료(있는 경우)는 공제될 수 있습니다.</li>
               <li>무료로 지급된 크레딧(회원가입 보너스, 이벤트 등)은 환불 대상이 아닙니다.</li>
+            </ol>
+          </Article>
+
+          <Article title="제16조의2 (미성년자의 결제 및 과오금)">
+            <ol className="list-decimal pl-5 space-y-1">
+              <li>만 19세 미만의 미성년 회원이 법정대리인의 동의 없이 결제한 경우, 본인 또는 법정대리인은 해당 결제를 취소할 수 있습니다. 다만, 미성년자가 법정대리인이 처분을 허락한 재산의 범위에서 결제하였거나, 성년자로 신분을 속이는 등 사술(詐術)을 사용한 경우에는 그러하지 아니합니다.</li>
+              <li>결제 과정에서 과오금(이중 결제, 금액 오류 등)이 발생한 경우, 회사는 그 사실을 확인한 후 과오금 전액을 환불합니다. 회사의 귀책사유로 발생한 과오금은 회사가 부담하며, 회원의 귀책사유로 발생한 경우 환불에 소요되는 비용은 합리적인 범위 내에서 회원이 부담할 수 있습니다.</li>
             </ol>
           </Article>
 
@@ -320,6 +335,7 @@ export default async function TermsPage({ searchParams }: { searchParams: Promis
           {/* ── 부칙 ── */}
           <h2 className="text-[15px] font-bold text-cta/80 mt-4">부칙</h2>
           <p>본 약관은 2026년 5월 1일부터 시행합니다.</p>
+          <p>본 개정 약관은 2026년 6월 3일부터 시행합니다. (소셜 로그인 제공 범위 현행화, 서비스 항목 갱신, 미성년자 결제·과오금·서비스 종료 공지 조항 신설)</p>
 
         </section>
 
