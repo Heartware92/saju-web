@@ -3,7 +3,8 @@
  * 엽전 크레딧 시스템에 맞춘 무료/유료 구분
  */
 
-import { SajuResult, TEN_GODS_MAP, STEM_ELEMENT, BRANCH_ELEMENT, normalizeGan, normalizeZhi, type SeWoon, type DaeWoon } from '../utils/sajuCalculator';
+import { SajuResult, TEN_GODS_MAP, STEM_ELEMENT, BRANCH_ELEMENT, EARTHLY_BRANCHES, normalizeGan, normalizeZhi, type SeWoon, type DaeWoon } from '../utils/sajuCalculator';
+import { STEM_YINYANG } from '../lib/data/constants';
 import { Solar } from 'lunar-javascript';
 import { determineGyeokguk, analyzeGyeokgukStatus } from '../engine/gyeokguk';
 import { getDayPillarTraits } from './gapjaTraits';
@@ -140,6 +141,101 @@ const GAN_CLASH: Record<string, string> = {
   '갑':'경', '경':'갑', '을':'신', '신':'을',
   '병':'임', '임':'병', '정':'계', '계':'정',
 };
+
+// ─────────────────────────────────────────────────────────────
+// 일진 × 원국 정밀 상호작용 (실시간 운세 — 매일 바뀌는 핵심 신호)
+// 표준 명리 테이블: 육합·충·삼합·형·파·해 + 12운성 + 용/기신 십성 판정
+// ─────────────────────────────────────────────────────────────
+const T_SAMHAP: Array<[string[], string]> = [
+  [['신','자','진'],'수'], [['인','오','술'],'화'], [['사','유','축'],'금'], [['해','묘','미'],'목'],
+];
+const T_WANGJI = ['자','오','묘','유'];
+const T_YUKHAP: Record<string,string> = {자:'축',축:'자',인:'해',해:'인',묘:'술',술:'묘',진:'유',유:'진',사:'신',신:'사',오:'미',미:'오'};
+const T_CHUNG: Record<string,string> = {자:'오',오:'자',축:'미',미:'축',인:'신',신:'인',묘:'유',유:'묘',진:'술',술:'진',사:'해',해:'사'};
+const T_PA: Record<string,string> = {자:'유',유:'자',오:'묘',묘:'오',신:'사',사:'신',인:'해',해:'인',진:'축',축:'진',술:'미',미:'술'};
+const T_HAE: Record<string,string> = {자:'미',미:'자',축:'오',오:'축',인:'사',사:'인',묘:'진',진:'묘',신:'해',해:'신',유:'술',술:'유'};
+const T_HYUNG_TRIO = [['인','사','신'],['축','술','미']];
+const T_SELF_HYUNG = ['진','오','유','해'];
+const T_EL_GEN: Record<string,string> = {목:'화',화:'토',토:'금',금:'수',수:'목'};
+const T_EL_CTRL: Record<string,string> = {목:'토',토:'수',수:'화',화:'금',금:'목'};
+const T_STAGE = ['장생','목욕','관대','건록','제왕','쇠','병','사','묘','절','태','양'];
+const T_STAGE_TONE: Record<string,string> = {
+  장생:'기운이 새로 솟는', 목욕:'들뜨고 변동 큰', 관대:'펼치기 좋은', 건록:'힘이 실리는', 제왕:'정점의 강한',
+  쇠:'한풀 꺾여 갈무리할', 병:'예민하고 지치기 쉬운', 사:'마무리·정리에 맞는', 묘:'움츠려 보관하는',
+  절:'끊고 비우기 좋은', 태:'씨앗을 품는', 양:'천천히 기르는',
+};
+const T_PALACE_LBL: Record<string,string> = { year:'년주', month:'월주', day:'일주', hour:'시주' };
+const T_PALACE_AREA: Record<string,string> = {
+  year:'뿌리·초년·먼 환경', month:'직업·사회·부모·재물 활동', day:'나 자신·배우자·건강', hour:'자녀·말년·밤 시간·계획',
+};
+function todayTwelveStage(dayGan: string, branch: string): string {
+  const bi = EARTHLY_BRANCHES.indexOf(branch);
+  if (bi < 0) return '';
+  const isYang = STEM_YINYANG[dayGan] === '양';
+  const el = STEM_ELEMENT[dayGan];
+  const yang: Record<string,number> = {목:11,화:2,토:2,금:5,수:8};
+  const yin: Record<string,number> = {목:6,화:9,토:9,금:0,수:3};
+  return isYang ? T_STAGE[((bi - (yang[el] ?? 0)) + 12) % 12] : T_STAGE[(((yin[el] ?? 0) - bi) + 12) % 12];
+}
+function elementRel(a: string, b: string): string {
+  if (!a || !b) return `${a||'-'}·${b||'-'}`;
+  if (a === b) return `${a}=${b} 비화(같은 기운—경쟁/협력)`;
+  if (T_EL_GEN[a] === b) return `${a}생${b}(내 기운을 ${b}으로 흘려보냄—설기)`;
+  if (T_EL_GEN[b] === a) return `${b}생${a}(${b}이 나를 도움—생조)`;
+  if (T_EL_CTRL[a] === b) return `${a}극${b}(내가 ${b}을 제어함)`;
+  if (T_EL_CTRL[b] === a) return `${b}극${a}(${b}이 나를 압박함)`;
+  return `${a}·${b}`;
+}
+/** 오늘 일진이 내 원국 4기둥과 어떻게 부딪히는지 정밀 분석 — 본문 풀이의 출발점 블록 */
+function buildTodayInteractionBlock(result: SajuResult, gz: TodayGanZhi): string {
+  const tGan = gz.gan, tZhi = gz.zhi;
+  const p = result.pillars;
+  const palaces: Array<[string, { gan: string; zhi: string }]> = [
+    ['year', p.year], ['month', p.month], ['day', p.day],
+    ...(result.hourUnknown ? [] : [['hour', p.hour] as [string, { gan: string; zhi: string }]]),
+  ];
+  // 천간 관계
+  const ganRels: string[] = [];
+  palaces.forEach(([k, pp]) => {
+    if (GAN_COMBINE[tGan]?.partner === pp.gan) ganRels.push(`${T_PALACE_LBL[k]}천간 ${pp.gan}과 천간합(→${GAN_COMBINE[tGan].result})`);
+    else if (GAN_CLASH[tGan] === pp.gan) ganRels.push(`${T_PALACE_LBL[k]}천간 ${pp.gan}과 천간충`);
+  });
+  // 지지 관계 (충/육합/삼합·반합/형/파/해)
+  const zhiRels: string[] = [];
+  const hitPalaces = new Set<string>();
+  palaces.forEach(([k, pp]) => {
+    const z = pp.zhi, lbl = T_PALACE_LBL[k], area = T_PALACE_AREA[k];
+    let hit = false;
+    if (T_CHUNG[tZhi] === z) { zhiRels.push(`${lbl}지지 ${z}와 충(沖) → ${area} 흔들림·변동`); hit = true; }
+    if (T_YUKHAP[tZhi] === z) { zhiRels.push(`${lbl}지지 ${z}와 육합(合) → ${area} 결속·협조`); hit = true; }
+    if (T_PA[tZhi] === z) { zhiRels.push(`${lbl}지지 ${z}와 파(破) → ${area} 작은 균열`); hit = true; }
+    if (T_HAE[tZhi] === z) { zhiRels.push(`${lbl}지지 ${z}와 해(害) → ${area} 은근한 소모`); hit = true; }
+    T_HYUNG_TRIO.forEach((trio) => { if (trio.includes(tZhi) && trio.includes(z) && tZhi !== z) { zhiRels.push(`${lbl}지지 ${z}와 형(刑) → ${area} 마찰·조정`); hit = true; } });
+    if (T_SELF_HYUNG.includes(tZhi) && tZhi === z) { zhiRels.push(`${lbl}지지 ${z}와 자형(自刑) → 내적 소모·자책 주의`); hit = true; }
+    T_SAMHAP.forEach(([grp, el]) => { if (grp.includes(tZhi) && grp.includes(z) && tZhi !== z) { const half = T_WANGJI.includes(tZhi) || T_WANGJI.includes(z); zhiRels.push(`${lbl}지지 ${z}와 ${half ? '반합' : '삼합 일부'}(→${el}) → ${area}에 ${el} 기운 모임`); hit = true; } });
+    if (hit) hitPalaces.add(area);
+  });
+  // 12운성
+  const stage = todayTwelveStage(result.dayMaster, tZhi);
+  // 용신/기신 십성 판정
+  const yong = result.yongSin || '', gi = result.giSin || '';
+  const sip = [gz.tenGodGan, gz.tenGodZhi].filter(Boolean) as string[];
+  const isYong = sip.some((s) => yong.includes(s)) || gz.ganElement === result.yongSinElement || gz.zhiElement === result.yongSinElement;
+  const isGi = sip.some((s) => gi.includes(s));
+  const yongLine = isYong
+    ? `★ 오늘은 용신(${yong}/${result.yongSinElement}) 기운이 드는 날 — 전반적으로 순행·기회의 흐름.`
+    : isGi
+    ? `△ 오늘은 기신(${gi}) 기운이 드는 날 — 확장·무리수보다 관리·수비가 유리.`
+    : `· 오늘 일진 십성(${sip.join('·') || '-'})은 용/기신 중립 — 평이한 흐름. 합충·궁 자극으로 디테일을 잡을 것.`;
+  return `[오늘의 일진 × 내 사주 — 정밀 상호작용]  ★매일 바뀌는 핵심 신호. 본문 모든 섹션 풀이를 여기서 출발시킬 것.
+- 오늘 일진: ${tGan}${tZhi} (${gz.ganElement}·${gz.zhiElement}) / 천간 십성 ${gz.tenGodGan || '-'} · 지지 십성 ${gz.tenGodZhi || '-'}
+- ${yongLine}
+- 일간 ${result.dayMaster} 기준 오늘 지지 ${tZhi}의 12운성: ${stage || '-'}${stage ? ` — '${T_STAGE_TONE[stage] || ''}' 날` : ''}
+- 천간 관계: ${ganRels.length ? ganRels.join(' / ') : '원국 천간과 직접 합·충 없음'}  (일진천간 ${tGan} vs 일간 ${result.dayMaster}: ${elementRel(gz.ganElement, p.day.ganElement)})
+- 지지 관계(궁별): ${zhiRels.length ? zhiRels.join(' / ') : '원국 지지와 직접 충·합·형·파·해 없음 — 무난한 날'}
+- 오늘 자극받는 삶의 영역: ${hitPalaces.size ? Array.from(hitPalaces).join(' · ') : '특정 영역 강한 자극 없음(전반 평이)'}
+- ★ 이 상호작용이 "오늘만의" 차별점이다. 충/합/형이 걸린 궁의 영역(연애·일·건강·재물 등)을 해당 섹션에 직접 반영하고, 어제와 다른 오늘의 결을 여기서 만들 것. 같은 사주라도 일진이 다르면 풀이가 확연히 달라야 한다.`;
+}
 
 /** 기둥 천간↔지지 오행 관계 한 줄 문자열 */
 function pillarRelation(ganEl: string, zhiEl: string): string {
@@ -1109,6 +1205,7 @@ export const generateTodayFortuneV3Prompt = (
   const monthRunStr = `${_mGan}${_mZhi}(${_mGanEl}${_mZhiEl}${_mTenGod ? `·${_mTenGod}` : ''})`;
 
   const interTodayStr = todayGz.interactions.length > 0 ? todayGz.interactions.join(' / ') : '없음';
+  const todayInteraction = buildTodayInteractionBlock(result, todayGz);
   const todayHidden = (todayGz as { hiddenStems?: string[] }).hiddenStems?.join(',') || '';
 
   const dateLabel = (() => {
@@ -1393,6 +1490,7 @@ ${baseGuide}`;
      - [today_oneliner]: 라벨 종합한 한 줄 결.
 
 1) 일진(${todayGz.gan}${todayGz.zhi})의 천간·지지·십성·합충을 [명리 의미 KB]에서 의미로 옮긴다.
+   ★ 먼저 아래 [오늘의 일진 × 내 사주 — 정밀 상호작용] 블록을 읽고, 거기 적힌 용/기신·12운성·천간/지지 합충·자극받는 궁(영역)을 본문 전 섹션의 출발점으로 삼는다. 이게 "어제와 다른 오늘만의" 결을 만드는 핵심이다 — 같은 사주라도 일진이 다르면 풀이가 확연히 달라야 한다.
 2) 4층 운기(대운·세운·월운·일진)가 오늘 어떻게 겹쳐 작용하는지 1줄로 정리한다.
 3) 사용자 답변(있다면)의 [답변 자동 분류 결과]를 본 후 [섹션별 비중·강조점 분기 가이드] 적용 + jobState 분기 + 'other' 케이스는 [자유 입력 답변 처리] 자율 분류.
 4) 각 섹션을 [데이터 인용 → 일상 인과 → 구체 장면 → 행동 권고] 4단 구조로 작성한다.
@@ -1437,6 +1535,8 @@ ${dayTraitsBlock}
 일운(오늘 일진): ${todayGz.gan}${todayGz.zhi}(${todayGz.hanja}) — ${todayGz.ganElement}·${todayGz.zhiElement}
    천간 십성: ${todayGz.tenGodGan} / 지지 십성: ${todayGz.tenGodZhi}${todayHidden ? ` / 일진 지장간: ${todayHidden}` : ''}
 일진×원국 합충: ${interTodayStr}
+
+${todayInteraction}
 
 [오늘 날짜] ${dateLabel}
 
