@@ -511,6 +511,29 @@ export async function POST(request: NextRequest) {
         }
       } catch (e) {
         console.error('[jobs/create] runXxxJob 치명적 누락 에러:', e);
+        // 방어선: 잡 러너가 자체 처리하지 못한 채 throw된 경우에도 잡이 pending/processing 으로
+        // 멈춰 클라이언트가 타임아웃을 보지 않도록, 여기서 failed 마킹 + 환불(멱등)한다.
+        // 러너가 이미 done/failed 로 끝냈으면 status 가드로 덮어쓰지 않고, 환불은 같은 멱등키라 중복 안 됨.
+        try {
+          await supabaseAdmin
+            .from('saju_records')
+            .update({
+              status: 'failed',
+              error_message: (e instanceof Error ? e.message : '처리 중 오류').slice(0, 500),
+              completed_at: new Date().toISOString(),
+            })
+            .eq('id', jobId)
+            .in('status', ['pending', 'processing']);
+          await supabaseAdmin.rpc('refund_credit_atomic', {
+            p_user_id: userId,
+            p_credit_type: CREDIT_TYPE,
+            p_amount: policy.creditCost,
+            p_reason: '분석 실패 자동 환불(누락 방어)',
+            p_idempotency_key: `refund:${consumeKey}`,
+          });
+        } catch (e2) {
+          console.error('[jobs/create] 방어 failed 마킹/환불 실패:', e2);
+        }
       }
     });
 

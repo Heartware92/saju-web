@@ -546,12 +546,14 @@ export default function TodayFortunePage() {
   chargeRef.current = chargeForContent;
   const apiCalledKeyRef = useRef<string | null>(null);
 
-  // 로딩 안전장치 — 130s. callGPT 자체 90s + 여유.
-  const [reportTimedOut] = useLoadingGuard(reportLoading, 140_000);
+  // 로딩 안전장치 — 서버 잡 maxDuration(300s)보다 약간 짧게(240s). 그 전에 끝나면 잡 동기화가 처리.
+  // 잡은 백그라운드에서 계속 진행 중일 수 있으므로(서버 300s) 하드 실패 대신 안내만 — 완료되면
+  // 잡 동기화 useEffect 가 결과로 자동 교체하고, 실패면 환불 후 failed 메시지로 교체된다. 보관함에도 저장됨.
+  const [reportTimedOut] = useLoadingGuard(reportLoading, 240_000);
   useEffect(() => {
     if (reportTimedOut) {
       setReportLoading(false);
-      if (!report) setReport({ success: false, error: '응답이 너무 오래 걸려요. 다시 시도해주세요.' });
+      if (!report) setReport({ success: false, error: '풀이가 생각보다 오래 걸리고 있어요. 완료되면 자동으로 표시되고, 잠시 후 보관함에서도 확인할 수 있어요.' });
     }
   }, [reportTimedOut, report]);
 
