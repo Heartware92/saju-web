@@ -79,8 +79,15 @@ export function useFortuneJob(
     }
 
     let cancelled = false;
+    let terminal = false; // done/failed 도달 시 재조회 불필요
     setLoading(true);
     setNotFound(false);
+
+    const applyRow = (row: Record<string, unknown>) => {
+      const st = row.status as string | undefined;
+      if (st === 'done' || st === 'failed') terminal = true;
+      setJob((prev) => mergeRow(prev, jobId, row, table));
+    };
 
     // 1) 먼저 channel subscribe — 마운트 직후 변경 이벤트 놓치지 않게
     const channel = supabase
@@ -95,14 +102,13 @@ export function useFortuneJob(
         },
         (payload) => {
           if (cancelled) return;
-          const row = payload.new as Record<string, unknown>;
-          setJob((prev) => mergeRow(prev, jobId, row, table));
+          applyRow(payload.new as Record<string, unknown>);
         },
       )
       .subscribe();
 
-    // 2) 직후 현재 상태 1회 fetch (subscribe race 방지)
-    void (async () => {
+    // 2) 현재 상태 fetch (subscribe race 방지 + 탭 복귀 시 재조회로 재사용)
+    const fetchOnce = async () => {
       const { data, error } = await supabase
         .from(table)
         .select(SELECT_COLUMNS[table])
@@ -118,12 +124,24 @@ export function useFortuneJob(
         return;
       }
 
-      setJob(mergeRow(null, jobId, data as unknown as Record<string, unknown>, table));
+      applyRow(data as unknown as Record<string, unknown>);
       setLoading(false);
-    })();
+    };
+    void fetchOnce();
+
+    // 3) Safari 등 백그라운드 탭에서 realtime WebSocket 이 끊겨 완료 UPDATE 를 놓쳐도,
+    //    탭 복귀(visible/focus) 시 재조회해 상태를 보정한다. (놓친 done 이 그제서야 반영)
+    const onReturn = () => {
+      if (cancelled || terminal) return;
+      if (document.visibilityState === 'visible') void fetchOnce();
+    };
+    document.addEventListener('visibilitychange', onReturn);
+    window.addEventListener('focus', onReturn);
 
     return () => {
       cancelled = true;
+      document.removeEventListener('visibilitychange', onReturn);
+      window.removeEventListener('focus', onReturn);
       void supabase.removeChannel(channel);
     };
   }, [jobId, table]);
