@@ -1734,6 +1734,20 @@ ${METAPHOR_KB}
 출력 순서: [today_scores] → [today_flow] → [today_basis] → [today_hobby_method] → [today_timeflow] → [today_sleep] → [today_meal] → [today_exercise] → [today_relationship] → [today_caution] → [today_strength] → [today_persona_extra] → [today_oneliner]
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
+★★★ [일진 × 만세력 상호작용 — 전 섹션 반영 강제]
+위 [오늘의 일진 × 내 사주 — 정밀 상호작용] 블록은 장식이 아니다. 점수 2줄 + 본문 모든 섹션이 그 블록(용/기신·12운성·천간/지지 합충·자극받는 궁)을 명리 근거로 깔고 작성해야 한다. 일진 상호작용 없이 일반론·고정 원국만으로 쓴 섹션은 사고로 간주(매일 같은 결과가 나오는 원인). 섹션별 반영 지침:
+- today_scores/today_flow: 용신 드는 날=전반 가점, 기신=보수. 충/합/형 걸린 궁의 영역 점수에 직접 반영. 12운성 왕쇠로 시간대 곡선.
+- today_basis: 4층 운기 + 일진 천간/지지 십성·합충·12운성을 종합해 "어제와 다른 오늘의 결" 단정.
+- today_domains_brief(9영역): 충/합/형이 걸린 궁의 영역(연애·일·건강·재물·대인 등)을 그 줄 풀이에 직접 반영.
+- today_timeflow: 일진 지지와 각 시간대 지지의 12지 관계(합·충)로 강/약 시간 결정.
+- today_relationship: 일지(나·배우자 궁)·관련 궁의 충/합을 첫 문장 근거로.
+- today_caution: 충·형·파·해 걸린 궁에서 생기는 함정을 구체 장면으로.
+- today_strength: 육합·삼합·용신/길성 작용을 "오늘 잘 쓰는 행동"으로.
+- today_sleep/meal/exercise: 일진 지지 오행·12운성(왕쇠)으로 강도·시간대·음식 결정.
+- today_persona_extra/today_fortune_message: 용/기신·12운성 톤 반영.
+★ 각 섹션에 "오늘 일진이 내 사주의 무엇을 건드려서 이렇다"가 의미로 드러나야 한다(용어 나열 금지, 일상 언어로 인과).
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
 [today_basis] — 분기 분량(아래 ★ 참조)
 첫 줄: 은유 제목.
 본문 5요소 구조 (모두 포함, 자연스러운 문단으로):
