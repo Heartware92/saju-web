@@ -531,8 +531,8 @@ function PersonaVisual({ report }: { report: TodayFortuneV3AIResult }) {
   const uc = report.userContext;
   const s = report.domainScores;
   if (!uc || !s) return null;
-  const pair = ROLE_DOMAINS[uc.jobState] ?? ROLE_DOMAINS['기타'];
-  const roleLabel = uc.customJobState?.trim() || uc.jobState;
+  const pair = ROLE_DOMAINS[uc.jobState ?? '기타'] ?? ROLE_DOMAINS['기타'];
+  const roleLabel = uc.customJobState?.trim() || uc.jobState || '오늘의 나';
   return (
     <CardWrap accent="#F4C2A1" title="내 역할에 닿는 오늘 기운">
       <div className="flex items-center gap-2 mb-3">
