@@ -1116,21 +1116,31 @@ export interface TodayFortuneV3AIResult {
  * - 항목별 55~97 (페널티 누적 시도 보호)
  */
 export function parseTodayV3DomainScores(raw: string): TodayV3DomainScores | undefined {
-  const m = raw.match(/\[today_scores\]\s*종합:(\d+)\s*시험:(\d+)\s*공부:(\d+)\s*멘탈:(\d+)\s*대인:(\d+)\s*이성:(\d+)\s*금전:(\d+)\s*운동:(\d+)\s*회복:(\d+)\s*횡재:(\d+)/);
-  if (!m) return undefined;
-  const clampOverall = (s: string) => Math.min(97, Math.max(60, Number(s)));
-  const clampDomain = (s: string) => Math.min(97, Math.max(55, Number(s)));
+  // 관대한 파싱: [today_scores] 한 줄에서 각 항목을 개별 추출.
+  // LLM이 일부 항목(특히 마지막 횡재)을 빠뜨려도 나머지는 살리고, 빠진 항목은 종합값으로 폴백.
+  // 종합(overall)만 없으면 점수 카드 자체가 의미 없으므로 undefined.
+  const block = raw.match(/\[today_scores\]([^\n[]*)/)?.[1];
+  if (!block) return undefined;
+  const pick = (label: string): number | undefined => {
+    const mm = block.match(new RegExp(`${label}\\s*:\\s*(\\d+)`));
+    return mm ? Number(mm[1]) : undefined;
+  };
+  const overall = pick('종합');
+  if (overall === undefined) return undefined;
+  const clampOverall = (n: number) => Math.min(97, Math.max(60, n));
+  const clampDomain = (n: number) => Math.min(97, Math.max(55, n));
+  const dom = (label: string) => clampDomain(pick(label) ?? overall);
   return {
-    overall:  clampOverall(m[1]),
-    exam:     clampDomain(m[2]),
-    focus:    clampDomain(m[3]),
-    mental:   clampDomain(m[4]),
-    social:   clampDomain(m[5]),
-    love:     clampDomain(m[6]),
-    money:    clampDomain(m[7]),
-    exercise: clampDomain(m[8]),
-    recovery: clampDomain(m[9]),
-    luck:     clampDomain(m[10]),
+    overall:  clampOverall(overall),
+    exam:     dom('시험'),
+    focus:    dom('공부'),
+    mental:   dom('멘탈'),
+    social:   dom('대인'),
+    love:     dom('이성'),
+    money:    dom('금전'),
+    exercise: dom('운동'),
+    recovery: dom('회복'),
+    luck:     dom('횡재'),
   };
 }
 

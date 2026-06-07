@@ -46,7 +46,12 @@ async function callGemini(prompt: string): Promise<string> {
     // 15개 마커 전부 존재해야 통과 — 하나라도 누락 시 재시도
     const MARKERS = ['today_scores','today_flow','today_basis','today_domains_brief','today_hobby_method','today_timeflow','today_sleep','today_meal','today_exercise','today_relationship','today_caution','today_strength','today_persona_extra','today_lucky_card','today_fortune_message'];
     const missing = MARKERS.filter(m=>!t.includes(`[${m}]`));
-    if((t.length<300 || missing.length>0) && a<4){console.log(`  재시도 ${a} (누락: ${missing.join(',')||'길이부족'})`);await new Promise(r=>setTimeout(r,2000));continue;}
+    // today_scores 10개 항목 전부 존재해야 통과 (특히 횡재 누락 빈번)
+    const scoreBlock=(t.match(/\[today_scores\]([^\n]*)/)||[])[1]||'';
+    const SCOREKEYS=['종합','시험','공부','멘탈','대인','이성','금전','운동','회복','횡재'];
+    const scoreMiss=SCOREKEYS.filter(k=>!new RegExp(k+':\\s*\\d+').test(scoreBlock));
+    const allMiss=[...missing,...scoreMiss.map(k=>'점수:'+k)];
+    if((t.length<300 || allMiss.length>0) && a<4){console.log(`  재시도 ${a} (누락: ${allMiss.join(',')||'길이부족'})`);await new Promise(r=>setTimeout(r,2000));continue;}
     return t||'[빈 응답]';
   } catch(e:any){ if(a<4){await new Promise(r=>setTimeout(r,2500));continue;} return `[실패 ${e?.message}]`; } }
   return '[재시도 실패]';
@@ -61,8 +66,10 @@ async function callGemini(prompt: string): Promise<string> {
   const raw = await callGemini(prompt);
   const MARKERS = ['today_scores','today_flow','today_basis','today_domains_brief','today_hobby_method','today_timeflow','today_sleep','today_meal','today_exercise','today_relationship','today_caution','today_strength','today_persona_extra','today_lucky_card','today_fortune_message'];
   const missing = MARKERS.filter(m=>!raw.includes(`[${m}]`));
-  console.log(`${DATE} ${slotLabel} (일진 ${gz.hanja}) 길이 ${raw.length} 마커 ${15-missing.length}/15${missing.length?' 누락:'+missing.join(','):''}`);
-  if (missing.length) { console.error('재생성에도 마커 누락 — 교체 보류'); process.exit(2); }
+  const sBlock=(raw.match(/\[today_scores\]([^\n]*)/)||[])[1]||'';
+  const sMiss=['종합','시험','공부','멘탈','대인','이성','금전','운동','회복','횡재'].filter(k=>!new RegExp(k+':\\s*\\d+').test(sBlock));
+  console.log(`${DATE} ${slotLabel} (일진 ${gz.hanja}) 길이 ${raw.length} 마커 ${15-missing.length}/15 점수 ${10-sMiss.length}/10${missing.length?' 마커누락:'+missing.join(','):''}${sMiss.length?' 점수누락:'+sMiss.join(','):''}`);
+  if (missing.length || sMiss.length) { console.error('재생성에도 누락 — 교체 보류'); process.exit(2); }
 
   const data = JSON.parse(fs.readFileSync('public/temp-test-data.json', 'utf8'));
   const idx = data.items.findIndex((i:any) => i.date===DATE && i.slot===SLOT);
