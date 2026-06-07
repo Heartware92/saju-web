@@ -43,8 +43,10 @@ async function callGemini(prompt: string): Promise<string> {
     const j:any = await res.json();
     if(!res.ok){ if(a<4){await new Promise(r=>setTimeout(r,2500));continue;} return `[오류 ${res.status}]`; }
     const t = j?.candidates?.[0]?.content?.parts?.map((p:any)=>p.text).join('')||'';
-    // today_basis 마커 누락 시 재시도
-    if((t.length<300 || !/\[today_basis\]/.test(t)) && a<4){await new Promise(r=>setTimeout(r,2000));continue;}
+    // 15개 마커 전부 존재해야 통과 — 하나라도 누락 시 재시도
+    const MARKERS = ['today_scores','today_flow','today_basis','today_domains_brief','today_hobby_method','today_timeflow','today_sleep','today_meal','today_exercise','today_relationship','today_caution','today_strength','today_persona_extra','today_lucky_card','today_fortune_message'];
+    const missing = MARKERS.filter(m=>!t.includes(`[${m}]`));
+    if((t.length<300 || missing.length>0) && a<4){console.log(`  재시도 ${a} (누락: ${missing.join(',')||'길이부족'})`);await new Promise(r=>setTimeout(r,2000));continue;}
     return t||'[빈 응답]';
   } catch(e:any){ if(a<4){await new Promise(r=>setTimeout(r,2500));continue;} return `[실패 ${e?.message}]`; } }
   return '[재시도 실패]';
@@ -57,9 +59,10 @@ async function callGemini(prompt: string): Promise<string> {
   const ctx:any = { hobbies:['업무·일'], jobState:null, loveState:null, timeSlot:SLOT, q1Text:'', q2Text:'' };
   const prompt = generateTodayFortuneV3Prompt(result, gz as any, DATE, ctx, null);
   const raw = await callGemini(prompt);
-  const hasBasis = /\[today_basis\]/.test(raw);
-  console.log(`${DATE} ${slotLabel} (일진 ${gz.hanja}) 길이 ${raw.length} today_basis마커 ${hasBasis ? 'O' : 'X'}`);
-  if (!hasBasis) { console.error('재생성에도 today_basis 누락 — 교체 보류'); process.exit(2); }
+  const MARKERS = ['today_scores','today_flow','today_basis','today_domains_brief','today_hobby_method','today_timeflow','today_sleep','today_meal','today_exercise','today_relationship','today_caution','today_strength','today_persona_extra','today_lucky_card','today_fortune_message'];
+  const missing = MARKERS.filter(m=>!raw.includes(`[${m}]`));
+  console.log(`${DATE} ${slotLabel} (일진 ${gz.hanja}) 길이 ${raw.length} 마커 ${15-missing.length}/15${missing.length?' 누락:'+missing.join(','):''}`);
+  if (missing.length) { console.error('재생성에도 마커 누락 — 교체 보류'); process.exit(2); }
 
   const data = JSON.parse(fs.readFileSync('public/temp-test-data.json', 'utf8'));
   const idx = data.items.findIndex((i:any) => i.date===DATE && i.slot===SLOT);
