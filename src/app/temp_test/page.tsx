@@ -3,11 +3,20 @@
 /**
  * /temp_test — 실시간 운세 결과 4열 비교 (검증용, 끝나면 제거 권장)
  * 사전 생성된 4일(6/7~6/10) × 4시간대(오전/오후/저녁/새벽) = 16개 결과를 public/temp-test-data.json 에서 읽어,
- * A·B·C·D 4개 열에서 각각 날짜·시간대를 골라 실제 결과 페이지 UI(TodayResultBlock) 그대로 나란히 비교.
+ * A·B·C·D 4개 열에서 각각 날짜·시간대를 골라 비교.
+ * ★ 실제 제품 결과 페이지(TodayFortunePage)와 1:1 동일한 TodayResultView 를 그대로 렌더 →
+ *   각 축(일진 카드·입력 요약·종합 점수·항목별·시간대 흐름·11섹션+시각카드)이 픽셀 단위로 같다.
  */
 
 import { useEffect, useMemo, useState } from 'react';
-import { TodayResultBlock } from '../../components/share/blocks/TodayResultBlock';
+import { TodayResultView } from '../../components/saju/TodayResultView';
+import {
+  parseTodayV3Sections, parseTodayV3DomainScores, parseTodayV3FlowScores,
+  type TodayFortuneV3AIResult,
+} from '../../services/fortuneService';
+import { computeSajuFromProfile } from '../../utils/profileSaju';
+import { TODAY_TIME_SLOT_LABELS, type TodayTimeSlot } from '../../constants/prompts';
+import type { BirthProfile } from '../../types/credit';
 
 const SLOTS = [
   { v: 'morning', label: '오전' }, { v: 'afternoon', label: '오후' },
@@ -15,7 +24,45 @@ const SLOTS = [
 ];
 const COL_LABELS = ['A', 'B', 'C', 'D'];
 
-interface Item { date: string; slot: string; slotLabel: string; iljin: string; record: Record<string, unknown>; }
+interface Item { date: string; slot: string; slotLabel: string; iljin: string; record: Record<string, any>; }
+
+// record(JSON) → 제품과 동일한 report/result 로 변환해 TodayResultView 그대로 렌더
+function TempColumn({ record }: { record: Record<string, any> }) {
+  const content: string = record.interpretation_detailed || record.interpretation_basic || '';
+  const eng = (record.engine_result ?? {}) as any;
+  const todayGz = eng.todayGz;
+  const userContext = eng.userContext;
+  const isoDate = eng.isoDate as string | undefined;
+
+  const profile: BirthProfile = {
+    id: record.profile_id ?? 'temp', user_id: '', name: record.profile_name ?? '',
+    birth_date: record.birth_date, birth_time: record.birth_time ?? undefined,
+    birth_place: record.birth_place ?? 'seoul', gender: record.gender,
+    calendar_type: record.calendar_type ?? 'solar', is_primary: false, created_at: '', updated_at: '',
+  };
+  const result = computeSajuFromProfile(profile);
+  if (!result) return <p className="text-[13px] text-text-tertiary p-4">사주 계산 실패</p>;
+
+  const report = {
+    success: true,
+    sections: parseTodayV3Sections(content),
+    domainScores: parseTodayV3DomainScores(content),
+    flowScores: parseTodayV3FlowScores(content),
+    todayGz, isoDate, userContext,
+  } as unknown as TodayFortuneV3AIResult;
+
+  const reportDateStr = isoDate
+    ? new Date(isoDate).toLocaleDateString('ko-KR', { month: 'long', day: 'numeric', weekday: 'long' })
+    : '';
+  const slot: TodayTimeSlot = userContext?.timeSlot ?? 'morning';
+  const ctxLabel = userContext
+    ? `${TODAY_TIME_SLOT_LABELS[slot]} · ${userContext.hobbies?.[0] ?? userContext.customHobby ?? '자기계발'}`
+    : null;
+
+  return (
+    <TodayResultView report={report} result={result} reportDateStr={reportDateStr} ctxLabel={ctxLabel} initialSlot={slot} />
+  );
+}
 
 export default function TempTestPage() {
   const [data, setData] = useState<{ profile?: { name?: string }; items: Item[] } | null>(null);
@@ -65,7 +112,7 @@ export default function TempTestPage() {
                 {item && <span className="ml-auto text-[11px] text-text-tertiary">일진 {item.iljin}</span>}
               </div>
               <div className="p-2">
-                {item ? <TodayResultBlock record={item.record as never} showSectionVisuals /> : <p className="text-[13px] text-text-tertiary p-4">해당 날짜·시간대 데이터 없음</p>}
+                {item ? <TempColumn record={item.record} /> : <p className="text-[13px] text-text-tertiary p-4">해당 날짜·시간대 데이터 없음</p>}
               </div>
             </div>
           );
