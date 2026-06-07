@@ -586,6 +586,57 @@ function LuckyVisual({ report }: { report: TodayFortuneV3AIResult }) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// 11) 영역별 한 줄 — 9개 생활영역 추진/균형/주의 톤 (today_scores 분류를 9영역으로 재매핑)
+//     상단 "항목별 운세"(시험·공부·이성·금전 등)와 다른 생활영역 분류라 중복 아님.
+//     숫자(정밀도)는 노출하지 않고 톤만 — 일·이동은 직접 점수가 없어 합성(공부+멘탈 / 운동+종합).
+// ─────────────────────────────────────────────────────────────────────────────
+function domainTone(score: number): { label: string; color: string } {
+  if (score >= 75) return { label: '추진', color: '#34D399' };
+  if (score >= 60) return { label: '균형', color: '#A78BFA' };
+  return { label: '주의', color: '#FBBF24' };
+}
+
+function DomainsBriefVisual({ report }: { report: TodayFortuneV3AIResult }) {
+  const s = report.domainScores;
+  if (!s) return null;
+  const r = (n: number) => Math.round(n);
+  const rows: { label: string; score: number }[] = [
+    { label: '연애', score: s.love },
+    { label: '일',   score: r((s.focus + s.mental) / 2) },
+    { label: '재물', score: s.money },
+    { label: '건강', score: r((s.recovery + s.exercise) / 2) },
+    { label: '학습', score: r((s.exam + s.focus) / 2) },
+    { label: '대인', score: s.social },
+    { label: '횡재', score: s.luck },
+    { label: '멘탈', score: s.mental },
+    { label: '이동', score: r((s.exercise + s.overall) / 2) },
+  ];
+  return (
+    <CardWrap accent="#C9A6FF" title="오늘 9개 영역 한눈 톤" titleSub="추진 · 균형 · 주의">
+      <div className="grid grid-cols-3 gap-2">
+        {rows.map((d) => {
+          const t = domainTone(d.score);
+          return (
+            <div
+              key={d.label}
+              className="rounded-xl px-2.5 py-2 border flex items-center justify-between gap-1"
+              style={{ background: `${t.color}12`, borderColor: `${t.color}3A` }}
+            >
+              <span className="text-[13px] font-semibold text-text-secondary" style={{ wordBreak: 'keep-all' }}>
+                {d.label}
+              </span>
+              <span className="text-[12px] font-bold px-1.5 py-0.5 rounded-md shrink-0" style={{ color: t.color, background: `${t.color}1F` }}>
+                {t.label}
+              </span>
+            </div>
+          );
+        })}
+      </div>
+    </CardWrap>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // 통합 라우터 — 섹션 키에 맞는 시각 카드 반환
 // ─────────────────────────────────────────────────────────────────────────────
 export function renderTodaySectionVisual(key: TodayV3SectionKey, report: TodayFortuneV3AIResult) {
@@ -616,9 +667,10 @@ export function renderTodaySectionVisual(key: TodayV3SectionKey, report: TodayFo
       return <PersonaVisual report={report} />;
     case 'today_lucky_card':
       return <LuckyVisual report={report} />;
+    case 'today_domains_brief':
+      return <DomainsBriefVisual report={report} />;
     default:
-      // today_domains_brief·today_fortune_message 는 상단 차트로 충분하거나
-      // 별도 결정값이 없어 카드 없음
+      // today_fortune_message 는 별도 결정값이 없어 카드 없음
       return null;
   }
 }

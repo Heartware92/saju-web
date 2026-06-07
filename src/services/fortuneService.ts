@@ -1202,7 +1202,7 @@ export function parseTodayV3Sections(raw: string): Partial<Record<TodayV3Section
 }
 
 /** today_domains_brief / today_lucky_card 의 라벨 — 줄별 분리·문단화에 사용 */
-const TODAY_DOMAIN_LABELS_RE = /(연애|일·업무|일\s*업무|재물|건강|학습|대인|횡재|멘탈|이동|컬러|숫자|아이템|장소)\s*[—–-]/;
+const TODAY_DOMAIN_LABELS_RE = /(연애|일·업무|일\s*업무|일|재물|건강|학습|대인|횡재|멘탈|이동|컬러|숫자|아이템|장소)\s*[—–-]/;
 
 /** 본문 안에 절대 남으면 안 되는 마커·태그 일괄 제거 (safety net) */
 export function stripStrayMarkers(text: string): string {
@@ -1218,8 +1218,8 @@ export function stripStrayMarkers(text: string): string {
     .replace(/^[\s]*[▶▷►▸▶︎▷︎]+\s*/gm, '')
     // ── today_domains_brief / today_lucky_card 라벨 시작 줄 앞에 빈 줄 강제 ──
     // 라벨이 줄 중간에 붙어있거나(같은 줄에 두 라벨) 줄바꿈 1번만 있어 문단 구분 안 보이는 경우 모두 정화
-    .replace(/([^\n])\n((?:연애|일·업무|일\s*업무|재물|건강|학습|대인|횡재|멘탈|이동|컬러|숫자|아이템|장소)\s*[—–-])/g, '$1\n\n$2')
-    .replace(/([.!?…,)])\s*((?:연애|일·업무|일\s*업무|재물|건강|학습|대인|횡재|멘탈|이동|컬러|숫자|아이템|장소)\s*[—–-])/g, '$1\n\n$2')
+    .replace(/([^\n])\n((?:연애|일·업무|일\s*업무|일|재물|건강|학습|대인|횡재|멘탈|이동|컬러|숫자|아이템|장소)\s*[—–-])/g, '$1\n\n$2')
+    .replace(/([.!?…,)])\s*((?:연애|일·업무|일\s*업무|일|재물|건강|학습|대인|횡재|멘탈|이동|컬러|숫자|아이템|장소)\s*[—–-])/g, '$1\n\n$2')
     // 연속 빈 줄 정리 (3개 이상 → 2개)
     .replace(/\n{3,}/g, '\n\n')
     .trim();
