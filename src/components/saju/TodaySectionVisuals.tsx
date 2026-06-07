@@ -243,16 +243,21 @@ function HobbyVisual({ report }: { report: TodayFortuneV3AIResult }) {
         {[
           { label: '직업·역할', value: jobState },
           { label: '연애 상태', value: loveState },
-        ].map((row) => (
-          <div
-            key={row.label}
-            className="rounded-xl px-3 py-2.5 border"
-            style={{ background: 'rgba(255,255,255,0.03)', borderColor: 'var(--border-subtle)' }}
-          >
-            <div className="text-[11.5px] text-text-tertiary mb-1">{row.label}</div>
-            <div className="text-[14px] font-bold text-text-primary">{row.value}</div>
-          </div>
-        ))}
+        ].map((row) => {
+          const filled = !!(row.value && row.value.trim());
+          return (
+            <div
+              key={row.label}
+              className="rounded-xl px-3 py-2.5 border"
+              style={{ background: 'rgba(255,255,255,0.03)', borderColor: 'var(--border-subtle)' }}
+            >
+              <div className="text-[11.5px] text-text-tertiary mb-1">{row.label}</div>
+              <div className={`text-[14px] font-bold ${filled ? 'text-text-primary' : 'text-text-tertiary'}`}>
+                {filled ? row.value : '미입력'}
+              </div>
+            </div>
+          );
+        })}
       </div>
     </CardWrap>
   );

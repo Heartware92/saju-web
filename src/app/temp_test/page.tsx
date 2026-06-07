@@ -2,7 +2,7 @@
 
 /**
  * /temp_test — 실시간 운세 결과 4열 비교 (검증용, 끝나면 제거 권장)
- * 사전 생성된 7일(6/6~6/12) × 4시간대(오전/오후/저녁/새벽) 결과를 public/temp-test-data.json 에서 읽어,
+ * 사전 생성된 4일(6/7~6/10) × 4시간대(오전/오후/저녁/새벽) = 16개 결과를 public/temp-test-data.json 에서 읽어,
  * A·B·C·D 4개 열에서 각각 날짜·시간대를 골라 실제 결과 페이지 UI(TodayResultBlock) 그대로 나란히 비교.
  */
 
@@ -21,10 +21,10 @@ export default function TempTestPage() {
   const [data, setData] = useState<{ profile?: { name?: string }; items: Item[] } | null>(null);
   const [err, setErr] = useState('');
   const [cols, setCols] = useState([
-    { date: '2026-06-06', slot: 'morning' },
     { date: '2026-06-07', slot: 'morning' },
     { date: '2026-06-08', slot: 'morning' },
     { date: '2026-06-09', slot: 'morning' },
+    { date: '2026-06-10', slot: 'morning' },
   ]);
 
   useEffect(() => {
@@ -65,7 +65,7 @@ export default function TempTestPage() {
                 {item && <span className="ml-auto text-[11px] text-text-tertiary">일진 {item.iljin}</span>}
               </div>
               <div className="p-2">
-                {item ? <TodayResultBlock record={item.record as never} /> : <p className="text-[13px] text-text-tertiary p-4">해당 날짜·시간대 데이터 없음</p>}
+                {item ? <TodayResultBlock record={item.record as never} showSectionVisuals /> : <p className="text-[13px] text-text-tertiary p-4">해당 날짜·시간대 데이터 없음</p>}
               </div>
             </div>
           );

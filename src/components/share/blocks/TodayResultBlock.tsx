@@ -11,13 +11,17 @@ import { TODAY_PERSONA_EXTRA_LABEL } from '@/constants/sajuKnowledgeBase';
 import {
   parseTodayV3Sections, parseTodayV3DomainScores, parseTodayV3FlowScores,
   stripStrayMarkers,
+  type TodayFortuneV3AIResult,
 } from '@/services/fortuneService';
+import { renderTodaySectionVisual } from '@/components/saju/TodaySectionVisuals';
 import { computeSajuFromProfile } from '@/utils/profileSaju';
 import { extractMetaphor } from '@/utils/parseMetaphor';
 import type { BirthProfile } from '@/types/credit';
 
 interface Props {
   record: Record<string, any>;
+  /** 섹션별 시각 데이터 카드(행운 처방·일진·식사 등)를 본문 위에 렌더 — 제품 페이지와 동일하게. 공유 페이지는 미사용(기본 false). */
+  showSectionVisuals?: boolean;
 }
 
 function scoreColor(s: number): string {
@@ -95,7 +99,7 @@ function FlowChart({ flow, currentSlot }: { flow: Record<TodayTimeSlot, number>;
   );
 }
 
-export function TodayResultBlock({ record }: Props) {
+export function TodayResultBlock({ record, showSectionVisuals = false }: Props) {
   const content: string = record.interpretation_detailed || record.interpretation_basic || '';
   const sections = parseTodayV3Sections(content);
   const domainScores = parseTodayV3DomainScores(content);
@@ -120,6 +124,17 @@ export function TodayResultBlock({ record }: Props) {
     updated_at: '',
   };
   const result = computeSajuFromProfile(profile);
+
+  // 제품 페이지(TodayFortunePage)와 동일한 시각 카드 렌더용 report — showSectionVisuals 일 때만 사용
+  const report = {
+    success: true,
+    sections,
+    domainScores,
+    flowScores,
+    todayGz: todayGz as never,
+    isoDate,
+    userContext: userContext as never,
+  } as unknown as TodayFortuneV3AIResult;
 
   const reportDateStr = isoDate
     ? new Date(isoDate).toLocaleDateString('ko-KR', { month: 'long', day: 'numeric', weekday: 'long' })
@@ -277,6 +292,7 @@ export function TodayResultBlock({ record }: Props) {
                   {metaphorTitle}
                 </div>
               )}
+              {showSectionVisuals && renderTodaySectionVisual(key, report)}
               <div className="text-[15px] text-text-secondary leading-[1.85] tracking-[-0.005em] space-y-3">
                 {bodyText.split(/\n\n+/).map((para, pi) => (
                   <p key={pi} className="whitespace-pre-line">{para.trim()}</p>
