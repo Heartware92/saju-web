@@ -584,28 +584,55 @@ function rotatePick<T>(arr: T[], seed: number, count: number): T[] {
   return out;
 }
 
+// 풀에서 seed 기준 start 인덱스
+function pickStart(len: number, seed: number): number {
+  return ((seed % len) + len) % len;
+}
+
 function LuckyVisual({ report }: { report: TodayFortuneV3AIResult }) {
   const gz = report.todayGz;
-  const el = gz?.ganElement;
-  const lucky = el ? ELEMENT_LUCKY[el] : undefined;
-  if (!lucky) return null;
-  // 오행 풀은 같아도 일진마다 색·보석·활동을 회전 선택 → 같은 오행 날도 처방이 다름.
-  // (숫자·방위·시간은 오행 정통 그대로 유지)
+  const ganEl = gz?.ganElement;
+  const zhiEl = gz?.zhiElement;
+  const g = ganEl ? ELEMENT_LUCKY[ganEl] : undefined;
+  if (!g) return null;
+  const z = zhiEl ? ELEMENT_LUCKY[zhiEl] : undefined;
   const seed = iljinSeed(gz?.gan, gz?.zhi);
-  const cn = lucky.colors.length;
-  const cStart = ((seed % cn) + cn) % cn;
-  const colors = [lucky.colors[cStart], lucky.colors[(cStart + 1) % cn]];
-  const colorCss = [lucky.colorCss[cStart], lucky.colorCss[(cStart + 1) % cn]];
-  const gem = rotatePick(lucky.gem.split('·'), seed, 4).join('·');
-  const activity = rotatePick(lucky.activity.split('·'), seed + 3, 4).join('·');
+  // 같은 오행이라도 일진마다 색·보석·활동을 회전 선택.
+  // ★ 천간·지지 오행이 다른 혼합일(예: 계축=천간 수·지지 토)은 두 기운을 모두 반영.
+  //   (방위·시간은 천간=일간 기준 정통 유지)
+  const mixed = !!z && zhiEl !== ganEl;
+  let colors: string[];
+  let colorCss: string[];
+  let numbers: number[];
+  let gem: string;
+  let activity: string;
+  let sub: string;
+  if (mixed && z) {
+    const gc = pickStart(g.colors.length, seed);
+    const zc = pickStart(z.colors.length, seed);
+    colors = [g.colors[gc], z.colors[zc]];
+    colorCss = [g.colorCss[gc], z.colorCss[zc]];
+    numbers = [g.numbers[seed % g.numbers.length], z.numbers[seed % z.numbers.length]];
+    gem = [...rotatePick(g.gem.split('·'), seed, 2), ...rotatePick(z.gem.split('·'), seed, 2)].join('·');
+    activity = [...rotatePick(g.activity.split('·'), seed + 3, 2), ...rotatePick(z.activity.split('·'), seed + 3, 2)].join('·');
+    sub = `${gz?.gan ?? ''}${gz?.zhi ?? ''} · 천간 ${ganEl}·지지 ${zhiEl} 기운`;
+  } else {
+    const cs = pickStart(g.colors.length, seed);
+    colors = [g.colors[cs], g.colors[(cs + 1) % g.colors.length]];
+    colorCss = [g.colorCss[cs], g.colorCss[(cs + 1) % g.colorCss.length]];
+    numbers = g.numbers;
+    gem = rotatePick(g.gem.split('·'), seed, 4).join('·');
+    activity = rotatePick(g.activity.split('·'), seed + 3, 4).join('·');
+    sub = `${gz?.gan ?? ''}${gz?.zhi ?? ''} · ${ganEl} 기운`;
+  }
   return (
-    <CardWrap accent="#FCE8B2" title="오늘의 행운 처방" titleSub={`${gz?.gan ?? ''}${gz?.zhi ?? ''} · ${el} 기운`}>
+    <CardWrap accent="#FCE8B2" title="오늘의 행운 처방" titleSub={sub}>
       <LuckyVisualCard
         colors={colors}
         colorCss={colorCss}
-        numbers={lucky.numbers}
-        direction={lucky.direction}
-        timeSlot={lucky.timeSlot}
+        numbers={numbers}
+        direction={g.direction}
+        timeSlot={g.timeSlot}
         gem={gem}
         activity={activity}
       />
