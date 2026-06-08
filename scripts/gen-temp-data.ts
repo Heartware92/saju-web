@@ -29,7 +29,7 @@ function calcTodayGz(result: SajuResult, isoDate: string) {
     if (md===6) interactions.push(`일진${zhi}×${oz} 충(沖)`); else if (md===0) interactions.push(`일진${zhi}×${oz} 동(同)`);
     hex.forEach(([a,b])=>{ if((zhi===a&&oz===b)||(zhi===b&&oz===a)) interactions.push(`일진${zhi}×${oz} 합(合)`); });
   });
-  return { gan, zhi, hanja:`${gan}${zhi}`, ganElement: STEM_ELEMENT[gan]||'', zhiElement: BRANCH_ELEMENT[zhi]||'',
+  return { gan, zhi, hanja:`${dayGz[0]}${dayGz[1]}`, ganElement: STEM_ELEMENT[gan]||'', zhiElement: BRANCH_ELEMENT[zhi]||'',
     tenGodGan: map[gan]||'', tenGodZhi: mainHidden ? (map[mainHidden]||'') : '', interactions };
 }
 
