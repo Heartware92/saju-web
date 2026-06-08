@@ -59,6 +59,7 @@ import {
   type PersonalitySectionKey,
   NAME_SECTION_KEYS,
   type NameSectionKey,
+  computeZhiInteractions,
 } from '../constants/prompts';
 import type { TaekilResult } from '../engine/taekil';
 import { Solar } from 'lunar-javascript';
@@ -1053,22 +1054,8 @@ export function calcTodayGanZhi(result: SajuResult, isoDate: string): TodayGanZh
     result.pillars.day.zhi,
     ...(result.hourUnknown ? [] : [result.pillars.hour.zhi]),
   ];
-  const interactions: string[] = [];
-  const todayIdx = EARTHLY_BRANCHES.indexOf(todayZhi);
-  origZhis.forEach(oz => {
-    const oIdx = EARTHLY_BRANCHES.indexOf(oz);
-    if (oIdx < 0 || todayIdx < 0) return;
-    const diff = Math.abs(todayIdx - oIdx);
-    const minDiff = Math.min(diff, 12 - diff);
-    if (minDiff === 6) interactions.push(`일진${todayZhi}×${oz} 충(沖)`);
-    else if (minDiff === 0) interactions.push(`일진${todayZhi}×${oz} 동(同)`);
-    // 육합 쌍: 자축, 인해, 묘술, 진유, 사신, 오미
-    const hexCombos: [string, string][] = [['자','축'],['인','해'],['묘','술'],['진','유'],['사','신'],['오','미']];
-    hexCombos.forEach(([a, b]) => {
-      if ((todayZhi === a && oz === b) || (todayZhi === b && oz === a))
-        interactions.push(`일진${todayZhi}×${oz} 합(合)`);
-    });
-  });
+  // 충·육합·파·해·형·자형·간여지동·삼합/반합 전부 — 정밀 블록과 동일 기준(누락 보완)
+  const interactions = computeZhiInteractions(todayZhi, origZhis);
 
   return {
     gan: todayGan,
