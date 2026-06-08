@@ -49,6 +49,31 @@ export async function POST(req: NextRequest) {
           { status: 409 },
         );
       }
+    } else {
+      // 회원가입(이메일 가입 / 소셜 첫 휴대폰 등록) — 이미 가입된 번호면 차단(한 번호 = 한 계정).
+      //   단, 예외 허용 리스트(phone_signup_allowlist)에 등록된 번호는 중복 가입 허용.
+      //   OTP 발송 전에 막아 어뷰징 차단 + 솔라피 SMS 비용 절감.
+      const { data: takenData, error: takenErr } = await supabaseAdmin.rpc('check_phone_taken', {
+        p_phone: phone,
+        p_exclude_user_id: null,
+      });
+      if (takenErr) {
+        console.error('[sms/send] check_phone_taken (signup) error:', takenErr);
+        return NextResponse.json({ error: '번호 확인 중 오류가 발생했어요.' }, { status: 500 });
+      }
+      if (takenData === true) {
+        const { data: allow } = await supabaseAdmin
+          .from('phone_signup_allowlist')
+          .select('phone')
+          .eq('phone', phone)
+          .maybeSingle();
+        if (!allow) {
+          return NextResponse.json(
+            { error: '이미 가입한 전화번호입니다.' },
+            { status: 409 },
+          );
+        }
+      }
     }
 
     // Rate limit — 솔라피 비용 폭주·스팸 차단. 회원가입·번호변경 공통 적용.

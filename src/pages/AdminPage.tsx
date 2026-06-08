@@ -16,6 +16,7 @@ import { AnalyticsSection, type AnalyticsSummary } from '@/components/admin/anal
 import { AuditLogSection, type AuditLog } from '@/components/admin/ops/AuditLogSection';
 import { InquiriesSection } from '@/components/admin/inquiries/InquiriesSection';
 import { PhoneChangesSection } from '@/components/admin/ops/PhoneChangesSection';
+import { PhoneAllowlistSection } from '@/components/admin/ops/PhoneAllowlistSection';
 import { JobsSection } from '@/components/admin/jobs/JobsSection';
 import { PaymentGatewaySection } from '@/components/admin/ops/PaymentGatewaySection';
 import { AudienceFilterBar, EMPTY_AUDIENCE, type AudienceFilterValue } from '@/components/admin/AudienceFilterBar';
@@ -1125,6 +1126,7 @@ export default function AdminPage() {
             <PaymentGatewaySection token={token} />
             <OpsSection summary={opsSummary} onOpenUser={setSelectedUserId} />
             <PhoneChangesSection token={token} onOpenUser={setSelectedUserId} />
+            <PhoneAllowlistSection token={token} />
             <AuditLogSection logs={auditLogs} warning={auditWarning} onOpenUser={setSelectedUserId} />
           </div>
         )}
