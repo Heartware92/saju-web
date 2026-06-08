@@ -41,6 +41,7 @@ export default function CompanyPage() {
           <Row label="사업자등록번호" value="136-88-03376" />
           <Row label="통신판매업 신고" value="2026-대구북구-0028" />
           <Row label="주소" value="대구광역시 북구 동북로 117" />
+          <Row label="사업장 주소" value="대구광역시 북구 옥산로 111, 5층 유니콘랩 대구 남서편 핫데스크 오피스(대구 귀환청년창업공간)" />
         </dl>
       </section>
 
