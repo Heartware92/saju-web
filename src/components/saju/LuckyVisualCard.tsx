@@ -30,8 +30,8 @@ export const ELEMENT_LUCKY: Record<string, {
   activity: string;
 }> = {
   '목': {
-    colors: ['초록', '연두'],
-    colorCss: ['#22c55e', '#84cc16'],
+    colors: ['초록', '연두', '민트', '올리브'],
+    colorCss: ['#22c55e', '#84cc16', '#10b981', '#65a30d'],
     numbers: [3, 8],
     direction: '동쪽',
     directionDeg: 90,
@@ -40,8 +40,8 @@ export const ELEMENT_LUCKY: Record<string, {
     activity: '숲 산책·식물 키우기·가드닝·아침 명상·요가·등산·글쓰기·독서',
   },
   '화': {
-    colors: ['빨강', '주황'],
-    colorCss: ['#ef4444', '#f97316'],
+    colors: ['빨강', '주황', '진홍', '산호'],
+    colorCss: ['#ef4444', '#f97316', '#dc2626', '#fb7185'],
     numbers: [2, 7],
     direction: '남쪽',
     directionDeg: 180,
@@ -50,8 +50,8 @@ export const ELEMENT_LUCKY: Record<string, {
     activity: '사교 모임·발표·요리·일출 감상·태양 산책·운동·댄스·캠프파이어',
   },
   '토': {
-    colors: ['노랑', '황토'],
-    colorCss: ['#eab308', '#b45309'],
+    colors: ['노랑', '황토', '베이지', '황금'],
+    colorCss: ['#eab308', '#b45309', '#d4a574', '#ca8a04'],
     numbers: [5, 10],
     direction: '중앙',
     directionDeg: -1,
@@ -60,8 +60,8 @@ export const ELEMENT_LUCKY: Record<string, {
     activity: '정원 가꾸기·요리·도자기·필사·정리정돈·달항아리 감상·고대 유물 관람·명상',
   },
   '금': {
-    colors: ['화이트', '실버'],
-    colorCss: ['#f1f5f9', '#94a3b8'],
+    colors: ['화이트', '실버', '그레이', '아이보리'],
+    colorCss: ['#f1f5f9', '#94a3b8', '#64748b', '#e5e7eb'],
     numbers: [4, 9],
     direction: '서쪽',
     directionDeg: 270,
@@ -70,8 +70,8 @@ export const ELEMENT_LUCKY: Record<string, {
     activity: '악기 연주·정리정돈·금속 소품 손질·차 마시기·캘리그라피·도구 다듬기·고전 음악 감상·은제 장식 닦기',
   },
   '수': {
-    colors: ['파랑', '네이비'],
-    colorCss: ['#3b82f6', '#1e3a8a'],
+    colors: ['파랑', '네이비', '하늘', '청록'],
+    colorCss: ['#3b82f6', '#1e3a8a', '#38bdf8', '#0891b2'],
     numbers: [1, 6],
     direction: '북쪽',
     directionDeg: 0,

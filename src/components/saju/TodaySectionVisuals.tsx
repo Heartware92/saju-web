@@ -566,20 +566,48 @@ function PersonaVisual({ report }: { report: TodayFortuneV3AIResult }) {
 // ─────────────────────────────────────────────────────────────────────────────
 // 10) 행운 카드 — 일진 천간 오행 기반 결정론적 행운 처방
 // ─────────────────────────────────────────────────────────────────────────────
+// 일진(60갑자) → 결정론적 시드 (같은 오행이라도 일진마다 처방이 달라지도록)
+const LUCKY_GAN_ORDER = ['갑', '을', '병', '정', '무', '기', '경', '신', '임', '계'];
+const LUCKY_ZHI_ORDER = ['자', '축', '인', '묘', '진', '사', '오', '미', '신', '유', '술', '해'];
+function iljinSeed(gan?: string, zhi?: string): number {
+  const gi = LUCKY_GAN_ORDER.indexOf(gan ?? '');
+  const zi = LUCKY_ZHI_ORDER.indexOf(zhi ?? '');
+  return (gi < 0 ? 0 : gi) * 12 + (zi < 0 ? 0 : zi);
+}
+// arr 에서 seed 기준 start 부터 count 개를 순환 선택 (결정론적)
+function rotatePick<T>(arr: T[], seed: number, count: number): T[] {
+  const n = arr.length;
+  if (n === 0) return [];
+  const start = ((seed % n) + n) % n;
+  const out: T[] = [];
+  for (let i = 0; i < Math.min(count, n); i++) out.push(arr[(start + i) % n]);
+  return out;
+}
+
 function LuckyVisual({ report }: { report: TodayFortuneV3AIResult }) {
-  const el = report.todayGz?.ganElement;
+  const gz = report.todayGz;
+  const el = gz?.ganElement;
   const lucky = el ? ELEMENT_LUCKY[el] : undefined;
   if (!lucky) return null;
+  // 오행 풀은 같아도 일진마다 색·보석·활동을 회전 선택 → 같은 오행 날도 처방이 다름.
+  // (숫자·방위·시간은 오행 정통 그대로 유지)
+  const seed = iljinSeed(gz?.gan, gz?.zhi);
+  const cn = lucky.colors.length;
+  const cStart = ((seed % cn) + cn) % cn;
+  const colors = [lucky.colors[cStart], lucky.colors[(cStart + 1) % cn]];
+  const colorCss = [lucky.colorCss[cStart], lucky.colorCss[(cStart + 1) % cn]];
+  const gem = rotatePick(lucky.gem.split('·'), seed, 4).join('·');
+  const activity = rotatePick(lucky.activity.split('·'), seed + 3, 4).join('·');
   return (
-    <CardWrap accent="#FCE8B2" title="오늘의 행운 처방" titleSub="일진 오행 기준">
+    <CardWrap accent="#FCE8B2" title="오늘의 행운 처방" titleSub={`${gz?.gan ?? ''}${gz?.zhi ?? ''} · ${el} 기운`}>
       <LuckyVisualCard
-        colors={lucky.colors}
-        colorCss={lucky.colorCss}
+        colors={colors}
+        colorCss={colorCss}
         numbers={lucky.numbers}
         direction={lucky.direction}
         timeSlot={lucky.timeSlot}
-        gem={lucky.gem}
-        activity={lucky.activity}
+        gem={gem}
+        activity={activity}
       />
     </CardWrap>
   );
