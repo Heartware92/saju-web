@@ -70,7 +70,7 @@ export default function TempTest2Page() {
   const [cols, setCols] = useState([
     { date: '2026-06-01', slot: 'morning' },
     { date: '2026-06-03', slot: 'morning' },
-    { date: '2026-06-05', slot: 'morning' },
+    { date: '2026-06-08', slot: 'morning' },
     { date: '2026-06-19', slot: 'morning' },
   ]);
 
