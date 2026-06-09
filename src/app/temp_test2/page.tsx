@@ -2,7 +2,7 @@
 
 /**
  * /temp_test — 실시간 운세 결과 4열 비교 (검증용, 끝나면 제거 권장)
- * 사전 생성된 4일(6/7~6/10) × 4시간대(오전/오후/저녁/새벽) = 16개 결과를 public/temp-test-data.json 에서 읽어,
+ * 사전 생성된 4일(6/7~6/10) × 4시간대(오전/오후/저녁/새벽) = 16개 결과를 public/temp-test-data2.json 에서 읽어,
  * A·B·C·D 4개 열에서 각각 날짜·시간대를 골라 비교.
  * ★ 실제 제품 결과 페이지(TodayFortunePage)와 1:1 동일한 TodayResultView 를 그대로 렌더 →
  *   각 축(일진 카드·입력 요약·종합 점수·항목별·시간대 흐름·11섹션+시각카드)이 픽셀 단위로 같다.
@@ -64,7 +64,7 @@ function TempColumn({ record }: { record: Record<string, any> }) {
   );
 }
 
-export default function TempTestPage() {
+export default function TempTest2Page() {
   const [data, setData] = useState<{ profile?: { name?: string }; items: Item[] } | null>(null);
   const [err, setErr] = useState('');
   const [cols, setCols] = useState([
@@ -75,7 +75,7 @@ export default function TempTestPage() {
   ]);
 
   useEffect(() => {
-    fetch('/temp-test-data.json', { cache: 'no-store' })
+    fetch('/temp-test-data2.json', { cache: 'no-store' })
       .then((r) => r.ok ? r.json() : Promise.reject(new Error('데이터 파일 없음(아직 생성 중일 수 있음)')))
       .then(setData)
       .catch((e) => setErr(e.message));
@@ -90,7 +90,7 @@ export default function TempTestPage() {
     <div className="min-h-screen bg-space-deep text-text-primary px-3 py-4">
       <h1 className="text-lg font-bold mb-1">실시간 운세 결과 4열 비교 (임시)</h1>
       <p className="text-[12.5px] text-text-tertiary mb-3">
-        대표 프로필 {data?.profile?.name ?? '허진우'} · 분야=업무·일 · 직업/연애 미입력. 각 열에서 날짜·시간대를 골라 일진별 차이를 비교하세요. (사전 생성, 크레딧 차감 없음)
+        대표 프로필 {data?.profile?.name ?? '성호'} · 분야=업무·일 · 직업/연애 미입력. 각 열에서 날짜·시간대를 골라 일진별 차이를 비교하세요. (사전 생성, 크레딧 차감 없음)
       </p>
       {err && <div className="mb-3 px-3 py-2 rounded-lg bg-amber-500/10 border border-amber-500/30 text-[13px] text-amber-200">{err}</div>}
 
