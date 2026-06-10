@@ -9,7 +9,7 @@ export interface CreditTransaction {
   id: string;
   user_id: string;
   credit_type: CreditType;
-  type: 'purchase' | 'consume' | 'bonus' | 'refund';
+  type: 'purchase' | 'consume' | 'bonus' | 'refund' | 'admin_adjust' | 'signup_bonus' | 'expire';
   amount: number;
   balance_after: number;
   reason: string;

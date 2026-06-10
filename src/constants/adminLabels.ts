@@ -84,6 +84,7 @@ export const CREDIT_REASON_LABEL: Record<string, string> = {
   purchase: '크레딧 패키지 구매',
   refund: '환불',
   admin_adjust: '관리자 조정',
+  expire: '유효기간 만료',
 };
 
 // ── 주문 상태 ────────────────────────────────────────────────

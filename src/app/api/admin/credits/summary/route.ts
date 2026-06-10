@@ -137,7 +137,7 @@ async function computeSummary(audience: Set<string> | null) {
     if (idx === undefined) continue;
     const abs = Math.abs(t.amount ?? 0);
     if (t.type === 'purchase' || t.type === 'signup_bonus' || t.type === 'admin_adjust') moonIssuedMo[idx] += (t.amount ?? 0) > 0 ? abs : 0;
-    else if (t.type === 'consume') moonConsumedMo[idx] += abs;
+    else if (t.type === 'consume' || t.type === 'expire') moonConsumedMo[idx] += abs;
   }
   const monthly = months.map((m, i) => ({
     month: m,

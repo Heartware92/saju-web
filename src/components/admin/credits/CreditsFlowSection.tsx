@@ -37,6 +37,7 @@ const TXN_TYPE_LABEL: Record<string, string> = {
   refund: '환불',
   signup_bonus: '가입 보너스',
   admin_adjust: '관리자 조정',
+  expire: '유효기간 만료',
 };
 
 export function CreditsFlowSection({ summary }: { summary: CreditsSummary | null }) {
