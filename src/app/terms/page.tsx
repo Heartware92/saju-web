@@ -24,7 +24,7 @@ export default async function TermsPage({ searchParams }: { searchParams: Promis
 
       <div className="rounded-2xl p-6 bg-[rgba(20,12,38,0.55)] border border-[var(--border-subtle)]">
         <p className="text-[13px] text-text-tertiary mb-4">
-          시행일: 2026-05-01 / 최종 개정일: 2026-06-03
+          시행일: 2026-05-01 / 최종 개정일: 2026-06-11
         </p>
 
         <section className="space-y-6 text-[14px] text-text-secondary leading-relaxed">
@@ -54,8 +54,8 @@ export default async function TermsPage({ searchParams }: { searchParams: Promis
           <Article title="제3조 (약관의 게시 및 효력)">
             <ol className="list-decimal pl-5 space-y-1">
               <li>본 약관은 서비스 화면에 게시하거나 기타의 방법으로 공지함으로써 효력이 발생합니다.</li>
-              <li>회사는 관련 법령을 위배하지 않는 범위 내에서 약관을 변경할 수 있으며, 변경 시 적용일 7일 전부터 서비스 내 공지합니다.</li>
-              <li>회원은 변경된 약관에 동의하지 않을 경우 회원 탈퇴를 요청할 수 있으며, 변경된 약관의 효력 발생일로부터 7일 이후에도 거부 의사를 표시하지 않고 서비스를 계속 이용할 경우 변경 사항에 동의한 것으로 간주합니다.</li>
+              <li>회사는 관련 법령을 위배하지 않는 범위 내에서 약관을 변경할 수 있으며, 변경 시 적용일 7일 전부터 서비스 내 공지합니다. 다만 회원에게 불리하거나 중대한 내용으로 변경하는 경우에는 적용일 30일 전부터 공지하고, 회원이 등록한 전자우편 등 전자적 수단으로 개별 통지합니다.</li>
+              <li>회원은 변경된 약관에 동의하지 않을 경우 회원 탈퇴를 요청할 수 있습니다. 회사는 전항의 공지 또는 개별 통지 시, 회원이 변경 약관의 효력 발생일까지 거부 의사를 표시하지 않으면 변경에 동의한 것으로 본다는 뜻을 함께 고지하며, 회원이 그 기간 내에 거부 의사를 표시하지 않고 서비스를 계속 이용하는 경우 변경 사항에 동의한 것으로 봅니다.</li>
             </ol>
           </Article>
 
@@ -87,7 +87,7 @@ export default async function TermsPage({ searchParams }: { searchParams: Promis
 
           <Article title="제6조 (회원가입)">
             <ol className="list-decimal pl-5 space-y-1">
-              <li>회원가입은 이메일 회원가입 또는 소셜 로그인(Google, 카카오)을 통해 이루어지며, 이메일 회원가입 시 휴대폰 본인인증(SMS)을 거칩니다.</li>
+              <li>회원가입은 이메일 회원가입 또는 소셜 로그인(Google, 카카오)을 통해 이루어지며, 가입 방식과 관계없이 서비스 이용을 위해 휴대폰 본인인증(SMS)을 거칩니다.</li>
               <li>회원은 가입 시 정확한 정보를 기재하여야 하며, 변경 사항이 있을 경우 즉시 수정하여야 합니다.</li>
               <li>회원이 제공한 정보가 부정확하여 발생하는 불이익에 대하여 회사는 책임을 지지 않습니다.</li>
             </ol>
@@ -259,8 +259,8 @@ export default async function TermsPage({ searchParams }: { searchParams: Promis
 
           <Article title="제20조 (부정 사용 제재)">
             <ol className="list-decimal pl-5 space-y-1">
-              <li>자동화 수단을 이용하여 서버·AI 리소스를 무단으로 사용한 경우, 회사는 실제 손해액의 3배에 해당하는 금액을 청구할 수 있습니다.</li>
-              <li>AI 시스템 프롬프트 해킹, 학습 데이터 추출, 모델 정보 해킹을 시도한 경우 회사는 민·형사상 법적 조치를 취할 수 있으며, 실제 손해액의 3배에 해당하는 배상을 청구할 수 있습니다.</li>
+              <li>자동화 수단을 이용하여 서버·AI 리소스를 무단으로 사용한 경우, 회사는 해당 회원의 서비스 이용을 제한할 수 있으며, 그로 인하여 회사에 발생한 손해의 배상을 청구할 수 있습니다.</li>
+              <li>AI 시스템 프롬프트 해킹, 학습 데이터 추출, 모델 정보 탈취 등을 시도한 경우, 회사는 관련 법령에 따라 민·형사상 법적 조치를 취할 수 있으며, 이로 인하여 회사에 발생한 손해의 배상을 청구할 수 있습니다.</li>
             </ol>
           </Article>
 
@@ -311,8 +311,9 @@ export default async function TermsPage({ searchParams }: { searchParams: Promis
 
           <Article title="제25조 (관할 법원)">
             <p>
-              서비스 이용으로 발생한 분쟁에 대해 소송이 제기될 경우 회사의 본점 소재지를 관할하는
-              법원을 전속 관할 법원으로 합니다.
+              서비스 이용으로 발생한 분쟁에 관한 소송의 관할 법원은 제소 당시 회원의 주소를 관할하는
+              지방법원의 전속관할로 하고, 회원의 주소가 없는 경우에는 거소를 관할하는 지방법원의 전속관할로 합니다.
+              제소 당시 회원의 주소 또는 거소가 분명하지 않거나 회원이 외국에 거주하는 경우에는 민사소송법상의 관할 법원에 제기합니다.
             </p>
           </Article>
 
@@ -336,6 +337,7 @@ export default async function TermsPage({ searchParams }: { searchParams: Promis
           <h2 className="text-[15px] font-bold text-cta/80 mt-4">부칙</h2>
           <p>본 약관은 2026년 5월 1일부터 시행합니다.</p>
           <p>본 개정 약관은 2026년 6월 3일부터 시행합니다. (소셜 로그인 제공 범위 현행화, 서비스 항목 갱신, 미성년자 결제·과오금·서비스 종료 공지 조항 신설)</p>
+          <p>본 개정 약관은 2026년 6월 11일부터 시행합니다. (관할 법원 규정을 소비자 보호에 맞게 정비, 약관 변경 시 불리한 변경의 30일 전 공지·개별 통지 절차 보강, 휴대폰 본인인증 적용 범위 명확화, 부정사용 손해배상 조항 정비)</p>
 
         </section>
 
