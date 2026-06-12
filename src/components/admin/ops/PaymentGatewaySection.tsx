@@ -1,19 +1,22 @@
 /**
- * 결제 게이트웨이 스위처 — 토스페이먼츠 ↔ KG이니시스 즉시 전환
+ * 결제 게이트웨이 스위처 — 토스페이먼츠 ↔ KG이니시스 ↔ KPN(한국결제네트웍스) 즉시 전환
  * 환경변수 변경/재배포 없이 DB row 한 줄 업데이트로 모든 신규 결제가 새 채널로 흘러감.
  */
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
 
-type Channel = 'tosspayments' | 'inicis';
+type Channel = 'tosspayments' | 'inicis' | 'kpn';
+const CHANNELS: Channel[] = ['tosspayments', 'inicis', 'kpn'];
 
 interface Config {
   activeChannel: Channel;
   tossChannelKey: string;
   inicisChannelKey: string;
+  kpnChannelKey: string;
   tossEnabled: boolean;
   inicisEnabled: boolean;
+  kpnEnabled: boolean;
   note: string | null;
   updatedBy: string | null;
   updatedAt: string;
@@ -22,7 +25,14 @@ interface Config {
 const CHANNEL_LABEL: Record<Channel, string> = {
   tosspayments: '토스페이먼츠',
   inicis: 'KG이니시스',
+  kpn: '한국결제네트웍스',
 };
+
+// 채널 → Config 필드 매핑 (분기문 대신 데이터로 관리)
+const keyField = (c: Channel) => (({ tosspayments: 'tossChannelKey', inicis: 'inicisChannelKey', kpn: 'kpnChannelKey' }) as const)[c];
+const enabledField = (c: Channel) => (({ tosspayments: 'tossEnabled', inicis: 'inicisEnabled', kpn: 'kpnEnabled' }) as const)[c];
+const keyPayloadField = (c: Channel) => (({ tosspayments: 'tossChannelKey', inicis: 'inicisChannelKey', kpn: 'kpnChannelKey' }) as const)[c];
+const enabledPayloadField = (c: Channel) => (({ tosspayments: 'tossEnabled', inicis: 'inicisEnabled', kpn: 'kpnEnabled' }) as const)[c];
 
 const mask = (k: string) => k ? `${k.slice(0, 10)}…(총 ${k.length}자)` : '(미설정)';
 const fmtDate = (s: string | null) => s
@@ -40,6 +50,7 @@ export function PaymentGatewaySection({ token }: { token: string | null }) {
   const [editingKeys, setEditingKeys] = useState(false);
   const [tossKey, setTossKey] = useState('');
   const [inicisKey, setInicisKey] = useState('');
+  const [kpnKey, setKpnKey] = useState('');
   const [noteInput, setNoteInput] = useState('');
 
   // 전환 확인 모달
@@ -57,6 +68,7 @@ export function PaymentGatewaySection({ token }: { token: string | null }) {
         setConfig(json.config);
         setTossKey(json.config.tossChannelKey);
         setInicisKey(json.config.inicisChannelKey);
+        setKpnKey(json.config.kpnChannelKey ?? '');
         setNoteInput(json.config.note ?? '');
       } else {
         setConfig(null);
@@ -81,6 +93,7 @@ export function PaymentGatewaySection({ token }: { token: string | null }) {
       setConfig(json.config);
       setTossKey(json.config.tossChannelKey);
       setInicisKey(json.config.inicisChannelKey);
+      setKpnKey(json.config.kpnChannelKey ?? '');
       setNoteInput(json.config.note ?? '');
       setMsg({ type: 'ok', text: successText });
       setEditingKeys(false);
@@ -99,14 +112,14 @@ export function PaymentGatewaySection({ token }: { token: string | null }) {
 
   const toggleEnabled = (channel: Channel, enabled: boolean) => {
     submit(
-      channel === 'tosspayments' ? { tossEnabled: enabled } : { inicisEnabled: enabled },
+      { [enabledPayloadField(channel)]: enabled },
       `${CHANNEL_LABEL[channel]} ${enabled ? '활성화' : '비활성화'}`,
     );
   };
 
   const saveKeys = () => {
     submit(
-      { tossChannelKey: tossKey, inicisChannelKey: inicisKey, note: noteInput },
+      { tossChannelKey: tossKey, inicisChannelKey: inicisKey, kpnChannelKey: kpnKey, note: noteInput },
       '채널 키 저장됨',
     );
   };
@@ -145,11 +158,11 @@ export function PaymentGatewaySection({ token }: { token: string | null }) {
       {config && (
         <>
           {/* 활성 채널 표시 + 전환 버튼 */}
-          <div className="grid grid-cols-2 gap-3">
-            {(['tosspayments', 'inicis'] as const).map(ch => {
+          <div className="grid grid-cols-3 gap-3">
+            {CHANNELS.map(ch => {
               const isActive = active === ch;
-              const enabled = ch === 'tosspayments' ? config.tossEnabled : config.inicisEnabled;
-              const key = ch === 'tosspayments' ? config.tossChannelKey : config.inicisChannelKey;
+              const enabled = config[enabledField(ch)];
+              const key = config[keyField(ch)];
               return (
                 <div
                   key={ch}
@@ -205,7 +218,7 @@ export function PaymentGatewaySection({ token }: { token: string | null }) {
                 </button>
               ) : (
                 <button
-                  onClick={() => { setEditingKeys(false); setTossKey(config.tossChannelKey); setInicisKey(config.inicisChannelKey); setNoteInput(config.note ?? ''); }}
+                  onClick={() => { setEditingKeys(false); setTossKey(config.tossChannelKey); setInicisKey(config.inicisChannelKey); setKpnKey(config.kpnChannelKey ?? ''); setNoteInput(config.note ?? ''); }}
                   className="text-[12px] text-text-tertiary hover:text-text-secondary"
                 >
                   취소
@@ -231,6 +244,16 @@ export function PaymentGatewaySection({ token }: { token: string | null }) {
                     type="text"
                     value={inicisKey}
                     onChange={e => setInicisKey(e.target.value)}
+                    placeholder="channel-key-..."
+                    className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/15 text-[12px] font-mono"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[11px] text-text-tertiary mb-1">한국결제네트웍스(KPN) 채널 키</label>
+                  <input
+                    type="text"
+                    value={kpnKey}
+                    onChange={e => setKpnKey(e.target.value)}
                     placeholder="channel-key-..."
                     className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/15 text-[12px] font-mono"
                   />

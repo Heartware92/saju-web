@@ -2,11 +2,13 @@
  * GET  /api/admin/payment-gateway — 현재 설정 조회
  * POST /api/admin/payment-gateway — 채널 전환 또는 키 업데이트
  *   Body: {
- *     activeChannel?: 'tosspayments' | 'inicis',
+ *     activeChannel?: 'tosspayments' | 'inicis' | 'kpn',
  *     tossChannelKey?: string,
  *     inicisChannelKey?: string,
+ *     kpnChannelKey?: string,
  *     tossEnabled?: boolean,
  *     inicisEnabled?: boolean,
+ *     kpnEnabled?: boolean,
  *     note?: string,
  *   }
  */
@@ -15,8 +17,13 @@ import { supabaseAdmin } from '@/services/supabaseAdmin';
 import { requireAdmin } from '../_auth';
 import { writeAudit, clientMeta } from '../_audit';
 
-type Channel = 'tosspayments' | 'inicis';
-const VALID_CHANNELS: Channel[] = ['tosspayments', 'inicis'];
+type Channel = 'tosspayments' | 'inicis' | 'kpn';
+const VALID_CHANNELS: Channel[] = ['tosspayments', 'inicis', 'kpn'];
+const CHANNEL_NAME: Record<Channel, string> = {
+  tosspayments: '토스페이먼츠',
+  inicis: 'KG이니시스',
+  kpn: '한국결제네트웍스(KPN)',
+};
 
 export async function GET(request: NextRequest) {
   const auth = await requireAdmin(request);
@@ -45,8 +52,10 @@ export async function GET(request: NextRequest) {
       activeChannel: data.active_channel,
       tossChannelKey: data.toss_channel_key,
       inicisChannelKey: data.inicis_channel_key,
+      kpnChannelKey: data.kpn_channel_key ?? '',
       tossEnabled: data.toss_enabled,
       inicisEnabled: data.inicis_enabled,
+      kpnEnabled: data.kpn_enabled ?? true,
       note: data.note,
       updatedBy: data.updated_by,
       updatedAt: data.updated_at,
@@ -65,8 +74,10 @@ export async function POST(request: NextRequest) {
     activeChannel?: Channel;
     tossChannelKey?: string;
     inicisChannelKey?: string;
+    kpnChannelKey?: string;
     tossEnabled?: boolean;
     inicisEnabled?: boolean;
+    kpnEnabled?: boolean;
     note?: string;
   };
   try { body = await request.json(); }
@@ -83,31 +94,24 @@ export async function POST(request: NextRequest) {
     .eq('id', 'primary')
     .maybeSingle();
 
-  // 전환 가드: 비활성 채널로 전환 시도 차단
-  if (body.activeChannel === 'tosspayments') {
-    const willBeEnabled = body.tossEnabled ?? before?.toss_enabled ?? true;
-    if (!willBeEnabled) {
-      return NextResponse.json({ error: '토스페이먼츠가 비활성 상태입니다. 먼저 활성화하세요.' }, { status: 400 });
+  // 전환 가드: 활성 전환 대상 채널이 비활성이거나 키가 비어있으면 차단
+  if (body.activeChannel !== undefined) {
+    const ch = body.activeChannel;
+    const willBeEnabled: Record<Channel, boolean> = {
+      tosspayments: body.tossEnabled ?? before?.toss_enabled ?? true,
+      inicis: body.inicisEnabled ?? before?.inicis_enabled ?? true,
+      kpn: body.kpnEnabled ?? before?.kpn_enabled ?? true,
+    };
+    const finalKey: Record<Channel, string> = {
+      tosspayments: body.tossChannelKey ?? before?.toss_channel_key ?? '',
+      inicis: body.inicisChannelKey ?? before?.inicis_channel_key ?? '',
+      kpn: body.kpnChannelKey ?? before?.kpn_channel_key ?? '',
+    };
+    if (!willBeEnabled[ch]) {
+      return NextResponse.json({ error: `${CHANNEL_NAME[ch]}가 비활성 상태입니다. 먼저 활성화하세요.` }, { status: 400 });
     }
-  }
-  if (body.activeChannel === 'inicis') {
-    const willBeEnabled = body.inicisEnabled ?? before?.inicis_enabled ?? true;
-    if (!willBeEnabled) {
-      return NextResponse.json({ error: 'KG이니시스가 비활성 상태입니다. 먼저 활성화하세요.' }, { status: 400 });
-    }
-  }
-
-  // 채널 키 공백 가드 — 활성 전환할 채널의 키가 비어있으면 차단
-  if (body.activeChannel === 'tosspayments') {
-    const finalKey = body.tossChannelKey ?? before?.toss_channel_key ?? '';
-    if (!finalKey.trim()) {
-      return NextResponse.json({ error: '토스 채널 키가 비어있습니다.' }, { status: 400 });
-    }
-  }
-  if (body.activeChannel === 'inicis') {
-    const finalKey = body.inicisChannelKey ?? before?.inicis_channel_key ?? '';
-    if (!finalKey.trim()) {
-      return NextResponse.json({ error: 'KG이니시스 채널 키가 비어있습니다.' }, { status: 400 });
+    if (!finalKey[ch].trim()) {
+      return NextResponse.json({ error: `${CHANNEL_NAME[ch]} 채널 키가 비어있습니다.` }, { status: 400 });
     }
   }
 
@@ -115,8 +119,10 @@ export async function POST(request: NextRequest) {
   if (body.activeChannel !== undefined) patch.active_channel = body.activeChannel;
   if (body.tossChannelKey !== undefined) patch.toss_channel_key = body.tossChannelKey.trim();
   if (body.inicisChannelKey !== undefined) patch.inicis_channel_key = body.inicisChannelKey.trim();
+  if (body.kpnChannelKey !== undefined) patch.kpn_channel_key = body.kpnChannelKey.trim();
   if (body.tossEnabled !== undefined) patch.toss_enabled = body.tossEnabled;
   if (body.inicisEnabled !== undefined) patch.inicis_enabled = body.inicisEnabled;
+  if (body.kpnEnabled !== undefined) patch.kpn_enabled = body.kpnEnabled;
   if (body.note !== undefined) patch.note = body.note;
 
   // upsert (row 없으면 생성)
@@ -127,8 +133,10 @@ export async function POST(request: NextRequest) {
       active_channel: body.activeChannel ?? before?.active_channel ?? 'tosspayments',
       toss_channel_key: body.tossChannelKey ?? before?.toss_channel_key ?? '',
       inicis_channel_key: body.inicisChannelKey ?? before?.inicis_channel_key ?? '',
+      kpn_channel_key: body.kpnChannelKey ?? before?.kpn_channel_key ?? '',
       toss_enabled: body.tossEnabled ?? before?.toss_enabled ?? true,
       inicis_enabled: body.inicisEnabled ?? before?.inicis_enabled ?? true,
+      kpn_enabled: body.kpnEnabled ?? before?.kpn_enabled ?? true,
       note: body.note ?? before?.note ?? null,
       updated_by: auth.email,
     }, { onConflict: 'id' })
@@ -147,15 +155,19 @@ export async function POST(request: NextRequest) {
       active: before.active_channel,
       tossKey: mask(before.toss_channel_key),
       inicisKey: mask(before.inicis_channel_key),
+      kpnKey: mask(before.kpn_channel_key),
       tossEnabled: before.toss_enabled,
       inicisEnabled: before.inicis_enabled,
+      kpnEnabled: before.kpn_enabled,
     } : null,
     after: {
       active: after.active_channel,
       tossKey: mask(after.toss_channel_key),
       inicisKey: mask(after.inicis_channel_key),
+      kpnKey: mask(after.kpn_channel_key),
       tossEnabled: after.toss_enabled,
       inicisEnabled: after.inicis_enabled,
+      kpnEnabled: after.kpn_enabled,
     },
     reason: body.note ?? undefined,
     ipAddress,
@@ -168,8 +180,10 @@ export async function POST(request: NextRequest) {
       activeChannel: after.active_channel,
       tossChannelKey: after.toss_channel_key,
       inicisChannelKey: after.inicis_channel_key,
+      kpnChannelKey: after.kpn_channel_key ?? '',
       tossEnabled: after.toss_enabled,
       inicisEnabled: after.inicis_enabled,
+      kpnEnabled: after.kpn_enabled ?? true,
       note: after.note,
       updatedBy: after.updated_by,
       updatedAt: after.updated_at,

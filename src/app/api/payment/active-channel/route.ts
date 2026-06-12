@@ -13,7 +13,7 @@ export async function GET() {
   try {
     const { data, error } = await supabaseAdmin
       .from('payment_gateway_config')
-      .select('active_channel, toss_channel_key, inicis_channel_key, toss_enabled, inicis_enabled')
+      .select('active_channel, toss_channel_key, inicis_channel_key, kpn_channel_key, toss_enabled, inicis_enabled, kpn_enabled')
       .eq('id', 'primary')
       .maybeSingle();
 
@@ -26,9 +26,19 @@ export async function GET() {
       );
     }
 
-    const active = data.active_channel;
-    const enabled = active === 'tosspayments' ? data.toss_enabled : data.inicis_enabled;
-    const channelKey = active === 'tosspayments' ? data.toss_channel_key : data.inicis_channel_key;
+    const active = data.active_channel as 'tosspayments' | 'inicis' | 'kpn';
+    const enabledByCh: Record<string, boolean> = {
+      tosspayments: data.toss_enabled,
+      inicis: data.inicis_enabled,
+      kpn: data.kpn_enabled,
+    };
+    const keyByCh: Record<string, string> = {
+      tosspayments: data.toss_channel_key,
+      inicis: data.inicis_channel_key,
+      kpn: data.kpn_channel_key,
+    };
+    const enabled = enabledByCh[active];
+    const channelKey = keyByCh[active];
     const finalKey = (enabled && channelKey) ? channelKey : fallbackKey;
 
     return NextResponse.json(
