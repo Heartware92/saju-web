@@ -2305,7 +2305,7 @@ export const parseDreamV4 = (raw: string): DreamV4Result | null => {
     polarity: (polarityVal as DreamPolarityLabel) || '',
     score: Math.max(0, Math.min(100, scoreNum)),
     certainty: (getKV(odBody, 'certainty') as 'high' | 'medium' | 'low' | '') || '',
-    reason: odReason.slice(0, 500),
+    reason: odReason.slice(0, 1200), // 프롬프트 스펙 최대 800자 + 여유 (기존 500은 진단 근거를 중간에서 잘랐음)
   };
 
   // ── 상징 카드 ──────────────────────────────────────
@@ -2419,7 +2419,7 @@ export const parseDreamV4 = (raw: string): DreamV4Result | null => {
     clinical: (getKV(wdBody, 'clinical') as DreamClinicalType) || '',
     function: getKV(wdBody, 'function'),
     intensity: (getKV(wdBody, 'intensity') as 'low' | 'medium' | 'high' | '') || '',
-    reason: wdReason.slice(0, 500),
+    reason: wdReason.slice(0, 1200), // 프롬프트 스펙 최대 700자 + 여유 (기존 500은 진단 근거를 중간에서 잘랐음)
   };
 
   // ── 잠재 의미 ──────────────────────────────────────
