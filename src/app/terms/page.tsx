@@ -328,7 +328,7 @@ export default async function TermsPage({ searchParams }: { searchParams: Promis
                 <li>회사명: (주)하트웨어</li>
                 <li>대표자: 허진우</li>
                 <li>이메일: heojinwoo@heartware.co.kr</li>
-                <li>연락처: [추후 기재]</li>
+                <li>연락처: 010-5960-0920</li>
               </ul>
             </div>
           </Article>

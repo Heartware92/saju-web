@@ -24,7 +24,7 @@ export default async function PrivacyPage({ searchParams }: { searchParams: Prom
 
       <div className="rounded-2xl p-6 bg-[rgba(20,12,38,0.55)] border border-[var(--border-subtle)]">
         <p className="text-[13px] text-text-tertiary mb-4">
-          시행일: 2026-05-01 / 최종 개정일: 2026-06-03 / 버전 1.2
+          시행일: 2026-05-01 / 최종 개정일: 2026-06-14 / 버전 1.3
         </p>
 
         <section className="space-y-6 text-[14px] text-text-secondary leading-relaxed">
@@ -252,19 +252,19 @@ export default async function PrivacyPage({ searchParams }: { searchParams: Prom
               </thead>
               <tbody>
                 <tr className="border-t border-[var(--border-subtle)]">
-                  <td className="px-3 py-2">Google LLC (Gemini)</td>
+                  <td className="px-3 py-2">Google LLC (Gemini)<br /><span className="text-text-tertiary text-[11px]">연락처 googlekrsupport@google.com</span></td>
                   <td className="px-3 py-2">미국</td>
                   <td className="px-3 py-2">풀이 입력정보(생년월일·태어난 시간·성별 등) / AI 풀이 결과 생성</td>
                   <td className="px-3 py-2">풀이 요청 시 네트워크 전송 / 결과 생성 후 별도 보관하지 않음(제공사 정책상 단기 보관될 수 있음)</td>
                 </tr>
                 <tr className="border-t border-[var(--border-subtle)]">
-                  <td className="px-3 py-2">OpenAI, L.L.C.</td>
+                  <td className="px-3 py-2">OpenAI, L.L.C.<br /><span className="text-text-tertiary text-[11px]">연락처 privacy@openai.com</span></td>
                   <td className="px-3 py-2">미국</td>
                   <td className="px-3 py-2">풀이·상담 입력정보 / AI 풀이·상담 결과 생성(보조)</td>
                   <td className="px-3 py-2">요청 시 네트워크 전송 / 결과 생성 후 별도 보관하지 않음(제공사 정책상 단기 보관될 수 있음)</td>
                 </tr>
                 <tr className="border-t border-[var(--border-subtle)]">
-                  <td className="px-3 py-2">Vercel Inc.</td>
+                  <td className="px-3 py-2">Vercel Inc.<br /><span className="text-text-tertiary text-[11px]">연락처 privacy@vercel.com</span></td>
                   <td className="px-3 py-2">미국</td>
                   <td className="px-3 py-2">서비스 이용·접속 정보 / 웹 서비스 호스팅</td>
                   <td className="px-3 py-2">서비스 접속 시 / 처리 목적 달성 시까지</td>
@@ -296,6 +296,16 @@ export default async function PrivacyPage({ searchParams }: { searchParams: Prom
               회사는 만 14세 미만 아동의 개인정보를 수집하지 않습니다.
               만 14세 미만의 아동이 서비스에 가입한 것으로 확인되는 경우, 해당 아동의 개인정보를
               즉시 삭제하고 회원 자격을 제한합니다.
+            </p>
+          </Article>
+
+          {/* ── 제8조의2 ── */}
+          <Article title="제8조의2 (민감정보의 처리)">
+            <p>
+              회사는 「개인정보 보호법」 제23조에 따른 민감정보(사상·신념, 노동조합·정당의 가입,
+              정치적 견해, 건강, 성생활, 유전정보, 범죄경력 등)를 수집·처리하지 않습니다.
+              서비스 제공을 위해 수집하는 생년월일·태어난 시간·성별 등 사주 풀이 정보는
+              민감정보에 해당하지 않으며, 사주명리·운세 분석 목적으로만 이용됩니다.
             </p>
           </Article>
 
@@ -354,7 +364,7 @@ export default async function PrivacyPage({ searchParams }: { searchParams: Prom
                 <li>회사명: (주)하트웨어</li>
                 <li>책임자: 허진우 (대표자 겸임)</li>
                 <li>이메일: heojinwoo@heartware.co.kr</li>
-                <li>전화: [추후 기재]</li>
+                <li>전화: 010-5960-0920</li>
               </ul>
             </div>
             <p className="mt-3">
@@ -379,6 +389,7 @@ export default async function PrivacyPage({ searchParams }: { searchParams: Prom
           {/* ── 부칙 ── */}
           <h2 className="text-[15px] font-bold text-cta/80 mt-4">부칙</h2>
           <p>본 개인정보처리방침은 2026년 5월 1일부터 시행합니다.</p>
+          <p>개정된 본 방침(버전 1.3 — 민감정보 처리, 국외이전 연락처, 보호책임자 연락처 보강)은 2026년 6월 14일부터 시행합니다.</p>
 
         </section>
 
