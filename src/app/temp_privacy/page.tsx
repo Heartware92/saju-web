@@ -3,6 +3,7 @@
  * 검토용 임시 페이지. 런칭 전 제거 권장.
  */
 import { LegalComparison, type CmpRow } from '../../components/temp/LegalComparison';
+import { PRIVACY_DETAILS } from './details';
 
 export const metadata = { title: '개인정보처리방침 5축 비교 (검토용)' };
 
@@ -130,6 +131,8 @@ const ROWS: CmpRow[] = [
   ]},
 ];
 
+const ROWS_D: CmpRow[] = ROWS.map(r => ({ ...r, cells: r.cells.map((c, i) => ({ ...c, d: PRIVACY_DETAILS[r.topic]?.[i] ?? '' })) }));
+
 export default function TempPrivacyPage() {
   return (
     <LegalComparison
@@ -137,7 +140,7 @@ export default function TempPrivacyPage() {
       subtitle="이천점 vs 사주아이·청월당·포스텔러·헬로우봇 — 항목별 보유 여부. 우리(파란 열)는 뼈대 충족, 가명정보·휴면계정은 미보유(후순위)."
       services={SERVICES}
       highlightIndex={0}
-      rows={ROWS}
+      rows={ROWS_D}
     />
   );
 }

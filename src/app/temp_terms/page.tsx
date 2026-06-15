@@ -3,6 +3,7 @@
  * 검토용 임시 페이지. 런칭 전 제거 권장.
  */
 import { LegalComparison, type CmpRow } from '../../components/temp/LegalComparison';
+import { TERMS_DETAILS } from './details';
 
 export const metadata = { title: '이용약관 5축 비교 (검토용)' };
 
@@ -116,6 +117,8 @@ const ROWS: CmpRow[] = [
   ]},
 ];
 
+const ROWS_D: CmpRow[] = ROWS.map(r => ({ ...r, cells: r.cells.map((c, i) => ({ ...c, d: TERMS_DETAILS[r.topic]?.[i] ?? '' })) }));
+
 export default function TempTermsPage() {
   return (
     <LegalComparison
@@ -123,7 +126,7 @@ export default function TempTermsPage() {
       subtitle="이천점 vs 사주아이·청월당·포스텔러·헬로우봇 — 항목별 보유 여부 한눈에. 우리(파란 열)가 16개 주제 전부 보유."
       services={SERVICES}
       highlightIndex={0}
-      rows={ROWS}
+      rows={ROWS_D}
     />
   );
 }
