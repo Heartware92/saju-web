@@ -89,7 +89,7 @@ export default async function PrivacyPage({ searchParams }: { searchParams: Prom
               <li>쿠키 및 유사 기술로 생성되는 세션 식별자·방문자 식별자(localStorage·sessionStorage 기반)</li>
               <li>유입 경로(referrer) 및 마케팅 유입 파라미터(UTM 등)</li>
             </ul>
-            <p className="text-[12px] text-text-tertiary mt-1">* 위 자동 수집 정보는 서비스 개선과 이용 통계·유입/이탈 분석(어드민 분석) 목적으로 이용되며, 특정 개인을 식별하기 위한 용도로 사용하지 않습니다.</p>
+            <p className="text-[12px] text-text-tertiary mt-1">* 위 자동 수집 정보는 서비스 개선과 이용 통계·유입/이탈 분석 목적으로 이용되며, 특정 개인을 식별하기 위한 용도로 사용하지 않습니다.</p>
           </Article>
 
           {/* ── 제2조 ── */}
