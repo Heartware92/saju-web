@@ -333,13 +333,24 @@ export default async function PrivacyPage({ searchParams }: { searchParams: Prom
 
           {/* ── 제10조 ── */}
           <Article title="제10조 (개인정보의 안전성 확보 조치)">
-            <p>회사는 개인정보의 안전성 확보를 위해 다음의 조치를 취하고 있습니다.</p>
-            <ul className="list-disc pl-5 mt-2 space-y-1">
-              <li>비밀번호의 암호화 저장 및 관리</li>
+            <p>회사는 개인정보의 안전한 처리를 위하여 다음과 같이 관리적·기술적·물리적 보호조치를 취하고 있습니다.</p>
+            <p className="font-medium text-text-primary mt-2">1. 관리적 조치</p>
+            <ul className="list-disc pl-5 mt-1 space-y-1">
+              <li>개인정보 내부관리계획의 수립 및 시행</li>
+              <li>개인정보를 취급하는 인원의 최소화 및 정기적인 개인정보 보호 교육</li>
+              <li>개인정보 처리 수탁사에 대한 보호 의무 부과 및 관리·감독</li>
+            </ul>
+            <p className="font-medium text-text-primary mt-2">2. 기술적 조치</p>
+            <ul className="list-disc pl-5 mt-1 space-y-1">
+              <li>비밀번호 등 중요 정보의 암호화 저장 및 관리</li>
               <li>SSL/TLS 등 암호화 통신을 통한 개인정보 전송</li>
-              <li>개인정보 접근 권한의 제한 및 관리</li>
-              <li>개인정보 처리 시스템의 접근 기록 보관 및 위·변조 방지</li>
-              <li>해킹 등에 대비한 보안 프로그램 설치 및 갱신</li>
+              <li>개인정보처리시스템의 접근 권한 제한 및 관리</li>
+              <li>접근 기록의 보관 및 위·변조 방지</li>
+              <li>해킹 등에 대비한 보안 프로그램 설치 및 주기적 갱신</li>
+            </ul>
+            <p className="font-medium text-text-primary mt-2">3. 물리적 조치</p>
+            <ul className="list-disc pl-5 mt-1 space-y-1">
+              <li>회사는 자체 전산설비를 운영하지 않으며, 개인정보는 AWS(서울)·Vercel 등 클라우드 인프라에 보관되어 해당 사업자의 데이터센터 물리 보안 기준에 따라 보호됩니다.</li>
             </ul>
           </Article>
 
