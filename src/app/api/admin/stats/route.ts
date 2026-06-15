@@ -62,9 +62,10 @@ async function computeStats(audience: Set<string> | null) {
     dailySajuRes,
     dailyTarotRes,
   ] = await Promise.all([
-    includeAudience(excludeUsers(supabaseAdmin.from('birth_profiles').select('user_id', { count: 'exact', head: true }).eq('is_primary', true), ex), audience),
-    includeAudience(excludeUsers(supabaseAdmin.from('user_credits').select('user_id', { count: 'exact', head: true }).gte('created_at', todayStart), ex), audience),
-    includeAudience(excludeUsers(supabaseAdmin.from('user_credits').select('user_id', { count: 'exact', head: true }).gte('created_at', monthStart), ex), audience),
+    // 총 회원/신규 = 가입 완료(약관 동의) 기준. user_credits(가입 보너스)는 신뢰 불가 — 보너스 폐지 + 미완성 가입도 행 생성됨.
+    includeAudience(excludeUsers(supabaseAdmin.from('user_agreements').select('user_id', { count: 'exact', head: true }), ex), audience),
+    includeAudience(excludeUsers(supabaseAdmin.from('user_agreements').select('user_id', { count: 'exact', head: true }).gte('terms_agreed_at', todayStart), ex), audience),
+    includeAudience(excludeUsers(supabaseAdmin.from('user_agreements').select('user_id', { count: 'exact', head: true }).gte('terms_agreed_at', monthStart), ex), audience),
     includeAudience(excludeUsers(supabaseAdmin.from('orders').select('status, amount').not('status', 'eq', 'pending'), ex), audience),
     includeAudience(excludeUsers(supabaseAdmin.from('orders').select('amount').eq('status', 'completed').gte('created_at', monthStart), ex), audience),
     includeAudience(excludeUsers(supabaseAdmin.from('orders').select('amount').eq('status', 'completed').gte('created_at', prevMonthStart).lt('created_at', monthStart), ex), audience),
@@ -77,7 +78,7 @@ async function computeStats(audience: Set<string> | null) {
     includeAudience(excludeUsers(supabaseAdmin.from('consultation_records').select('id', { count: 'exact', head: true }).gte('created_at', todayStart), ex), audience),
     // 30일 시계열
     includeAudience(excludeUsers(supabaseAdmin.from('orders').select('amount, created_at').eq('status', 'completed').gte('created_at', thirtyDaysAgo), ex), audience),
-    includeAudience(excludeUsers(supabaseAdmin.from('user_credits').select('created_at').gte('created_at', thirtyDaysAgo), ex), audience),
+    includeAudience(excludeUsers(supabaseAdmin.from('user_agreements').select('terms_agreed_at').gte('terms_agreed_at', thirtyDaysAgo), ex), audience),
     includeAudience(excludeUsers(supabaseAdmin.from('saju_records').select('created_at').gte('created_at', thirtyDaysAgo), ex), audience),
     includeAudience(excludeUsers(supabaseAdmin.from('tarot_records').select('created_at').gte('created_at', thirtyDaysAgo), ex), audience),
   ]);
@@ -108,7 +109,7 @@ async function computeStats(audience: Set<string> | null) {
     if (idx !== undefined) revenueByDay[idx] += o.amount ?? 0;
   }
   for (const c of dailySignupsRes.data ?? []) {
-    const idx = dayIndex.get(dayKey(c.created_at));
+    const idx = dayIndex.get(dayKey(c.terms_agreed_at));
     if (idx !== undefined) signupsByDay[idx]++;
   }
   for (const r of dailySajuRes.data ?? []) {
