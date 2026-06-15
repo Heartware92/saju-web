@@ -11,8 +11,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/services/supabaseAdmin';
 import { requireAdmin } from '../../_auth';
 import { cached, shouldForce } from '../../_cache';
-import { excludedUserIds, filterExcludedRows } from '../../_excluded';
-import { resolveAudience } from '../../_audience';
+import { excludedUserIds, filterExcludedRows, excludeUsers } from '../../_excluded';
+import { resolveAudience, includeAudience } from '../../_audience';
+import { cachedLoadAdminBundle } from '../../_userAggregates';
 
 const CACHE_KEY = 'admin:analytics:summary:v1';
 const TTL_SECONDS = 60;
@@ -171,6 +172,109 @@ async function computeRetention(excluded: Set<string>, audience: Set<string> | n
   };
 }
 
+interface FunnelResult {
+  windowDays: number;
+  /** 방문 → 가입 (visitor 키 · signup 이벤트 기반 · 배포 이후 데이터부터 축적) */
+  visitorToSignup: { visitors: number; signedUp: number; rate: number };
+  /** 최근 N일 신규 가입자 코호트의 행동 깔때기 (user 키) */
+  cohort: {
+    signups: number;
+    ran: number;       // 풀이(사주/타로) 1회 이상 실행
+    attempt: number;   // 결제 1회 이상 시도(상태 무관)
+    complete: number;  // 결제 1회 이상 완료
+    ranRate: number;
+    attemptRate: number;
+    completeRate: number;
+  };
+  /** 최근 N일 생성 주문의 결과 분해 (주문 단위) */
+  paymentOutcome: {
+    total: number;
+    completed: number;
+    failed: number;
+    cancelled: number;
+    pending: number;
+    refunded: number;
+  };
+}
+
+/**
+ * 전환 깔때기 — 결제·크레딧 코드를 건드리지 않고 기존 테이블에서만 읽어 집계.
+ *  - 방문→가입: analytics_events 의 signup 이벤트(visitor_id 보유)로 동일 키 정확 집계.
+ *  - 코호트: 최근 N일 가입자 중 풀이 실행/결제 시도/결제 완료까지 도달한 비율.
+ *    (신규 가입자라 saju/tarot 누적 카운트가 사실상 기간 내 활동과 동일)
+ *  - 결제 결과: orders 전 상태(완료/실패/취소/대기/환불) 분해 — "결제하다 어디서 이탈" 진단.
+ * 제외 계정·오디언스 필터를 모든 단계에 일관 적용. 표본이 적은 베타 단계에 맞춘 단순 집계.
+ */
+async function computeFunnel(
+  audience: Set<string> | null,
+  excluded: Set<string>,
+  totalVisitors: number,
+  filteredRows: EventRow[],
+): Promise<FunnelResult> {
+  // 기간 경계는 숫자(ms)로 비교 — created_at 이 'Z'/'+00:00' 등 포맷이 섞여도 안전.
+  const sinceMs = Date.now() - WINDOW_DAYS * 86_400_000;
+
+  // ── 방문 → 가입 (signup 이벤트의 고유 visitor) ──
+  const signupVisitors = new Set<string>();
+  for (const r of filteredRows) {
+    if (r.event_type === 'signup' && r.visitor_id) signupVisitors.add(r.visitor_id);
+  }
+  const visitorToSignup = {
+    visitors: totalVisitors,
+    signedUp: signupVisitors.size,
+    rate: totalVisitors ? Math.round((signupVisitors.size / totalVisitors) * 1000) / 10 : 0,
+  };
+
+  // ── 코호트(최근 N일 가입자) 행동 + 결제 결과 ──
+  const bundle = await cachedLoadAdminBundle();
+  // 주문 전 상태 — 제외/오디언스 적용. 시도(상태 무관) 유저 집합 + 기간 내 결과 분해 둘 다에 사용.
+  const ordersRes = await includeAudience(
+    excludeUsers(supabaseAdmin.from('orders').select('user_id, status, created_at'), excluded),
+    audience,
+  );
+  const allOrders = (ordersRes.data ?? []) as { user_id: string; status: string; created_at: string }[];
+  const attemptUsers = new Set<string>();
+  for (const o of allOrders) if (o.user_id) attemptUsers.add(o.user_id);
+
+  let signups = 0, ran = 0, attempt = 0, complete = 0;
+  for (const u of bundle.users) {
+    const createdMs = u.created_at ? new Date(u.created_at).getTime() : 0;
+    if (!createdMs || createdMs < sinceMs) continue;        // 최근 N일 가입자만
+    if (excluded.has(u.id)) continue;                        // 슈퍼/테스트 계정 제외
+    if (audience && !audience.has(u.id)) continue;           // 오디언스 코호트 한정
+    signups++;
+    const didRun =
+      (bundle.sajuCountByUser.get(u.id) ?? 0) > 0 ||
+      (bundle.tarotCountByUser.get(u.id) ?? 0) > 0;
+    if (didRun) ran++;
+    if (attemptUsers.has(u.id)) attempt++;
+    if (bundle.ordersByUser.has(u.id)) complete++;           // ordersByUser 는 completed 만 보유
+  }
+  const pct = (n: number) => (signups ? Math.round((n / signups) * 1000) / 10 : 0);
+
+  // ── 결제 결과 분해 (기간 내 생성 주문, 주문 단위) ──
+  const outcome = { total: 0, completed: 0, failed: 0, cancelled: 0, pending: 0, refunded: 0 };
+  for (const o of allOrders) {
+    if (!o.created_at || new Date(o.created_at).getTime() < sinceMs) continue;
+    outcome.total++;
+    if (o.status === 'completed') outcome.completed++;
+    else if (o.status === 'failed') outcome.failed++;
+    else if (o.status === 'cancelled') outcome.cancelled++;
+    else if (o.status === 'pending') outcome.pending++;
+    else if (o.status === 'refunded') outcome.refunded++;
+  }
+
+  return {
+    windowDays: WINDOW_DAYS,
+    visitorToSignup,
+    cohort: {
+      signups, ran, attempt, complete,
+      ranRate: pct(ran), attemptRate: pct(attempt), completeRate: pct(complete),
+    },
+    paymentOutcome: outcome,
+  };
+}
+
 async function computeSummary(audience: Set<string> | null) {
   const sinceIso = new Date(Date.now() - WINDOW_DAYS * 86_400_000).toISOString();
   const { rows: allRows, truncated } = await fetchWindowRows(sinceIso);
@@ -244,9 +348,11 @@ async function computeSummary(audience: Set<string> | null) {
 
   const totalSessions = sessions.size;
   const retention = await computeRetention(excluded, audience);
+  const funnel = await computeFunnel(audience, excluded, visitors.size, filtered);
 
   return {
     truncated,
+    funnel,
     kpi: {
       sessions: totalSessions,
       visitors: visitors.size,

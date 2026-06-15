@@ -21,8 +21,10 @@ const BOT_RE =
 const MOBILE_RE = /mobile|android|iphone|ipad|ipod/i;
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-// 허용 이벤트 타입(화이트리스트). 페이지뷰 + 공유 버튼 클릭(카카오/링크).
-const EVENT_TYPES = new Set(['pageview', 'share_kakao', 'share_url']);
+// 허용 이벤트 타입(화이트리스트). 페이지뷰 + 공유 버튼 클릭(카카오/링크) + 전환(가입/로그인).
+// signup/login 은 인증 성공 직후 클라이언트가 발생 — 익명 visitor_id 와 user_id 를 잇는
+// 유일한 연결고리(방문→가입 전환율 정확 집계용). 결제/크레딧 로직과는 무관.
+const EVENT_TYPES = new Set(['pageview', 'share_kakao', 'share_url', 'signup', 'login']);
 
 function trunc(v: unknown, n: number): string | null {
   if (typeof v !== 'string') return null;

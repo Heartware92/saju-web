@@ -11,8 +11,31 @@ import { pathLabel } from '@/constants/adminLabels';
 
 interface Counted { key: string; count: number; }
 
+export interface ConversionFunnel {
+  windowDays: number;
+  visitorToSignup: { visitors: number; signedUp: number; rate: number };
+  cohort: {
+    signups: number;
+    ran: number;
+    attempt: number;
+    complete: number;
+    ranRate: number;
+    attemptRate: number;
+    completeRate: number;
+  };
+  paymentOutcome: {
+    total: number;
+    completed: number;
+    failed: number;
+    cancelled: number;
+    pending: number;
+    refunded: number;
+  };
+}
+
 export interface AnalyticsSummary {
   truncated: boolean;
+  funnel?: ConversionFunnel;
   kpi: {
     sessions: number;
     visitors: number;
@@ -79,6 +102,76 @@ function RankBars({ items, color, empty, labelFn }: { items: Counted[]; color: s
   );
 }
 
+function MiniStat({ label, value, color }: { label: string; value: string; color?: string }) {
+  return (
+    <div className="bg-white/[0.03] border border-white/10 rounded-lg p-3 text-center">
+      <p className="text-[12px] text-text-secondary mb-1">{label}</p>
+      <p className={`text-[20px] font-bold tabular-nums leading-tight ${color ?? 'text-text-primary'}`}>{value}</p>
+    </div>
+  );
+}
+
+/** 전환 깔때기 — 신규 가입자 행동 / 방문→가입 / 결제 결과 */
+function FunnelCards({ funnel }: { funnel: ConversionFunnel }) {
+  const { visitorToSignup: v, cohort: c, paymentOutcome: p } = funnel;
+  const steps = [
+    { label: '가입', value: c.signups, rate: 100, color: 'rgba(96, 165, 250, 0.85)' },
+    { label: '풀이 실행', value: c.ran, rate: c.ranRate, color: 'rgba(52, 211, 153, 0.85)' },
+    { label: '결제 시도', value: c.attempt, rate: c.attemptRate, color: 'rgba(251, 191, 36, 0.85)' },
+    { label: '결제 완료', value: c.complete, rate: c.completeRate, color: 'rgba(236, 72, 153, 0.85)' },
+  ];
+  return (
+    <div className="grid lg:grid-cols-2 gap-4">
+      <Card
+        title="신규 가입자 전환 깔때기"
+        sub={`최근 ${funnel.windowDays}일 가입자 ${fmt(c.signups)}명 기준 · 가입 후 도달 단계`}
+      >
+        {c.signups === 0 ? (
+          <p className="text-[13px] text-text-tertiary py-6 text-center">최근 {funnel.windowDays}일 신규 가입자가 없습니다</p>
+        ) : (
+          <div className="space-y-2.5">
+            {steps.map((s) => (
+              <div key={s.label} className="flex items-center gap-3">
+                <span className="w-[68px] text-[13px] text-text-secondary shrink-0">{s.label}</span>
+                <div className="flex-1 h-[22px] bg-white/5 rounded overflow-hidden">
+                  <div className="h-full rounded" style={{ width: `${Math.max(s.rate, 1.5)}%`, background: s.color }} />
+                </div>
+                <span className="w-[96px] text-right text-[12px] tabular-nums text-text-tertiary shrink-0">
+                  {fmt(s.value)}명 · {s.rate}%
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
+      </Card>
+
+      <div className="space-y-4">
+        <Card title="방문 → 가입 전환" sub="가입 이벤트 배포 이후 수집된 방문자 기준 (visitor 단위)">
+          <div className="grid grid-cols-3 gap-2.5">
+            <MiniStat label="고유 방문자" value={fmt(v.visitors)} />
+            <MiniStat label="가입 전환" value={fmt(v.signedUp)} />
+            <MiniStat label="전환율" value={`${v.rate}%`} color="text-emerald-300" />
+          </div>
+        </Card>
+
+        <Card title="결제 시도 결과" sub={`최근 ${funnel.windowDays}일 생성 주문 ${fmt(p.total)}건 · 어디서 이탈하는지`}>
+          <RankBars
+            items={[
+              { key: '완료', count: p.completed },
+              { key: '실패', count: p.failed },
+              { key: '취소', count: p.cancelled },
+              { key: '대기', count: p.pending },
+              { key: '환불', count: p.refunded },
+            ].filter((i) => i.count > 0)}
+            color="rgba(248, 113, 113, 0.65)"
+            empty="결제 시도 없음"
+          />
+        </Card>
+      </div>
+    </div>
+  );
+}
+
 export function AnalyticsSection({ summary }: { summary: AnalyticsSummary | null }) {
   if (!summary) {
     return <p className="text-[14px] text-text-tertiary py-10 text-center">데이터를 불러오는 중…</p>;
@@ -129,6 +222,9 @@ export function AnalyticsSection({ summary }: { summary: AnalyticsSummary | null
           color="text-pink-300"
         />
       </div>
+
+      {/* 전환 깔때기 (가입 → 풀이 → 결제) */}
+      {summary.funnel && <FunnelCards funnel={summary.funnel} />}
 
       {/* 일별 방문자 추이 */}
       <Card title="일별 방문자 추이" sub="최근 30일 고유 방문자(visitor) 기준">

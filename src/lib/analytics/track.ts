@@ -11,7 +11,7 @@ import { useUserStore } from '@/store/useUserStore';
 
 const ENDPOINT = '/api/analytics/collect';
 
-export type TrackEventType = 'share_kakao' | 'share_url';
+export type TrackEventType = 'share_kakao' | 'share_url' | 'signup' | 'login';
 
 function readId(storage: Storage | undefined, key: string): string | null {
   try {

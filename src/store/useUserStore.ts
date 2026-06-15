@@ -7,6 +7,7 @@ import { persist } from 'zustand/middleware';
 import { supabase, auth, agreement } from '../services/supabase';
 import { useCreditStore } from './useCreditStore';
 import { useProfileStore } from './useProfileStore';
+import { trackEvent } from '../lib/analytics/track';
 import type { AuthUser } from '../types/user';
 
 interface UserState {
@@ -78,6 +79,8 @@ export const useUserStore = create<UserState>()(
           const response = await auth.signInWithEmail(email, password);
 
           set({ user: response.user });
+          // 전환 분석: 로그인 성공 이벤트(익명 visitor_id ↔ user_id 연결). 실패해도 무시.
+          if (response.user) trackEvent('login');
           if (response.user) {
             await Promise.all([
               useCreditStore.getState().fetchBalance(response.user.id, { force: true }),
@@ -109,6 +112,9 @@ export const useUserStore = create<UserState>()(
           const response = await auth.signUpWithEmail(email, password, phone);
 
           set({ user: response.user || null, loading: false });
+
+          // 전환 분석: 가입 성공 이벤트(방문→가입 전환율 집계용). 실패해도 무시.
+          if (response.user) trackEvent('signup');
 
           // 가입 직후 동의 정보 기록 (user_agreements 테이블)
           // 세션이 즉시 생성되는 환경(이메일 확인 비활성화)에서 RLS 통과 가능
