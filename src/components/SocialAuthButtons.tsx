@@ -9,7 +9,7 @@
  * - 신규 OAuth 사용자: 동의 메타 없음 → 콜백이 /auth/consent 로 보냄
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { auth } from '../services/supabase';
 
 interface SocialAuthButtonsProps {
@@ -20,6 +20,21 @@ interface SocialAuthButtonsProps {
 export const SocialAuthButtons: React.FC<SocialAuthButtonsProps> = ({ label }) => {
   const [error, setError] = useState('');
   const [pending, setPending] = useState<'google' | 'kakao' | null>(null);
+
+  // OAuth 리다이렉트 후 뒤로가기로 돌아오면 페이지가 bfcache 에서 복원되는데,
+  // 이때 React 는 재마운트되지 않고 이전 state(pending='google'/'kakao')를 그대로 되살린다.
+  // → 두 버튼이 영구 비활성화. 페이지 복원/재가시화 시 pending 을 초기화해 풀어준다.
+  useEffect(() => {
+    const reset = () => setPending(null);
+    const onPageShow = (e: PageTransitionEvent) => { if (e.persisted) reset(); };
+    const onVisibility = () => { if (document.visibilityState === 'visible') reset(); };
+    window.addEventListener('pageshow', onPageShow);
+    document.addEventListener('visibilitychange', onVisibility);
+    return () => {
+      window.removeEventListener('pageshow', onPageShow);
+      document.removeEventListener('visibilitychange', onVisibility);
+    };
+  }, []);
 
   const handleClick = async (provider: 'google' | 'kakao') => {
     setError('');
