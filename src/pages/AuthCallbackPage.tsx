@@ -61,21 +61,24 @@ export default function AuthCallbackPage() {
           ]);
 
           const next = searchParams.get('next') || '/';
+          const dest = encodeURIComponent(next);
 
-          // 1) 약관 동의 누락 → 동의 페이지로
-          //    public.user_agreements 테이블에서 조회 (OAuth 가 덮어쓸 수 없는 위치).
-          const ag = await agreement.getMine();
-          if (!ag?.terms_agreed_at) {
-            const dest = encodeURIComponent(next);
+          const isSocial = session.user.app_metadata?.provider && session.user.app_metadata.provider !== 'email';
+          const hasPhone = !!session.user.user_metadata?.phone;
+
+          // 1) 소셜 가입 미완료(휴대폰 미인증) → 휴대폰 인증부터 "이어서"가 아니라
+          //    처음(약관 동의)부터 다시 시작. 동의 페이지가 끝나면 휴대폰 인증으로 이어진다.
+          //    (가입을 끝내지 않고 이탈했다면 매번 처음부터 재시작 = 일관된 온보딩 깔때기)
+          if (isSocial && !hasPhone) {
             router.replace(`/auth/consent?next=${dest}`);
             return;
           }
 
-          // 2) 소셜 신규 사용자 + 휴대폰 미인증 → 휴대폰 인증
-          const isSocial = session.user.app_metadata?.provider && session.user.app_metadata.provider !== 'email';
-          const hasPhone = !!session.user.user_metadata?.phone;
-          if (isSocial && !hasPhone) {
-            router.replace('/auth/phone-verify');
+          // 2) 그 외 약관 동의 누락(이메일 가입 등 잔여 케이스) → 동의 페이지로
+          //    public.user_agreements 테이블에서 조회 (OAuth 가 덮어쓸 수 없는 위치).
+          const ag = await agreement.getMine();
+          if (!ag?.terms_agreed_at) {
+            router.replace(`/auth/consent?next=${dest}`);
             return;
           }
 
