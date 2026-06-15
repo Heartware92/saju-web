@@ -249,7 +249,7 @@ export default async function PrivacyPage({ searchParams }: { searchParams: Prom
           <Article title="제6조의2 (개인정보의 국외 이전)">
             <p>
               회사는 서비스 제공을 위해 다음과 같이 개인정보를 국외로 이전(처리위탁)하고 있습니다.
-              이용자는 본 이전에 대한 동의를 거부할 수 있으나, 이 경우 AI 풀이 등 일부 서비스 이용이 제한될 수 있습니다.
+              이용자는 회원 탈퇴 또는 고객센터(이메일 heojinwoo@heartware.co.kr)를 통해 개인정보의 국외 이전을 거부할 수 있으며, 이 경우 AI 풀이 등 일부 서비스 이용이 제한될 수 있습니다.
               (데이터 저장·인증을 담당하는 Supabase는 국내 리전(AWS 서울)에 보관되어 국외 이전 대상이 아닙니다.)
             </p>
             <table className="w-full text-[13px] border border-[var(--border-subtle)] rounded-lg overflow-hidden mt-2">
