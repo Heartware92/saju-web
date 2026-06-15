@@ -78,7 +78,8 @@ export default async function PrivacyPage({ searchParams }: { searchParams: Prom
 
             <h4 className="text-[13px] font-bold text-text-primary mt-3 mb-1">3. 결제 시</h4>
             <ul className="list-disc pl-5 space-y-1">
-              <li>결제수단 정보, 결제 기록 (결제대행사 경유, 카드번호 등 민감정보는 회사가 직접 저장하지 않음)</li>
+              <li>결제 수단 종류(신용카드·간편결제 등), 결제 승인·거래번호, 주문번호, 결제 금액, 결제 일시, 결제 상태</li>
+              <li className="text-text-tertiary">* 결제는 결제대행사(PG)를 통해 처리되며, 카드번호·계좌번호 등 결제수단 상세정보는 회사가 직접 수집·저장하지 않습니다.</li>
             </ul>
 
             <h4 className="text-[13px] font-bold text-text-primary mt-3 mb-1">4. 서비스 이용 중 자동 수집</h4>
@@ -391,7 +392,7 @@ export default async function PrivacyPage({ searchParams }: { searchParams: Prom
           <h2 className="text-[15px] font-bold text-cta/80 mt-4">부칙</h2>
           <p>본 개인정보처리방침은 2026년 5월 1일부터 시행합니다.</p>
           <p>개정된 본 방침(버전 1.3 — 민감정보 처리, 국외이전 연락처, 보호책임자 연락처 보강)은 2026년 6월 14일부터 시행합니다.</p>
-          <p>개정된 본 방침(버전 1.4 — 「개인정보 보호법」 제30조 수립 근거 명시)은 2026년 6월 15일부터 시행합니다.</p>
+          <p>개정된 본 방침(버전 1.4 — 「개인정보 보호법」 제30조 수립 근거 명시 및 결제 수집항목 구체화)은 2026년 6월 15일부터 시행합니다.</p>
 
         </section>
 
