@@ -72,7 +72,7 @@ export default async function PrivacyPage({ searchParams }: { searchParams: Prom
               <li>궁합 서비스: 상대방 이름, 생년월일, 태어난 시간, 성별</li>
               <li>이름풀이 서비스: 풀이할 이름(한글·한자)</li>
               <li>꿈해몽 서비스: 꿈 내용(텍스트)</li>
-              <li>상담소(AI 채팅 상담): 이용자가 입력한 대화 내용</li>
+              <li>상담소: 이용자가 입력한 대화 내용</li>
             </ul>
             <p className="text-[12px] text-text-tertiary mt-1">* (선택) 마케팅 정보 수신 동의 여부 — 동의 시 이벤트·혜택 안내에 이용</p>
 
@@ -84,8 +84,12 @@ export default async function PrivacyPage({ searchParams }: { searchParams: Prom
 
             <h4 className="text-[13px] font-bold text-text-primary mt-3 mb-1">4. 서비스 이용 중 자동 수집</h4>
             <ul className="list-disc pl-5 space-y-1">
-              <li>서비스 이용 기록, 접속 로그, 접속 IP 주소, 기기 및 브라우저 정보, 쿠키</li>
+              <li>서비스 이용 기록(방문한 페이지 경로, 페이지 이동·이탈 경로, 기능 이용 내역)</li>
+              <li>접속 로그, 접속 일시, 접속 IP 주소, 기기 및 브라우저 정보(OS·기기 유형 등)</li>
+              <li>쿠키 및 유사 기술로 생성되는 세션 식별자·방문자 식별자(localStorage·sessionStorage 기반)</li>
+              <li>유입 경로(referrer) 및 마케팅 유입 파라미터(UTM 등)</li>
             </ul>
+            <p className="text-[12px] text-text-tertiary mt-1">* 위 자동 수집 정보는 서비스 개선과 이용 통계·유입/이탈 분석(어드민 분석) 목적으로 이용되며, 특정 개인을 식별하기 위한 용도로 사용하지 않습니다.</p>
           </Article>
 
           {/* ── 제2조 ── */}
@@ -309,6 +313,11 @@ export default async function PrivacyPage({ searchParams }: { searchParams: Prom
               서비스 제공을 위해 수집하는 생년월일·태어난 시간·성별 등 사주 풀이 정보는
               민감정보에 해당하지 않으며, 사주명리·운세 분석 목적으로만 이용됩니다.
             </p>
+            <p className="mt-2">
+              회사는 민감정보를 별도로 요구·수집하지 않으나, 이용자가 상담소·꿈해몽 등 자유입력란에
+              입력한 내용은 풀이·상담 결과 제공 목적으로만 이용됩니다. 이용자는 자유입력란에 건강·정치적
+              견해 등 불필요한 민감정보를 입력하지 않도록 권고드립니다.
+            </p>
           </Article>
 
           {/* ── 제9조 ── */}
@@ -392,7 +401,7 @@ export default async function PrivacyPage({ searchParams }: { searchParams: Prom
           <h2 className="text-[15px] font-bold text-cta/80 mt-4">부칙</h2>
           <p>본 개인정보처리방침은 2026년 5월 1일부터 시행합니다.</p>
           <p>개정된 본 방침(버전 1.3 — 민감정보 처리, 국외이전 연락처, 보호책임자 연락처 보강)은 2026년 6월 14일부터 시행합니다.</p>
-          <p>개정된 본 방침(버전 1.4 — 「개인정보 보호법」 제30조 수립 근거 명시 및 결제 수집항목 구체화)은 2026년 6월 15일부터 시행합니다.</p>
+          <p>개정된 본 방침(버전 1.4 — 「개인정보 보호법」 제30조 수립 근거 명시, 결제·자동수집 항목 구체화, 민감정보 자유입력 안내)은 2026년 6월 15일부터 시행합니다.</p>
 
         </section>
 
