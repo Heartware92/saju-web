@@ -51,8 +51,9 @@ function lastNDays(n: number): string[] {
   return out;
 }
 
-// 분석 제외 경로 — 내부 테스트/검수용(/temp_*). 진입·이탈·인기·공유 집계에서 제외해 실제 방문 통계만 남긴다.
-const EXCLUDED_PATH_RE = /^\/temp_/i;
+// 분석 제외 경로 — 내부 테스트/검수용(/temp_*)·어드민(/admin)·인증 플로우(/auth/* — 소셜 로그인 콜백·동의·휴대폰 인증 등 전환용).
+// 진입·이탈·인기·공유 집계에서 제외해 실제 콘텐츠 방문 통계만 남긴다.
+const EXCLUDED_PATH_RE = /^\/(?:temp_|admin(?:\/|$)|auth\/)/i;
 
 /** first-touch referrer + utm_source 로 유입 채널 분류 */
 function classifySource(referrer: string | null, utmSource: string | null): string {
