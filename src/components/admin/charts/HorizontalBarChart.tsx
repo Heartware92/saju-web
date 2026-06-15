@@ -37,8 +37,8 @@ export function HorizontalBarChart({
         const widthPct = Math.max(2, (b.value / max) * 100);
         const pct = total > 0 ? Math.round((b.value / total) * 100) : 0;
         return (
-          <div key={b.key} className="grid grid-cols-[72px_1fr_auto] items-center gap-2 text-[13px]">
-            <span className="text-text-secondary whitespace-nowrap">{b.label}</span>
+          <div key={b.key} className="grid grid-cols-[120px_1fr_auto] items-center gap-2 text-[13px]">
+            <span className="text-text-secondary truncate" title={b.label}>{b.label}</span>
             <div className="h-5 rounded bg-white/5 overflow-hidden relative">
               <div
                 className="h-full rounded transition-all"

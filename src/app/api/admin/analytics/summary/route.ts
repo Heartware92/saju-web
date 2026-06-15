@@ -51,6 +51,9 @@ function lastNDays(n: number): string[] {
   return out;
 }
 
+// 분석 제외 경로 — 내부 테스트/검수용(/temp_*). 진입·이탈·인기·공유 집계에서 제외해 실제 방문 통계만 남긴다.
+const EXCLUDED_PATH_RE = /^\/temp_/i;
+
 /** first-touch referrer + utm_source 로 유입 채널 분류 */
 function classifySource(referrer: string | null, utmSource: string | null): string {
   const u = (utmSource ?? '').toLowerCase();
@@ -293,8 +296,10 @@ async function computeSummary(audience: Set<string> | null) {
   // 오디언스 필터 활성 시: 해당 코호트 user_id 이벤트만. 비로그인(user_id=null)은 인구통계 식별 불가 → 제외.
   if (audience) filtered = filtered.filter((r) => r.user_id !== null && audience.has(r.user_id));
   // 페이지뷰 집계와 공유(상호작용) 이벤트를 분리 — 공유 이벤트가 방문/이탈 통계를 오염시키지 않게.
-  const rows = filtered.filter((r) => r.event_type === 'pageview');
-  const shareRows = filtered.filter((r) => r.event_type === 'share_kakao' || r.event_type === 'share_url');
+  const rows = filtered.filter((r) => r.event_type === 'pageview' && !EXCLUDED_PATH_RE.test(r.path));
+  const shareRows = filtered.filter(
+    (r) => (r.event_type === 'share_kakao' || r.event_type === 'share_url') && !EXCLUDED_PATH_RE.test(r.path),
+  );
 
   // ── 공유 페이지 집계: 어느 화면을 어떤 채널(카톡/URL복사)로 공유하는지 ──
   const sharePageChannel = new Map<string, { kakao: number; url: number }>();
