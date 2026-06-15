@@ -105,7 +105,7 @@ export default async function PrivacyPage({ searchParams }: { searchParams: Prom
               <tbody>
                 <tr className="border-t border-[var(--border-subtle)]">
                   <td className="px-3 py-2">서비스 제공</td>
-                  <td className="px-3 py-2">만세력 계산, 사주명리 풀이, AI 운세 결과 생성</td>
+                  <td className="px-3 py-2">만세력 계산, 사주명리 풀이, 인공지능 운세 결과 생성</td>
                 </tr>
                 <tr className="border-t border-[var(--border-subtle)]">
                   <td className="px-3 py-2">회원 관리</td>
@@ -231,7 +231,7 @@ export default async function PrivacyPage({ searchParams }: { searchParams: Prom
                 </tr>
                 <tr className="border-t border-[var(--border-subtle)]">
                   <td className="px-3 py-2">Google (Gemini), OpenAI</td>
-                  <td className="px-3 py-2">AI 풀이·상담 결과 생성</td>
+                  <td className="px-3 py-2">인공지능 풀이·상담 결과 생성</td>
                 </tr>
                 <tr className="border-t border-[var(--border-subtle)]">
                   <td className="px-3 py-2">Vercel</td>
@@ -249,39 +249,38 @@ export default async function PrivacyPage({ searchParams }: { searchParams: Prom
           <Article title="제6조의2 (개인정보의 국외 이전)">
             <p>
               회사는 서비스 제공을 위해 다음과 같이 개인정보를 국외로 이전(처리위탁)하고 있습니다.
-              회사가 국외로 이전하는 정보는 AI 풀이·웹 서비스 제공에 필수적이어서 부분적인 거부가 어렵습니다. 이용자는 회원 탈퇴를 통해 개인정보의 국외 이전을 거부할 수 있으며, 이 경우 서비스 이용이 종료됩니다.
+              회사가 국외로 이전하는 정보는 인공지능 풀이·웹 서비스 제공에 필수적이어서 부분적인 거부가 어렵습니다. 이용자는 회원 탈퇴를 통해 개인정보의 국외 이전을 거부할 수 있으며, 이 경우 서비스 이용이 종료됩니다.
               (데이터 저장·인증을 담당하는 Supabase는 국내 리전(AWS 서울)에 보관되어 국외 이전 대상이 아닙니다.)
             </p>
-            <table className="w-full text-[13px] border border-[var(--border-subtle)] rounded-lg overflow-hidden mt-2">
-              <thead>
-                <tr className="bg-[rgba(124,92,252,0.08)]">
-                  <th className="text-left px-3 py-2 text-text-tertiary font-medium">이전받는 자</th>
-                  <th className="text-left px-3 py-2 text-text-tertiary font-medium">국가</th>
-                  <th className="text-left px-3 py-2 text-text-tertiary font-medium">이전 항목 / 목적</th>
-                  <th className="text-left px-3 py-2 text-text-tertiary font-medium">이전 일시·방법 / 보유기간</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr className="border-t border-[var(--border-subtle)]">
-                  <td className="px-3 py-2">Google LLC (Gemini)<br /><span className="text-text-tertiary text-[11px]">연락처 googlekrsupport@google.com</span></td>
-                  <td className="px-3 py-2">미국</td>
-                  <td className="px-3 py-2">풀이 입력정보(생년월일·태어난 시간·성별 등) / AI 풀이 결과 생성</td>
-                  <td className="px-3 py-2">풀이 요청 시 네트워크 전송 / 결과 생성 후 별도 보관하지 않음(제공사 정책상 단기 보관될 수 있음)</td>
-                </tr>
-                <tr className="border-t border-[var(--border-subtle)]">
-                  <td className="px-3 py-2">OpenAI, L.L.C.<br /><span className="text-text-tertiary text-[11px]">연락처 privacy@openai.com</span></td>
-                  <td className="px-3 py-2">미국</td>
-                  <td className="px-3 py-2">풀이·상담 입력정보 / AI 풀이·상담 결과 생성(보조)</td>
-                  <td className="px-3 py-2">요청 시 네트워크 전송 / 결과 생성 후 별도 보관하지 않음(제공사 정책상 단기 보관될 수 있음)</td>
-                </tr>
-                <tr className="border-t border-[var(--border-subtle)]">
-                  <td className="px-3 py-2">Vercel Inc.<br /><span className="text-text-tertiary text-[11px]">연락처 privacy@vercel.com</span></td>
-                  <td className="px-3 py-2">미국</td>
-                  <td className="px-3 py-2">서비스 이용·접속 정보 / 웹 서비스 호스팅</td>
-                  <td className="px-3 py-2">서비스 접속 시 / 처리 목적 달성 시까지</td>
-                </tr>
-              </tbody>
-            </table>
+            <div className="mt-2 space-y-2">
+              <div className="rounded-lg border border-[var(--border-subtle)] p-3 text-[13px] space-y-1.5 bg-[rgba(124,92,252,0.04)]">
+                <div className="flex flex-wrap items-baseline gap-x-2">
+                  <span className="font-medium text-text-primary">Google LLC (Gemini)</span>
+                  <span className="text-text-tertiary text-[12px]">미국</span>
+                </div>
+                <p className="text-[11px] text-text-tertiary">연락처 googlekrsupport@google.com</p>
+                <p><span className="text-text-tertiary">이전 항목·목적</span> — 풀이 입력정보(생년월일·태어난 시간·성별 등) / 인공지능 풀이 결과 생성</p>
+                <p><span className="text-text-tertiary">일시·방법·보유기간</span> — 풀이 요청 시 네트워크 전송 / 결과 생성 후 별도 보관하지 않음(제공사 정책상 단기 보관될 수 있음)</p>
+              </div>
+              <div className="rounded-lg border border-[var(--border-subtle)] p-3 text-[13px] space-y-1.5 bg-[rgba(124,92,252,0.04)]">
+                <div className="flex flex-wrap items-baseline gap-x-2">
+                  <span className="font-medium text-text-primary">OpenAI, L.L.C.</span>
+                  <span className="text-text-tertiary text-[12px]">미국</span>
+                </div>
+                <p className="text-[11px] text-text-tertiary">연락처 privacy@openai.com</p>
+                <p><span className="text-text-tertiary">이전 항목·목적</span> — 풀이·상담 입력정보 / 인공지능 풀이·상담 결과 생성(보조)</p>
+                <p><span className="text-text-tertiary">일시·방법·보유기간</span> — 요청 시 네트워크 전송 / 결과 생성 후 별도 보관하지 않음(제공사 정책상 단기 보관될 수 있음)</p>
+              </div>
+              <div className="rounded-lg border border-[var(--border-subtle)] p-3 text-[13px] space-y-1.5 bg-[rgba(124,92,252,0.04)]">
+                <div className="flex flex-wrap items-baseline gap-x-2">
+                  <span className="font-medium text-text-primary">Vercel Inc.</span>
+                  <span className="text-text-tertiary text-[12px]">미국</span>
+                </div>
+                <p className="text-[11px] text-text-tertiary">연락처 privacy@vercel.com</p>
+                <p><span className="text-text-tertiary">이전 항목·목적</span> — 서비스 이용·접속 정보 / 웹 서비스 호스팅</p>
+                <p><span className="text-text-tertiary">일시·방법·보유기간</span> — 서비스 접속 시 / 처리 목적 달성 시까지</p>
+              </div>
+            </div>
           </Article>
 
           {/* ── 제7조 ── */}
@@ -328,7 +327,7 @@ export default async function PrivacyPage({ searchParams }: { searchParams: Prom
           {/* ── 제9조 ── */}
           <Article title="제9조 (자동화된 결정에 대한 정보주체의 권리)">
             <ol className="list-decimal pl-5 space-y-1">
-              <li>서비스에서 제공하는 사주명리·운세 풀이 결과는 AI(인공지능)에 의해 자동으로 생성됩니다.</li>
+              <li>서비스에서 제공하는 사주명리·운세 풀이 결과는 인공지능에 의해 자동으로 생성됩니다.</li>
               <li>이러한 결과는 참고 목적의 콘텐츠이며, 과학적으로 입증된 것이 아닙니다.</li>
               <li>이용자는 자동화된 결정에 대해 설명을 요구하거나 이의를 제기할 수 있으며, 해당 요청은 개인정보보호책임자에게 연락하여 처리할 수 있습니다.</li>
             </ol>
@@ -369,12 +368,12 @@ export default async function PrivacyPage({ searchParams }: { searchParams: Prom
           </Article>
 
           {/* ── 제12조 ── */}
-          <Article title="제12조 (AI 학습 미활용)">
+          <Article title="제12조 (인공지능 학습 미활용)">
             <p>
               회사는 이용자의 개인정보(생년월일, 출생 시간, 성별 등 사주 정보 포함)를
-              AI 모델의 학습 데이터로 활용하지 않습니다. 이용자의 정보는 오직 해당 이용자의
+              인공지능 모델의 학습 데이터로 활용하지 않습니다. 이용자의 정보는 오직 해당 이용자의
               풀이·상담 결과 생성 목적으로만 사용되며, 회사는 결과 생성 외의 목적으로 이를
-              보관·이용하지 않습니다. 다만 AI 처리 과정에서 AI 제공사(Google, OpenAI)의
+              보관·이용하지 않습니다. 다만 인공지능 처리 과정에서 인공지능 제공사(Google, OpenAI)의
               자체 정책에 따라 오·남용 모니터링 목적으로 일시적으로 보관될 수 있습니다.
             </p>
           </Article>
