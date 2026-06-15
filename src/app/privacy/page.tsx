@@ -24,7 +24,7 @@ export default async function PrivacyPage({ searchParams }: { searchParams: Prom
 
       <div className="rounded-2xl p-6 bg-[rgba(20,12,38,0.55)] border border-[var(--border-subtle)]">
         <p className="text-[13px] text-text-tertiary mb-4">
-          시행일: 2026-05-01 / 최종 개정일: 2026-06-15 / 버전 1.4
+          시행일: 2026-06-15 / 버전 1.0
         </p>
 
         <section className="space-y-6 text-[14px] text-text-secondary leading-relaxed">
@@ -416,9 +416,7 @@ export default async function PrivacyPage({ searchParams }: { searchParams: Prom
 
           {/* ── 부칙 ── */}
           <h2 className="text-[15px] font-bold text-cta/80 mt-4">부칙</h2>
-          <p>본 개인정보처리방침은 2026년 5월 1일부터 시행합니다.</p>
-          <p>개정된 본 방침(버전 1.3 — 민감정보 처리, 국외이전 연락처, 보호책임자 연락처 보강)은 2026년 6월 14일부터 시행합니다.</p>
-          <p>개정된 본 방침(버전 1.4 — 「개인정보 보호법」 제30조 수립 근거 명시, 수집·보유·자동수집·쿠키/행태정보·민감정보 항목 명확화, 법정 보존기간 정비, 처리위탁 수탁사 추가 등)은 2026년 6월 15일부터 시행합니다.</p>
+          <p>본 개인정보처리방침은 2026년 6월 15일부터 시행합니다.</p>
 
         </section>
 
