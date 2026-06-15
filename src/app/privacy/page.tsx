@@ -218,7 +218,7 @@ export default async function PrivacyPage({ searchParams }: { searchParams: Prom
                   <td className="px-3 py-2">결제 연동 및 처리</td>
                 </tr>
                 <tr className="border-t border-[var(--border-subtle)]">
-                  <td className="px-3 py-2">KG이니시스, 토스페이먼츠</td>
+                  <td className="px-3 py-2">KG이니시스, 토스페이먼츠, 한국결제네트웍스(KPN)</td>
                   <td className="px-3 py-2">신용카드·간편결제 등 결제대행(PG)</td>
                 </tr>
                 <tr className="border-t border-[var(--border-subtle)]">
@@ -404,7 +404,7 @@ export default async function PrivacyPage({ searchParams }: { searchParams: Prom
           <h2 className="text-[15px] font-bold text-cta/80 mt-4">부칙</h2>
           <p>본 개인정보처리방침은 2026년 5월 1일부터 시행합니다.</p>
           <p>개정된 본 방침(버전 1.3 — 민감정보 처리, 국외이전 연락처, 보호책임자 연락처 보강)은 2026년 6월 14일부터 시행합니다.</p>
-          <p>개정된 본 방침(버전 1.4 — 「개인정보 보호법」 제30조 수립 근거 명시, 결제·자동수집 항목 구체화, 민감정보 자유입력 안내, 세법상 보존기간(국세기본법 5년) 추가 및 근거 법령 정식명칭 표기, 쿠키·행태정보 처리 명확화(Vercel Analytics 이용·맞춤형 광고 미수집))은 2026년 6월 15일부터 시행합니다.</p>
+          <p>개정된 본 방침(버전 1.4 — 「개인정보 보호법」 제30조 수립 근거 명시, 수집·보유·자동수집·쿠키/행태정보·민감정보 항목 명확화, 법정 보존기간 정비, 처리위탁 수탁사 추가 등)은 2026년 6월 15일부터 시행합니다.</p>
 
         </section>
 
