@@ -141,39 +141,39 @@ export default async function PrivacyPage({ searchParams }: { searchParams: Prom
               <thead>
                 <tr className="bg-[rgba(124,92,252,0.08)]">
                   <th className="text-left px-3 py-2 text-text-tertiary font-medium">보관 항목</th>
-                  <th className="text-left px-3 py-2 text-text-tertiary font-medium">기간</th>
+                  <th className="text-center px-3 py-2 text-text-tertiary font-medium whitespace-nowrap" style={{ width: 72 }}>기간</th>
                   <th className="text-left px-3 py-2 text-text-tertiary font-medium">근거 법령</th>
                 </tr>
               </thead>
               <tbody>
-                <tr className="border-t border-[var(--border-subtle)]">
+                <tr className="border-t border-[var(--border-subtle)] align-top">
                   <td className="px-3 py-2">계약 또는 청약철회 기록</td>
-                  <td className="px-3 py-2">5년</td>
+                  <td className="px-3 py-2 text-center whitespace-nowrap">5년</td>
                   <td className="px-3 py-2">전자상거래 등에서의 소비자보호에 관한 법률</td>
                 </tr>
-                <tr className="border-t border-[var(--border-subtle)]">
+                <tr className="border-t border-[var(--border-subtle)] align-top">
                   <td className="px-3 py-2">대금결제 및 재화 공급 기록</td>
-                  <td className="px-3 py-2">5년</td>
+                  <td className="px-3 py-2 text-center whitespace-nowrap">5년</td>
                   <td className="px-3 py-2">전자상거래 등에서의 소비자보호에 관한 법률</td>
                 </tr>
-                <tr className="border-t border-[var(--border-subtle)]">
+                <tr className="border-t border-[var(--border-subtle)] align-top">
                   <td className="px-3 py-2">소비자 불만 또는 분쟁처리 기록</td>
-                  <td className="px-3 py-2">3년</td>
+                  <td className="px-3 py-2 text-center whitespace-nowrap">3년</td>
                   <td className="px-3 py-2">전자상거래 등에서의 소비자보호에 관한 법률</td>
                 </tr>
-                <tr className="border-t border-[var(--border-subtle)]">
+                <tr className="border-t border-[var(--border-subtle)] align-top">
                   <td className="px-3 py-2">표시·광고에 관한 기록</td>
-                  <td className="px-3 py-2">6개월</td>
+                  <td className="px-3 py-2 text-center whitespace-nowrap">6개월</td>
                   <td className="px-3 py-2">전자상거래 등에서의 소비자보호에 관한 법률</td>
                 </tr>
-                <tr className="border-t border-[var(--border-subtle)]">
+                <tr className="border-t border-[var(--border-subtle)] align-top">
                   <td className="px-3 py-2">세법상 거래에 관한 장부 및 증빙서류</td>
-                  <td className="px-3 py-2">5년</td>
+                  <td className="px-3 py-2 text-center whitespace-nowrap">5년</td>
                   <td className="px-3 py-2">국세기본법</td>
                 </tr>
-                <tr className="border-t border-[var(--border-subtle)]">
+                <tr className="border-t border-[var(--border-subtle)] align-top">
                   <td className="px-3 py-2">웹사이트 방문 기록</td>
-                  <td className="px-3 py-2">3개월</td>
+                  <td className="px-3 py-2 text-center whitespace-nowrap">3개월</td>
                   <td className="px-3 py-2">통신비밀보호법</td>
                 </tr>
               </tbody>
@@ -313,10 +313,7 @@ export default async function PrivacyPage({ searchParams }: { searchParams: Prom
           {/* ── 제8조의2 ── */}
           <Article title="제8조의2 (민감정보의 처리)">
             <p>
-              회사는 「개인정보 보호법」 제23조에 따른 민감정보(사상·신념, 노동조합·정당의 가입,
-              정치적 견해, 건강, 성생활, 유전정보, 범죄경력 등)를 수집·처리하지 않습니다.
-              서비스 제공을 위해 수집하는 생년월일·태어난 시간·성별 등 사주 풀이 정보는
-              민감정보에 해당하지 않으며, 사주명리·운세 분석 목적으로만 이용됩니다.
+              회사는 이용자의 민감한 개인정보를 수집하지 않습니다.
             </p>
             <p className="mt-2">
               회사는 민감정보를 별도로 요구·수집하지 않으나, 이용자가 상담소·꿈해몽 등 자유입력란에
