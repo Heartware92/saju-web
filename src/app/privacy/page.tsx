@@ -149,22 +149,27 @@ export default async function PrivacyPage({ searchParams }: { searchParams: Prom
                 <tr className="border-t border-[var(--border-subtle)]">
                   <td className="px-3 py-2">계약 또는 청약철회 기록</td>
                   <td className="px-3 py-2">5년</td>
-                  <td className="px-3 py-2">전자상거래법</td>
+                  <td className="px-3 py-2">전자상거래 등에서의 소비자보호에 관한 법률</td>
                 </tr>
                 <tr className="border-t border-[var(--border-subtle)]">
                   <td className="px-3 py-2">대금결제 및 재화 공급 기록</td>
                   <td className="px-3 py-2">5년</td>
-                  <td className="px-3 py-2">전자상거래법</td>
+                  <td className="px-3 py-2">전자상거래 등에서의 소비자보호에 관한 법률</td>
                 </tr>
                 <tr className="border-t border-[var(--border-subtle)]">
                   <td className="px-3 py-2">소비자 불만 또는 분쟁처리 기록</td>
                   <td className="px-3 py-2">3년</td>
-                  <td className="px-3 py-2">전자상거래법</td>
+                  <td className="px-3 py-2">전자상거래 등에서의 소비자보호에 관한 법률</td>
                 </tr>
                 <tr className="border-t border-[var(--border-subtle)]">
                   <td className="px-3 py-2">표시·광고에 관한 기록</td>
                   <td className="px-3 py-2">6개월</td>
-                  <td className="px-3 py-2">전자상거래법</td>
+                  <td className="px-3 py-2">전자상거래 등에서의 소비자보호에 관한 법률</td>
+                </tr>
+                <tr className="border-t border-[var(--border-subtle)]">
+                  <td className="px-3 py-2">세법상 거래에 관한 장부 및 증빙서류</td>
+                  <td className="px-3 py-2">5년</td>
+                  <td className="px-3 py-2">국세기본법</td>
                 </tr>
                 <tr className="border-t border-[var(--border-subtle)]">
                   <td className="px-3 py-2">웹사이트 방문 기록</td>
@@ -401,7 +406,7 @@ export default async function PrivacyPage({ searchParams }: { searchParams: Prom
           <h2 className="text-[15px] font-bold text-cta/80 mt-4">부칙</h2>
           <p>본 개인정보처리방침은 2026년 5월 1일부터 시행합니다.</p>
           <p>개정된 본 방침(버전 1.3 — 민감정보 처리, 국외이전 연락처, 보호책임자 연락처 보강)은 2026년 6월 14일부터 시행합니다.</p>
-          <p>개정된 본 방침(버전 1.4 — 「개인정보 보호법」 제30조 수립 근거 명시, 결제·자동수집 항목 구체화, 민감정보 자유입력 안내)은 2026년 6월 15일부터 시행합니다.</p>
+          <p>개정된 본 방침(버전 1.4 — 「개인정보 보호법」 제30조 수립 근거 명시, 결제·자동수집 항목 구체화, 민감정보 자유입력 안내, 세법상 보존기간(국세기본법 5년) 추가 및 근거 법령 정식명칭 표기)은 2026년 6월 15일부터 시행합니다.</p>
 
         </section>
 
