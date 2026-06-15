@@ -287,15 +287,21 @@ async function computeSummary(audience: Set<string> | null) {
   const rows = filtered.filter((r) => r.event_type === 'pageview');
   const shareRows = filtered.filter((r) => r.event_type === 'share_kakao' || r.event_type === 'share_url');
 
-  // ── 공유 페이지 집계: 어느 화면을 가장 많이 공유하는지 + 채널 분포 ──
-  const sharePageCount = new Map<string, number>();
+  // ── 공유 페이지 집계: 어느 화면을 어떤 채널(카톡/URL복사)로 공유하는지 ──
+  const sharePageChannel = new Map<string, { kakao: number; url: number }>();
   let shareKakao = 0;
   let shareUrl = 0;
   for (const r of shareRows) {
-    sharePageCount.set(r.path, (sharePageCount.get(r.path) ?? 0) + 1);
-    if (r.event_type === 'share_kakao') shareKakao++;
-    else shareUrl++;
+    const e = sharePageChannel.get(r.path) ?? { kakao: 0, url: 0 };
+    if (r.event_type === 'share_kakao') { e.kakao++; shareKakao++; }
+    else { e.url++; shareUrl++; }
+    sharePageChannel.set(r.path, e);
   }
+  // path별 (카톡+URL) 합계 상위 12개 — 채널 분해 포함
+  const sharePagesDetailed = [...sharePageChannel.entries()]
+    .map(([key, c]) => ({ key, kakao: c.kakao, url: c.url, count: c.kakao + c.url }))
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 12);
 
   // ── 세션별 첫/마지막 이벤트 (rows 는 created_at asc 정렬) ──
   interface Sess { first: EventRow; last: EventRow; count: number; }
@@ -367,7 +373,8 @@ async function computeSummary(audience: Set<string> | null) {
     exitPages: topN(exitCount, 12),
     topPages: topN(pagePv, 12),
     devices: topN(deviceCount, 5),
-    sharePages: topN(sharePageCount, 12),
+    sharePages: sharePagesDetailed.map(({ key, count }) => ({ key, count })),
+    sharePagesDetailed,
     shareChannels: { kakao: shareKakao, url: shareUrl, total: shareKakao + shareUrl },
   };
 }

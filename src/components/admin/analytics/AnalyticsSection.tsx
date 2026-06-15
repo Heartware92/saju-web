@@ -54,6 +54,7 @@ export interface AnalyticsSummary {
   topPages: Counted[];
   devices: Counted[];
   sharePages: Counted[];
+  sharePagesDetailed?: { key: string; kakao: number; url: number; count: number }[];
   shareChannels: { kakao: number; url: number; total: number };
 }
 
@@ -96,6 +97,30 @@ function RankBars({ items, color, empty, labelFn }: { items: Counted[]; color: s
             <div className="h-full rounded" style={{ width: `${(it.count / max) * 100}%`, background: color }} />
           </div>
           <span className="text-[12px] text-text-tertiary tabular-nums w-12 text-right">{fmt(it.count)}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/** 공유 페이지 × 채널(카톡/URL복사) 누적 막대 — 어떤 결과를 무슨 채널로 공유하는지 */
+function ShareChannelBars({ items }: { items: { key: string; kakao: number; url: number; count: number }[] }) {
+  if (!items.length) {
+    return <p className="text-[13px] text-text-tertiary py-6 text-center">공유 데이터 없음</p>;
+  }
+  const max = Math.max(1, ...items.map((i) => i.count));
+  return (
+    <div className="space-y-2.5">
+      {items.map((it) => (
+        <div key={it.key} className="flex items-center gap-3">
+          <span className="text-[13px] text-text-secondary w-[34%] truncate" title={it.key}>{pathLabel(it.key)}</span>
+          <div className="flex-1 h-[18px] bg-white/5 rounded overflow-hidden flex">
+            <div className="h-full" style={{ width: `${(it.kakao / max) * 100}%`, background: 'rgba(250, 204, 21, 0.85)' }} title={`카카오톡 ${it.kakao}`} />
+            <div className="h-full" style={{ width: `${(it.url / max) * 100}%`, background: 'rgba(96, 165, 250, 0.85)' }} title={`URL복사 ${it.url}`} />
+          </div>
+          <span className="text-[12px] text-text-tertiary tabular-nums w-[104px] text-right shrink-0">
+            카톡 {fmt(it.kakao)}·URL {fmt(it.url)}
+          </span>
         </div>
       ))}
     </div>
@@ -256,8 +281,10 @@ export function AnalyticsSection({ summary }: { summary: AnalyticsSummary | null
         <Card title="인기 페이지" sub="페이지뷰 상위">
           <RankBars items={summary.topPages} color="rgba(251, 191, 36, 0.7)" empty="데이터 없음" labelFn={pathLabel} />
         </Card>
-        <Card title="공유 많은 페이지" sub="카카오톡·링크복사 공유 버튼 클릭 기준">
-          <RankBars items={sharePages} color="rgba(236, 72, 153, 0.7)" empty="공유 데이터 없음" labelFn={pathLabel} />
+        <Card title="공유 많은 페이지" sub="결과별 채널 분해 · 노랑=카카오톡, 파랑=URL복사">
+          {Array.isArray(summary.sharePagesDetailed)
+            ? <ShareChannelBars items={summary.sharePagesDetailed} />
+            : <RankBars items={sharePages} color="rgba(236, 72, 153, 0.7)" empty="공유 데이터 없음" labelFn={pathLabel} />}
         </Card>
       </div>
     </div>

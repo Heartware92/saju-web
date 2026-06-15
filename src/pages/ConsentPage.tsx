@@ -15,6 +15,7 @@ import React, { useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { auth, supabase, agreement } from '../services/supabase';
 import { useUserStore } from '../store/useUserStore';
+import { trackEvent } from '../lib/analytics/track';
 
 export default function ConsentPage() {
   const router = useRouter();
@@ -54,6 +55,9 @@ export default function ConsentPage() {
       const user = session?.user;
       if (user) {
         useUserStore.setState({ user });
+        // 전환 분석: OAuth 신규 가입 완료 이벤트(이메일 가입은 useUserStore.signup 에서 발생).
+        // 이 페이지는 OAuth 첫 로그인 전용 분기라 여기서 1회 발생 = OAuth 가입 추적. 실패해도 무시.
+        trackEvent('signup');
         const isSocial = user.app_metadata?.provider && user.app_metadata.provider !== 'email';
         const hasPhone = !!user.user_metadata?.phone;
         if (isSocial && !hasPhone) {
