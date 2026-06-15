@@ -69,6 +69,15 @@ function classifySource(referrer: string | null, utmSource: string | null): stri
   } catch {
     /* URL 파싱 실패 → 원문 일부로 판정 */
   }
+  // 자기참조(우리 도메인) + 결제·로그인 리다이렉트 도메인은 외부 유입이 아니므로 '직접 유입'으로 흡수.
+  // 네이버/구글 등 실제 검색 유입 판정보다 먼저 걸러야 accounts.google.com(로그인) 등이 '구글'로 오분류되지 않음.
+  const INTERNAL_OR_REDIRECT = [
+    '2000-saju.com',                                 // 자기참조(self-referral)
+    'inicis', 'tosspayments', 'portone', 'iamport',  // 결제(PG) 왕복
+    'accounts.google.com', 'kauth.kakao.com', 'accounts.kakao.com', // 소셜 로그인 리다이렉트
+    'supabase.co',                                   // 인증 리다이렉트
+  ];
+  if (INTERNAL_OR_REDIRECT.some((h) => host.includes(h))) return '직접 유입';
   if (host.includes('naver')) return '네이버';
   if (host.includes('google')) return '구글';
   if (host.includes('daum') || host.includes('kakao')) return '카카오/다음';
