@@ -24,7 +24,7 @@ export default async function TermsPage({ searchParams }: { searchParams: Promis
 
       <div className="rounded-2xl p-6 bg-[rgba(20,12,38,0.55)] border border-[var(--border-subtle)]">
         <p className="text-[13px] text-text-tertiary mb-4">
-          시행일: 2026-05-01 / 최종 개정일: 2026-06-11
+          시행일: 2026-06-15 / 버전 1.0
         </p>
 
         <section className="space-y-6 text-[14px] text-text-secondary leading-relaxed">
@@ -253,6 +253,7 @@ export default async function TermsPage({ searchParams }: { searchParams: Promis
           <Article title="제19조 (이용 제한)">
             <ol className="list-decimal pl-5 space-y-1">
               <li>회사는 회원이 제17조의 의무를 위반하거나 서비스의 정상적인 운영을 방해한 경우, 경고, 일시 정지, 영구 이용 정지 등의 조치를 취할 수 있습니다.</li>
+              <li>회사는 회원이 입력·등록한 콘텐츠(상담 내용, 풀이 입력 정보 등)가 법령 또는 본 약관에 위반되거나 타인의 권리를 침해하는 경우, 사전 통지 없이 해당 콘텐츠를 삭제·접근차단하거나 서비스 이용을 제한할 수 있습니다.</li>
               <li>회사는 이용 제한 조치 시 그 사유, 일시, 기간 등을 회원에게 통지합니다. 다만, 긴급을 요하는 경우 사후에 통지할 수 있습니다.</li>
             </ol>
           </Article>
@@ -335,9 +336,7 @@ export default async function TermsPage({ searchParams }: { searchParams: Promis
 
           {/* ── 부칙 ── */}
           <h2 className="text-[15px] font-bold text-cta/80 mt-4">부칙</h2>
-          <p>본 약관은 2026년 5월 1일부터 시행합니다.</p>
-          <p>본 개정 약관은 2026년 6월 3일부터 시행합니다. (소셜 로그인 제공 범위 현행화, 서비스 항목 갱신, 미성년자 결제·과오금·서비스 종료 공지 조항 신설)</p>
-          <p>본 개정 약관은 2026년 6월 11일부터 시행합니다. (관할 법원 규정을 소비자 보호에 맞게 정비, 약관 변경 시 불리한 변경의 30일 전 공지·개별 통지 절차 보강, 휴대폰 본인인증 적용 범위 명확화, 부정사용 손해배상 조항 정비)</p>
+          <p>본 약관은 2026년 6월 15일부터 시행합니다.</p>
 
         </section>
 
