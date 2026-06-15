@@ -24,17 +24,18 @@ export default async function PrivacyPage({ searchParams }: { searchParams: Prom
 
       <div className="rounded-2xl p-6 bg-[rgba(20,12,38,0.55)] border border-[var(--border-subtle)]">
         <p className="text-[13px] text-text-tertiary mb-4">
-          시행일: 2026-05-01 / 최종 개정일: 2026-06-14 / 버전 1.3
+          시행일: 2026-05-01 / 최종 개정일: 2026-06-15 / 버전 1.4
         </p>
 
         <section className="space-y-6 text-[14px] text-text-secondary leading-relaxed">
 
           <p>
-            (주)하트웨어(이하 &quot;회사&quot;)는 이천점 서비스(이하 &quot;서비스&quot;)를 운영함에 있어
-            이용자의 개인정보를 중요시하며, 「개인정보보호법」, 「정보통신망 이용촉진 및 정보보호 등에
-            관한 법률」 등 관련 법령을 준수합니다. 본 개인정보처리방침을 통하여 이용자가 제공한
-            개인정보가 어떠한 용도와 방식으로 이용되고 있으며, 어떠한 보호 조치가 취해지고 있는지
-            알려드립니다.
+            (주)하트웨어(이하 &quot;회사&quot;)는 「개인정보 보호법」 제30조에 따라 이용자(정보주체)의
+            개인정보를 보호하고 이와 관련한 고충을 신속하고 원활하게 처리할 수 있도록 하기 위하여
+            다음과 같이 개인정보 처리방침을 수립·공개합니다. 회사는 이천점 서비스(이하 &quot;서비스&quot;)를
+            운영함에 있어 「개인정보 보호법」, 「정보통신망 이용촉진 및 정보보호 등에 관한 법률」 등
+            관련 법령을 준수하며, 본 개인정보처리방침을 통하여 이용자가 제공한 개인정보가 어떠한
+            용도와 방식으로 이용되고 있으며 어떠한 보호 조치가 취해지고 있는지 알려드립니다.
           </p>
 
           {/* ── 제1조 ── */}
@@ -390,6 +391,7 @@ export default async function PrivacyPage({ searchParams }: { searchParams: Prom
           <h2 className="text-[15px] font-bold text-cta/80 mt-4">부칙</h2>
           <p>본 개인정보처리방침은 2026년 5월 1일부터 시행합니다.</p>
           <p>개정된 본 방침(버전 1.3 — 민감정보 처리, 국외이전 연락처, 보호책임자 연락처 보강)은 2026년 6월 14일부터 시행합니다.</p>
+          <p>개정된 본 방침(버전 1.4 — 「개인정보 보호법」 제30조 수립 근거 명시)은 2026년 6월 15일부터 시행합니다.</p>
 
         </section>
 
