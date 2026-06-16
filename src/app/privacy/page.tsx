@@ -325,16 +325,7 @@ export default async function PrivacyPage({ searchParams }: { searchParams: Prom
           </Article>
 
           {/* ── 제9조 ── */}
-          <Article title="제9조 (자동화된 결정에 대한 정보주체의 권리)">
-            <ol className="list-decimal pl-5 space-y-1">
-              <li>서비스에서 제공하는 사주명리·운세 풀이 결과는 인공지능에 의해 자동으로 생성됩니다.</li>
-              <li>이러한 결과는 참고 목적의 콘텐츠이며, 과학적으로 입증된 것이 아닙니다.</li>
-              <li>이용자는 자동화된 결정에 대해 설명을 요구하거나 이의를 제기할 수 있으며, 해당 요청은 개인정보보호책임자에게 연락하여 처리할 수 있습니다.</li>
-            </ol>
-          </Article>
-
-          {/* ── 제10조 ── */}
-          <Article title="제10조 (개인정보의 안전성 확보 조치)">
+          <Article title="제9조 (개인정보의 안전성 확보 조치)">
             <p>회사는 개인정보의 안전한 처리를 위하여 다음과 같이 관리적·기술적·물리적 보호조치를 취하고 있습니다.</p>
             <p className="font-medium text-text-primary mt-2">1. 관리적 조치</p>
             <ul className="list-disc pl-5 mt-1 space-y-1">
@@ -356,8 +347,8 @@ export default async function PrivacyPage({ searchParams }: { searchParams: Prom
             </ul>
           </Article>
 
-          {/* ── 제11조 ── */}
-          <Article title="제11조 (쿠키 및 행태정보의 처리·거부)">
+          {/* ── 제10조 ── */}
+          <Article title="제10조 (쿠키 및 행태정보의 처리·거부)">
             <ol className="list-decimal pl-5 space-y-1">
               <li>회사는 로그인 세션 유지 및 개인화된 서비스 제공을 위해 쿠키와 이와 유사한 기술을 사용합니다.</li>
               <li>이용 목적: 로그인 상태 유지, 회원/비회원 구분, 접속 빈도·서비스 이용 패턴 파악, 유입/이탈 등 이용 통계 분석</li>
@@ -367,8 +358,8 @@ export default async function PrivacyPage({ searchParams }: { searchParams: Prom
             </ol>
           </Article>
 
-          {/* ── 제12조 ── */}
-          <Article title="제12조 (인공지능 학습 미활용)">
+          {/* ── 제11조 ── */}
+          <Article title="제11조 (인공지능 학습 미활용)">
             <p>
               회사는 이용자의 개인정보(생년월일, 출생 시간, 성별 등 사주 정보 포함)를
               인공지능 모델의 학습 데이터로 활용하지 않습니다. 이용자의 정보는 오직 해당 이용자의
@@ -378,8 +369,8 @@ export default async function PrivacyPage({ searchParams }: { searchParams: Prom
             </p>
           </Article>
 
-          {/* ── 제13조 ── */}
-          <Article title="제13조 (개인정보 보호책임자)">
+          {/* ── 제12조 ── */}
+          <Article title="제12조 (개인정보 보호책임자)">
             <p>
               회사는 개인정보 처리에 관한 업무를 총괄해서 책임지고, 개인정보 처리와 관련한
               정보주체의 불만 처리 및 피해 구제 등을 위하여 아래와 같이 개인정보 보호책임자를
@@ -405,8 +396,8 @@ export default async function PrivacyPage({ searchParams }: { searchParams: Prom
             </ul>
           </Article>
 
-          {/* ── 제14조 ── */}
-          <Article title="제14조 (개인정보처리방침의 변경)">
+          {/* ── 제13조 ── */}
+          <Article title="제13조 (개인정보처리방침의 변경)">
             <ol className="list-decimal pl-5 space-y-1">
               <li>본 개인정보처리방침은 시행일로부터 적용되며, 법령 및 방침에 따른 변경 내용의 추가, 삭제 및 수정이 있는 경우에는 변경사항의 시행 7일 전부터 서비스 내 공지사항을 통하여 고지할 것입니다.</li>
               <li>이용자의 권리에 중요한 변경이 있는 경우에는 시행 30일 전에 고지합니다.</li>
