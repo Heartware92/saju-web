@@ -156,6 +156,43 @@ export function saveRoom(profileId: string, conv: StoredConversation) {
   } catch { /* ignore */ }
 }
 
+/**
+ * 5방 전환 이전의 레거시 자유대화(uuid·c- ID)를 모두 시간순으로 본인 물상(defaultKey) 방에 합친다.
+ * - 여러 자유대화의 메시지를 createdAt 오름차순으로 병합(이미 물상 방에 있던 메시지와도 시간순 병합).
+ * - 질문 30개 한도(trimToMaxQuestions) 적용 → 초과 시 가장 오래된 질문·답변부터 제거.
+ * - 이관 후 레거시 항목은 제거. 멱등(레거시가 없으면 즉시 반환).
+ * 반환: 이관이 실제로 일어났으면 true.
+ */
+export function migrateLegacyToRoom(profileId: string, defaultKey: ElementKey): boolean {
+  try {
+    const raw = localStorage.getItem(CONVERSATIONS_KEY(profileId));
+    if (!raw) return false;
+    const arr: StoredConversation[] = JSON.parse(raw);
+    const legacy = arr.filter(c => !elementKeyFromRoomId(c.id));
+    if (legacy.length === 0) return false; // 이미 이관됨 (멱등)
+
+    const roomId = ROOM_ID(profileId, defaultKey);
+    const existingRoom = arr.find(c => c.id === roomId);
+    const merged = [
+      ...legacy.flatMap(c => c.messages),
+      ...(existingRoom?.messages ?? []),
+    ].sort((a, b) => a.createdAt - b.createdAt);
+
+    const roomConv: StoredConversation = {
+      id: roomId,
+      title: getElement(defaultKey).name,
+      messages: trimToMaxQuestions(merged),
+      updatedAt: merged.length ? merged[merged.length - 1].createdAt : Date.now(),
+    };
+
+    // 레거시 전부 제거 + 다른 방(룸 ID)은 보존 + 물상 방 교체/추가
+    const next = arr.filter(c => elementKeyFromRoomId(c.id) && c.id !== roomId);
+    next.push(roomConv);
+    localStorage.setItem(CONVERSATIONS_KEY(profileId), JSON.stringify(next));
+    return true;
+  } catch { return false; }
+}
+
 export const QUICK_QUESTIONS = [
   '올해 재물운은 어떤가요?',
   '요즘 연애운이 궁금해요',

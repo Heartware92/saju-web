@@ -13,6 +13,7 @@ import {
   defaultElementKey,
   loadRooms,
   loadUnlockedElements,
+  migrateLegacyToRoom,
   formatRelativeTime,
 } from '../lib/consultation';
 
@@ -62,11 +63,12 @@ export default function ConsultationListPage() {
     return mine ? [mine, ...rest] : ELEMENTS;
   }, [defaultKey]);
 
-  // 프로필 전환 시 방별 대화 미리보기 로드
+  // 프로필 전환 시 레거시 자유대화 → 본인 물상 방 이관(멱등) 후 방별 미리보기 로드
   useEffect(() => {
-    if (!selectedProfileId || typeof window === 'undefined') { setRooms(null); return; }
+    if (!selectedProfileId || !defaultKey || typeof window === 'undefined') { setRooms(null); return; }
+    migrateLegacyToRoom(selectedProfileId, defaultKey);
     setRooms(loadRooms(selectedProfileId));
-  }, [selectedProfileId]);
+  }, [selectedProfileId, defaultKey]);
 
   const handleOpenRoom = (key: ElementKey) => {
     if (!unlockedKeys.has(key)) { setLockedNotice(true); return; }
@@ -191,7 +193,7 @@ export default function ConsultationListPage() {
                         <p className="text-[13px] text-text-tertiary/70 mt-0.5">{el.toneHint}</p>
                       )
                     ) : (
-                      <p className="text-[13px] text-text-tertiary/70 mt-0.5">달 크레딧으로 열려요 · 준비 중</p>
+                      <p className="text-[13px] text-text-tertiary/70 mt-0.5">준비 중인 방이에요</p>
                     )}
                     {unlocked && conv && conv.messages.length > 0 && (
                       <p className="text-[11px] text-text-tertiary/50 mt-1">
@@ -235,7 +237,7 @@ export default function ConsultationListPage() {
             <div className="w-full max-w-sm rounded-2xl bg-[rgba(20,12,38,0.98)] border border-cta/40 p-5 pointer-events-auto">
               <h3 className="text-lg font-bold text-text-primary mb-1">아직 잠긴 방이에요</h3>
               <p className="text-[13px] text-text-secondary mb-4 leading-relaxed">
-                지금은 본인 물상의 방만 이용할 수 있어요. 다른 오행의 방은 달 크레딧으로 여는 기능을 준비 중이에요.
+                지금은 본인 물상의 방만 이용할 수 있어요. 해당 기능은 준비 중이에요.
               </p>
               <button
                 onClick={() => setLockedNotice(false)}

@@ -23,6 +23,7 @@ import {
   loadUnlockedElements,
   loadRoom,
   saveRoom,
+  migrateLegacyToRoom,
   trimToMaxQuestions,
 } from '../lib/consultation';
 import StarfallBackground from '../components/StarfallBackground';
@@ -156,6 +157,8 @@ export default function ConsultationChatPage() {
       return;
     }
 
+    // 레거시 자유대화 → 본인 물상 방 이관(멱등) 후 방 로드
+    migrateLegacyToRoom(pid, defaultKey);
     const conv = loadRoom(pid, elementKey);
     setConversations([conv]);
     setActiveConversationId(conv.id);
