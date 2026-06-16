@@ -220,7 +220,10 @@ export function TodayResultView({ report, result, reportDateStr, ctxLabel, initi
               </div>
               <div className="text-[13px] text-text-tertiary mt-0.5">
                 {todayGz.ganElement}·{todayGz.zhiElement}
-                {todayGz.tenGodGan ? ` · ${todayGz.tenGodGan}` : ''}
+                {(todayGz.tenGodGan || todayGz.tenGodZhi) && ' · '}
+                {todayGz.tenGodGan && `${todayGz.tenGodGan}(천간)`}
+                {todayGz.tenGodGan && todayGz.tenGodZhi && '·'}
+                {todayGz.tenGodZhi && `${todayGz.tenGodZhi}(지지)`}
               </div>
               {todayGz.interactions.length > 0 && (
                 <div className="text-[11px] text-text-tertiary mt-0.5 max-w-[140px] truncate" title={todayGz.interactions.join(' / ')}>
