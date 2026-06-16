@@ -5,12 +5,15 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useProfileStore } from '../store/useProfileStore';
 import { useUserStore } from '../store/useUserStore';
+import { computeSajuFromProfile } from '../utils/profileSaju';
 import {
+  ELEMENTS,
+  type ElementKey,
   type StoredConversation,
-  loadConversations,
+  defaultElementKey,
+  loadRooms,
+  loadUnlockedElements,
   formatRelativeTime,
-  newConversation,
-  saveConversations,
 } from '../lib/consultation';
 
 export default function ConsultationListPage() {
@@ -19,7 +22,8 @@ export default function ConsultationListPage() {
   const { profiles, fetchProfiles } = useProfileStore();
 
   const [selectedProfileId, setSelectedProfileId] = useState('');
-  const [conversations, setConversations] = useState<StoredConversation[]>([]);
+  const [rooms, setRooms] = useState<Record<ElementKey, StoredConversation> | null>(null);
+  const [lockedNotice, setLockedNotice] = useState(false);
 
   useEffect(() => {
     if (user) fetchProfiles();
@@ -38,35 +42,27 @@ export default function ConsultationListPage() {
     [profiles, selectedProfileId],
   );
 
-  // 프로필 전환 시 대화목록 로드
-  useEffect(() => {
-    if (!selectedProfileId) return;
-    if (typeof window === 'undefined') return;
+  // 선택된 프로필의 사주 → 본인 물상(디폴트 열린 방) 결정
+  const defaultKey = useMemo<ElementKey | null>(() => {
+    if (!selectedProfile) return null;
+    const saju = computeSajuFromProfile(selectedProfile);
+    return defaultElementKey(saju?.dayMasterElement);
+  }, [selectedProfile]);
 
-    const { conversations: loaded } = loadConversations(selectedProfileId);
-    setConversations(loaded);
+  const unlockedKeys = useMemo<Set<ElementKey>>(() => {
+    if (!selectedProfileId || !defaultKey) return new Set();
+    return new Set(loadUnlockedElements(selectedProfileId, defaultKey));
+  }, [selectedProfileId, defaultKey]);
+
+  // 프로필 전환 시 방별 대화 미리보기 로드
+  useEffect(() => {
+    if (!selectedProfileId || typeof window === 'undefined') { setRooms(null); return; }
+    setRooms(loadRooms(selectedProfileId));
   }, [selectedProfileId]);
 
-  const handleOpenChat = (conversationId: string) => {
-    router.push(`/sangdamso/chat?pid=${selectedProfileId}&cid=${conversationId}`);
-  };
-
-  const handleNewChat = () => {
-    router.push(`/sangdamso/chat?pid=${selectedProfileId}&cid=new`);
-  };
-
-  const handleDeleteConversation = (id: string, e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (!confirm('이 대화를 삭제할까요?')) return;
-    const next = conversations.filter(c => c.id !== id);
-    if (next.length === 0) {
-      const fresh = newConversation();
-      setConversations([fresh]);
-      saveConversations(selectedProfileId, [fresh], fresh.id);
-    } else {
-      setConversations(next);
-      saveConversations(selectedProfileId, next, next[0].id);
-    }
+  const handleOpenRoom = (key: ElementKey) => {
+    if (!unlockedKeys.has(key)) { setLockedNotice(true); return; }
+    router.push(`/sangdamso/chat?pid=${selectedProfileId}&el=${key}`);
   };
 
   if (!user) {
@@ -78,19 +74,17 @@ export default function ConsultationListPage() {
     );
   }
 
-  const nonEmptyConvs = conversations.filter(c => c.messages.length > 0).sort((a, b) => b.updatedAt - a.updatedAt);
-
   return (
     <div className="pb-6">
 
-      {/* 헤더 — 메인 페이지라 뒤로가기 없음. 타이틀 + 우측 차감 안내 */}
+      {/* 헤더 */}
       <div className="flex items-center relative mb-5 pt-3 px-1">
         <div className="flex-1 text-center">
           <h1 className="text-2xl font-bold text-text-primary" style={{ fontFamily: 'var(--font-serif)' }}>
             상담소
           </h1>
         </div>
-        <span className="absolute right-2 text-[12px] text-text-tertiary">🌙 1개 소모</span>
+        <span className="absolute right-2 text-[12px] text-text-tertiary">달 1개 소모</span>
       </div>
 
       {/* 프로필 선택 */}
@@ -133,70 +127,89 @@ export default function ConsultationListPage() {
       </div>
 
       {selectedProfile && (
-        <>
-          {/* 새 대화 시작 */}
-          <div className="px-4 mb-3">
-            <button
-              onClick={handleNewChat}
-              className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-cta/15 border border-cta/40 text-cta font-semibold text-[15px] hover:bg-cta/25 active:scale-[0.98] transition-all"
-            >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
-                <line x1="12" y1="5" x2="12" y2="19" />
-                <line x1="5" y1="12" x2="19" y2="12" />
-              </svg>
-              새 대화 시작
-            </button>
-          </div>
+        <div className="px-4">
+          <p className="text-[13px] font-semibold text-text-tertiary uppercase tracking-wider mb-2 px-1">
+            오행의 방
+          </p>
+          <p className="text-[13px] text-text-tertiary/80 mb-3 px-1 leading-relaxed">
+            방마다 말투와 결이 달라요. <span className="text-text-secondary">본인 물상</span>의 방이 먼저 열려 있어요.
+          </p>
 
-          {/* 대화방 리스트 */}
-          <div className="px-4">
-            {nonEmptyConvs.length > 0 && (
-              <p className="text-[13px] font-semibold text-text-tertiary uppercase tracking-wider mb-2 px-1">
-                이전 대화 · {nonEmptyConvs.length}개
-              </p>
-            )}
-            <div className="flex flex-col gap-2">
-              {nonEmptyConvs.map(c => {
-                const lastMsg = c.messages[c.messages.length - 1];
-                const preview = lastMsg
-                  ? (lastMsg.role === 'user' ? '나: ' : '') + lastMsg.content.slice(0, 40).trim()
-                  : '';
-                return (
-                  <button
-                    key={c.id}
-                    onClick={() => handleOpenChat(c.id)}
-                    className="group relative w-full text-left px-4 py-3 rounded-xl bg-white/5 border border-white/10 hover:border-cta/30 hover:bg-white/[0.07] transition-all"
+          <div className="flex flex-col gap-2.5">
+            {ELEMENTS.map(el => {
+              const unlocked = unlockedKeys.has(el.key);
+              const isDefault = defaultKey === el.key;
+              const conv = rooms?.[el.key];
+              const lastMsg = conv && conv.messages.length > 0 ? conv.messages[conv.messages.length - 1] : null;
+              const preview = lastMsg
+                ? (lastMsg.role === 'user' ? '나: ' : '') + lastMsg.content.slice(0, 38).trim()
+                : '';
+
+              return (
+                <button
+                  key={el.key}
+                  onClick={() => handleOpenRoom(el.key)}
+                  className={`group relative w-full text-left px-4 py-3.5 rounded-2xl border transition-all flex items-center gap-3.5
+                    ${unlocked
+                      ? 'bg-white/5 border-white/10 hover:border-cta/30 hover:bg-white/[0.07] active:scale-[0.99]'
+                      : 'bg-white/[0.02] border-white/[0.06] opacity-70 hover:opacity-90'}`}
+                >
+                  {/* 오행 마크 */}
+                  <span
+                    className="flex-shrink-0 w-11 h-11 rounded-xl flex items-center justify-center text-[20px] font-bold border"
+                    style={{
+                      color: unlocked ? el.accent : 'var(--text-tertiary)',
+                      borderColor: unlocked ? `${el.accent}55` : 'rgba(255,255,255,0.08)',
+                      background: unlocked ? `${el.accent}14` : 'rgba(255,255,255,0.02)',
+                      fontFamily: 'var(--font-serif)',
+                    }}
                   >
-                    <p className="text-[15px] font-medium text-text-primary truncate pr-8">{c.title}</p>
-                    {preview && (
-                      <p className="text-[13px] text-text-tertiary truncate mt-0.5">{preview}</p>
-                    )}
-                    <p className="text-[11px] text-text-tertiary/60 mt-1">
-                      {c.messages.length}개 메시지 · {formatRelativeTime(c.updatedAt)}
-                    </p>
-                    <button
-                      onClick={(e) => handleDeleteConversation(c.id, e)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 w-7 h-7 rounded-lg flex items-center justify-center text-text-tertiary/40 hover:text-red-400 hover:bg-red-500/10 opacity-0 group-hover:opacity-100 transition-all"
-                      aria-label="삭제"
-                    >
-                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <polyline points="3 6 5 6 21 6" />
-                        <path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2" />
-                      </svg>
-                    </button>
-                  </button>
-                );
-              })}
-            </div>
+                    {el.hanja}
+                  </span>
 
-            {nonEmptyConvs.length === 0 && (
-              <div className="text-center py-12">
-                <p className="text-[15px] text-text-tertiary">아직 대화 기록이 없어요.</p>
-                <p className="text-[13px] text-text-tertiary/60 mt-1">새 대화를 시작해보세요!</p>
-              </div>
-            )}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-1.5">
+                      <p className="text-[15px] font-semibold text-text-primary truncate">{el.name}</p>
+                      {isDefault && (
+                        <span className="flex-shrink-0 text-[10px] font-semibold text-cta border border-cta/40 rounded px-1.5 py-0.5">
+                          내 물상
+                        </span>
+                      )}
+                    </div>
+                    {unlocked ? (
+                      preview ? (
+                        <p className="text-[13px] text-text-tertiary truncate mt-0.5">{preview}</p>
+                      ) : (
+                        <p className="text-[13px] text-text-tertiary/70 mt-0.5">{el.toneHint}</p>
+                      )
+                    ) : (
+                      <p className="text-[13px] text-text-tertiary/70 mt-0.5">달 크레딧으로 열려요 · 준비 중</p>
+                    )}
+                    {unlocked && conv && conv.messages.length > 0 && (
+                      <p className="text-[11px] text-text-tertiary/50 mt-1">
+                        질문 {conv.messages.filter(m => m.role === 'user').length}개 · {formatRelativeTime(conv.updatedAt)}
+                      </p>
+                    )}
+                  </div>
+
+                  {/* 우측 표시: 열림=화살표 / 잠금=자물쇠 */}
+                  <span className="flex-shrink-0 text-text-tertiary/50">
+                    {unlocked ? (
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <polyline points="9 18 15 12 9 6" />
+                      </svg>
+                    ) : (
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <rect x="3" y="11" width="18" height="11" rx="2" />
+                        <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                      </svg>
+                    )}
+                  </span>
+                </button>
+              );
+            })}
           </div>
-        </>
+        </div>
       )}
 
       {profiles.length === 0 && (
@@ -204,6 +217,27 @@ export default function ConsultationListPage() {
           <p className="text-text-secondary mb-4">프로필을 먼저 등록해야 상담이 가능해요.</p>
           <Link href="/saju/input?mode=profile-only&from=sangdamso" className="text-cta font-semibold underline">프로필 등록</Link>
         </div>
+      )}
+
+      {/* 잠긴 방 안내 (껍데기 — 달 크레딧 해제 플로우는 추후) */}
+      {lockedNotice && (
+        <>
+          <div onClick={() => setLockedNotice(false)} className="fixed inset-0 z-[80] bg-black/60" />
+          <div className="fixed inset-0 z-[81] flex items-center justify-center px-5 pointer-events-none">
+            <div className="w-full max-w-sm rounded-2xl bg-[rgba(20,12,38,0.98)] border border-cta/40 p-5 pointer-events-auto">
+              <h3 className="text-lg font-bold text-text-primary mb-1">아직 잠긴 방이에요</h3>
+              <p className="text-[13px] text-text-secondary mb-4 leading-relaxed">
+                지금은 본인 물상의 방만 이용할 수 있어요. 다른 오행의 방은 달 크레딧으로 여는 기능을 준비 중이에요.
+              </p>
+              <button
+                onClick={() => setLockedNotice(false)}
+                className="w-full py-3 rounded-xl bg-cta text-white font-semibold text-[15px]"
+              >
+                확인
+              </button>
+            </div>
+          </div>
+        </>
       )}
     </div>
   );

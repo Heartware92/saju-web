@@ -15,12 +15,15 @@ import { MOON_COST_CONSULTATION_QUESTION, CHARGE_REASONS } from '../constants/cr
 import {
   type ChatMessage,
   type StoredConversation,
+  type ElementKey,
   CONVERSATIONS_KEY,
   QUICK_QUESTIONS,
-  newConversation,
-  deriveTitle,
-  loadConversations,
-  saveConversations,
+  getElement,
+  defaultElementKey,
+  loadUnlockedElements,
+  loadRoom,
+  saveRoom,
+  trimToMaxQuestions,
 } from '../lib/consultation';
 import StarfallBackground from '../components/StarfallBackground';
 
@@ -77,7 +80,7 @@ export default function ConsultationChatPage() {
   const searchParams = useSearchParams();
   const pathname = usePathname();
   const pid = searchParams?.get('pid') || '';
-  const cid = searchParams?.get('cid') || '';
+  const elParam = searchParams?.get('el') || '';
 
   const { user } = useUserStore();
   const { profiles, fetchProfiles } = useProfileStore();
@@ -107,8 +110,9 @@ export default function ConsultationChatPage() {
   const setMessages = useCallback((updater: ChatMessage[] | ((prev: ChatMessage[]) => ChatMessage[])) => {
     setConversations(prev => prev.map(c => {
       if (c.id !== activeConversationId) return c;
-      const nextMessages = typeof updater === 'function' ? updater(c.messages) : updater;
-      return { ...c, messages: nextMessages, title: deriveTitle(nextMessages), updatedAt: Date.now() };
+      // 방 제목은 오행 방 이름 고정. 질문 30개 초과 시 가장 오래된 질문·답변부터 슬라이딩 제거.
+      const nextMessages = trimToMaxQuestions(typeof updater === 'function' ? updater(c.messages) : updater);
+      return { ...c, messages: nextMessages, updatedAt: Date.now() };
     }));
   }, [activeConversationId]);
 
@@ -119,46 +123,50 @@ export default function ConsultationChatPage() {
     return computeSajuFromProfile(selectedProfile);
   }, [selectedProfile]);
 
+  // 본인 물상(디폴트 열린 방). 요청된 el 이 없거나 잠겨 있으면 디폴트 방으로.
+  const defaultKey = useMemo<ElementKey>(() => defaultElementKey(saju?.dayMasterElement), [saju]);
+  const elementKey = useMemo<ElementKey>(() => {
+    if (!saju) return defaultKey;
+    const unlocked = loadUnlockedElements(pid, defaultKey);
+    return unlocked.find(k => k === elParam) ?? defaultKey;
+  }, [saju, defaultKey, elParam, pid]);
+  const room = getElement(elementKey);
+
   // 초기화
   useEffect(() => {
     if (user) { fetchProfiles(); fetchBalance(); }
   }, [user, fetchProfiles, fetchBalance]);
 
-  // 프로필 로드 후 대화 로드
+  // 프로필 로드 후 방(오행 대화) 로드
   useEffect(() => {
     if (!pid || profiles.length === 0) return;
     if (!profiles.find(p => p.id === pid)) {
       router.replace('/sangdamso');
       return;
     }
-
-    const { conversations: loaded, activeId } = loadConversations(pid);
-
-    if (cid === 'new') {
-      const existing = loaded.find(c => c.messages.length === 0);
-      if (existing) {
-        setConversations(loaded);
-        setActiveConversationId(existing.id);
-      } else {
-        const fresh = newConversation();
-        setConversations([fresh, ...loaded]);
-        setActiveConversationId(fresh.id);
-      }
-    } else if (cid && loaded.find(c => c.id === cid)) {
-      setConversations(loaded);
-      setActiveConversationId(cid);
-    } else {
-      setConversations(loaded);
-      setActiveConversationId(activeId);
+    // 사주 계산 실패 프로필(잘못된 생일·음력 변환 실패 등) — 무한 로딩 방지 폴백
+    if (!saju) {
+      router.replace('/sangdamso');
+      return;
+    }
+    // 잠긴 방 직접 접근(URL) 차단 → 목록으로
+    const unlocked = loadUnlockedElements(pid, defaultKey);
+    if (elParam && !unlocked.some(k => k === elParam)) {
+      router.replace('/sangdamso');
+      return;
     }
 
+    const conv = loadRoom(pid, elementKey);
+    setConversations([conv]);
+    setActiveConversationId(conv.id);
     setReady(true);
-  }, [pid, cid, profiles, router]);
+  }, [pid, elementKey, elParam, defaultKey, profiles, saju, router]);
 
   // 자동 저장 (localStorage)
   useEffect(() => {
     if (!pid || conversations.length === 0 || !ready) return;
-    saveConversations(pid, conversations, activeConversationId);
+    const conv = conversations.find(c => c.id === activeConversationId);
+    if (conv) saveRoom(pid, conv);
   }, [conversations, activeConversationId, pid, ready]);
 
   // DB 동기화 — 대화에 메시지가 있을 때 서버에 저장
@@ -202,6 +210,16 @@ export default function ConsultationChatPage() {
     if (distanceFromBottom > 120) return;
     el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' });
   }, [messages, loading]);
+
+  // 방 진입 시 1회 — 가장 최근(최하단) 대화로 포커싱 (smooth 아닌 즉시 점프)
+  const didInitialScroll = useRef(false);
+  useEffect(() => {
+    if (!ready || didInitialScroll.current) return;
+    const el = scrollRef.current;
+    if (!el) return;
+    el.scrollTop = el.scrollHeight;
+    didInitialScroll.current = true;
+  }, [ready, messages.length]);
 
   // 이탈 경고
   useEffect(() => {
@@ -416,7 +434,7 @@ export default function ConsultationChatPage() {
   }
 
   const showWelcome = messages.length === 0;
-  const convTitle = activeConv?.title === '새 대화' ? '' : (activeConv?.title ?? '');
+  const convTitle = room.name;
 
   return (
     // ★ outer 를 viewport 에 강제 박음 (position:fixed inset:0). body 스크롤 무관하게
