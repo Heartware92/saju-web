@@ -184,6 +184,71 @@ export const processPayment = async (
 };
 
 /**
+ * 토스페이(TossPay) 간편결제 — 직연동(포트원 미경유) 클라이언트 진입점.
+ *
+ * 흐름: pending 주문 생성 → /api/payment/toss/create 로 결제창 URL 발급 →
+ *       toss checkoutPage 로 전체 페이지 이동. 승인·크레딧 지급은 복귀 후
+ *       /payment/toss/callback → /api/payment/toss/confirm 에서 처리한다.
+ *
+ * 성공 시 이 함수는 반환하지 않고 페이지가 토스 결제창으로 리다이렉트된다.
+ */
+export const processTossPayment = async (
+  request: PaymentRequest
+): Promise<PaymentResult> => {
+  try {
+    // 1. 로그인 확인
+    const user = await auth.getCurrentUser();
+    if (!user) {
+      return { success: false, error: 'LOGIN_REQUIRED', message: '로그인이 필요합니다' };
+    }
+
+    // 2. 패키지 조회
+    const packageInfo = getPackageById(request.packageId);
+    if (!packageInfo) {
+      return { success: false, error: 'INVALID_PACKAGE', message: '올바르지 않은 패키지입니다' };
+    }
+
+    // 3. 주문 생성 (status=pending)
+    const orderData: Omit<Order, 'id' | 'created_at'> = {
+      user_id: user.id,
+      package_id: request.packageId,
+      package_name: packageInfo.name,
+      amount: request.amount,
+      moon_credit_amount: packageInfo.moonCredit,
+      status: 'pending',
+    };
+    const order = await orderDB.createOrder(orderData);
+
+    // 4. 서버에서 토스페이 결제 생성 → checkoutPage 발급
+    const res = await fetch('/api/payment/toss/create', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ orderId: order.id }),
+    });
+    const json = await res.json().catch(() => null);
+
+    if (!res.ok || !json?.success || !json?.checkoutPage) {
+      await orderDB.updateOrderStatus(order.id, 'failed').catch(() => undefined);
+      return {
+        success: false,
+        orderId: order.id,
+        error: json?.error || 'TOSS_CREATE_FAILED',
+        message: json?.error || '결제창을 여는 데 실패했습니다. 잠시 후 다시 시도해 주세요.',
+      };
+    }
+
+    // 5. 토스 결제창으로 이동 (이후 /payment/toss/callback 으로 복귀)
+    window.location.href = json.checkoutPage;
+
+    return { success: true, orderId: order.id, message: '결제창으로 이동합니다' };
+  } catch (error: any) {
+    console.error('Toss payment error:', error);
+    const detail = error?.message || error?.code || '알 수 없는 오류';
+    return { success: false, error: 'TOSS_PAYMENT_ERROR', message: `[디버그] ${detail}` };
+  }
+};
+
+/**
  * 리다이렉트 방식 결제 콜백 — /payment/callback 페이지에서 호출.
  * paymentId와 orderId를 받아 서버 verify 라우트를 호출한다.
  */

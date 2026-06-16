@@ -9,7 +9,7 @@ import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useCreditStore } from '@/store/useCreditStore';
 import { CREDIT_PACKAGES } from '@/constants/pricing';
-import { processPayment } from '@/services/payment';
+import { processPayment, processTossPayment } from '@/services/payment';
 import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
 import type { CreditPackage } from '@/constants/pricing';
@@ -19,6 +19,8 @@ export const CreditPurchasePage: React.FC = () => {
   const { moonBalance } = useCreditStore();
   const [loading, setLoading] = useState<string | null>(null);
   const [canceledNotice, setCanceledNotice] = useState(false);
+  // 결제수단 선택 모달 (구매 버튼 → 토스페이 / 일반카드 중 선택)
+  const [methodPkg, setMethodPkg] = useState<CreditPackage | null>(null);
 
   // 모바일: PortOne이 결제창으로 전체 페이지를 리다이렉트하므로, 결제창에서
   // 브라우저 뒤로가기를 누르면 이 페이지가 bfcache에서 복원된다. 이때 loading('...')
@@ -35,8 +37,37 @@ export const CreditPurchasePage: React.FC = () => {
     return () => window.removeEventListener('pageshow', onPageShow);
   }, []);
 
-  const handlePurchase = async (pkg: CreditPackage) => {
+  // 구매 버튼 → 결제수단 선택 모달 열기
+  const handlePurchase = (pkg: CreditPackage) => {
     setCanceledNotice(false);
+    setMethodPkg(pkg);
+  };
+
+  // 토스페이 직연동 — 성공 시 토스 결제창으로 페이지가 이동한다(반환 없이 리다이렉트)
+  const payWithToss = async (pkg: CreditPackage) => {
+    setMethodPkg(null);
+    setLoading(pkg.id);
+    try {
+      const result = await processTossPayment({
+        packageId: pkg.id,
+        amount: pkg.price,
+        creditAmount: pkg.moonCredit,
+      });
+      if (!result.success) {
+        alert(result.message || '결제창을 여는 데 실패했습니다.');
+        setLoading(null);
+      }
+      // 성공 시에는 window.location 이동 중이므로 로딩 해제하지 않음
+    } catch (error) {
+      console.error('Toss purchase error:', error);
+      alert('결제 처리 중 오류가 발생했습니다.');
+      setLoading(null);
+    }
+  };
+
+  // 일반카드 결제 — 기존 포트원(KG이니시스) 플로우
+  const payWithCard = async (pkg: CreditPackage) => {
+    setMethodPkg(null);
     setLoading(pkg.id);
     try {
       const result = await processPayment({
@@ -113,6 +144,49 @@ export const CreditPurchasePage: React.FC = () => {
           ))}
         </div>
 
+        {/* 결제수단 선택 모달 — 토스페이 / 일반카드 */}
+        <Modal
+          isOpen={methodPkg !== null}
+          onClose={() => setMethodPkg(null)}
+          title="결제수단 선택"
+          size="sm"
+        >
+          {methodPkg && (
+            <div className="space-y-4">
+              <div className="text-center text-sm text-text-secondary">
+                <span className="font-bold text-text-primary">{methodPkg.name}</span>
+                {' · '}🌙 {methodPkg.moonCredit}개
+                {' · '}
+                <span className="font-bold text-text-primary">{methodPkg.price.toLocaleString()}원</span>
+              </div>
+
+              {/* 토스페이 — 흰 카드 + toss pay 로고 락업 */}
+              <button
+                onClick={() => payWithToss(methodPkg)}
+                className="w-full rounded-xl bg-white border border-[#E5E8EB] py-4 flex items-center justify-center transition-all active:scale-[0.99] hover:border-[#3182F6]"
+              >
+                <TossPayLogo />
+              </button>
+
+              {/* 일반카드 — 포트원(KG이니시스) */}
+              <button
+                onClick={() => payWithCard(methodPkg)}
+                className="w-full rounded-xl bg-white border border-[#E5E8EB] py-4 flex items-center justify-center gap-2 transition-all active:scale-[0.99] hover:border-[#B0B8C1]"
+              >
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#4E5968" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <rect x="2" y="5" width="20" height="14" rx="2.5" />
+                  <path d="M2 10h20" />
+                </svg>
+                <span className="font-bold text-[15px] text-[#191F28]">신용 · 체크카드</span>
+              </button>
+
+              <p className="text-[11.5px] text-text-tertiary text-center leading-relaxed">
+                토스페이는 토스 앱/계좌·카드로, 신용·체크카드는 카드사 결제창으로 진행됩니다.
+              </p>
+            </div>
+          )}
+        </Modal>
+
         {/* 결제창 뒤로가기(취소) 안내 모달 */}
         <Modal
           isOpen={canceledNotice}
@@ -133,6 +207,21 @@ export const CreditPurchasePage: React.FC = () => {
     </div>
   );
 };
+
+/**
+ * toss pay 공식 로고 락업 (심볼 + 워드마크) — 토스 제공 에셋.
+ * 원본 1410x342 (≈4.12:1), 투명 배경. 흰 카드 버튼 위에 표시.
+ */
+const TossPayLogo: React.FC = () => (
+  // eslint-disable-next-line @next/next/no-img-element
+  <img
+    src="/icons/tosspay-lockup.png"
+    alt="toss pay"
+    height={24}
+    className="h-6 w-auto select-none"
+    draggable={false}
+  />
+);
 
 /**
  * 패키지 카드 (단일 달 크레딧)
