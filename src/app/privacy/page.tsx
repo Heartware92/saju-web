@@ -86,8 +86,8 @@ export default async function PrivacyPage({ searchParams }: { searchParams: Prom
             <ul className="list-disc pl-5 space-y-1">
               <li>서비스 이용 기록(방문한 페이지 경로, 페이지 이동·이탈 경로, 기능 이용 내역)</li>
               <li>접속 로그, 접속 일시, 접속 IP 주소, 기기 및 브라우저 정보(OS·기기 유형 등)</li>
-              <li>쿠키 및 유사 기술로 생성되는 세션 식별자·방문자 식별자(localStorage·sessionStorage 기반)</li>
-              <li>유입 경로(referrer) 및 마케팅 유입 파라미터(UTM 등)</li>
+              <li>쿠키 및 유사 기술로 생성되는 접속 식별값(세션·방문자 구분용)</li>
+              <li>서비스 유입 경로 및 마케팅 유입 정보</li>
             </ul>
             <p className="text-[12px] text-text-tertiary mt-1">* 위 자동 수집 정보는 서비스 개선과 이용 통계·유입/이탈 분석 목적으로 이용되며, 특정 개인을 식별하기 위한 용도로 사용하지 않습니다.</p>
           </Article>
@@ -359,11 +359,11 @@ export default async function PrivacyPage({ searchParams }: { searchParams: Prom
           {/* ── 제11조 ── */}
           <Article title="제11조 (쿠키 및 행태정보의 처리·거부)">
             <ol className="list-decimal pl-5 space-y-1">
-              <li>회사는 로그인 세션 유지 및 개인화된 서비스 제공을 위해 쿠키와 유사 기술(localStorage·sessionStorage)을 사용합니다.</li>
+              <li>회사는 로그인 세션 유지 및 개인화된 서비스 제공을 위해 쿠키와 이와 유사한 기술을 사용합니다.</li>
               <li>이용 목적: 로그인 상태 유지, 회원/비회원 구분, 접속 빈도·서비스 이용 패턴 파악, 유입/이탈 등 이용 통계 분석</li>
               <li>회사는 서비스 이용 통계 분석을 위해 제3자 분석 도구인 Vercel Analytics(Vercel Inc.)를 이용하며, 해당 도구는 쿠키를 사용하지 않고 익명·집계 형태로 방문 정보를 처리합니다.</li>
               <li>회사는 온라인 맞춤형 광고를 위한 행태정보를 수집하지 않으며, 이용자의 행태정보를 제3자에게 광고 목적으로 제공하지 않습니다.</li>
-              <li>이용자는 웹 브라우저 설정으로 쿠키 저장을 거부하거나, 브라우저 저장소(localStorage·sessionStorage) 삭제 기능으로 저장된 식별자를 삭제할 수 있습니다. 다만 이 경우 로그인 유지 등 일부 서비스 이용에 제한이 있을 수 있습니다.</li>
+              <li>이용자는 웹 브라우저 설정으로 쿠키 저장을 거부하거나 브라우저에 저장된 정보를 삭제할 수 있습니다. 다만 이 경우 로그인 유지 등 일부 서비스 이용에 제한이 있을 수 있습니다.</li>
             </ol>
           </Article>
 
