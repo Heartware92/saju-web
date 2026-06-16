@@ -359,18 +359,7 @@ export default async function PrivacyPage({ searchParams }: { searchParams: Prom
           </Article>
 
           {/* ── 제11조 ── */}
-          <Article title="제11조 (인공지능 학습 미활용)">
-            <p>
-              회사는 이용자의 개인정보(생년월일, 출생 시간, 성별 등 사주 정보 포함)를
-              인공지능 모델의 학습 데이터로 활용하지 않습니다. 이용자의 정보는 오직 해당 이용자의
-              풀이·상담 결과 생성 목적으로만 사용되며, 회사는 결과 생성 외의 목적으로 이를
-              보관·이용하지 않습니다. 다만 인공지능 처리 과정에서 인공지능 제공사(Google, OpenAI)의
-              자체 정책에 따라 오·남용 모니터링 목적으로 일시적으로 보관될 수 있습니다.
-            </p>
-          </Article>
-
-          {/* ── 제12조 ── */}
-          <Article title="제12조 (개인정보 보호책임자)">
+          <Article title="제11조 (개인정보 보호책임자)">
             <p>
               회사는 개인정보 처리에 관한 업무를 총괄해서 책임지고, 개인정보 처리와 관련한
               정보주체의 불만 처리 및 피해 구제 등을 위하여 아래와 같이 개인정보 보호책임자를
@@ -396,8 +385,8 @@ export default async function PrivacyPage({ searchParams }: { searchParams: Prom
             </ul>
           </Article>
 
-          {/* ── 제13조 ── */}
-          <Article title="제13조 (개인정보처리방침의 변경)">
+          {/* ── 제12조 ── */}
+          <Article title="제12조 (개인정보처리방침의 변경)">
             <ol className="list-decimal pl-5 space-y-1">
               <li>본 개인정보처리방침은 시행일로부터 적용되며, 법령 및 방침에 따른 변경 내용의 추가, 삭제 및 수정이 있는 경우에는 변경사항의 시행 7일 전부터 서비스 내 공지사항을 통하여 고지할 것입니다.</li>
               <li>이용자의 권리에 중요한 변경이 있는 경우에는 시행 30일 전에 고지합니다.</li>
