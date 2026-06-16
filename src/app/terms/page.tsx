@@ -140,15 +140,7 @@ export default async function TermsPage({ searchParams }: { searchParams: Promis
             </ol>
           </Article>
 
-          <Article title="제11조 (이용자 정보의 활용)">
-            <ol className="list-decimal pl-5 space-y-1">
-              <li>회원이 입력한 생년월일, 출생 시간, 성별 등의 정보는 사주명리 계산 및 인공지능 풀이 결과 생성에 활용됩니다.</li>
-              <li>회사는 이용자의 개인정보를 인공지능 모델 학습 목적으로 활용하지 않습니다.</li>
-              <li>서비스 이용 기록은 서비스 품질 개선 및 통계 분석 목적으로 비식별화하여 활용될 수 있습니다.</li>
-            </ol>
-          </Article>
-
-          <Article title="제11조의2 (광고 및 알림 메시지)">
+          <Article title="제11조 (광고 및 알림 메시지)">
             <ol className="list-decimal pl-5 space-y-1">
               <li>회사는 서비스 내에 광고를 게재할 수 있으며, 마케팅 정보 수신에 동의한 회원에게 이벤트·혜택 등 광고성 정보를 전자적 방법으로 전송할 수 있습니다. 회원은 언제든지 수신을 거부할 수 있습니다.</li>
               <li>회사는 회원가입, 문의 답변 등 거래 및 서비스 이용에 관한 정보성 메시지(카카오 알림톡, 문자메시지 등)를 발송할 수 있으며, 이는 광고성 정보 수신 동의 여부와 무관하게 발송될 수 있습니다.</li>
