@@ -54,6 +54,14 @@ export default function ConsultationListPage() {
     return new Set(loadUnlockedElements(selectedProfileId, defaultKey));
   }, [selectedProfileId, defaultKey]);
 
+  // 본인 물상 방을 최상단으로, 나머지는 오행 순서(목·화·토·금·수)로 정렬
+  const orderedElements = useMemo(() => {
+    if (!defaultKey) return ELEMENTS;
+    const mine = ELEMENTS.find(e => e.key === defaultKey);
+    const rest = ELEMENTS.filter(e => e.key !== defaultKey);
+    return mine ? [mine, ...rest] : ELEMENTS;
+  }, [defaultKey]);
+
   // 프로필 전환 시 방별 대화 미리보기 로드
   useEffect(() => {
     if (!selectedProfileId || typeof window === 'undefined') { setRooms(null); return; }
@@ -136,7 +144,7 @@ export default function ConsultationListPage() {
           </p>
 
           <div className="flex flex-col gap-2.5">
-            {ELEMENTS.map(el => {
+            {orderedElements.map(el => {
               const unlocked = unlockedKeys.has(el.key);
               const isDefault = defaultKey === el.key;
               const conv = rooms?.[el.key];
