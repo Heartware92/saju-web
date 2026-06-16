@@ -191,7 +191,9 @@ export default function ConsultationListPage() {
                         <p className="text-[13px] text-text-tertiary truncate mt-0.5">{preview}</p>
                       ) : el.toneHint ? (
                         <p className="text-[13px] text-text-tertiary/70 mt-0.5">{el.toneHint}</p>
-                      ) : null
+                      ) : (
+                        <p className="text-[13px] text-text-tertiary/70 mt-0.5">아직 나눈 대화가 없어요</p>
+                      )
                     ) : (
                       <p className="text-[13px] text-text-tertiary/70 mt-0.5">준비 중인 방이에요</p>
                     )}
