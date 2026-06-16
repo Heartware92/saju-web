@@ -80,12 +80,14 @@ export function useFortuneJob(
 
     let cancelled = false;
     let terminal = false; // done/failed 도달 시 재조회 불필요
+    let pollId: ReturnType<typeof setInterval> | null = null;
+    const stopPoll = () => { if (pollId) { clearInterval(pollId); pollId = null; } };
     setLoading(true);
     setNotFound(false);
 
     const applyRow = (row: Record<string, unknown>) => {
       const st = row.status as string | undefined;
-      if (st === 'done' || st === 'failed') terminal = true;
+      if (st === 'done' || st === 'failed') { terminal = true; stopPoll(); }
       setJob((prev) => mergeRow(prev, jobId, row, table));
     };
 
@@ -107,8 +109,8 @@ export function useFortuneJob(
       )
       .subscribe();
 
-    // 2) 현재 상태 fetch (subscribe race 방지 + 탭 복귀 시 재조회로 재사용)
-    const fetchOnce = async () => {
+    // 2) 현재 상태 fetch (subscribe race 방지 + 탭 복귀/폴링 시 재조회로 재사용)
+    const fetchOnce = async (isInitial = false) => {
       const { data, error } = await supabase
         .from(table)
         .select(SELECT_COLUMNS[table])
@@ -118,28 +120,39 @@ export function useFortuneJob(
       if (cancelled) return;
 
       if (error || !data) {
-        // RLS 로 다른 사용자 row 인 경우도 여기로 떨어짐
-        setNotFound(true);
-        setLoading(false);
+        // 최초 조회 실패만 notFound 처리(RLS 로 다른 사용자 row 등).
+        // 폴링 중 일시적 네트워크 오류는 무시하고 다음 틱에 재시도 — 진행 중 화면이 깨지지 않게.
+        if (isInitial) {
+          setNotFound(true);
+          setLoading(false);
+        }
         return;
       }
 
       applyRow(data as unknown as Record<string, unknown>);
       setLoading(false);
     };
-    void fetchOnce();
+    void fetchOnce(true);
+
+    // 2-b) 폴링 폴백 — Realtime UPDATE 를 놓쳐도(채널 미구독/WS 끊김/이벤트 누락) 같은 탭에
+    //      머무는 동안 done/failed 로 전환되도록 주기적으로 재조회한다.
+    //      증상: 로딩 게이지가 100% 찬 채 결과로 안 넘어가는데 보관함엔 결과가 있음 → 이 폴백으로 해소.
+    pollId = setInterval(() => {
+      if (!cancelled && !terminal) void fetchOnce(false);
+    }, 4000);
 
     // 3) Safari 등 백그라운드 탭에서 realtime WebSocket 이 끊겨 완료 UPDATE 를 놓쳐도,
     //    탭 복귀(visible/focus) 시 재조회해 상태를 보정한다. (놓친 done 이 그제서야 반영)
     const onReturn = () => {
       if (cancelled || terminal) return;
-      if (document.visibilityState === 'visible') void fetchOnce();
+      if (document.visibilityState === 'visible') void fetchOnce(false);
     };
     document.addEventListener('visibilitychange', onReturn);
     window.addEventListener('focus', onReturn);
 
     return () => {
       cancelled = true;
+      stopPoll();
       document.removeEventListener('visibilitychange', onReturn);
       window.removeEventListener('focus', onReturn);
       void supabase.removeChannel(channel);
