@@ -8,6 +8,7 @@ import { supabase, auth, agreement } from '../services/supabase';
 import { useCreditStore } from './useCreditStore';
 import { useProfileStore } from './useProfileStore';
 import { trackEvent } from '../lib/analytics/track';
+import { notifySignupWelcome } from '../services/notify';
 import type { AuthUser } from '../types/user';
 
 interface UserState {
@@ -124,6 +125,8 @@ export const useUserStore = create<UserState>()(
             } catch (e) {
               console.error('Agreement upsert failed at signup (will be retried at first login):', e);
             }
+            // 이메일 가입 완료 — 회원가입 환영 알림톡 (비차단·멱등은 서버 보장)
+            void notifySignupWelcome();
           }
 
           // 회원가입 시 자동으로 1엽전이 Supabase Trigger로 지급됨

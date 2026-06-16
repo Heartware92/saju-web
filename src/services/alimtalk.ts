@@ -4,13 +4,14 @@
  * 설계 원칙:
  *   - 환경변수(KAKAO_PF_ID / 템플릿 ID)가 없으면 발송하지 않고 'skipped' 반환
  *     → 카카오 채널·템플릿 승인 전에도 배포·동작 안전 (no-op)
- *   - 절대 throw 하지 않음 — 호출부(어드민 답변 저장 등)를 막지 않도록 결과 객체로만 반환
+ *   - 절대 throw 하지 않음 — 호출부(어드민 답변 저장 / 가입 완료 등)를 막지 않도록 결과 객체로만 반환
  *   - 자격증명은 기존 SMS(Solapi)와 동일한 SOLAPI_* 재사용
  *
  * 준비물 (카카오 채널/템플릿 승인 후 환경변수 설정):
  *   SOLAPI_API_KEY, SOLAPI_API_SECRET, SOLAPI_SENDER_PHONE   (기존 SMS용 재사용)
  *   KAKAO_PF_ID                          = Solapi 에 연동한 카카오 채널 pfId
  *   KAKAO_TEMPLATE_INQUIRY_ANSWERED      = '문의 답변완료' 알림톡 템플릿 ID
+ *   KAKAO_TEMPLATE_SIGNUP_WELCOME        = '회원가입 환영' 알림톡 템플릿 ID
  */
 import { SolapiMessageService } from 'solapi';
 
@@ -29,12 +30,12 @@ export function normalizePhone(raw: string | null | undefined): string | null {
 }
 
 /**
- * 문의 답변완료 알림톡 발송.
- * @param phone   수신 휴대폰 (정규화 전 원문 허용)
- * @param variables 템플릿 치환 변수 (카카오에 등록한 템플릿의 #{변수}와 키 일치 필요)
+ * 알림톡 발송 공통 코어 — 자격증명·pfId·템플릿ID 검증 후 Solapi 호출.
+ * 모든 발송 함수가 이 함수를 통해 동일한 안전 규칙(미설정 시 skipped, throw 금지)을 따른다.
  */
-export async function sendInquiryAnsweredAlimtalk(
+async function sendAlimtalk(
   phone: string | null | undefined,
+  templateId: string | undefined,
   variables: Record<string, string>,
 ): Promise<AlimtalkResult> {
   const to = normalizePhone(phone);
@@ -46,10 +47,10 @@ export async function sendInquiryAnsweredAlimtalk(
   const apiSecret = process.env.SOLAPI_API_SECRET?.trim();
   const senderPhone = process.env.SOLAPI_SENDER_PHONE?.trim();
   const pfId = process.env.KAKAO_PF_ID?.trim();
-  const templateId = process.env.KAKAO_TEMPLATE_INQUIRY_ANSWERED?.trim();
+  const tplId = templateId?.trim();
 
   // 카카오 채널·템플릿 미설정 시 발송하지 않음 (승인 전 안전)
-  if (!apiKey || !apiSecret || !senderPhone || !pfId || !templateId) {
+  if (!apiKey || !apiSecret || !senderPhone || !pfId || !tplId) {
     return { status: 'skipped', recipient: to, error: 'alimtalk_not_configured' };
   }
 
@@ -60,7 +61,7 @@ export async function sendInquiryAnsweredAlimtalk(
       from: senderPhone,
       kakaoOptions: {
         pfId,
-        templateId,
+        templateId: tplId,
         variables,
         // 알림톡 실패 시 SMS 대체발송 안 함 — 비용·스팸 통제 (필요 시 별도 정책)
         disableSms: true,
@@ -75,4 +76,29 @@ export async function sendInquiryAnsweredAlimtalk(
       providerResponse: e?.response?.data ?? null,
     };
   }
+}
+
+/**
+ * 문의 답변완료 알림톡 발송.
+ * @param phone   수신 휴대폰 (정규화 전 원문 허용)
+ * @param variables 템플릿 치환 변수 (카카오에 등록한 템플릿의 #{변수}와 키 일치 필요)
+ */
+export async function sendInquiryAnsweredAlimtalk(
+  phone: string | null | undefined,
+  variables: Record<string, string>,
+): Promise<AlimtalkResult> {
+  return sendAlimtalk(phone, process.env.KAKAO_TEMPLATE_INQUIRY_ANSWERED, variables);
+}
+
+/**
+ * 회원가입 환영 알림톡 발송. 가입 완료(휴대폰 확정) 직후 1회.
+ * 승인된 '회원가입 환영' 템플릿은 치환 변수가 없으므로 기본 빈 객체.
+ * @param phone   수신 휴대폰 (정규화 전 원문 허용)
+ * @param variables 템플릿에 변수가 있을 경우에만 전달
+ */
+export async function sendSignupWelcomeAlimtalk(
+  phone: string | null | undefined,
+  variables: Record<string, string> = {},
+): Promise<AlimtalkResult> {
+  return sendAlimtalk(phone, process.env.KAKAO_TEMPLATE_SIGNUP_WELCOME, variables);
 }
