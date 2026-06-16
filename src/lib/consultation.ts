@@ -51,12 +51,13 @@ export interface ElementRoom {
   accent: string;     // 오행 강조색 (다크 배경 대비)
 }
 
+// toneHint(방별 말투)는 추후 사용자가 직접 정의. 임의 기본값을 두지 않고 빈 문자열로 비워둔다.
 export const ELEMENTS: ElementRoom[] = [
-  { key: 'wood',  han: '목', hanja: '木', name: '나무의 방', toneHint: '차분하고 성장지향적인, 북돋아 주는 말투', accent: '#4CC38A' },
-  { key: 'fire',  han: '화', hanja: '火', name: '불의 방',   toneHint: '직설적이고 열정적인, 기운을 끌어올리는 강한 말투', accent: '#FF6B5A' },
-  { key: 'earth', han: '토', hanja: '土', name: '흙의 방',   toneHint: '든든하고 포용적인, 안정감을 주는 말투', accent: '#E0A45E' },
-  { key: 'metal', han: '금', hanja: '金', name: '쇠의 방',   toneHint: '단호하고 명료한, 핵심을 짚는 절제된 말투', accent: '#CBD5E1' },
-  { key: 'water', han: '수', hanja: '水', name: '물의 방',   toneHint: '유연하고 통찰적인, 깊이 헤아리는 말투', accent: '#5B9BD5' },
+  { key: 'wood',  han: '목', hanja: '木', name: '나무의 방', toneHint: '', accent: '#4CC38A' },
+  { key: 'fire',  han: '화', hanja: '火', name: '불의 방',   toneHint: '', accent: '#FF6B5A' },
+  { key: 'earth', han: '토', hanja: '土', name: '흙의 방',   toneHint: '', accent: '#E0A45E' },
+  { key: 'metal', han: '금', hanja: '金', name: '쇠의 방',   toneHint: '', accent: '#CBD5E1' },
+  { key: 'water', han: '수', hanja: '水', name: '물의 방',   toneHint: '', accent: '#5B9BD5' },
 ];
 
 const HAN_TO_KEY: Record<string, ElementKey> = {
