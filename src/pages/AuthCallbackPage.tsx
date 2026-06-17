@@ -65,24 +65,34 @@ export default function AuthCallbackPage() {
         }
 
         if (session?.user) {
-          // 1이메일 = 1provider 정책. 같은 (인증된) 이메일을 가진 구글·카카오는 Supabase 가
-          // 서버에서 자동으로 한 계정에 연결(identity linking)한다. 그 결과 두 번째 provider 로
-          // 들어오면 첫 번째(구글)로 만든 계정에 로그인돼 버린다.
+          // 1이메일 = 1provider 정책. 같은 (인증된) 이메일을 가진 구글·카카오·이메일 가입은
+          // Supabase 가 서버에서 자동으로 한 계정에 연결(identity linking)한다. 그 결과 두 번째
+          // provider 로 들어오면 첫 번째로 만든 계정에 로그인돼 버린다.
           // → identities 가 2개 이상이면, 최초(가장 오래된) provider 만 허용하고 나머지는 차단.
-          const identities = session.user.identities ?? [];
+          // identities 는 JWT 에 실리지 않으므로 서버에서 최신 유저를 받아 확인한다.
+          let idUser = session.user;
+          try {
+            const { data: gu } = await supabase.auth.getUser();
+            if (gu?.user) idUser = gu.user;
+          } catch { /* noop — session.user 로 폴백 */ }
+
+          const identities = idUser.identities ?? [];
           if (identities.length > 1) {
             const oldest = [...identities].sort(
               (a, b) => new Date(a.created_at ?? 0).getTime() - new Date(b.created_at ?? 0).getTime(),
             )[0];
             const original = oldest?.provider;
-            const current = session.user.app_metadata?.provider;
+            const current = idUser.app_metadata?.provider;
             if (original && current && current !== original) {
-              const label: Record<string, string> = { google: '구글', kakao: '카카오' };
+              const label: Record<string, string> = { google: '구글', kakao: '카카오', email: '이메일' };
               const name = label[original] ?? original;
+              const msg = original === 'email'
+                ? '이미 이메일·비밀번호로 가입한 계정이에요. 이메일로 로그인해주세요.'
+                : `이미 ${name}로 가입한 계정이에요. ${name}로 로그인해주세요.`;
               try { await supabase.auth.signOut(); } catch { /* noop */ }
               useUserStore.setState({ user: null });
               setStatus('failed');
-              setMessage(`이미 ${name}로 가입된 이메일이에요. ${name}로 로그인해주세요.`);
+              setMessage(msg);
               return;
             }
           }
