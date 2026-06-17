@@ -10,6 +10,7 @@ import { useReportCacheStore, sajuKey } from '../store/useReportCacheStore';
 import { sajuDB, supabase } from '../services/supabase';
 import { useFortuneJob } from '../hooks/useFortuneJob';
 import { BackButton } from '../components/ui/BackButton';
+import { InsufficientCreditModal } from '../components/InsufficientCreditModal';
 import { SUN_COST_BIG, CHARGE_REASONS } from '../constants/creditCosts';
 import { extractMetaphor } from '../utils/parseMetaphor';
 import { renderEmphasis } from '../utils/renderEmphasis';
@@ -302,6 +303,7 @@ export default function GunghapPage() {
   const urlFresh = searchParams?.get('fresh') === '1';
   const { user } = useUserStore();
   const { profiles } = useProfileStore();
+  const { moonBalance } = useCreditStore();
 
   // 내부 recordId — URL 파라미터 또는 랜딩에서 클릭한 결과
   const [activeRecordId, setActiveRecordId] = useState<string | null>(urlRecordId);
@@ -1117,9 +1119,22 @@ export default function GunghapPage() {
   const modalGateActive =
     !isArchiveMode && step === 'category' && (archiveLoading || (showArchiveList && archiveList.length > 0));
 
+  // 크레딧 부족 게이트 — 신규(보관함/잡 결과 아님) 진입에서 잔액 < 비용이면 충전 안내 모달.
+  // 보관함 모달(archive)이 떠 있는 동안은 양보(과거 결과 열람 우선) → 닫고 새 풀이 시도 시 노출.
+  const insufficientGate =
+    !isArchiveMode && step === 'category' && !modalGateActive && !loading && moonBalance < SUN_COST_BIG;
+
   return (
     <div className="min-h-screen pb-24">
-      {modalGateActive ? (
+      {insufficientGate && (
+        <InsufficientCreditModal
+          serviceName="궁합"
+          creditCost={SUN_COST_BIG}
+          balance={moonBalance}
+          onClose={() => router.push('/')}
+        />
+      )}
+      {(modalGateActive || insufficientGate) ? (
         archiveLoading ? (
           <div className="flex items-center justify-center min-h-screen">
             <div className="w-8 h-8 border-3 border-cta border-t-transparent rounded-full animate-spin" />

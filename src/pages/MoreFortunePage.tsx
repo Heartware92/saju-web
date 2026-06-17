@@ -52,6 +52,7 @@ import { useFortuneJob } from '../hooks/useFortuneJob';
 import { findRecentArchive, type ArchiveCategory } from '../services/archiveService';
 import { RestoreReportModal } from '../components/RestoreReportModal';
 import { QuickFortuneGate } from '../components/QuickFortuneGate';
+import { InsufficientCreditModal } from '../components/InsufficientCreditModal';
 import { MOON_COST_PER_FORTUNE as MOON_COST_SELECT } from '../constants/moreFortunes';
 import { analyzeKoreanName } from '../utils/nameEumRyeong';
 import { AILoadingBar } from '../components/AILoadingBar';
@@ -862,6 +863,22 @@ export default function MoreFortunePage({ category }: Props) {
         archiveCategory={category as ArchiveCategory}
         creditType="moon"
         creditCost={MOON_COST_SELECT}
+      />
+    );
+  }
+
+  // 크레딧 부족 게이트 — 이름풀이·꿈해몽 등 입력폼 선노출 케이스는 QuickFortuneGate 를
+  // 건너뛰므로(needsProfileSelect=false), 진입 시 직접 부족 모달을 띄운다.
+  // 보관함·잡 결과·자동시작·진행중·완료(차감 후 잔액 감소 포함)는 제외 — 순수 신규 진입에서만.
+  if (
+    !isArchiveMode && !urlJobId && !createdJobId && !shouldAutoStart &&
+    !loading && !result && cfg && moonBalance < MOON_COST_PER_FORTUNE
+  ) {
+    return (
+      <InsufficientCreditModal
+        serviceName={cfg.title}
+        creditCost={MOON_COST_PER_FORTUNE}
+        balance={moonBalance}
       />
     );
   }
