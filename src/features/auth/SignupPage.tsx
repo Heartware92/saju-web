@@ -15,6 +15,11 @@ export const SignupPage: React.FC = () => {
   const { signup, loading } = useUserStore();
 
   const [email, setEmail] = useState('');
+  // 이메일 중복 자동검사 — 입력칸을 벗어날 때 검사. 통과(available) 전까지 가입 버튼 비활성화.
+  type EmailCheck = 'idle' | 'checking' | 'available' | 'taken' | 'invalid';
+  const [emailCheck, setEmailCheck] = useState<EmailCheck>('idle');
+  const [emailTakenProvider, setEmailTakenProvider] = useState<string>('');
+  const lastCheckedEmail = useRef<string>('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   // 비밀번호 표시·숨김 토글 — 입력 실수 줄임
@@ -67,6 +72,39 @@ export const SignupPage: React.FC = () => {
   }, [otpTimer > 0]);
 
   const formatTimer = (s: number) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+
+  const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  const providerLabel = (p: string) =>
+    p === 'google' ? '구글' : p === 'kakao' ? '카카오' : '이메일';
+
+  // 이메일 입력칸을 벗어날 때 중복 검사. 같은 값 재검사는 생략.
+  const handleEmailBlur = async () => {
+    const value = email.trim();
+    if (!value) { setEmailCheck('idle'); return; }
+    if (!EMAIL_RE.test(value)) { setEmailCheck('invalid'); return; }
+    if (lastCheckedEmail.current === value && emailCheck !== 'idle') return;
+
+    setEmailCheck('checking');
+    try {
+      const res = await fetch('/api/auth/check-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: value }),
+      });
+      const data = await res.json();
+      lastCheckedEmail.current = value;
+      if (data.available) {
+        setEmailCheck('available');
+        setEmailTakenProvider('');
+      } else {
+        setEmailCheck('taken');
+        setEmailTakenProvider(data.provider || 'email');
+      }
+    } catch {
+      // 검사 실패 시 막지 않음 — 최종 방어는 제출 시 서버 에러
+      setEmailCheck('idle');
+    }
+  };
 
   const handleSendOtp = async () => {
     const cleaned = phone.replace(/[^0-9]/g, '');
@@ -133,6 +171,11 @@ export const SignupPage: React.FC = () => {
 
     if (!email || !password || !confirmPassword || !phone) {
       setError('모든 필드를 입력해주세요.');
+      return;
+    }
+
+    if (emailCheck === 'taken') {
+      setError(`이미 ${providerLabel(emailTakenProvider)}로 가입된 이메일이에요.`);
       return;
     }
 
@@ -230,11 +273,33 @@ export const SignupPage: React.FC = () => {
                   type="email"
                   placeholder="example@email.com"
                   value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  onChange={(e) => {
+                    setEmail(e.target.value);
+                    // 값이 바뀌면 이전 검사 결과 무효화
+                    if (emailCheck !== 'idle') setEmailCheck('idle');
+                  }}
+                  onBlur={handleEmailBlur}
                   className={inputClass}
                   autoComplete="email"
                   required
                 />
+                {emailCheck === 'checking' && (
+                  <p className="mt-1 text-xs text-text-tertiary">이메일 확인 중...</p>
+                )}
+                {emailCheck === 'invalid' && (
+                  <p className="mt-1 text-xs text-status-error">올바른 이메일 형식이 아니에요.</p>
+                )}
+                {emailCheck === 'available' && (
+                  <p className="mt-1 text-xs text-status-success">사용 가능한 이메일이에요.</p>
+                )}
+                {emailCheck === 'taken' && (
+                  <p className="mt-1 text-xs text-status-error">
+                    이미 {providerLabel(emailTakenProvider)}로 가입된 이메일이에요.{' '}
+                    {emailTakenProvider === 'email'
+                      ? '로그인해주세요.'
+                      : `${providerLabel(emailTakenProvider)} 간편 로그인을 이용해주세요.`}
+                  </p>
+                )}
               </div>
 
               {/* Phone — SMS OTP 인증 */}
@@ -470,7 +535,7 @@ export const SignupPage: React.FC = () => {
               {/* Submit */}
               <button
                 type="submit"
-                disabled={loading || success}
+                disabled={loading || success || emailCheck === 'taken' || emailCheck === 'checking' || emailCheck === 'invalid'}
                 className="w-full h-12 rounded-lg bg-gradient-to-r from-cta to-cta-active text-white font-bold text-sm cursor-pointer transition-all hover:opacity-90 hover:shadow-lg hover:shadow-cta/20 disabled:opacity-50 disabled:cursor-not-allowed mt-4"
               >
                 {loading ? '가입 중...' : '회원가입 완료'}
