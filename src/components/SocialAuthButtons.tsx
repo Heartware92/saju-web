@@ -36,7 +36,36 @@ export const SocialAuthButtons: React.FC<SocialAuthButtonsProps> = ({ label }) =
     };
   }, []);
 
+  // 인앱 브라우저(임베디드 웹뷰) 감지 — 구글은 웹뷰/비표준 브라우저에서 OAuth 를 차단한다.
+  //   증상(안드로이드): 계정 선택 후 우리 앱으로 안 돌아오고 Gmail 앱으로 튀거나 로그인 실패.
+  //   iOS 는 이 제약이 없어 정상. → 감지되면 외부 브라우저(Chrome)로 열도록 유도한다.
+  const [inApp, setInApp] = useState(false);
+  const [isAndroid, setIsAndroid] = useState(false);
+  useEffect(() => {
+    if (typeof navigator === 'undefined') return;
+    const ua = navigator.userAgent || '';
+    setIsAndroid(/Android/i.test(ua));
+    const isWebView = /; wv\)/.test(ua) || /\bwv\b/.test(ua);
+    const knownInApp = /(KAKAOTALK|Instagram|FB(AN|AV|_IAB)|Line\/|NAVER\(inapp|DaumApps|everytimeApp|Snapchat|TikTok|Twitter)/i.test(ua);
+    setInApp(isWebView || knownInApp);
+  }, []);
+
+  const openInExternalBrowser = () => {
+    const ua = navigator.userAgent || '';
+    const raw = window.location.href.replace(/^https?:\/\//, '');
+    if (/Android/i.test(ua)) {
+      // 안드로이드: 현재 페이지를 Chrome 으로 다시 연다(인앱 웹뷰 탈출). Chrome 미설치 시 무동작.
+      window.location.href = `intent://${raw}#Intent;scheme=https;package=com.android.chrome;end`;
+    }
+  };
+
   const handleClick = async (provider: 'google' | 'kakao') => {
+    // 구글 OAuth 는 인앱/웹뷰에서 막혀(계정선택 후 Gmail 로 튐) → 외부 브라우저로 유도.
+    if (provider === 'google' && inApp) {
+      if (isAndroid) { openInExternalBrowser(); return; }
+      setError('인앱 브라우저에서는 구글 로그인이 제한돼요. 우측 상단 메뉴의 "다른 브라우저로 열기"를 이용하거나, 카카오 로그인을 사용해주세요.');
+      return;
+    }
     setError('');
     setPending(provider);
     try {
@@ -60,6 +89,16 @@ export const SocialAuthButtons: React.FC<SocialAuthButtonsProps> = ({ label }) =
       {error && (
         <div className="rounded-lg bg-status-error/10 border border-status-error/20 p-3 text-sm text-status-error mb-3">
           {error}
+        </div>
+      )}
+
+      {inApp && (
+        <div className="rounded-lg bg-amber-500/10 border border-amber-500/30 p-3 text-[13px] text-amber-200 mb-3 leading-relaxed">
+          인앱 브라우저에서는 <b>구글 로그인이 제한</b>될 수 있어요.{' '}
+          {isAndroid ? (
+            <button type="button" onClick={openInExternalBrowser} className="underline font-semibold text-amber-100">Chrome으로 열기</button>
+          ) : '우측 상단 메뉴에서 "다른 브라우저로 열기"를 눌러주세요.'}
+          {' '}또는 카카오 로그인을 이용해주세요.
         </div>
       )}
 
