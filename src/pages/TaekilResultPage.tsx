@@ -394,8 +394,10 @@ export default function TaekilResultPage() {
   // ── 로딩/에러 ──
   // ?jobId 진행 중 잡 + ?recordId 보관함 조회 모두 AILoadingBar 로 통일.
   // TaekilPage 의 풀이 로딩과 같은 컴포넌트라 router.push 후에도 끊김 없이 이어짐.
-  // ★ sticky — 결과(result)가 채워지면 로딩으로 안 돌아간다(정통사주 패턴, 백그라운드 복귀 대응)
-  if (loading && !result) {
+  // ★ sticky — AI 본문(aiAdvice)이 채워지면 로딩으로 안 돌아간다(정통사주 패턴, 백그라운드 복귀 대응)
+  //   주의: result(엔진결과)는 processing 중에도 세팅돼 로딩을 조기 종료시키므로, "본문 준비" 신호인
+  //   aiAdvice 로 판정해야 한다(아니면 처리 중 '결과를 표시할 수 없어요' 에러 페이지로 떨어짐).
+  if (loading && !aiAdvice) {
     return (
       <AILoadingBar
         label="택일 운세 분석중"
