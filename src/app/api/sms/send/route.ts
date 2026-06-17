@@ -125,7 +125,9 @@ export async function POST(req: NextRequest) {
       {
         to: phone,
         from: senderPhone,
-        text: `[이천점] 인증번호 ${code}를 입력해주세요. (5분 이내)`,
+        // 마지막 줄 `@<도메인> #<코드>` 는 안드로이드 WebOTP 자동입력용(바운드 포맷).
+        // iOS 는 이 줄을 무시하고 본문의 6자리를 휴리스틱으로 인식한다.
+        text: `[이천점] 인증번호 ${code}를 입력해주세요. (5분 이내)\n\n@2000-saju.com #${code}`,
       },
     ]);
 

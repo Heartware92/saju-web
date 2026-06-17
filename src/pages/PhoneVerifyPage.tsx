@@ -32,6 +32,25 @@ export default function PhoneVerifyPage() {
     }
   }, [user, router]);
 
+  // 안드로이드 Chrome: WebOTP 로 SMS 인증번호 자동 입력.
+  // (iOS Safari 는 입력칸의 autoComplete="one-time-code" + 키보드 추천으로 처리)
+  // SMS 마지막 줄의 `@<도메인> #<코드>` 포맷을 읽어 코드만 채운다. 미지원/취소 시 수동 입력.
+  useEffect(() => {
+    if (!otpSent || otpVerified) return;
+    if (typeof window === 'undefined' || !('OTPCredential' in window)) return;
+    const ac = new AbortController();
+    (navigator.credentials.get as (o: unknown) => Promise<{ code?: string } | null>)({
+      otp: { transport: ['sms'] },
+      signal: ac.signal,
+    })
+      .then((cred) => {
+        const code = cred?.code;
+        if (code) setOtpCode(String(code).replace(/[^0-9]/g, '').slice(0, 6));
+      })
+      .catch(() => { /* 미지원·취소·타임아웃 → 수동 입력 */ });
+    return () => ac.abort();
+  }, [otpSent, otpVerified]);
+
   const formatTimer = (s: number) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
 
   const handleSendOtp = async () => {
@@ -161,6 +180,7 @@ export default function PhoneVerifyPage() {
                 <input
                   type="text"
                   inputMode="numeric"
+                  autoComplete="one-time-code"
                   placeholder="인증번호 6자리"
                   value={otpCode}
                   onChange={(e) => setOtpCode(e.target.value.replace(/[^0-9]/g, '').slice(0, 6))}
