@@ -44,16 +44,19 @@ export function RadarChart({
   const n = domains.length;
   if (n < 3) return null;
 
-  // 좌우 라벨은 옆으로 길게 뻗으므로 padX를 더 확보, 위아래는 라벨 한 줄 높이만큼만 (최소화)
-  const padX = Math.max(44, Math.round(labelFontSize * 1.6 + 8));
-  const padY = Math.max(12, Math.round(labelFontSize * 0.5));
+  // 좌우 라벨(직장·사업운 등 6글자)이 start/end anchor 로 바깥으로 뻗으므로 padX 를 라벨 폭만큼 확보.
+  //   ~5.5글자 폭 = labelFontSize * 4.5 (차트 자체 여유 0.0843*size 는 별도로 더해짐).
+  // 하단은 라벨 + 점수 2줄이 들어가므로 padBottom 을 크게, 상단은 라벨 한 줄만이라 작게(비대칭).
+  const padX = Math.max(48, Math.round(labelFontSize * 4.5));
+  const padTop = Math.max(14, Math.round(labelFontSize * 0.9));
+  const padBottom = Math.max(36, Math.round(labelFontSize * 2.4));
   const cx = padX + size / 2;
-  const cy = padY + size / 2;
+  const cy = padTop + size / 2;
   // 차트 자체를 더 크게 — maxR 비율 ↑
   const maxR = size * 0.42;
   const labelR = size * 0.48;
   const vbW = size + padX * 2;
-  const vbH = size + padY * 2;
+  const vbH = size + padTop + padBottom;
   const gridLevels = [20, 40, 60, 80, 100];
 
   const dataPoints = domains.map((d, i) => {
@@ -64,7 +67,13 @@ export function RadarChart({
 
   return (
     <div className={`flex justify-center ${className}`}>
-      <svg width={vbW} height={vbH} viewBox={`0 0 ${vbW} ${vbH}`}>
+      {/* 고정 px 대신 컨테이너 폭에 맞춰 축소(viewBox 비율 유지) — 좁은 모바일에서 라벨 잘림 방지 */}
+      <svg
+        width={vbW}
+        height={vbH}
+        viewBox={`0 0 ${vbW} ${vbH}`}
+        style={{ width: '100%', height: 'auto', maxWidth: vbW }}
+      >
         {/* Grid */}
         {gridLevels.map(pct => (
           <polygon
