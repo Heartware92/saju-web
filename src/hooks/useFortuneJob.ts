@@ -80,19 +80,12 @@ export function useFortuneJob(
 
     let cancelled = false;
     let terminal = false; // done/failed 도달 시 재조회 불필요
-    let pollId: ReturnType<typeof setInterval> | null = null;
-    const stopPoll = () => { if (pollId) { clearInterval(pollId); pollId = null; } };
     setLoading(true);
     setNotFound(false);
 
     const applyRow = (row: Record<string, unknown>) => {
       const st = row.status as string | undefined;
-      // ★ 상태 역행 방지 — 이미 done/failed 에 도달했으면, 뒤늦게 도착한 비종료(pending/processing)
-      //   이벤트는 무시한다. 모바일(Safari) 백그라운드 동안 Realtime WebSocket 이 버퍼링한 옛 'processing'
-      //   UPDATE 가 복귀 후 done 보다 늦게 재생되어 결과→로딩으로 되돌아가는 현상(결과 0.5초 깜빡임 후
-      //   93% 로딩 멈춤)을 차단한다.
-      if (terminal && st !== 'done' && st !== 'failed') return;
-      if (st === 'done' || st === 'failed') { terminal = true; stopPoll(); }
+      if (st === 'done' || st === 'failed') terminal = true;
       setJob((prev) => mergeRow(prev, jobId, row, table));
     };
 
@@ -114,8 +107,8 @@ export function useFortuneJob(
       )
       .subscribe();
 
-    // 2) 현재 상태 fetch (subscribe race 방지 + 탭 복귀/폴링 시 재조회로 재사용)
-    const fetchOnce = async (isInitial = false) => {
+    // 2) 현재 상태 fetch (subscribe race 방지 + 탭 복귀 시 재조회로 재사용)
+    const fetchOnce = async () => {
       const { data, error } = await supabase
         .from(table)
         .select(SELECT_COLUMNS[table])
@@ -125,52 +118,30 @@ export function useFortuneJob(
       if (cancelled) return;
 
       if (error || !data) {
-        // 최초 조회 실패만 notFound 처리(RLS 로 다른 사용자 row 등).
-        // 폴링 중 일시적 네트워크 오류는 무시하고 다음 틱에 재시도 — 진행 중 화면이 깨지지 않게.
-        if (isInitial) {
-          setNotFound(true);
-          setLoading(false);
-        }
+        // RLS 로 다른 사용자 row 인 경우도 여기로 떨어짐
+        setNotFound(true);
+        setLoading(false);
         return;
       }
 
       applyRow(data as unknown as Record<string, unknown>);
       setLoading(false);
     };
-    void fetchOnce(true);
+    void fetchOnce();
 
-    // ── 모바일/데스크톱 분리 ──────────────────────────────────────────────
-    // 데스크톱: Realtime WebSocket 이 안정적이라 원래 잘 동작했다. 탭 복귀(visible/focus)
-    //          재조회만 둔다(원래 동작). 폴링·pageshow·online 같은 공격적 복구는 켜지 않는다
-    //          (데스크톱에 불필요 + 재로딩 부작용 유발).
-    // 모바일: 브라우저가 백그라운드 탭을 폐기/프리즈해 Realtime·timer 가 끊긴다(iOS Safari·
-    //         안드 크롬·삼성인터넷 공통). 폴링 폴백 + pageshow(bfcache)·online 복귀 재조회를 추가.
-    const isMobile = typeof navigator !== 'undefined' &&
-      (navigator.maxTouchPoints > 0 || /Mobi|Android|iP(hone|ad|od)/i.test(navigator.userAgent));
-
-    const kick = () => { if (!cancelled && !terminal) void fetchOnce(false); };
-    const onVisible = () => { if (document.visibilityState === 'visible') kick(); };
-
-    // 탭 복귀 재조회 — 데스크톱·모바일 공통(원래 동작 유지)
-    document.addEventListener('visibilitychange', onVisible);
-    window.addEventListener('focus', onVisible);
-
-    // 모바일 전용 — 폴링 폴백 + bfcache(pageshow)·online 복귀 재조회
-    if (isMobile) {
-      pollId = setInterval(() => {
-        if (!cancelled && !terminal) void fetchOnce(false);
-      }, 4000);
-      window.addEventListener('pageshow', kick);
-      window.addEventListener('online', kick);
-    }
+    // 3) Safari 등 백그라운드 탭에서 realtime WebSocket 이 끊겨 완료 UPDATE 를 놓쳐도,
+    //    탭 복귀(visible/focus) 시 재조회해 상태를 보정한다. (놓친 done 이 그제서야 반영)
+    const onReturn = () => {
+      if (cancelled || terminal) return;
+      if (document.visibilityState === 'visible') void fetchOnce();
+    };
+    document.addEventListener('visibilitychange', onReturn);
+    window.addEventListener('focus', onReturn);
 
     return () => {
       cancelled = true;
-      stopPoll();
-      document.removeEventListener('visibilitychange', onVisible);
-      window.removeEventListener('focus', onVisible);
-      window.removeEventListener('pageshow', kick);
-      window.removeEventListener('online', kick);
+      document.removeEventListener('visibilitychange', onReturn);
+      window.removeEventListener('focus', onReturn);
       void supabase.removeChannel(channel);
     };
   }, [jobId, table]);
