@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { supabase } from '../services/supabase';
 import { useUserStore } from '../store/useUserStore';
 import { notifySignupWelcome } from '../services/notify';
+import { AlertModal } from '../components/ui/Modal';
 
 export default function PhoneVerifyPage() {
   const router = useRouter();
@@ -143,11 +144,6 @@ export default function PhoneVerifyPage() {
             <p className="text-text-secondary text-sm">서비스 이용을 위해 휴대폰 인증이 필요합니다</p>
           </div>
 
-          {error && (
-            <div className="rounded-lg bg-status-error/10 border border-status-error/20 p-3 text-sm text-status-error mb-4">
-              {error}
-            </div>
-          )}
 
           <div className="space-y-3">
             <div>
@@ -215,6 +211,8 @@ export default function PhoneVerifyPage() {
           </div>
         </div>
       </div>
+
+      <AlertModal message={error} onClose={() => setError('')} title="휴대폰 인증" />
     </div>
   );
 }

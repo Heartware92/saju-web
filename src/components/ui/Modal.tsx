@@ -138,3 +138,36 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
     </Modal>
   );
 };
+
+interface AlertModalProps {
+  /** 메시지가 있으면 열림. 빈 문자열이면 닫힘. */
+  message: string;
+  onClose: () => void;
+  title?: string;
+  confirmText?: string;
+  variant?: 'primary' | 'sun' | 'moon';
+}
+
+/**
+ * 단순 알림 모달 — 확인 버튼 1개.
+ * 긴 폼에서 상단 에러 배너는 스크롤을 올려야 보여 인지가 어렵다.
+ * message 가 비어있지 않으면 자동으로 화면 중앙에 떠서 사용자가 바로 인지한다.
+ */
+export const AlertModal: React.FC<AlertModalProps> = ({
+  message,
+  onClose,
+  title = '알림',
+  confirmText = '확인',
+  variant = 'primary',
+}) => {
+  return (
+    <Modal isOpen={!!message} onClose={onClose} title={title} size="sm" showCloseButton={false}>
+      <div className="space-y-6">
+        <p className="text-text-secondary whitespace-pre-line">{message}</p>
+        <Button variant={variant} fullWidth onClick={onClose}>
+          {confirmText}
+        </Button>
+      </div>
+    </Modal>
+  );
+};

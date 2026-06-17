@@ -9,6 +9,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useUserStore } from '../../store/useUserStore';
 import { BackButton } from '../../components/ui/BackButton';
+import { AlertModal } from '../../components/ui/Modal';
 
 export const SignupPage: React.FC = () => {
   const router = useRouter();
@@ -258,11 +259,6 @@ export const SignupPage: React.FC = () => {
                 </div>
               )}
 
-              {error && (
-                <div className="rounded-lg bg-status-error/10 border border-status-error/20 p-3 text-sm text-status-error">
-                  {error}
-                </div>
-              )}
 
               {/* Email */}
               <div>
@@ -579,6 +575,9 @@ export const SignupPage: React.FC = () => {
           />
         </div>
       )}
+
+      {/* 검증 실패 등 알림 — 긴 폼이라 상단 배너 대신 모달로 띄워 바로 인지하게 한다 */}
+      <AlertModal message={error} onClose={() => setError('')} title="회원가입" />
     </div>
   );
 };

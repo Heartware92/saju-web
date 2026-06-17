@@ -10,6 +10,7 @@ import Link from 'next/link';
 import { useUserStore } from '../../store/useUserStore';
 import { BackButton } from '../../components/ui/BackButton';
 import { SocialAuthButtons } from '../../components/SocialAuthButtons';
+import { AlertModal } from '../../components/ui/Modal';
 
 export const LoginPage: React.FC = () => {
   const router = useRouter();
@@ -92,11 +93,6 @@ export const LoginPage: React.FC = () => {
 
           {/* Form */}
           <form onSubmit={handleSubmit} className="space-y-5">
-            {error && (
-              <div className="rounded-lg bg-status-error/10 border border-status-error/20 p-3 text-sm text-status-error">
-                {error}
-              </div>
-            )}
 
             {/* Email */}
             <div>
@@ -177,6 +173,8 @@ export const LoginPage: React.FC = () => {
         </div>
       </div>
       </div>
+
+      <AlertModal message={error} onClose={() => setError('')} title="로그인" />
     </div>
   );
 };
