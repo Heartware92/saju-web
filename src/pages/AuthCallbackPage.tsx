@@ -77,13 +77,15 @@ export default function AuthCallbackPage() {
           } catch { /* noop — session.user 로 폴백 */ }
 
           const identities = idUser.identities ?? [];
-          if (identities.length > 1) {
+          // 방금 누른 provider(=p). app_metadata.provider 는 최초 가입값으로 고정돼
+          // 현재 로그인 provider 를 알 수 없으므로, OAuth 시작 시 실어 보낸 p 를 쓴다.
+          const clicked = searchParams.get('p');
+          if (identities.length > 1 && clicked) {
             const oldest = [...identities].sort(
               (a, b) => new Date(a.created_at ?? 0).getTime() - new Date(b.created_at ?? 0).getTime(),
             )[0];
             const original = oldest?.provider;
-            const current = idUser.app_metadata?.provider;
-            if (original && current && current !== original) {
+            if (original && clicked !== original) {
               const label: Record<string, string> = { google: '구글', kakao: '카카오', email: '이메일' };
               const name = label[original] ?? original;
               const msg = original === 'email'

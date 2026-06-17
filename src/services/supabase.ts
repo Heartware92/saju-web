@@ -95,7 +95,9 @@ export const auth = {
     const { data, error } = await supabase.auth.signInWithOAuth({
       provider,
       options: {
-        redirectTo: `${baseUrl}/auth/callback`,
+        // 콜백에서 "방금 누른 provider" 를 알 수 있도록 p 파라미터로 전달한다.
+        // (app_metadata.provider 는 최초 가입값으로 고정돼 현재 로그인 provider 를 알 수 없음)
+        redirectTo: `${baseUrl}/auth/callback?p=${provider}`,
         // 구글·카카오 모두 계정 선택 화면을 항상 표시(prompt=select_account).
         // 이미 로그인된 계정이 있으면 선택 화면 없이 자동 진행돼, 어느 계정으로
         // 가입/로그인하는지 고르거나 인증 화면을 볼 수 없는 문제를 막는다.
