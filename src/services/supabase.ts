@@ -96,9 +96,10 @@ export const auth = {
       provider,
       options: {
         redirectTo: `${baseUrl}/auth/callback`,
-        // 구글: 계정 선택 화면을 항상 표시. 브라우저에 로그인된 구글 계정이 하나면
-        // prompt 없이는 선택 화면 없이 자동 선택돼 버린다(어느 계정으로 가입하는지 못 고름).
-        ...(provider === 'google' ? { queryParams: { prompt: 'select_account' } } : {}),
+        // 구글·카카오 모두 계정 선택 화면을 항상 표시(prompt=select_account).
+        // 이미 로그인된 계정이 있으면 선택 화면 없이 자동 진행돼, 어느 계정으로
+        // 가입/로그인하는지 고르거나 인증 화면을 볼 수 없는 문제를 막는다.
+        queryParams: { prompt: 'select_account' },
       },
     });
     if (error) throw error;
