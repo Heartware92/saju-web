@@ -39,20 +39,31 @@ export default function AuthCallbackPage() {
 
         // code-flow: ?code=
         const code = searchParams.get('code');
+        let session = null;
         if (code) {
-          const { error } = await supabase.auth.exchangeCodeForSession(code);
+          const { data, error } = await supabase.auth.exchangeCodeForSession(code);
           if (error) {
             setStatus('failed');
             setMessage(error.message || '세션 교환 실패');
             return;
           }
+          // ★ 교환 결과의 세션을 직접 사용한다. 직후 getSession()을 재조회하면 세션 영속
+          //   타이밍 레이스로(특히 안드로이드) null 이 잡혀, 동의 체크를 건너뛰고 홈으로
+          //   빠지는 버그가 있었다(첫 시도는 홈, 두 번째에야 동의로).
+          session = data.session;
         } else {
           // token-flow (magic link 클릭 직후): 해시에 access_token이 실려 오는 경우
-          // supabase-js가 자동으로 세션을 복원하므로 getSession만 확인
-          await supabase.auth.getSession();
+          // supabase-js가 자동으로 세션을 복원하므로 getSession 으로 확인
+          const { data } = await supabase.auth.getSession();
+          session = data.session;
         }
 
-        const { data: { session } } = await supabase.auth.getSession();
+        // 방어: 세션이 비면 한 번 더 조회(영속 지연 대비)
+        if (!session) {
+          const { data } = await supabase.auth.getSession();
+          session = data.session;
+        }
+
         if (session?.user) {
           useUserStore.setState({ user: session.user });
           await Promise.all([
