@@ -568,8 +568,8 @@ export default function ConsultationChatPage() {
 
         {/* 입력창 — 탭바 바로 위에 자연 stacking. safe-area 는 탭바가 처리 */}
         <div className="flex-shrink-0 px-3 pt-2.5 pb-2 border-t border-[var(--border-subtle)] bg-[rgba(20,12,38,0.5)]">
-          {/* 소모 안내 — 입력창 위 (타이핑 전 정보) */}
-          <div className="flex items-center justify-center mb-2 px-1">
+          {/* 소모 안내 — 입력창 위 우측 (타이핑 전 정보) */}
+          <div className="flex items-center justify-end mb-2 px-1">
             <span className="text-[12px] text-text-tertiary">
               질문 1개당 🌙 {MOON_COST_CONSULTATION_QUESTION}개 소모
               {moonBalance < MOON_COST_CONSULTATION_QUESTION && (
