@@ -217,6 +217,13 @@ html {
   font-size: 17px;
 }
 
+/* 모바일 탭 반응성 — 버튼·링크 등 인터랙티브 요소의 '더블탭 줌' 제스처 대기를 제거한다.
+   대기 동안 단일 탭이 지연/무시되어, 특히 화면을 확대(줌)한 상태에서 버튼이 잘 안 눌리던 문제 해결.
+   (페이지 핀치줌·패닝은 그대로 유지 — manipulation 은 더블탭 줌만 끈다.) */
+button, a, [role="button"], summary {
+  touch-action: manipulation;
+}
+
 body {
   /* 배경은 html root 에서 처리 — Safari async-scrolling compositor 가
      fixed pseudo-element 를 별도 GPU 레이어로 합성하면서 scrolling thread 와
