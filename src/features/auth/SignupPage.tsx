@@ -83,7 +83,11 @@ export const SignupPage: React.FC = () => {
         body: JSON.stringify({ phone: cleaned }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error);
+      if (!res.ok) {
+        // 서버가 사유를 명시해 보낸 경우(예: 이미 가입한 번호) 그대로 노출 — 사용자가 원인을 알 수 있게.
+        setError(data?.error || '인증번호 발송에 실패했습니다. 잠시 후 다시 시도해주세요.');
+        return;
+      }
       setOtpSent(true);
       setOtpTimer(300);
       setOtpVerified(false);

@@ -69,7 +69,7 @@ export async function POST(req: NextRequest) {
           .maybeSingle();
         if (!allow) {
           return NextResponse.json(
-            { error: '이미 가입한 전화번호입니다.' },
+            { error: '이미 가입된 휴대폰 번호입니다.' },
             { status: 409 },
           );
         }
