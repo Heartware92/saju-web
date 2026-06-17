@@ -27,6 +27,10 @@ export default function TossPaymentCallbackPage() {
     if (ran.current) return;
     ran.current = true;
 
+    // 콜백(승인/검증)에 도달했으면 결제창을 정상 통과한 것 — 미완료 플래그 정리.
+    // (정리 안 하면 이후 /credit 재방문 시 취소 모달이 오탐된다)
+    try { sessionStorage.removeItem('toss_payment_pending'); } catch { /* noop */ }
+
     const orderId = searchParams?.get('orderId') || '';
     const canceled = searchParams?.get('canceled') === '1';
 

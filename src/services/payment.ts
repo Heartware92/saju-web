@@ -54,7 +54,8 @@ export interface PaymentResult {
   orderId?: string;
   error?: string;
   message?: string;
-  /** 사용자가 결제창을 닫거나 취소한 경우 true (실패와 구분 — 취소 모달 표시용) */
+  /** 결제창이 미완료로 닫힌 경우(사용자 취소·닫기·PG 실패 포함) true — 재시도 모달 표시용.
+   *  로그인/설정/패키지 등 결제창 이전 단계 오류는 false(브라우저 alert로 안내). */
   canceled?: boolean;
 }
 
@@ -137,7 +138,9 @@ export const processPayment = async (
       return {
         success: false,
         error: response.code,
-        canceled: isCanceled,
+        // 결제창이 미완료로 닫힌 경우(취소·닫기·PG 실패)는 모두 재시도 모달로 통일.
+        // DB 상태만 취소/실패로 구분 기록한다.
+        canceled: true,
         message: isCanceled
           ? '결제를 취소하였습니다.'
           : '결제에 실패했습니다. 잠시 후 다시 시도해 주세요.',
@@ -241,6 +244,9 @@ export const processTossPayment = async (
     }
 
     // 5. 토스 결제창으로 이동 (이후 /payment/toss/callback 으로 복귀)
+    //    데스크톱은 외부 사이트에서 뒤로가기 시 bfcache 복원이 안 돼 loading 상태가 사라진다.
+    //    sessionStorage 플래그를 심어, 미완료로 /credit 에 돌아오면 취소 모달을 띄우게 한다.
+    try { sessionStorage.setItem('toss_payment_pending', order.id); } catch { /* noop */ }
     window.location.href = json.checkoutPage;
 
     return { success: true, orderId: order.id, message: '결제창으로 이동합니다' };

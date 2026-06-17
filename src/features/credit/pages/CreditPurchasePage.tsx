@@ -44,17 +44,29 @@ export const CreditPurchasePage: React.FC = () => {
     img.src = '/icons/tosspay-lockup.png';
   }, []);
 
-  // 토스페이 결제창에서 X(닫기)/취소로 retCancelUrl(/credit?canceled=1) 복귀 시,
-  // 뒤로가기와 동일한 '결제가 취소되었습니다' 모달로 통일한다.
+  // 결제 미완료로 /credit 에 돌아온 경우 '결제가 취소되었습니다' 모달을 띄운다.
+  // (1) 토스 retCancelUrl(/credit?canceled=1) — X/취소 복귀
+  // (2) toss_payment_pending 플래그 — 토스 결제창에서 뒤로가기(데스크톱 bfcache 미복원 포함)
   useEffect(() => {
+    let canceled = false;
+
     const params = new URLSearchParams(window.location.search);
     if (params.get('canceled') === '1') {
-      setCanceledNotice(true);
+      canceled = true;
       // 새로고침/뒤로가기 시 모달이 다시 뜨지 않도록 쿼리 정리
       params.delete('canceled');
       const qs = params.toString();
       window.history.replaceState({}, '', window.location.pathname + (qs ? `?${qs}` : ''));
     }
+
+    try {
+      if (sessionStorage.getItem('toss_payment_pending')) {
+        sessionStorage.removeItem('toss_payment_pending');
+        canceled = true;
+      }
+    } catch { /* noop */ }
+
+    if (canceled) setCanceledNotice(true);
   }, []);
 
   // 구매 버튼 → 결제수단 선택 모달 열기
