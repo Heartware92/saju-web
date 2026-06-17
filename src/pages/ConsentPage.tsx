@@ -74,8 +74,10 @@ export default function ConsentPage() {
         // 이 페이지는 OAuth 첫 로그인 전용 분기라 여기서 1회 발생 = OAuth 가입 추적. 실패해도 무시.
         trackEvent('signup');
         const isSocial = user.app_metadata?.provider && user.app_metadata.provider !== 'email';
-        const hasPhone = !!user.user_metadata?.phone;
-        if (isSocial && !hasPhone) {
+        // 우리 휴대폰 인증(phone_verified) 통과 여부로 판단 — 소셜이 자동으로 채운 phone 만 보고
+        // 인증을 건너뛰면 약관 동의만으로 가입이 끝나 중복가입이 된다.
+        const phoneVerified = !!user.user_metadata?.phone_verified;
+        if (isSocial && !phoneVerified) {
           router.replace('/auth/phone-verify');
           return;
         }

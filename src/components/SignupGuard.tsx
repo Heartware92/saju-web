@@ -27,10 +27,11 @@ export function SignupGuard() {
 
     const provider = user.app_metadata?.provider;
     const isSocial = !!provider && provider !== 'email';
-    const hasPhone = !!user.user_metadata?.phone;
+    // 우리 휴대폰 인증(phone_verified) 통과 여부로 판단(소셜 자동 phone 은 인증으로 안 침).
+    const phoneVerified = !!user.user_metadata?.phone_verified;
     const inAuthFlow = !!pathname && pathname.startsWith('/auth/');
 
-    if (isSocial && !hasPhone && !inAuthFlow) {
+    if (isSocial && !phoneVerified && !inAuthFlow) {
       void (async () => {
         try {
           await useUserStore.getState().logout();
