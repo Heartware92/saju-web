@@ -10,7 +10,8 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { lookupHanjaBySoundWithDueum, type HanjaCandidate } from '../../lib/data/hanjaByKoreanSound';
+import { lookupHanjaBySoundWithDueum, findHanjaByChar, type HanjaCandidate } from '../../lib/data/hanjaByKoreanSound';
+import { getSurnameHanja, getSurnameFallbackCandidate } from '../../lib/data/koreanSurnameHanja';
 
 const JAWON_COLOR: Record<string, string> = {
   '木': '#22c55e',
@@ -26,11 +27,13 @@ interface Props {
   sound: string;
   /** 현재 선택된 한자 (있으면 강조) */
   currentChar?: string;
+  /** 성씨 위치 글자면 true — 한국 성씨로 쓰는 한자를 후보 최상단에 모아 보여준다. */
+  prioritizeSurname?: boolean;
   onSelect: (candidate: HanjaCandidate) => void;
   onClose: () => void;
 }
 
-export function HanjaPickerModal({ open, sound, currentChar, onSelect, onClose }: Props) {
+export function HanjaPickerModal({ open, sound, currentChar, prioritizeSurname, onSelect, onClose }: Props) {
   const [filter, setFilter] = useState('');
 
   // open 변경 시 검색어 초기화
@@ -49,7 +52,13 @@ export function HanjaPickerModal({ open, sound, currentChar, onSelect, onClose }
   const lookup = useMemo(() => lookupHanjaBySoundWithDueum(sound), [sound]);
   const totalCount = lookup.totalCount;
 
-  // 필터링 — primary + 두음 그룹 모두에 동일 q 적용
+  // 성씨 위치면 그 음의 성씨 한자 목록(인구순). 아니면 빈 배열 → 기존 동작 그대로.
+  const surnameChars = useMemo(
+    () => (prioritizeSurname ? getSurnameHanja(sound) : []),
+    [prioritizeSurname, sound],
+  );
+
+  // 필터링 — 성씨 + primary + 두음 그룹 모두에 동일 q 적용
   const filteredGroups = useMemo(() => {
     const q = filter.trim();
     const matches = (cands: HanjaCandidate[]) => !q ? cands : cands.filter(c =>
@@ -57,14 +66,34 @@ export function HanjaPickerModal({ open, sound, currentChar, onSelect, onClose }
       || c.meanings.some(m => m.includes(q))
       || c.radical.includes(q)
     );
+
+    // 성씨 한자 추출 — 본음·두음 후보 전체에서 성씨 한자를 인구순으로 골라 상단으로.
+    const surnameSet = new Set(surnameChars);
+    let surname: HanjaCandidate[] = [];
+    if (surnameSet.size) {
+      const pool = [lookup.primary, ...lookup.dueumGroups.map(g => g.candidates)].flat();
+      const seen = new Set<string>();
+      for (const ch of surnameChars) {
+        // 본음/두음 후보에 있으면 그걸 쓰고, 없으면 전역 char 조회 → 그래도 없으면(金 등 데이터셋 누락) 성씨 보강 메타.
+        const found = pool.find(c => c.char === ch) ?? findHanjaByChar(ch) ?? getSurnameFallbackCandidate(ch);
+        if (found && !seen.has(ch)) { surname.push(found); seen.add(ch); }
+      }
+      surname = matches(surname);
+    }
+
+    // 성씨로 올라간 한자는 본음/두음 그리드에서 제외(중복 방지)
+    const dropSurname = (cands: HanjaCandidate[]) =>
+      surnameSet.size ? cands.filter(c => !surnameSet.has(c.char)) : cands;
+
     return {
-      primary: matches(lookup.primary),
+      surname,
+      primary: matches(dropSurname(lookup.primary)),
       dueum: lookup.dueumGroups
-        .map(g => ({ sound: g.sound, candidates: matches(g.candidates) }))
+        .map(g => ({ sound: g.sound, candidates: matches(dropSurname(g.candidates)) }))
         .filter(g => g.candidates.length > 0),
     };
-  }, [lookup, filter]);
-  const filteredTotal = filteredGroups.primary.length + filteredGroups.dueum.reduce((s, g) => s + g.candidates.length, 0);
+  }, [lookup, filter, surnameChars]);
+  const filteredTotal = filteredGroups.surname.length + filteredGroups.primary.length + filteredGroups.dueum.reduce((s, g) => s + g.candidates.length, 0);
 
   return (
     <AnimatePresence>
@@ -113,6 +142,14 @@ export function HanjaPickerModal({ open, sound, currentChar, onSelect, onClose }
                   </div>
                   <p className="text-[11px] text-text-tertiary mt-1">
                     {totalCount}개 한자 · 자원오행 색 표시 · 클릭하면 선택돼요
+                    {filteredGroups.surname.length > 0 && (
+                      <>
+                        <br />
+                        <span style={{ color: 'var(--cta-primary)' }}>
+                          한국에서 성씨로 쓰는 한자를 맨 위에 모아 보여드려요.
+                        </span>
+                      </>
+                    )}
                     {lookup.dueumGroups.length > 0 && (
                       <>
                         <br />
@@ -158,15 +195,35 @@ export function HanjaPickerModal({ open, sound, currentChar, onSelect, onClose }
                   </div>
                 ) : (
                   <>
+                    {/* 성씨 그리드 — 한국 성씨로 쓰는 한자 우선 노출 */}
+                    {filteredGroups.surname.length > 0 && (
+                      <div>
+                        <div
+                          className="text-[13px] font-bold mb-2 pl-0.5 flex items-center gap-2"
+                          style={{ color: 'var(--cta-primary)', fontFamily: 'var(--font-title)' }}
+                        >
+                          <span>성씨로 쓰는 한자</span>
+                          <span className="text-[11px] font-normal text-text-tertiary">{filteredGroups.surname.length}자</span>
+                        </div>
+                        <CandidateGrid
+                          candidates={filteredGroups.surname}
+                          displaySound={sound}
+                          currentChar={currentChar}
+                          onSelect={onSelect}
+                          isDueum={false}
+                        />
+                      </div>
+                    )}
+
                     {/* primary 그리드 — 입력 음 그대로 */}
                     {filteredGroups.primary.length > 0 && (
                       <div>
-                        {lookup.dueumGroups.length > 0 && (
+                        {(lookup.dueumGroups.length > 0 || filteredGroups.surname.length > 0) && (
                           <div
                             className="text-[13px] font-bold mb-2 pl-0.5 flex items-center gap-2"
                             style={{ color: 'var(--text-primary)', fontFamily: 'var(--font-title)' }}
                           >
-                            <span>「{sound}」 본음</span>
+                            <span>{filteredGroups.surname.length > 0 ? `그 외 「${sound}」 한자` : `「${sound}」 본음`}</span>
                             <span className="text-[11px] font-normal text-text-tertiary">{filteredGroups.primary.length}자</span>
                           </div>
                         )}

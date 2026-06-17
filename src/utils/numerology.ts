@@ -11,6 +11,7 @@
  */
 
 import { lookupHanjaBySound } from '../lib/data/hanjaByKoreanSound';
+import { getSurnameFallbackCandidate } from '../lib/data/koreanSurnameHanja';
 import { lookupSuri, SURI_ELEMENT_KOREAN, type SuriEntry } from '../lib/data/numerology81';
 
 export interface FourGyeokResult {
@@ -29,7 +30,8 @@ export interface FourGyeokResult {
 export function strokesOf(char: string, sound: string): number {
   const candidates = lookupHanjaBySound(sound);
   const hit = candidates.find(c => c.char === char);
-  return hit?.strokes ?? 0;
+  // 데이터셋에 없으면(金 등 누락 성씨 한자) 성씨 보강 메타의 표준 획수로.
+  return hit?.strokes ?? getSurnameFallbackCandidate(char)?.strokes ?? 0;
 }
 
 /**

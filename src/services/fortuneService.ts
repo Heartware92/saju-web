@@ -1892,12 +1892,14 @@ export async function buildNameFortunePrompt(
   let nameInputWithResolved = nameInput;
   if (nameInput.hanjaName && nameInput.charMeanings && nameInput.charMeanings.length > 0) {
     const { lookupHanjaBySound } = await import('@/lib/data/hanjaByKoreanSound');
+    const { getSurnameFallbackCandidate } = await import('@/lib/data/koreanSurnameHanja');
     const { calc4Gyeok } = await import('@/utils/numerology');
     const chars = [...nameInput.hanjaName];
     const resolved = chars.map((char, i) => {
       const sound = nameInput.charMeanings?.[i]?.sound ?? '';
       const candidates = lookupHanjaBySound(sound);
-      const hit = candidates.find((c) => c.char === char);
+      // 데이터셋 미스 시 성씨 보강 메타(金 등)로 폴백 — 4격·자원오행 누락 방지.
+      const hit = candidates.find((c) => c.char === char) ?? getSurnameFallbackCandidate(char);
       return hit
         ? { char, meaning: hit.meanings[0] ?? (nameInput.charMeanings?.[i]?.meaning ?? ''), radical: hit.radical, strokes: hit.strokes, jawon: hit.jawon }
         : { char, meaning: nameInput.charMeanings?.[i]?.meaning ?? '', radical: '', strokes: 0, jawon: '' };

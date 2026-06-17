@@ -96,6 +96,19 @@ export function lookupHanjaBySoundWithDueum(sound: string): HanjaLookupResult {
   return { primary, dueumGroups, totalCount };
 }
 
+// 한자 한 글자 → 후보 메타 조회(음 무관). lazy 인덱스.
+// 용도: 사전음과 성씨음이 다르고 두음법칙으로도 안 잡히는 특수 성씨(金=김 등) 보강.
+let _charIndex: Map<string, HanjaCandidate> | null = null;
+export function findHanjaByChar(char: string): HanjaCandidate | null {
+  if (!_charIndex) {
+    _charIndex = new Map();
+    for (const cands of Object.values(HANJA_BY_KOREAN_SOUND)) {
+      for (const c of cands) if (!_charIndex.has(c.char)) _charIndex.set(c.char, c);
+    }
+  }
+  return _charIndex.get(char) ?? null;
+}
+
 /**
  * 부수 → 자원오행 매핑 (전통 성명학). prompt 룰베이스와 동일.
  * 동적 lookup 이 필요할 때 사용.

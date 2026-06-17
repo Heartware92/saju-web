@@ -1545,6 +1545,7 @@ function NameInputPanel({
         open={pickerOpen}
         sound={chars[pickerIndex] ?? ''}
         currentChar={selectedHanjas[pickerIndex] ?? undefined}
+        prioritizeSurname={pickerIndex < surnameLength}
         onSelect={(c) => handleSelectHanja(pickerIndex, c)}
         onClose={() => setPickerOpen(false)}
       />
