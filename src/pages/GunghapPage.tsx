@@ -333,6 +333,10 @@ export default function GunghapPage() {
 
   // 결과 준비 완료 시 스크롤 최상단
   useScrollToTopOnLoad(!!result && !loading);
+  // 카테고리 목록을 아래로 스크롤한 채 '상대 정보' 입력 스텝으로 넘어가면 스크롤이 남아있는 문제 — 진입 시 최상단으로
+  useEffect(() => {
+    if (step === 'input') window.scrollTo({ top: 0 });
+  }, [step]);
   const [mySajuResult, setMySajuResult] = useState<SajuResult | null>(null);
   const [otherSajuResult, setOtherSajuResult] = useState<SajuResult | null>(null);
   const [gunghapTitle, setGunghapTitle] = useState('');
