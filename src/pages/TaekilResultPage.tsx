@@ -1048,9 +1048,11 @@ export default function TaekilResultPage() {
       </div>
 
       {/* 공유 — 카카오톡 + URL 복사 */}
-      {recordId && (
+      {/* ★ 새 풀이(jobId) 에서도 공유 노출 — urlJobId 가 곧 saju_records(=보관함 레코드) id.
+          기존 {recordId} 만이면 보관함 진입 시에만 공유가 떠서 새 풀이엔 공유 버튼이 없었음(다른 운세는 recordId||savedRecordId). */}
+      {(recordId || urlJobId) && (
         <div style={{ marginTop: 24, padding: '0 4px' }}>
-          <ShareBar recordId={recordId} type="saju" category="taekil" />
+          <ShareBar recordId={(recordId || urlJobId)!} type="saju" category="taekil" />
         </div>
       )}
 
