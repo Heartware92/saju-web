@@ -11,7 +11,7 @@
  * "동의하지 않고 나가기" 누르면 즉시 로그아웃 + 홈으로.
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { auth, supabase, agreement } from '../services/supabase';
 import { useUserStore } from '../store/useUserStore';
@@ -39,6 +39,21 @@ export default function ConsentPage() {
     setAgreedAge14(v);
     setAgreedMarketing(v);
   };
+
+  // 마운트 시 세션 서버검증 — 토큰이 무효(만료/계정 삭제 등)면 동의를 저장할 수 없다.
+  // 죽은 세션을 정리하고 로그인으로 보내, 'Not authenticated' 막다른길을 방지한다.
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!cancelled && !user) {
+        try { await auth.signOut(); } catch { /* noop */ }
+        useUserStore.setState({ user: null });
+        router.replace('/login');
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [router]);
 
   const handleAccept = async () => {
     if (!allRequiredAgreed) {
@@ -68,6 +83,13 @@ export default function ConsentPage() {
       router.replace(next);
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : '';
+      // 인증 오류(세션 만료/계정 삭제 등)면 죽은 세션을 정리하고 재로그인으로 — 막다른길 방지.
+      if (msg === 'Not authenticated' || /not authenticated|jwt|session|token/i.test(msg)) {
+        try { await auth.signOut(); } catch { /* noop */ }
+        useUserStore.setState({ user: null });
+        router.replace('/login');
+        return;
+      }
       setError(msg || '동의 처리 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.');
       setSubmitting(false);
     }
