@@ -37,6 +37,13 @@ export const CreditPurchasePage: React.FC = () => {
     return () => window.removeEventListener('pageshow', onPageShow);
   }, []);
 
+  // 토스페이 로고를 페이지 진입 시 미리 받아둔다(캐시 워밍).
+  // 결제수단 모달은 클릭 시점에 열려 <img>가 그제서야 마운트되는데, 미리 받아두면 즉시 표시된다.
+  useEffect(() => {
+    const img = new window.Image();
+    img.src = '/icons/tosspay-lockup.png';
+  }, []);
+
   // 토스페이 결제창에서 X(닫기)/취소로 retCancelUrl(/credit?canceled=1) 복귀 시,
   // 뒤로가기와 동일한 '결제가 취소되었습니다' 모달로 통일한다.
   useEffect(() => {
@@ -226,13 +233,15 @@ export const CreditPurchasePage: React.FC = () => {
 
 /**
  * toss pay 공식 로고 락업 (심볼 + 워드마크) — 토스 제공 에셋.
- * 원본 1410x342 (≈4.12:1), 투명 배경. 흰 카드 버튼 위에 표시.
+ * 395x96 (≈4.11:1), 투명 배경. 흰 카드 버튼 위 24px 높이로 표시.
+ * width/height 명시로 레이아웃 시프트 방지(페이지 진입 시 프리로드됨).
  */
 const TossPayLogo: React.FC = () => (
   // eslint-disable-next-line @next/next/no-img-element
   <img
     src="/icons/tosspay-lockup.png"
     alt="toss pay"
+    width={99}
     height={24}
     className="h-6 w-auto select-none"
     draggable={false}
