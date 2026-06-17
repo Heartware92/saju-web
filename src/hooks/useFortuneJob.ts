@@ -139,30 +139,36 @@ export function useFortuneJob(
     };
     void fetchOnce(true);
 
-    // 2-b) 폴링 폴백 — Realtime UPDATE 를 놓쳐도(채널 미구독/WS 끊김/이벤트 누락) 같은 탭에
-    //      머무는 동안 done/failed 로 전환되도록 주기적으로 재조회한다.
-    //      증상: 로딩 게이지가 100% 찬 채 결과로 안 넘어가는데 보관함엔 결과가 있음 → 이 폴백으로 해소.
-    pollId = setInterval(() => {
-      if (!cancelled && !terminal) void fetchOnce(false);
-    }, 4000);
+    // ── 모바일/데스크톱 분리 ──────────────────────────────────────────────
+    // 데스크톱: Realtime WebSocket 이 안정적이라 원래 잘 동작했다. 탭 복귀(visible/focus)
+    //          재조회만 둔다(원래 동작). 폴링·pageshow·online 같은 공격적 복구는 켜지 않는다
+    //          (데스크톱에 불필요 + 재로딩 부작용 유발).
+    // 모바일: 브라우저가 백그라운드 탭을 폐기/프리즈해 Realtime·timer 가 끊긴다(iOS Safari·
+    //         안드 크롬·삼성인터넷 공통). 폴링 폴백 + pageshow(bfcache)·online 복귀 재조회를 추가.
+    const isMobile = typeof navigator !== 'undefined' &&
+      (navigator.maxTouchPoints > 0 || /Mobi|Android|iP(hone|ad|od)/i.test(navigator.userAgent));
 
-    // 3) 백그라운드 탭 복귀 시 재조회 — realtime WebSocket 이 끊기고 setInterval 이 모바일에서
-    //    얼어 done UPDATE 를 놓쳐도, 복귀 즉시 1회 재조회해 상태를 보정한다.
-    //    ★ 모바일(특히 iOS Safari)은 앱 전환 복귀 시 visibilitychange/focus 가 불안정하고
-    //      pageshow(bfcache 복원)로 돌아오는 경우가 많아 함께 구독한다. online(네트워크 복구)도 포함.
-    //      (증상: 모바일에서 생성 중 다른 앱 갔다 오면 결과로 안 넘어가고 로딩에서 멈춤 → 이 보정으로 해소)
     const kick = () => { if (!cancelled && !terminal) void fetchOnce(false); };
     const onVisible = () => { if (document.visibilityState === 'visible') kick(); };
+
+    // 탭 복귀 재조회 — 데스크톱·모바일 공통(원래 동작 유지)
     document.addEventListener('visibilitychange', onVisible);
-    window.addEventListener('focus', kick);
-    window.addEventListener('pageshow', kick);
-    window.addEventListener('online', kick);
+    window.addEventListener('focus', onVisible);
+
+    // 모바일 전용 — 폴링 폴백 + bfcache(pageshow)·online 복귀 재조회
+    if (isMobile) {
+      pollId = setInterval(() => {
+        if (!cancelled && !terminal) void fetchOnce(false);
+      }, 4000);
+      window.addEventListener('pageshow', kick);
+      window.addEventListener('online', kick);
+    }
 
     return () => {
       cancelled = true;
       stopPoll();
       document.removeEventListener('visibilitychange', onVisible);
-      window.removeEventListener('focus', kick);
+      window.removeEventListener('focus', onVisible);
       window.removeEventListener('pageshow', kick);
       window.removeEventListener('online', kick);
       void supabase.removeChannel(channel);
