@@ -535,8 +535,8 @@ export default function TaekilResultPage() {
                         </span>
                         <span style={{ fontSize: 15, fontWeight: 600, color: 'var(--text-secondary)' }}>{mon}월 ({dow})</span>
                         <span style={{
-                          marginTop: 6, padding: '5px 12px', borderRadius: 99,
-                          fontSize: 14, fontWeight: 700,
+                          marginTop: 6, padding: '5px 10px', borderRadius: 99,
+                          fontSize: 14, fontWeight: 700, whiteSpace: 'nowrap',
                           color: GRADE_COLOR[d.grade], background: GRADE_BG[d.grade],
                           border: `1px solid ${GRADE_COLOR[d.grade]}40`,
                         }}>

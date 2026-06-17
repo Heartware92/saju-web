@@ -277,7 +277,9 @@ export default function TaekilPage() {
       const { jobId } = (await res.json()) as { jobId: string };
       // 결과 페이지로 navigate — TaekilResultPage 가 ?jobId 로 Realtime 구독.
       // ?t= 로 로딩 시작 시각 전달 → 결과 페이지 로딩바가 0% 부터 새로 시작하지 않음.
-      router.push(`/saju/taekil/result?jobId=${jobId}&t=${loadStartedAt}`);
+      // ★ replace 사용 — push 면 로딩 상태였던 TaekilPage 가 히스토리에 남아, 결과에서 뒤로가기 시
+      //   로딩 화면으로 복귀하는 사고. replace 로 로딩 항목을 결과로 대체해 뒤로가기가 로딩으로 안 감.
+      router.replace(`/saju/taekil/result?jobId=${jobId}&t=${loadStartedAt}`);
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : '오류가 발생했어요.';
       setAiError(msg);
