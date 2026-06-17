@@ -527,7 +527,9 @@ export default function PeriodFortunePage({ scope }: { scope: FortuneScope | 'da
     setArchiveYear(null);  // 새 풀이라 archive year override 해제
     apiCalledKeyRef.current = null;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isFreshParam, targetYear, profileIdParam, scope, saju]);
+    // ★ saju(객체)는 탭 복귀 시 fetchProfiles→새 profiles→새 saju 로 reference 가 바뀌어 이 reset effect
+    //   가 재실행되며 결과를 null 로 만들었다(0.x초 떴다 로딩 복귀). 안정 문자열 sajuKey 로 교체해 차단.
+  }, [isFreshParam, targetYear, profileIdParam, scope, saju && sajuKey(saju)]);
 
   // ── 보관함 재생 모드 — recordId 가 있으면 DB에서 풀이 복원, AI 호출 skip ──
   // (scope='year'·newyear / scope='date'·period 가 archive 저장됨)

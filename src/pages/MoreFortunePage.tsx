@@ -625,7 +625,8 @@ export default function MoreFortunePage({ category }: Props) {
     setResult(null);
     setResultSections(null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [category, saju, koreanName, charMeanings, selectedHanjas, dreamText, isArchiveMode, freshParam, effectiveJobId]);
+    // ★ saju(객체)는 탭 복귀 시 reference 가 바뀌어 이 effect 재실행→결과 null 사고. 안정 문자열로 교체.
+  }, [category, saju && sajuKey(saju), koreanName, charMeanings, selectedHanjas, dreamText, isArchiveMode, freshParam, effectiveJobId]);
 
   // auto-start: 모달에서 "새로 풀이 받기" 클릭 후 소개 페이지 건너뛰고 바로 풀이
   // ★ shouldAutoStart 는 freshParam=true 일 때만 true → 무조건 force=true 로 호출.
