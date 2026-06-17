@@ -87,6 +87,11 @@ export const auth = {
     const baseUrl =
       typeof window !== 'undefined' ? window.location.origin : (process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000');
 
+    // 새 소셜 로그인 시작 전 기존 세션(로컬)을 정리한다.
+    // 안 그러면 살아있던 다른 provider 세션이 콜백에서 복원돼,
+    // 예) 카카오를 눌렀는데 기존 구글 세션으로 로그인돼 버리는 문제가 생긴다.
+    try { await supabase.auth.signOut({ scope: 'local' }); } catch { /* noop */ }
+
     const { data, error } = await supabase.auth.signInWithOAuth({
       provider,
       options: {
