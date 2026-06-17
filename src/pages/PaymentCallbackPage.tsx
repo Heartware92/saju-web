@@ -28,17 +28,13 @@ export default function PaymentCallbackPage() {
 
     const paymentId = searchParams.get('paymentId') || '';
     const code = searchParams.get('code');
-    const msg = searchParams.get('message');
 
-    // 코드가 실려 돌아온 경우: 사용자 취소(닫기/뒤로)면 /credit 의 취소 모달로 통일,
-    // 그 외 기술적 실패는 기존 실패 화면 유지.
+    // PG에서 code 가 실려 돌아오면 결제 미완료(취소/닫기/실패).
+    // 모바일 리다이렉트 경로 — 데스크톱(in-page)과 동일하게 /credit 의
+    // '결제가 취소되었습니다' 모달로 통일한다(별도 실패 전체화면 제거).
+    // ※ 결제 성공은 code 없이 paymentId 로 돌아오므로 이 분기에 걸리지 않는다.
     if (code) {
-      if (/cancel/i.test(code)) {
-        router.replace('/credit?canceled=1');
-        return;
-      }
-      setStatus('failed');
-      setMessage(msg || '결제가 취소되었거나 실패했습니다.');
+      router.replace('/credit?canceled=1');
       return;
     }
 
