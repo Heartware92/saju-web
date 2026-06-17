@@ -131,7 +131,8 @@ export async function POST(req: NextRequest) {
           apiKey: TOSS_PAY_API_KEY,
           payToken: pgRef,
           reason: reason || '사용자 요청 환불',
-          refundNo: `refund-${orderId}`,
+          // 토스 refundNo 최대 36자 — `refund-${UUID}`(43자) 길이 초과 거부됨. 하이픈 제거 UUID(33자)로.
+          refundNo: `r${orderId.replace(/-/g, '')}`,
           idempotent: true,
         }),
       });

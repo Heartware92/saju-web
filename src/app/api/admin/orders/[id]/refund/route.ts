@@ -64,7 +64,9 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
         apiKey: TOSS_PAY_API_KEY,
         payToken: pgRef,
         reason: refundReason,
-        refundNo: `refund-${orderId}`,
+        // 토스 refundNo 는 최대 36자 — `refund-${UUID}`(43자)는 길이 초과로 거부됨.
+        // 하이픈 제거 UUID(32자) + 'r' 프리픽스(33자)로 주문당 고정·멱등.
+        refundNo: `r${orderId.replace(/-/g, '')}`,
         idempotent: true,
       }),
     });
