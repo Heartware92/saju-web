@@ -19,6 +19,8 @@ import { supabaseAdmin } from '@/services/supabaseAdmin';
 
 const PORTONE_API_SECRET = process.env.PORTONE_API_SECRET || '';
 const PORTONE_API_BASE = 'https://api.portone.io';
+const TOSS_PAY_API_KEY = process.env.TOSS_PAY_API_KEY || '';
+const TOSS_PAY_API_BASE = 'https://pay.toss.im/api/v2';
 
 interface RefundRequestBody {
   orderId: string;
@@ -34,13 +36,6 @@ export async function POST(req: NextRequest) {
       return NextResponse.json(
         { success: false, error: '로그인이 필요합니다.' },
         { status: 401 }
-      );
-    }
-
-    if (!PORTONE_API_SECRET) {
-      return NextResponse.json(
-        { success: false, error: 'PortOne API secret is not configured.' },
-        { status: 500 }
       );
     }
 
@@ -83,7 +78,12 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    if (!order.portone_payment_id) {
+    // 결제수단별 PG 참조 — 토스페이는 payToken(payment_key), 그 외(포트원)는 portone_payment_id.
+    const isToss = order.payment_method === 'tosspay';
+    const pgRef: string | null = isToss
+      ? (order.payment_key ?? null)
+      : (order.portone_payment_id ?? null);
+    if (!pgRef) {
       return NextResponse.json(
         { success: false, error: '결제 정보가 없어 환불할 수 없습니다.' },
         { status: 400 }
@@ -112,24 +112,58 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // 3) PortOne 환불 API 호출
-    const cancelRes = await fetch(
-      `${PORTONE_API_BASE}/payments/${encodeURIComponent(order.portone_payment_id)}/cancel`,
-      {
-        method: 'POST',
-        headers: {
-          Authorization: `PortOne ${PORTONE_API_SECRET}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ reason: reason || '사용자 요청 환불' }),
-        cache: 'no-store',
+    // 3) PG 환불 API 호출 — 결제수단별 분기
+    let pgOk = false;
+    let pgDetail = '';
+    if (isToss) {
+      if (!TOSS_PAY_API_KEY) {
+        return NextResponse.json(
+          { success: false, error: '토스페이 환불 설정이 없습니다.' },
+          { status: 500 }
+        );
       }
-    );
+      // amount 미지정 = 전액 환불. refundNo + idempotent 로 중복 환불 방지.
+      const r = await fetch(`${TOSS_PAY_API_BASE}/refunds`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        cache: 'no-store',
+        body: JSON.stringify({
+          apiKey: TOSS_PAY_API_KEY,
+          payToken: pgRef,
+          reason: reason || '사용자 요청 환불',
+          refundNo: `refund-${orderId}`,
+          idempotent: true,
+        }),
+      });
+      const j = await r.json().catch(() => null);
+      pgOk = r.ok && j?.code === 0;
+      pgDetail = pgOk ? '' : JSON.stringify(j ?? {}).slice(0, 500);
+    } else {
+      if (!PORTONE_API_SECRET) {
+        return NextResponse.json(
+          { success: false, error: 'PortOne API secret is not configured.' },
+          { status: 500 }
+        );
+      }
+      const r = await fetch(
+        `${PORTONE_API_BASE}/payments/${encodeURIComponent(pgRef)}/cancel`,
+        {
+          method: 'POST',
+          headers: {
+            Authorization: `PortOne ${PORTONE_API_SECRET}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ reason: reason || '사용자 요청 환불' }),
+          cache: 'no-store',
+        }
+      );
+      pgOk = r.ok;
+      pgDetail = pgOk ? '' : (await r.text().catch(() => '')).slice(0, 500);
+    }
 
-    if (!cancelRes.ok) {
-      const txt = await cancelRes.text().catch(() => '');
+    if (!pgOk) {
       return NextResponse.json(
-        { success: false, error: 'PortOne 환불 실패', detail: txt.slice(0, 500) },
+        { success: false, error: '환불 실패', detail: pgDetail },
         { status: 502 }
       );
     }

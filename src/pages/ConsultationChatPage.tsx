@@ -223,14 +223,12 @@ export default function ConsultationChatPage() {
     }
   }, [consultJob?.status, activeJobId, activeConversationId, hydrateRoomFromDb, fetchBalance, consultJob?.errorMessage]);
 
-  // 모바일 폴링 폴백 — Realtime(useFortuneJob)이 done 을 놓쳐도 "엮는 중"이 반드시 풀리게 한다.
-  // 공용 useFortuneJob 은 건드리지 않고(다른 세션이 데스크톱 회귀 때문에 폴링을 뺀 상태) 상담소 안에서만,
-  // 모바일에서만 saju_records 상태를 직접 폴링한다. 데스크톱은 Realtime 이 안정적이라 제외.
+  // 폴링 폴백 — Realtime(useFortuneJob)이 done 을 놓쳐도 "엮는 중"이 반드시 풀리게 한다.
+  // 공용 useFortuneJob 은 안 건드리고(다른 세션이 데스크톱 회귀 때문에 폴링을 뺀 상태) 상담소 안에서만,
+  // 모바일·데스크톱 모두 saju_records 를 직접 폴링한다. terminal(done/failed)일 때만 행동하고 즉시
+  // 중단하므로 '결과→로딩 역행' 같은 재로딩 회귀를 유발하지 않는다(상태를 되돌리는 setJob 없음).
   useEffect(() => {
     if (!activeJobId || !loading) return;
-    const isMobile = typeof navigator !== 'undefined' &&
-      (navigator.maxTouchPoints > 0 || /Mobi|Android|iP(hone|ad|od)/i.test(navigator.userAgent));
-    if (!isMobile) return;
     let cancelled = false;
     const rid = activeConversationId;
     const poll = async () => {

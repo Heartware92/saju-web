@@ -77,7 +77,30 @@ export async function POST(req: NextRequest) {
     }
     const amount = pkg.price;
 
-    // 1) 결제 승인 (실제 캡처)
+    // 0) 동시 confirm 이중 캡처(이중 청구) 방지 — execute 전에 주문을 원자적으로 선점한다.
+    //    orders.status enum 에 'processing' 이 없어, free-text payment_method 를 CAS 락으로 사용한다.
+    //    승리한 1건만 execute(실제 캡처)로 진입하고, 나머지는 재실행 없이 멱등 응답한다.
+    const { data: claimed } = await supabaseAdmin
+      .from('orders')
+      .update({ payment_method: 'tosspay:executing' })
+      .eq('id', order.id)
+      .eq('status', 'pending')
+      .eq('payment_method', 'tosspay')
+      .select('id')
+      .maybeSingle();
+    if (!claimed) {
+      const { data: cur } = await supabaseAdmin
+        .from('orders').select('status').eq('id', order.id).maybeSingle();
+      if (cur?.status === 'completed') {
+        return NextResponse.json({ success: true, alreadyCompleted: true, orderId: order.id });
+      }
+      return NextResponse.json(
+        { success: false, error: '결제가 처리 중입니다. 잠시 후 다시 확인해 주세요.', processing: true },
+        { status: 409 },
+      );
+    }
+
+    // 1) 결제 승인 (실제 캡처) — 위 CAS 락을 획득한 요청만 도달
     const execRes = await fetch(`${TOSS_PAY_API_BASE}/execute`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -112,8 +135,8 @@ export async function POST(req: NextRequest) {
     }
 
     // 3) 주문 완료 + 크레딧 지급 (기존 멱등 로직 재사용)
-    const txnId = (exec.transactionId as string) || payToken;
-    const granted = await grantCreditsForOrder(order, txnId, 'tosspay');
+    //    payToken 을 보존한다(payment_key·portone_payment_id) — 토스 환불(/refunds)이 payToken 을 사용.
+    const granted = await grantCreditsForOrder(order, payToken, 'tosspay');
 
     if (!granted.ok) {
       return NextResponse.json(
