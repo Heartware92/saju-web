@@ -87,6 +87,11 @@ export function useFortuneJob(
 
     const applyRow = (row: Record<string, unknown>) => {
       const st = row.status as string | undefined;
+      // ★ 상태 역행 방지 — 이미 done/failed 에 도달했으면, 뒤늦게 도착한 비종료(pending/processing)
+      //   이벤트는 무시한다. 모바일(Safari) 백그라운드 동안 Realtime WebSocket 이 버퍼링한 옛 'processing'
+      //   UPDATE 가 복귀 후 done 보다 늦게 재생되어 결과→로딩으로 되돌아가는 현상(결과 0.5초 깜빡임 후
+      //   93% 로딩 멈춤)을 차단한다.
+      if (terminal && st !== 'done' && st !== 'failed') return;
       if (st === 'done' || st === 'failed') { terminal = true; stopPoll(); }
       setJob((prev) => mergeRow(prev, jobId, row, table));
     };
