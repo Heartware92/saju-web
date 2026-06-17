@@ -74,6 +74,7 @@ const TODAY_MESSAGES = [
 
 function InputForm({
   initialSlot,
+  initialHour,
   profileJobState,
   profileCustomJobState,
   profileLoveState,
@@ -81,6 +82,7 @@ function InputForm({
   onSubmit,
 }: {
   initialSlot: TodayTimeSlot;
+  initialHour: number;
   /** 프로필에 저장된 직업·연애 상태 — 매번 선택할 필요 없이 자동 사용 */
   profileJobState: string;
   profileCustomJobState: string | null;
@@ -160,6 +162,7 @@ function InputForm({
       loveState: (profileLoveState || undefined) as TodayLoveState | undefined,
       customLoveState: (profileCustomLoveState && profileCustomLoveState.trim()) || undefined,
       timeSlot: initialSlot,
+      entryHour: initialHour,
       q1Text: q1.q,
       q2Text: q2.q,
       q1Answer: resolvedQ1 || undefined,
@@ -357,7 +360,8 @@ export default function TodayFortunePage() {
   }, [profiles, profileId, needsProfileSelect]);
 
   const todayIso = new Date().toISOString().slice(0, 10);
-  const initialSlot = useMemo(() => getTodayTimeSlot(new Date().getHours()), []);
+  const initialHour = useMemo(() => new Date().getHours(), []);
+  const initialSlot = useMemo(() => getTodayTimeSlot(initialHour), [initialHour]);
 
   const [result, setResult] = useState<SajuResult | null>(null);
   const [userCtx, setUserCtx] = useState<TodayUserContext | null>(null);
@@ -639,7 +643,10 @@ export default function TodayFortunePage() {
   }
 
   // 로딩 화면 (사용자 입력 제출 후 ~ 결과 도착 전)
-  if (reportLoading) {
+  // ★ 결과(report)가 한 번 채워지면 절대 로딩으로 되돌아가지 않는다(sticky). 모바일 복귀 시
+  //   뒤늦은 비종료 이벤트 등으로 reportLoading 이 잠깐 true 가 돼도 결과 화면을 유지 →
+  //   "결과 0.5초 떴다가 다시 로딩(93%)으로 되돌아가는" 현상 차단.
+  if (reportLoading && !report) {
     const targetDateStr = (() => {
       const d = new Date(todayIso);
       return d.toLocaleDateString('ko-KR', { month: 'long', day: 'numeric', weekday: 'long' });
@@ -687,6 +694,7 @@ export default function TodayFortunePage() {
         </div>
         <InputForm
           initialSlot={initialSlot}
+          initialHour={initialHour}
           profileJobState={targetProfile?.job_state || ''}
           profileCustomJobState={targetProfile?.custom_job_state ?? null}
           profileLoveState={targetProfile?.love_state || ''}

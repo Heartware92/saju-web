@@ -95,6 +95,10 @@ export default function ConsultationChatPage() {
   const [showInsufficientModal, setShowInsufficientModal] = useState(false);
   const [ready, setReady] = useState(false);
   const [activeJobId, setActiveJobId] = useState<string | null>(null);
+  // 타이핑 효과 — 백그라운드 답변을 타자기처럼 점진 노출(스트리밍 느낌 복원). { 메시지id, 노출 글자수 }
+  const [typing, setTyping] = useState<{ id: string; n: number } | null>(null);
+  const justAnsweredRef = useRef(false); // 잡 완료 직후 도착한 답변만 애니메이션(기존 대화 하이드레이트는 즉시 표시)
+  const animatedRef = useRef<Set<string>>(new Set());
 
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -197,6 +201,7 @@ export default function ConsultationChatPage() {
   useEffect(() => {
     if (!consultJob || !activeJobId) return;
     if (consultJob.status === 'done') {
+      justAnsweredRef.current = true; // 이번 잡 답변은 타자기 애니메이션 대상
       void hydrateRoomFromDb(activeConversationId);
       setActiveJobId(null);
       setLoading(false);
@@ -221,7 +226,27 @@ export default function ConsultationChatPage() {
     const distanceFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
     if (distanceFromBottom > 120) return;
     el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' });
-  }, [messages, loading]);
+  }, [messages, loading, typing?.n]);
+
+  // 타이핑 트리거 — 잡 완료로 새 답변이 도착하면(justAnswered) 그 답변을 타자기처럼 노출 시작.
+  // 기존 대화 하이드레이트/재진입은 즉시 표시(애니메이션 안 함).
+  useEffect(() => {
+    if (!justAnsweredRef.current) return;
+    const last = [...messages].reverse().find(m => m.role === 'assistant' && !m.pending && m.content);
+    if (!last || animatedRef.current.has(last.id)) return;
+    justAnsweredRef.current = false;
+    animatedRef.current.add(last.id);
+    setTyping({ id: last.id, n: 0 });
+  }, [messages]);
+
+  // 타이핑 진행 — 글자 점진 노출(타자기). 완료되면 typing 해제.
+  useEffect(() => {
+    if (!typing) return;
+    const full = messages.find(m => m.id === typing.id)?.content ?? '';
+    if (typing.n >= full.length) { setTyping(null); return; }
+    const t = setTimeout(() => setTyping(x => (x ? { ...x, n: Math.min(full.length, x.n + 4) } : null)), 16);
+    return () => clearTimeout(t);
+  }, [typing, messages]);
 
   // 방 진입 시 1회 — 가장 최근(최하단) 대화로 포커싱 (smooth 아닌 즉시 점프)
   const didInitialScroll = useRef(false);
@@ -420,7 +445,8 @@ export default function ConsultationChatPage() {
             {messages.map((msg, idx) => {
               const isLast = idx === messages.length - 1;
               const isPending = msg.role === 'assistant' && !!msg.pending && !msg.content;
-              const showFollowups = !loading && msg.role === 'assistant' && isLast && (msg.followups?.length ?? 0) > 0;
+              const isTyping = typing?.id === msg.id;
+              const showFollowups = !loading && !isTyping && msg.role === 'assistant' && isLast && (msg.followups?.length ?? 0) > 0;
               return (
                 <motion.div
                   key={msg.id}
@@ -447,6 +473,11 @@ export default function ConsultationChatPage() {
                           <span className="inline-block w-2 h-2 rounded-full bg-cta animate-pulse" style={{ animationDelay: '0.4s' }} />
                           <span className="text-[14px] text-text-secondary ml-1">사주 데이터를 엮는 중...</span>
                         </div>
+                      ) : isTyping ? (
+                        <>
+                          {msg.content.slice(0, typing!.n)}
+                          <span className="inline-block w-[8px] h-[15px] bg-cta/80 ml-0.5 -mb-0.5 align-middle animate-pulse" />
+                        </>
                       ) : (
                         msg.content
                       )}
