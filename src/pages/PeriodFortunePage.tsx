@@ -826,8 +826,12 @@ export default function PeriodFortunePage({ scope }: { scope: FortuneScope | 'da
             }
             return;
           }
-          const minuteBucket = Math.floor(Date.now() / 60000);
-          const idempotencyKey = `${sajuKey(saju)}:${targetYear}:${isFromYearFortune ? 'yf' : 'ny'}:${minuteBucket}`;
+          // idempotencyKey 안정화 — 모바일 복귀/새로고침으로 jobId 박히기 전 재진입해도 같은 키 →
+          // 서버가 기존 잡 반환(중복차감 0, 0%부터 새 로딩 방지). '다시 풀이'(isFresh/refetchNonce)만 새 키로 새 풀이.
+          const regen = isFresh || refetchNonce > 0;
+          const idempotencyKey = regen
+            ? `${sajuKey(saju)}:${targetYear}:${isFromYearFortune ? 'yf' : 'ny'}:r${refetchNonce}:${Math.floor(Date.now() / 60000)}`
+            : `${sajuKey(saju)}:${targetYear}:${isFromYearFortune ? 'yf' : 'ny'}`;
           const res = await fetch('/api/fortune/jobs/create', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${accessToken}` },
@@ -922,8 +926,11 @@ export default function PeriodFortunePage({ scope }: { scope: FortuneScope | 'da
             loveState: targetProfile?.love_state ?? null,
             customLoveState: targetProfile?.custom_love_state ?? null,
           });
-          const minuteBucket = Math.floor(Date.now() / 60000);
-          const idempotencyKey = `period:${sajuKey(saju)}:${pickedDate}:${minuteBucket}`;
+          // idempotencyKey 안정화 (위 년운과 동일 — 재진입 시 기존 잡 dedup, '다시 풀이'만 새 키)
+          const regen = isFresh || refetchNonce > 0;
+          const idempotencyKey = regen
+            ? `period:${sajuKey(saju)}:${pickedDate}:r${refetchNonce}:${Math.floor(Date.now() / 60000)}`
+            : `period:${sajuKey(saju)}:${pickedDate}`;
           const res = await fetch('/api/fortune/jobs/create', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${accessToken}` },
