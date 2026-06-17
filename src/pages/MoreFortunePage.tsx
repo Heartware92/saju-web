@@ -882,7 +882,8 @@ export default function MoreFortunePage({ category }: Props) {
 
   // 로딩 풀스크린 — 보관함 재생 모드는 짧은 DB 조회라 AI 로딩 연출 대신 간단한 표시
   // shouldAutoStart: 모달→바로 풀이 시 saju 로드 전부터 로딩 화면 표시
-  if (!isArchiveMode && (loading || (shouldAutoStart && !result && !error))) {
+  // ★ sticky — 결과(result)가 채워지면 로딩으로 안 돌아간다(정통사주 패턴, 백그라운드 복귀 대응)
+  if (!isArchiveMode && !result && (loading || (shouldAutoStart && !error))) {
     return (
       <AILoadingBar
         label={`${cfg.title} 분석 중`}

@@ -664,7 +664,8 @@ export default function TojeongResultPage() {
   }
 
   // ── AI 풀이 로딩 — 풀스크린 ──
-  if (aiLoading) {
+  // ★ sticky — 결과(aiSections)가 채워지면 로딩으로 안 돌아간다(정통사주 패턴, 백그라운드 복귀 대응)
+  if (aiLoading && !aiSections) {
     return (
       <AILoadingBar
         label="토정비결 심층 풀이중"

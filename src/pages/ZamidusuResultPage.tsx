@@ -1122,8 +1122,8 @@ export default function ZamidusuResultPage() {
   }
 
   // ── 풀스크린 로딩: 명반 계산 OR AI 풀이 대기 중 ──
-  // 한번에 모든 내용이 준비되어 쭉 보이도록 풀스크린으로 대기
-  if (!chart || aiLoading) {
+  // ★ sticky — 결과(aiResult)가 채워지면 로딩으로 안 돌아간다(정통사주 패턴, 백그라운드 복귀 대응)
+  if (!chart || (aiLoading && !aiResult)) {
     return (
       <AILoadingBar
         label="자미두수 명반을 펼치는 중"

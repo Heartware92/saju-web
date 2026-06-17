@@ -1089,7 +1089,9 @@ export default function PeriodFortunePage({ scope }: { scope: FortuneScope | 'da
   }
 
   // 신년운세: 리포트 응답 오기 전까지 전체 로딩 화면
-  if (scope === 'year' && newyearReportLoading) {
+  // ★ sticky — 결과(newyearReport)가 한 번 채워지면 로딩으로 안 돌아간다(정통사주와 동일 패턴).
+  //   모바일/데스크톱 백그라운드 복귀 시 로딩 재시작/되돌아감 차단.
+  if (scope === 'year' && newyearReportLoading && !newyearReport) {
     return (
       <AILoadingBar
         label={isFromYearFortune ? `${targetYear}년도 운세 풀이중` : `${targetYear}년 신년운세 풀이중`}
@@ -1113,7 +1115,7 @@ export default function PeriodFortunePage({ scope }: { scope: FortuneScope | 'da
   }
 
   // 지정일 운세: 사용자가 날짜를 선택한 직후 풀이 응답 대기 중 — 전체 로딩 화면
-  if (scope === 'date' && dateConfirmed && pickedDateReportLoading) {
+  if (scope === 'date' && dateConfirmed && pickedDateReportLoading && !pickedDateReport) {
     return (
       <AILoadingBar
         label="지정일 운세 풀이중"

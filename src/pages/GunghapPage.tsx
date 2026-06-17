@@ -1027,7 +1027,8 @@ export default function GunghapPage() {
   };
 
   // 궁합 분석 로딩 전체화면
-  if (loading) {
+  // ★ sticky — 결과(result)가 채워지면 로딩으로 안 돌아간다(정통사주 패턴, 백그라운드 복귀 대응)
+  if (loading && !result) {
     return (
       <AILoadingBar
         label="궁합 분석중"

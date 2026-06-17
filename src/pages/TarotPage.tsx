@@ -772,7 +772,7 @@ export default function TarotPage() {
                     />
                   ))}
                 </div>
-                {aiLoading && <LoadingSpinner startedAt={fortuneJob?.startedAt} />}
+                {aiLoading && !aiContent && <LoadingSpinner startedAt={fortuneJob?.startedAt} />}
                 {aiError && (
                   <div className="rounded-2xl p-4 text-center bg-[rgba(248,113,113,0.1)] border border-[rgba(248,113,113,0.3)]">
                     <p className="text-[15px] text-[#F87171] mb-3">{aiError}</p>
@@ -860,7 +860,7 @@ export default function TarotPage() {
                 <div className="flex justify-center mb-6">
                   <FlipCard drawn={qDrawn} width={160} shouldFlip={true} flipDelay={0.15} />
                 </div>
-                {aiLoading && <LoadingSpinner startedAt={fortuneJob?.startedAt} />}
+                {aiLoading && !aiContent && <LoadingSpinner startedAt={fortuneJob?.startedAt} />}
                 {aiError && (
                   <div className="rounded-2xl p-4 text-center bg-[rgba(248,113,113,0.1)] border border-[rgba(248,113,113,0.3)]">
                     <p className="text-[15px] text-[#F87171] mb-3">{aiError}</p>
