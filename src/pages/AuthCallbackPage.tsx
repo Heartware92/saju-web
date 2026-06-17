@@ -75,10 +75,10 @@ export default function AuthCallbackPage() {
           const dest = encodeURIComponent(next);
 
           const isSocial = session.user.app_metadata?.provider && session.user.app_metadata.provider !== 'email';
-          // ★ "우리 휴대폰 인증을 통과(phone_verified=true)" 했는지로 판단한다.
-          //    카카오 등은 phone 을 자동으로 채워주므로 phone 존재만 보면 인증을 건너뛰어
-          //    약관 동의만으로 가입이 끝나버린다(중복가입 유발). phone_verified 가 진짜 신호.
-          const phoneVerified = !!session.user.user_metadata?.phone_verified;
+          // ★ 우리 휴대폰 인증 통과 여부 = phone_verified_at(우리 전용 키)로 판단.
+          //    phone(자동채움)·phone_verified(카카오가 로그인마다 false 로 덮어씀)는 신뢰 불가.
+          //    카카오가 보내지 않는 phone_verified_at 만 재로그인 시에도 보존된다.
+          const phoneVerified = !!session.user.user_metadata?.phone_verified_at;
 
           // 1) 소셜 가입 미완료(휴대폰 미인증) → 휴대폰 인증부터 "이어서"가 아니라
           //    처음(약관 동의)부터 다시 시작. 동의 페이지가 끝나면 휴대폰 인증으로 이어진다.

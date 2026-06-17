@@ -104,8 +104,11 @@ export default function PhoneVerifyPage() {
       setOtpVerified(true);
       setOtpTimer(0);
 
+      // phone_verified_at: 카카오는 로그인마다 자신의 phone_verified(=false) 클레임으로
+      // user_metadata.phone_verified 를 덮어쓴다. 카카오가 보내지 않는 우리 전용 키
+      // phone_verified_at 으로 인증 여부를 판단해야 재로그인 시에도 보존된다.
       const { error: updateError } = await supabase.auth.updateUser({
-        data: { phone: cleaned, phone_verified: true },
+        data: { phone: cleaned, phone_verified: true, phone_verified_at: new Date().toISOString() },
       });
       if (updateError) throw updateError;
 

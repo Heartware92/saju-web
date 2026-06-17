@@ -27,8 +27,9 @@ export function SignupGuard() {
 
     const provider = user.app_metadata?.provider;
     const isSocial = !!provider && provider !== 'email';
-    // 우리 휴대폰 인증(phone_verified) 통과 여부로 판단(소셜 자동 phone 은 인증으로 안 침).
-    const phoneVerified = !!user.user_metadata?.phone_verified;
+    // 우리 휴대폰 인증 통과 = phone_verified_at(우리 전용 키). 카카오가 phone_verified 를
+    // 로그인마다 false 로 덮어쓰므로, 그 키로 판단하면 완료된 카카오 유저가 로그아웃돼 버린다.
+    const phoneVerified = !!user.user_metadata?.phone_verified_at;
     const inAuthFlow = !!pathname && pathname.startsWith('/auth/');
 
     if (isSocial && !phoneVerified && !inAuthFlow) {
