@@ -1,12 +1,15 @@
 /**
  * 어드민 집계 제외 계정 — 내부/테스트/슈퍼 계정을 모든 통계에서 빼기 위한 공용 유틸.
  *
- * 배경: 어드민 인증은 API 키 기반(_auth.ts)이라 test@test.com 같은 슈퍼/테스트 계정은
+ * 배경: 어드민 인증은 API 키 기반(_auth.ts)이라 PG 심사용 테스트 계정은
  *       DB 상으론 평범한 일반 유저다. 이 계정의 테스트 활동(운세 풀이·크레딧 소비·페이지뷰
  *       ·결제 시도 등)이 매출/이용/유입 집계에 섞이면 지표가 오염된다.
  *       → 모든 어드민 집계 라우트에서 user_id 기준으로 제외한다.
  *
- * 식별: 기본 제외 이메일은 test@test.com. 환경변수 ADMIN_EXCLUDED_EMAILS(쉼표구분)로 추가 가능.
+ * 식별: 기본 제외 이메일 = PG(결제대행) 심사용 테스트 계정 4개(toss/kpn/kakao/kg @test.com).
+ *       가오픈 시점에 더미·슈퍼·테스트 계정은 모두 삭제했고 DB 에 남는 건 이 PG 심사 계정뿐이라,
+ *       이들을 제외하면 어드민 지표가 0 에서 시작한다.
+ *       환경변수 ADMIN_EXCLUDED_EMAILS(쉼표구분)로 추가 가능.
  *       이메일 → user_id 해석은 listUsers 기반 cachedEmailMap 을 재사용(추가 왕복 없음).
  *
  * 주의(익명 페이지뷰): analytics_events 는 비로그인 시 user_id 가 null 이므로,
@@ -17,8 +20,13 @@ import { cached, type CachedOptions } from './_cache';
 import { cachedEmailMap } from './_emailMap';
 import { supabaseAdmin } from '@/services/supabaseAdmin';
 
-/** 코드 기본 제외 계정 */
-const DEFAULT_EXCLUDED_EMAILS = ['test@test.com'];
+/** 코드 기본 제외 계정 — PG 결제대행 심사용 테스트 계정(가오픈 후 DB 에 남는 유일한 계정들) */
+const DEFAULT_EXCLUDED_EMAILS = [
+  'toss@test.com',
+  'kpn@test.com',
+  'kakao@test.com',
+  'kg@test.com',
+];
 
 function configuredEmails(): Set<string> {
   const env = (process.env.ADMIN_EXCLUDED_EMAILS ?? '')
