@@ -55,13 +55,14 @@ export interface ElementRoom {
   accent: string;     // 오행 강조색 (다크 배경 대비)
 }
 
-// toneHint(방별 말투)는 추후 사용자가 직접 정의. 임의 기본값을 두지 않고 빈 문자열로 비워둔다.
+// toneHint(방별 말투/성향) — 오행별 음양 천간 캐릭터(루트~듀)의 핵심 성향에서 추출한 5개 해시태그.
+// 카드에 표시되며, 추후 상담 프롬프트의 톤앤매너로도 연결한다.
 export const ELEMENTS: ElementRoom[] = [
-  { key: 'wood',  han: '목', hanja: '木', name: '나무의 방', toneHint: '', accent: '#4CC38A' },
-  { key: 'fire',  han: '화', hanja: '火', name: '불의 방',   toneHint: '', accent: '#FF6B5A' },
-  { key: 'earth', han: '토', hanja: '土', name: '흙의 방',   toneHint: '', accent: '#E0A45E' },
-  { key: 'metal', han: '금', hanja: '金', name: '쇠의 방',   toneHint: '', accent: '#CBD5E1' },
-  { key: 'water', han: '수', hanja: '水', name: '물의 방',   toneHint: '', accent: '#5B9BD5' },
+  { key: 'wood',  han: '목', hanja: '木', name: '나무의 방', toneHint: '#진취적 #성장지향 #끈기 #추진력 #생동감', accent: '#4CC38A' },
+  { key: 'fire',  han: '화', hanja: '火', name: '불의 방',   toneHint: '#열정 #활력 #따뜻함 #밝음 #용기', accent: '#FF6B5A' },
+  { key: 'earth', han: '토', hanja: '土', name: '흙의 방',   toneHint: '#포용력 #안정감 #듬직함 #신뢰감 #꾸준함', accent: '#E0A45E' },
+  { key: 'metal', han: '금', hanja: '金', name: '쇠의 방',   toneHint: '#결단력 #예리함 #원칙 #완벽주의 #의리', accent: '#CBD5E1' },
+  { key: 'water', han: '수', hanja: '水', name: '물의 방',   toneHint: '#지혜로움 #통찰 #유연함 #포용력 #여유', accent: '#5B9BD5' },
 ];
 
 const HAN_TO_KEY: Record<string, ElementKey> = {

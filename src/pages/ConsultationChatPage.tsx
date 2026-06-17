@@ -346,12 +346,21 @@ export default function ConsultationChatPage() {
       const accessToken = sessionData?.session?.access_token;
       if (!accessToken) throw new Error('로그인이 필요합니다.');
 
-      const systemPrompt = buildConsultationSystemPrompt(saju, {
+      const baseSystemPrompt = buildConsultationSystemPrompt(saju, {
         name: selectedProfile.name,
         birth_date: selectedProfile.birth_date,
         gender: selectedProfile.gender,
         calendar_type: selectedProfile.calendar_type,
       });
+      // 현재 시각(KST)을 프롬프트에 주입 — "오늘 몇 시에 ~하면 좋아?" 류 질문에
+      // 이미 지나간 시간대를 추천하는 문제를 막는다. 질문할 때마다 갱신된다.
+      const nowKST = new Date().toLocaleString('ko-KR', {
+        timeZone: 'Asia/Seoul', dateStyle: 'full', timeStyle: 'short',
+      });
+      const systemPrompt =
+        `${baseSystemPrompt}\n\n[현재 시각]\n지금은 ${nowKST} (한국 시간)입니다. ` +
+        `사용자가 "오늘" "지금" "이따" 등 시점을 말하면 반드시 이 현재 시각을 기준으로 답하고, ` +
+        `이미 지나간 시간대는 추천하지 마세요.`;
       const sourceBirth = {
         birthDate: selectedProfile.birth_date,
         birthTime: selectedProfile.birth_time ?? null,

@@ -20,6 +20,7 @@ import {
   loadUnlockedElements,
   migrateLegacyToRoom,
   pickFresherConversation,
+  formatRelativeTime,
 } from '../lib/consultation';
 
 export default function ConsultationListPage() {
@@ -183,6 +184,7 @@ export default function ConsultationListPage() {
             {orderedElements.map(el => {
               const unlocked = unlockedKeys.has(el.key);
               const isDefault = defaultKey === el.key;
+              const conv = rooms?.[el.key];
 
               return (
                 <button
@@ -215,9 +217,19 @@ export default function ConsultationListPage() {
                         </span>
                       )}
                     </div>
-                    {/* 열린 방은 이름만 깔끔하게 — 미리보기·메타(질문수/시간) 모두 제거. 잠긴 방만 안내. */}
+                    {/* 톤 해시태그 — 모든 방, 이름 바로 아래 */}
+                    {el.toneHint && (
+                      <p className="text-[12px] text-text-tertiary/70 mt-0.5 leading-snug">{el.toneHint}</p>
+                    )}
+                    {/* 잠긴 방 안내 (해시태그 아래) */}
                     {!unlocked && (
-                      <p className="text-[13px] text-text-tertiary/70 mt-0.5">준비 중인 방이에요</p>
+                      <p className="text-[12px] text-text-tertiary/50 mt-0.5">준비 중인 방이에요</p>
+                    )}
+                    {/* 활동 표시(질문수·경과시간) — 열린 방, 대화 있을 때. 메시지 미리보기는 제외. */}
+                    {unlocked && conv && conv.messages.length > 0 && (
+                      <p className="text-[12px] text-text-tertiary/60 mt-0.5">
+                        질문 {conv.messages.filter(m => m.role === 'user').length}개 · {formatRelativeTime(conv.updatedAt)}
+                      </p>
                     )}
                   </div>
 
