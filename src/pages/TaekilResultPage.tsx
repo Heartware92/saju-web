@@ -398,6 +398,10 @@ export default function TaekilResultPage() {
   //   주의: result(엔진결과)는 processing 중에도 세팅돼 로딩을 조기 종료시키므로, "본문 준비" 신호인
   //   aiAdvice 로 판정해야 한다(아니면 처리 중 '결과를 표시할 수 없어요' 에러 페이지로 떨어짐).
   if (loading && !aiAdvice) {
+    // 보관함(recordId) 조회는 짧은 DB 읽기 — "분석중" 전체 로딩바 대신 가벼운 표시로(0.2초 깜빡임 최소화).
+    if (recordId) {
+      return <div className={styles.loading}>불러오는 중...</div>;
+    }
     return (
       <AILoadingBar
         label="택일 운세 분석중"
