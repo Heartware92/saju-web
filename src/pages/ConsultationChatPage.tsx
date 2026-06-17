@@ -469,9 +469,8 @@ export default function ConsultationChatPage() {
           </span>
         </div>
 
-        {/* 메시지 영역 (relative 래퍼 — 우측 하단 고정 칩의 기준) */}
-        <div className="relative flex-1 min-h-0">
-        <div ref={scrollRef} className="absolute inset-0 overflow-y-auto px-4 py-4 space-y-4" style={{ overflowAnchor: 'none' }}>
+        {/* 메시지 영역 */}
+        <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 py-4 space-y-4" style={{ overflowAnchor: 'none' }}>
 
           {showWelcome && (
             <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}>
@@ -575,21 +574,20 @@ export default function ConsultationChatPage() {
             </div>
           )}
         </div>
-          {/* 우측 하단 고정 — 질문당 소모 안내. 스크롤과 무관하게 채팅 영역 위에 떠 있음. */}
-          <div className="absolute bottom-2 right-3 pointer-events-none">
-            <span className="pointer-events-auto inline-flex items-center rounded-full bg-[rgba(20,12,38,0.82)] backdrop-blur-sm border border-[var(--border-subtle)] px-2.5 py-1 text-[11px] text-text-tertiary shadow-sm">
+
+        {/* 입력창 — 탭바 바로 위에 자연 stacking. safe-area 는 탭바가 처리 */}
+        <div className="flex-shrink-0 px-3 pt-2.5 pb-2 border-t border-[var(--border-subtle)] bg-[rgba(20,12,38,0.5)]">
+          {/* 소모 안내 — 입력창 위 가운데 */}
+          <div className="flex items-center justify-center mb-2 px-1">
+            <span className="text-[12px] text-text-tertiary">
               질문 1개당 🌙 {MOON_COST_CONSULTATION_QUESTION}개 소모
               {moonBalance < MOON_COST_CONSULTATION_QUESTION && (
-                <button onClick={() => router.push('/credit')} className="ml-1.5 text-cta underline font-semibold">
-                  충전
+                <button onClick={() => router.push('/credit')} className="ml-2 text-cta underline font-semibold">
+                  충전하기
                 </button>
               )}
             </span>
           </div>
-        </div>
-
-        {/* 입력창 — 탭바 바로 위에 자연 stacking. safe-area 는 탭바가 처리 */}
-        <div className="flex-shrink-0 px-3 pt-2.5 pb-2 border-t border-[var(--border-subtle)] bg-[rgba(20,12,38,0.5)]">
           <div className="flex items-end gap-2">
             <textarea
               value={inputText}
