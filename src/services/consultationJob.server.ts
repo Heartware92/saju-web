@@ -60,25 +60,34 @@ export async function runConsultationJob(input: RunConsultationJobInput): Promis
     const answer = sanitizeAIOutput(raw.content).replace(/\*+/g, '').trim();
     if (!answer || answer.length < 10) throw new Error('상담 답변이 비어 있어요.');
 
-    // ── 후속 질문 제안 (best-effort, 실패해도 답변은 저장) ──
-    const followups = await generateFollowups(userMessage, answer, history).catch(() => [] as string[]);
-
-    // ── consultation_records 기록 (서버가 직접 — 무중단·크로스기기 핵심) ──
+    // ── 답변 먼저 기록 + 잡 done (엮는 중 단축) ──
+    // 후속질문 생성(또 다른 AI 호출)을 done 뒤로 분리한다. 사용자는 답변을 곧장 받고,
+    // 후속질문은 잠시 뒤 따라붙는다. → "엮는 중" 대기에서 후속질문 생성 시간이 빠진다.
+    const assistantId = (typeof crypto !== 'undefined' && crypto.randomUUID) ? crypto.randomUUID() : `a-${Date.now()}`;
     const assistantMsg: ChatMessage = {
-      id: (typeof crypto !== 'undefined' && crypto.randomUUID) ? crypto.randomUUID() : `a-${Date.now()}`,
+      id: assistantId,
       role: 'assistant',
       content: answer,
       createdAt: Date.now(),
-      ...(followups.length > 0 ? { followups } : {}),
     };
     const userMsg: ChatMessage = { id: userMessageId, role: 'user', content: userMessage, createdAt: Date.now() - 1 };
     await writeConsultationRecord(userId, conversationId, profileId, profileName, history, userMsg, assistantMsg);
 
-    // ── 잡 done (useFortuneJob 폴링용) ──
+    // 잡 done — 여기서 클라의 "엮는 중"이 끝나고 답변이 표시된다(useFortuneJob).
     await supabaseAdmin
       .from('saju_records')
       .update({ status: 'done', interpretation_detailed: answer, interpretation_basic: answer, completed_at: new Date().toISOString(), error_message: null })
       .eq('id', recordId);
+
+    // ── 후속 질문 제안 (done 이후, best-effort) ──
+    // 생성되면 consultation_records 의 해당 답변 메시지에 패치(updated_at 갱신).
+    // 클라는 done 직후 한 번 더 동기화해 이 후속질문을 받아온다(엮는 중 시간에는 영향 없음).
+    try {
+      const followups = await generateFollowups(userMessage, answer, history);
+      if (followups.length > 0) {
+        await attachFollowups(userId, conversationId, assistantId, followups);
+      }
+    } catch { /* 후속질문 실패는 무시 — 답변은 이미 저장·표시됨 */ }
   } catch (e) {
     const msg = e instanceof Error ? e.message : '상담소 처리 중 오류';
     console.error('[consultationJob] 치명적 에러:', msg);
@@ -115,6 +124,38 @@ async function writeConsultationRecord(
     { onConflict: 'user_id,conversation_id' },
   );
   if (error) console.error('[consultationJob] consultation_records 기록 실패:', error);
+}
+
+/**
+ * done 이후 생성된 후속질문을 해당 답변 메시지(assistantId)에 패치한다.
+ * 현재 messages 를 다시 읽어 id 로 찾아 붙이므로, 그 사이 다음 질문이 들어와도 안전(덮어쓰지 않음).
+ * updated_at 을 갱신해, 클라의 재동기화(pickFresherConversation) 가 이 버전을 채택하게 한다.
+ */
+async function attachFollowups(
+  userId: string,
+  conversationId: string,
+  assistantId: string,
+  followups: string[],
+): Promise<void> {
+  const { data, error } = await supabaseAdmin
+    .from('consultation_records')
+    .select('messages')
+    .eq('user_id', userId)
+    .eq('conversation_id', conversationId)
+    .maybeSingle();
+  if (error || !data) return;
+  const messages = (Array.isArray(data.messages) ? data.messages : []) as ChatMessage[];
+  let patched = false;
+  const next = messages.map((m) => {
+    if (m.id === assistantId) { patched = true; return { ...m, followups }; }
+    return m;
+  });
+  if (!patched) return;
+  await supabaseAdmin
+    .from('consultation_records')
+    .update({ messages: next, updated_at: new Date().toISOString() })
+    .eq('user_id', userId)
+    .eq('conversation_id', conversationId);
 }
 
 /** 후속 질문 3개 — Gemini JSON 모드. 실패 시 throw(상위에서 catch→빈 배열). */

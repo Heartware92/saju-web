@@ -206,6 +206,10 @@ export default function ConsultationChatPage() {
       setActiveJobId(null);
       setLoading(false);
       fetchBalance();
+      // 후속질문은 done 직후 서버가 별도로 생성·패치한다("엮는 중" 단축).
+      // 잠시 뒤 한 번 더 동기화해 후속질문을 받아온다(타자기 표시에는 영향 없음).
+      const rid = activeConversationId;
+      window.setTimeout(() => { void hydrateRoomFromDb(rid); }, 3000);
     } else if (consultJob.status === 'failed') {
       setError(consultJob.errorMessage ?? '답변 생성에 실패했어요. 크레딧은 자동 환불됐어요.');
       setConversations(prev => prev.map(c => c.id === activeConversationId
