@@ -91,6 +91,9 @@ export const CreditPurchasePage: React.FC = () => {
 
       if (result.success) {
         alert(`${pkg.name} 구매 완료! 🌙 ${pkg.moonCredit}개 충전!`);
+      } else if (result.canceled) {
+        // 결제창 X(닫기)/취소 — 뒤로가기와 동일한 취소 모달로 통일
+        setCanceledNotice(true);
       } else {
         alert(result.message || '결제에 실패했습니다.');
       }

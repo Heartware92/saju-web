@@ -30,8 +30,13 @@ export default function PaymentCallbackPage() {
     const code = searchParams.get('code');
     const msg = searchParams.get('message');
 
-    // 실패 코드가 쿼리에 실려 돌아온 경우
+    // 코드가 실려 돌아온 경우: 사용자 취소(닫기/뒤로)면 /credit 의 취소 모달로 통일,
+    // 그 외 기술적 실패는 기존 실패 화면 유지.
     if (code) {
+      if (/cancel/i.test(code)) {
+        router.replace('/credit?canceled=1');
+        return;
+      }
       setStatus('failed');
       setMessage(msg || '결제가 취소되었거나 실패했습니다.');
       return;

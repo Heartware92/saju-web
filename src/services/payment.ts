@@ -54,6 +54,8 @@ export interface PaymentResult {
   orderId?: string;
   error?: string;
   message?: string;
+  /** 사용자가 결제창을 닫거나 취소한 경우 true (실패와 구분 — 취소 모달 표시용) */
+  canceled?: boolean;
 }
 
 /**
@@ -135,6 +137,7 @@ export const processPayment = async (
       return {
         success: false,
         error: response.code,
+        canceled: isCanceled,
         message: isCanceled
           ? '결제를 취소하였습니다.'
           : '결제에 실패했습니다. 잠시 후 다시 시도해 주세요.',
