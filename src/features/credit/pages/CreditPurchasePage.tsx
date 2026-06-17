@@ -37,6 +37,19 @@ export const CreditPurchasePage: React.FC = () => {
     return () => window.removeEventListener('pageshow', onPageShow);
   }, []);
 
+  // 토스페이 결제창에서 X(닫기)/취소로 retCancelUrl(/credit?canceled=1) 복귀 시,
+  // 뒤로가기와 동일한 '결제가 취소되었습니다' 모달로 통일한다.
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('canceled') === '1') {
+      setCanceledNotice(true);
+      // 새로고침/뒤로가기 시 모달이 다시 뜨지 않도록 쿼리 정리
+      params.delete('canceled');
+      const qs = params.toString();
+      window.history.replaceState({}, '', window.location.pathname + (qs ? `?${qs}` : ''));
+    }
+  }, []);
+
   // 구매 버튼 → 결제수단 선택 모달 열기
   const handlePurchase = (pkg: CreditPackage) => {
     setCanceledNotice(false);

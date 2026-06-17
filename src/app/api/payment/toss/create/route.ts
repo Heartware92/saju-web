@@ -61,7 +61,8 @@ export async function POST(req: NextRequest) {
     // 2) 토스페이 결제 생성. retUrl/retCancelUrl 은 요청 origin 기준(로컬 테스트가 운영으로 새지 않도록).
     const origin = req.nextUrl.origin;
     const retUrl = `${origin}/payment/toss/callback?orderId=${order.id}`;
-    const retCancelUrl = `${origin}/payment/toss/callback?orderId=${order.id}&canceled=1`;
+    // 취소 시에는 카드결제와 동일하게 /credit 의 '결제 취소' 모달로 복귀(UX 통일)
+    const retCancelUrl = `${origin}/credit?canceled=1`;
 
     const createRes = await fetch(`${TOSS_PAY_API_BASE}/payments`, {
       method: 'POST',
