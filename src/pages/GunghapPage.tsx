@@ -170,25 +170,35 @@ export const CATEGORY_LABEL_MAP: Record<string, string> = {
   custom: '직접 입력',
 };
 
+// 역할 라벨 [A, B]:
+//  - 성별 역할 카테고리(GENDER_ROLE_CATEGORIES): A=남성 입장, B=여성 입장 → 대표프로필 성별로 기본값 자동, 변경 가능
+//  - 입장/방향 역할 카테고리: A=기본 입장, B=반대 입장 → 사용자가 직접 선택
+//  - 그 외(동등·고정): A='나', B=상대 라벨 → 선택 UI 없음
 const AUTO_ROLES: Record<string, [string, string]> = {
-  secret_crush: ['나', '짝사랑 상대'],
-  som: ['나', '썸 상대'],
+  secret_crush: ['짝사랑 하는 쪽', '짝사랑 받는 쪽'],
+  som: ['썸남', '썸녀'],
   lover: ['남자친구', '여자친구'],
   spouse: ['남편', '아내'],
-  ex_lover: ['나', '전 연인'],
-  ex_spouse: ['나', '전 배우자'],
+  ex_lover: ['전 남친', '전 여친'],
+  ex_spouse: ['전 남편', '전 아내'],
   soulmate: ['나', '소울메이트'],
   rival: ['나', '라이벌'],
-  mentor: ['멘티', '멘토'],
+  mentor: ['멘토', '멘티'],
   friend: ['나', '친구'],
   parent_child: ['부모', '자녀'],
-  sibling: ['나', '형제·자매'],
+  sibling: ['손위(연장자)', '손아래(동생)'],
   work: ['나', '동료'],
   business: ['나', '사업 파트너'],
   idol_fan: ['팬', '유명인'],
   pet: ['나', '반려동물'],
   custom: ['나', '상대'],
 };
+
+// 성별로 역할이 갈리는 카테고리 — 대표프로필 성별로 기본 방향 자동(idx0=남성, idx1=여성), 사용자가 변경 가능
+const GENDER_ROLE_CATEGORIES = ['lover', 'spouse', 'som', 'ex_lover', 'ex_spouse'];
+// 역할 선택 UI('나는 누구인가요?')를 노출할 전체 카테고리 — 성별 역할 + 입장/방향 역할
+// (소울메이트·라이벌·친구·사업파트너=동등, 직장동료=동등, 반려동물=고정 → 선택 불필요)
+const ROLE_SELECT_CATEGORIES = [...GENDER_ROLE_CATEGORIES, 'secret_crush', 'mentor', 'parent_child', 'sibling', 'idol_fan'];
 
 // 궁합 영역별 점수 5개 도메인 — 공유 모듈 alias
 const GUNGHAP_DOMAINS = SHARED_GUNGHAP_DOMAINS;
@@ -402,13 +412,22 @@ export default function GunghapPage() {
   }, [step]);
 
 
-  const SWAPPABLE_CATEGORIES = ['parent_child', 'mentor', 'idol_fan'];
+  // 성별 역할 카테고리는 대표프로필 성별로 기본 방향 자동 설정(여성→swap), 그 외는 기본(idx0).
+  // 이후 사용자가 토글로 직접 변경 가능. roleSwapped 를 의존성에서 빼야 토글-effect 무한루프가 안 생긴다.
+  useEffect(() => {
+    if (GENDER_ROLE_CATEGORIES.includes(category)) {
+      setRoleSwapped(selectedProfile?.gender === 'female');
+    } else {
+      setRoleSwapped(false);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [category, selectedProfile?.gender]);
 
-  // 카테고리 선택 시 자동 역할 결정 (swap 반영)
+  // 카테고리·swap 에 따라 내/상대 역할 라벨 결정
   useEffect(() => {
     const roles = AUTO_ROLES[category];
     if (roles) {
-      if (roleSwapped && SWAPPABLE_CATEGORIES.includes(category)) {
+      if (roleSwapped && ROLE_SELECT_CATEGORIES.includes(category)) {
         setMyRole(roles[1]);
         setOtherRole(roles[0]);
       } else {
@@ -1265,8 +1284,8 @@ export default function GunghapPage() {
               </div>
             )}
 
-            {/* 역할 선택 토글 — 부모·자녀 / 멘토·멘티 */}
-            {SWAPPABLE_CATEGORIES.includes(category) && (() => {
+            {/* 역할 선택 토글 — 성별 역할(연인·배우자·썸·전연인·전배우자) + 입장 역할(짝사랑·멘토멘티·부모자녀·형제·유명인) */}
+            {ROLE_SELECT_CATEGORIES.includes(category) && (() => {
               const roles = AUTO_ROLES[category];
               if (!roles) return null;
               const [roleA, roleB] = roles;
