@@ -9,6 +9,7 @@ import { cachedEmailMap } from '../_emailMap';
 import { shouldForce } from '../_cache';
 import { expireStalePendingOrders } from '../_expirePending';
 import { audienceUserIds, includeAudience } from '../_audience';
+import { excludedUserIds, excludeUsers } from '../_excluded';
 
 const DEFAULT_PAGE_SIZE = 20;
 const MAX_PAGE_SIZE = 10_000;
@@ -28,6 +29,8 @@ export async function GET(request: NextRequest) {
   const from = (page - 1) * pageSize;
 
   const audience = await audienceUserIds(request);
+  // 집계 제외 계정(PG 심사용 테스트 계정)의 주문은 목록에서도 숨긴다.
+  const ex = await excludedUserIds();
 
   let query = supabaseAdmin
     .from('orders')
@@ -36,6 +39,7 @@ export async function GET(request: NextRequest) {
     .range(from, from + pageSize - 1);
 
   if (status) query = query.eq('status', status);
+  query = excludeUsers(query, ex);
   query = includeAudience(query, audience);
 
   const { data: orders, count, error } = await query;
