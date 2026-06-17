@@ -343,7 +343,7 @@ export function QuickFortuneGate({
                     <br />현재 잔액: {creditLabel} {balance}개
                   </p>
                   <div className="space-y-2.5">
-                    <button type="button" onClick={() => router.push('/payment')} className="block w-full h-12 rounded-lg bg-gradient-to-r from-cta to-cta-active text-white font-bold text-[15px] hover:opacity-90 transition-all">
+                    <button type="button" onClick={() => router.push('/credit')} className="block w-full h-12 rounded-lg bg-gradient-to-r from-cta to-cta-active text-white font-bold text-[15px] hover:opacity-90 transition-all">
                       크레딧 충전하기
                     </button>
                     <button type="button" onClick={handleClose} className="block w-full h-12 rounded-lg border border-[var(--border-subtle)] text-text-secondary font-medium text-[15px] hover:bg-white/5 transition-all">

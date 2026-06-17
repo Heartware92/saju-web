@@ -334,7 +334,7 @@ export function FortuneProfileSelect({
                     type="button"
                     onClick={() => {
                       closeModal();
-                      router.push('/payment');
+                      router.push('/credit');
                     }}
                     className="block w-full h-12 rounded-lg bg-gradient-to-r from-cta to-cta-active text-white font-bold text-[15px] hover:opacity-90 transition-all"
                   >
