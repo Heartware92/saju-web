@@ -9,6 +9,10 @@ export interface ChatMessage {
   content: string;
   createdAt: number;
   followups?: string[];
+  /** 백그라운드 잡 진행 중인 답변 placeholder (로컬 전용 — DB 기록엔 없음) */
+  pending?: boolean;
+  /** 이 답변을 생성 중인 잡 id (재진입 시 폴링 재개용) */
+  jobId?: string;
 }
 
 export interface StoredConversation {
@@ -103,6 +107,22 @@ export function loadUnlockedElements(profileId: string, defaultKey: ElementKey):
 /** 빈 방 대화 생성 */
 export function emptyRoom(profileId: string, key: ElementKey): StoredConversation {
   return { id: ROOM_ID(profileId, key), title: getElement(key).name, messages: [], updatedAt: Date.now() };
+}
+
+/**
+ * 두 대화(로컬 vs DB) 중 더 "최신/풍부한" 쪽 선택 — 크로스기기 하이드레이트 병합용.
+ * 진행 중(pending) 메시지는 제외하고 비교(서버 완성본 우선). 메시지 수 → 마지막 시각 순.
+ */
+export function pickFresherConversation(
+  a: StoredConversation | null,
+  b: StoredConversation | null,
+): StoredConversation | null {
+  if (!a) return b;
+  if (!b) return a;
+  const realLen = (c: StoredConversation) => c.messages.filter(m => !m.pending).length;
+  const la = realLen(a), lb = realLen(b);
+  if (la !== lb) return la > lb ? a : b;
+  return a.updatedAt >= b.updatedAt ? a : b;
 }
 
 /**

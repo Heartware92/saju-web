@@ -9,14 +9,13 @@ import { useUserStore } from '../store/useUserStore';
 import { useCreditStore } from '../store/useCreditStore';
 import { computeSajuFromProfile } from '../utils/profileSaju';
 import { buildConsultationSystemPrompt } from '../constants/prompts';
-import { sanitizeAIOutput } from '../services/fortuneService';
 import { supabase } from '../services/supabase';
-import { MOON_COST_CONSULTATION_QUESTION, CHARGE_REASONS } from '../constants/creditCosts';
+import { useFortuneJob } from '../hooks/useFortuneJob';
+import { MOON_COST_CONSULTATION_QUESTION } from '../constants/creditCosts';
 import {
   type ChatMessage,
   type StoredConversation,
   type ElementKey,
-  CONVERSATIONS_KEY,
   QUICK_QUESTIONS,
   getElement,
   defaultElementKey,
@@ -25,6 +24,7 @@ import {
   saveRoom,
   migrateLegacyToRoom,
   trimToMaxQuestions,
+  pickFresherConversation,
 } from '../lib/consultation';
 import StarfallBackground from '../components/StarfallBackground';
 
@@ -85,7 +85,7 @@ export default function ConsultationChatPage() {
 
   const { user } = useUserStore();
   const { profiles, fetchProfiles } = useProfileStore();
-  const { moonBalance, fetchBalance, chargeForContent } = useCreditStore();
+  const { moonBalance, fetchBalance } = useCreditStore();
 
   const [conversations, setConversations] = useState<StoredConversation[]>([]);
   const [activeConversationId, setActiveConversationId] = useState('');
@@ -94,19 +94,18 @@ export default function ConsultationChatPage() {
   const [error, setError] = useState('');
   const [showInsufficientModal, setShowInsufficientModal] = useState(false);
   const [ready, setReady] = useState(false);
+  const [activeJobId, setActiveJobId] = useState<string | null>(null);
 
   const scrollRef = useRef<HTMLDivElement>(null);
-  const abortRef = useRef<AbortController | null>(null);
-  const streamingRef = useRef<{ accumulated: string; botMsgId: string; profileId: string; convId: string } | null>(null);
-  // followups 요청 시 최신 messages 참조 (setMessages 비동기 + fetch closure stale 회피)
-  const messagesRef = useRef<ChatMessage[]>([]);
+
+  // 백그라운드 잡 구독 (saju_records 캐리어) — 답변은 서버가 생성·DB 기록, 클라는 폴링만.
+  const { job: consultJob } = useFortuneJob(activeJobId, 'saju_records');
 
   const activeConv = useMemo(
     () => conversations.find(c => c.id === activeConversationId) ?? null,
     [conversations, activeConversationId],
   );
   const messages = activeConv?.messages ?? [];
-  useEffect(() => { messagesRef.current = messages; }, [messages]);
 
   const setMessages = useCallback((updater: ChatMessage[] | ((prev: ChatMessage[]) => ChatMessage[])) => {
     setConversations(prev => prev.map(c => {
@@ -133,29 +132,44 @@ export default function ConsultationChatPage() {
   }, [saju, defaultKey, elParam, pid]);
   const room = getElement(elementKey);
 
+  // DB(consultation_records)에서 방을 읽어 로컬과 병합 — 크로스기기 하이드레이트.
+  const hydrateRoomFromDb = useCallback(async (roomId: string) => {
+    try {
+      const { data } = await supabase
+        .from('consultation_records')
+        .select('conversation_id,messages,updated_at')
+        .eq('conversation_id', roomId)
+        .maybeSingle();
+      if (!data) return;
+      const dbConv: StoredConversation = {
+        id: roomId,
+        title: getElement(elementKey).name,
+        messages: Array.isArray(data.messages) ? (data.messages as ChatMessage[]) : [],
+        updatedAt: data.updated_at ? new Date(data.updated_at).getTime() : Date.now(),
+      };
+      setConversations(prev => {
+        const local = prev.find(c => c.id === roomId) ?? null;
+        const merged = pickFresherConversation(local, dbConv) ?? dbConv;
+        saveRoom(pid, merged);
+        return prev.some(c => c.id === roomId) ? prev.map(c => c.id === roomId ? merged : c) : [merged];
+      });
+    } catch { /* ignore */ }
+  }, [elementKey, pid]);
+
   // 초기화
   useEffect(() => {
     if (user) { fetchProfiles(); fetchBalance(); }
   }, [user, fetchProfiles, fetchBalance]);
 
-  // 프로필 로드 후 방(오행 대화) 로드
+  // 프로필 로드 후 방(오행 대화) 로드 + DB 하이드레이트 + 진행 중 잡 폴링 재개
   useEffect(() => {
     if (!pid || profiles.length === 0) return;
-    if (!profiles.find(p => p.id === pid)) {
-      router.replace('/sangdamso');
-      return;
-    }
-    // 사주 계산 실패 프로필(잘못된 생일·음력 변환 실패 등) — 무한 로딩 방지 폴백
-    if (!saju) {
-      router.replace('/sangdamso');
-      return;
-    }
+    if (!profiles.find(p => p.id === pid)) { router.replace('/sangdamso'); return; }
+    // 사주 계산 실패 프로필 — 무한 로딩 방지 폴백
+    if (!saju) { router.replace('/sangdamso'); return; }
     // 잠긴 방 직접 접근(URL) 차단 → 목록으로
     const unlocked = loadUnlockedElements(pid, defaultKey);
-    if (elParam && !unlocked.some(k => k === elParam)) {
-      router.replace('/sangdamso');
-      return;
-    }
+    if (elParam && !unlocked.some(k => k === elParam)) { router.replace('/sangdamso'); return; }
 
     // 레거시 자유대화 → 본인 물상 방 이관(멱등) 후 방 로드
     migrateLegacyToRoom(pid, defaultKey);
@@ -163,7 +177,14 @@ export default function ConsultationChatPage() {
     setConversations([conv]);
     setActiveConversationId(conv.id);
     setReady(true);
-  }, [pid, elementKey, elParam, defaultKey, profiles, saju, router]);
+
+    // 크로스기기: DB 에서 읽어 병합 (다른 기기에서 나눈 대화도 보이게)
+    void hydrateRoomFromDb(conv.id);
+
+    // 재진입 시 진행 중 잡이 있으면 폴링 재개 (브라우저 닫았다 들어와도 답변이 붙음)
+    const pendingMsg = conv.messages.find(m => m.pending && m.jobId);
+    if (pendingMsg?.jobId) { setActiveJobId(pendingMsg.jobId); setLoading(true); }
+  }, [pid, elementKey, elParam, defaultKey, profiles, saju, router, hydrateRoomFromDb]);
 
   // 자동 저장 (localStorage)
   useEffect(() => {
@@ -172,35 +193,23 @@ export default function ConsultationChatPage() {
     if (conv) saveRoom(pid, conv);
   }, [conversations, activeConversationId, pid, ready]);
 
-  // DB 동기화 — 대화에 메시지가 있을 때 서버에 저장
-  const syncToDb = useCallback(async (conv: StoredConversation) => {
-    if (!conv || conv.messages.length === 0) return;
-    try {
-      const { data: sessionData } = await supabase.auth.getSession();
-      const accessToken = sessionData?.session?.access_token;
-      if (!accessToken) return;
-      await fetch('/api/consultation/sync', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${accessToken}` },
-        body: JSON.stringify({
-          profileId: pid,
-          profileName: selectedProfile?.name ?? '',
-          conversationId: conv.id,
-          title: conv.title,
-          messages: conv.messages,
-        }),
-      });
-    } catch { /* silent */ }
-  }, [pid, selectedProfile?.name]);
-
-  // DB 동기화 — 대화가 변경되고 스트리밍 중이 아닐 때 서버에 저장
+  // 백그라운드 잡 결과 반영 — done 이면 DB(권위본)에서 답변+후속질문 하이드레이트, failed 면 환불 안내.
   useEffect(() => {
-    if (!pid || !ready || loading) return;
-    const conv = conversations.find(c => c.id === activeConversationId);
-    if (!conv || conv.messages.length === 0) return;
-    const timer = setTimeout(() => syncToDb(conv), 1500);
-    return () => clearTimeout(timer);
-  }, [conversations, activeConversationId, pid, ready, loading, syncToDb]);
+    if (!consultJob || !activeJobId) return;
+    if (consultJob.status === 'done') {
+      void hydrateRoomFromDb(activeConversationId);
+      setActiveJobId(null);
+      setLoading(false);
+      fetchBalance();
+    } else if (consultJob.status === 'failed') {
+      setError(consultJob.errorMessage ?? '답변 생성에 실패했어요. 크레딧은 자동 환불됐어요.');
+      setConversations(prev => prev.map(c => c.id === activeConversationId
+        ? { ...c, messages: c.messages.filter(m => !m.pending) } : c));
+      setActiveJobId(null);
+      setLoading(false);
+      fetchBalance();
+    }
+  }, [consultJob?.status, activeJobId, activeConversationId, hydrateRoomFromDb, fetchBalance, consultJob?.errorMessage]);
 
   // 자동 스크롤 — 단, 사용자가 위로 스크롤해서 이전 답변을 읽고 있으면 따라가지 않음.
   // 사용 케이스: 답변 스트리밍 끝난 뒤 "이어서 물어볼까요" followups 가 setMessages 로 추가되면
@@ -224,38 +233,6 @@ export default function ConsultationChatPage() {
     didInitialScroll.current = true;
   }, [ready, messages.length]);
 
-  // 이탈 경고
-  useEffect(() => {
-    if (!loading) return;
-    const handler = (e: BeforeUnloadEvent) => { e.preventDefault(); e.returnValue = ''; };
-    window.addEventListener('beforeunload', handler);
-    return () => window.removeEventListener('beforeunload', handler);
-  }, [loading]);
-
-  // 언마운트 시 부분 응답 저장
-  useEffect(() => {
-    return () => {
-      if (streamingRef.current) {
-        const { accumulated, botMsgId, profileId, convId } = streamingRef.current;
-        if (accumulated) {
-          const partial = sanitizeAIOutput(accumulated);
-          try {
-            const rawConvs = localStorage.getItem(CONVERSATIONS_KEY(profileId));
-            if (rawConvs) {
-              const convs: StoredConversation[] = JSON.parse(rawConvs);
-              const updated = convs.map(c => {
-                if (c.id !== convId) return c;
-                return { ...c, messages: c.messages.map(m => m.id === botMsgId ? { ...m, content: partial } : m), updatedAt: Date.now() };
-              });
-              localStorage.setItem(CONVERSATIONS_KEY(profileId), JSON.stringify(updated));
-            }
-          } catch { /* ignore */ }
-        }
-      }
-      abortRef.current?.abort();
-    };
-  }, []);
-
   const handleSend = async (questionOverride?: string) => {
     const question = (questionOverride ?? inputText).trim();
     if (!question || loading || !saju || !selectedProfile) return;
@@ -267,7 +244,6 @@ export default function ConsultationChatPage() {
 
     setError('');
     setInputText('');
-    const profileAtSend = pid;
 
     const userMsg: ChatMessage = {
       id: crypto.randomUUID?.() ?? `u-${Date.now()}-${Math.random()}`,
@@ -275,26 +251,20 @@ export default function ConsultationChatPage() {
       content: question,
       createdAt: Date.now(),
     };
+    const placeholderId = crypto.randomUUID?.() ?? `a-${Date.now()}-${Math.random()}`;
 
-    // 질문 1개당 달 1개 차감 (묻지 않고 즉시 차감, 잔액 0이면 위에서 차단됨)
-    const charged = await chargeForContent(
-      'moon',
-      MOON_COST_CONSULTATION_QUESTION,
-      CHARGE_REASONS.consultation,
-      `consult:${activeConversationId}:${userMsg.id}`,
-    );
-    if (!charged) {
-      setError('크레딧 차감에 실패했어요. 잠시 후 다시 시도해주세요.');
-      return;
-    }
+    // 잡에 보낼 이전 대화(진행 중 placeholder 제외)
+    const history = messages
+      .filter(m => !m.pending)
+      .map(m => ({ id: m.id, role: m.role, content: m.content, createdAt: m.createdAt }));
 
-    setMessages(prev => [...prev, userMsg]);
+    // 낙관적 표시: 질문 + "생성 중" placeholder
+    setMessages(prev => [
+      ...prev,
+      userMsg,
+      { id: placeholderId, role: 'assistant', content: '', createdAt: Date.now(), pending: true },
+    ]);
     setLoading(true);
-
-    const controller = new AbortController();
-    abortRef.current = controller;
-    const botMsgId = crypto.randomUUID?.() ?? `a-${Date.now()}-${Math.random()}`;
-    streamingRef.current = { accumulated: '', botMsgId, profileId: pid, convId: activeConversationId };
 
     try {
       const { data: sessionData } = await supabase.auth.getSession();
@@ -307,112 +277,52 @@ export default function ConsultationChatPage() {
         gender: selectedProfile.gender,
         calendar_type: selectedProfile.calendar_type,
       });
+      const sourceBirth = {
+        birthDate: selectedProfile.birth_date,
+        birthTime: selectedProfile.birth_time ?? null,
+        birthPlace: selectedProfile.birth_place ?? null,
+        gender: selectedProfile.gender,
+        calendarType: selectedProfile.calendar_type,
+      };
 
-      const history = messages.map(m => ({
-        role: m.role === 'user' ? 'user' as const : 'model' as const,
-        content: m.content,
-      }));
-
-      const res = await fetch('/api/consultation', {
+      // 백그라운드 잡 생성 — 답변은 서버가 생성·DB 기록(무중단·크로스기기). 차감도 라우트가 멱등 처리.
+      const res = await fetch('/api/fortune/jobs/create', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${accessToken}` },
-        body: JSON.stringify({ systemPrompt, history, userMessage: question }),
-        signal: controller.signal,
+        body: JSON.stringify({
+          category: 'consultation',
+          systemPrompt,
+          history,
+          userMessage: question,
+          userMessageId: userMsg.id,
+          conversationId: activeConversationId,
+          profileId: pid,
+          profileName: selectedProfile.name,
+          sourceBirth,
+          idempotencyKey: `${activeConversationId}:${userMsg.id}`,
+        }),
       });
 
+      if (res.status === 402) {
+        setShowInsufficientModal(true);
+        setMessages(prev => prev.filter(m => m.id !== userMsg.id && m.id !== placeholderId));
+        setLoading(false);
+        return;
+      }
       if (!res.ok) {
         const errData = await res.json().catch(() => ({}));
-        throw new Error(errData.error || '응답 생성 실패');
+        throw new Error(errData.error || '요청에 실패했어요.');
       }
-      if (!res.body) throw new Error('응답 본문이 비어 있습니다.');
+      const { jobId } = (await res.json()) as { jobId?: string };
+      if (!jobId) throw new Error('잡 생성에 실패했어요.');
 
-      if (pid === profileAtSend) {
-        setMessages(prev => [...prev, { id: botMsgId, role: 'assistant', content: '', createdAt: Date.now() }]);
-      }
-
-      const reader = res.body.getReader();
-      const decoder = new TextDecoder();
-      let sseBuffer = '';
-      let accumulated = '';
-      let streamError: string | null = null;
-      let gotDone = false;
-
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        sseBuffer += decoder.decode(value, { stream: true });
-
-        let idx: number;
-        while ((idx = sseBuffer.indexOf('\n\n')) !== -1) {
-          const frame = sseBuffer.slice(0, idx).trim();
-          sseBuffer = sseBuffer.slice(idx + 2);
-          if (!frame.startsWith('data:')) continue;
-          const jsonStr = frame.slice(5).trim();
-          if (!jsonStr) continue;
-          try {
-            const parsed = JSON.parse(jsonStr) as { delta?: string; done?: boolean; error?: string };
-            if (parsed.error) { streamError = parsed.error; continue; }
-            if (parsed.done) { gotDone = true; continue; }
-            if (parsed.delta) {
-              accumulated += parsed.delta;
-              streamingRef.current!.accumulated = accumulated;
-              if (pid === profileAtSend) {
-                const display = sanitizeAIOutput(accumulated).replace(/\*+/g, '');
-                setMessages(prev => prev.map(m => m.id === botMsgId ? { ...m, content: display } : m));
-              }
-            }
-          } catch { /* ignore */ }
-        }
-      }
-
-      if (streamError) throw new Error(streamError);
-      if (!gotDone && accumulated.length === 0) throw new Error('응답이 비어 있습니다.');
-
-      const cleaned = sanitizeAIOutput(accumulated);
-      if (pid === profileAtSend) {
-        setMessages(prev => prev.map(m => m.id === botMsgId ? { ...m, content: cleaned } : m));
-      }
-
-      // 후속 질문 제안 — 이미 보낸 질문은 prevQuestions 로 서버에 알려 LLM 이 중복 회피
-      if (pid === profileAtSend && cleaned) {
-        const prevQuestions = [
-          ...messagesRef.current.filter(m => m.role === 'user').map(m => m.content),
-          question, // 현재 막 보낸 질문도 포함
-        ];
-        fetch('/api/consultation/followups', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${accessToken}` },
-          body: JSON.stringify({ lastQuestion: question, lastAnswer: cleaned, prevQuestions }),
-        })
-          .then(r => r.ok ? r.json() : null)
-          .then((data: { suggestions?: string[] } | null) => {
-            const suggestions = data?.suggestions ?? [];
-            if (suggestions.length > 0 && pid === profileAtSend) {
-              setMessages(prev => {
-                // 이미 사용자가 보낸 질문 + QUICK_QUESTIONS(초기 칩) 모두 중복 제외
-                // LLM 이 messages 컨텍스트를 모르므로 클라이언트가 필터링
-                const normalize = (s: string) => s.trim().replace(/\s+/g, ' ').toLowerCase();
-                const sentQuestions = new Set<string>([
-                  ...prev.filter(m => m.role === 'user').map(m => normalize(m.content)),
-                  ...QUICK_QUESTIONS.map(q => normalize(q)),
-                ]);
-                // 새 질문(현재 막 보낸 question) 도 중복 제외
-                sentQuestions.add(normalize(question));
-                const dedup = suggestions.filter(s => !sentQuestions.has(normalize(s)));
-                // 모두 필터링되면 빈 배열 — followups 영역 안 보임 (사용자 입장에선 자연스러움)
-                return prev.map(m => m.id === botMsgId ? { ...m, followups: dedup } : m);
-              });
-            }
-          })
-          .catch(() => {});
-      }
+      // placeholder 에 jobId 부착(재진입 폴링 재개용) + 폴링 시작
+      setMessages(prev => prev.map(m => m.id === placeholderId ? { ...m, jobId } : m));
+      setActiveJobId(jobId);
+      fetchBalance(); // 차감 즉시 반영
     } catch (e: unknown) {
-      if ((e as Error)?.name === 'AbortError') return;
-      setMessages(prev => prev.filter(m => m.id !== botMsgId));
+      setMessages(prev => prev.filter(m => m.id !== userMsg.id && m.id !== placeholderId));
       setError(e instanceof Error ? e.message : '오류가 발생했습니다.');
-    } finally {
-      streamingRef.current = null;
-      abortRef.current = null;
       setLoading(false);
     }
   };
@@ -422,7 +332,7 @@ export default function ConsultationChatPage() {
   };
 
   const handleBack = () => {
-    abortRef.current?.abort();
+    // 백그라운드 잡이라 나가도 서버가 답변을 끝까지 생성·저장 — 중단 없음.
     router.push('/sangdamso');
   };
 
@@ -509,7 +419,7 @@ export default function ConsultationChatPage() {
           <AnimatePresence initial={false}>
             {messages.map((msg, idx) => {
               const isLast = idx === messages.length - 1;
-              const isStreaming = loading && msg.role === 'assistant' && isLast;
+              const isPending = msg.role === 'assistant' && !!msg.pending && !msg.content;
               const showFollowups = !loading && msg.role === 'assistant' && isLast && (msg.followups?.length ?? 0) > 0;
               return (
                 <motion.div
@@ -530,9 +440,15 @@ export default function ConsultationChatPage() {
                           ? 'bg-cta/90 text-white rounded-tr-sm'
                           : 'bg-[rgba(20,12,38,0.75)] border border-[var(--border-subtle)] text-text-primary rounded-tl-sm'}`}
                     >
-                      {msg.content}
-                      {isStreaming && (
-                        <span className="inline-block w-[8px] h-[14px] bg-cta/80 ml-0.5 -mb-0.5 align-middle animate-pulse" />
+                      {isPending ? (
+                        <div className="flex items-center gap-2">
+                          <span className="inline-block w-2 h-2 rounded-full bg-cta animate-pulse" style={{ animationDelay: '0s' }} />
+                          <span className="inline-block w-2 h-2 rounded-full bg-cta animate-pulse" style={{ animationDelay: '0.2s' }} />
+                          <span className="inline-block w-2 h-2 rounded-full bg-cta animate-pulse" style={{ animationDelay: '0.4s' }} />
+                          <span className="text-[14px] text-text-secondary ml-1">사주 데이터를 엮는 중...</span>
+                        </div>
+                      ) : (
+                        msg.content
                       )}
                     </div>
                   </div>
@@ -561,22 +477,6 @@ export default function ConsultationChatPage() {
               );
             })}
           </AnimatePresence>
-
-          {loading && (messages.length === 0 || messages[messages.length - 1]?.role === 'user') && (
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex justify-start">
-              <div className="flex-shrink-0 w-8 h-8 rounded-full bg-gradient-to-br from-violet-500/40 to-indigo-500/30 flex items-center justify-center text-sm mr-2 border border-white/15">
-                🌙
-              </div>
-              <div className="max-w-[85%] px-4 py-3 rounded-2xl bg-[rgba(20,12,38,0.75)] border border-[var(--border-subtle)]">
-                <div className="flex items-center gap-2">
-                  <span className="inline-block w-2 h-2 rounded-full bg-cta animate-pulse" style={{ animationDelay: '0s' }} />
-                  <span className="inline-block w-2 h-2 rounded-full bg-cta animate-pulse" style={{ animationDelay: '0.2s' }} />
-                  <span className="inline-block w-2 h-2 rounded-full bg-cta animate-pulse" style={{ animationDelay: '0.4s' }} />
-                  <span className="text-[14px] text-text-secondary ml-1">사주 데이터를 엮는 중...</span>
-                </div>
-              </div>
-            </motion.div>
-          )}
 
           {error && (
             <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/30 text-[15px] text-red-400 text-center">

@@ -141,20 +141,25 @@ export function useFortuneJob(
       if (!cancelled && !terminal) void fetchOnce(false);
     }, 4000);
 
-    // 3) Safari 등 백그라운드 탭에서 realtime WebSocket 이 끊겨 완료 UPDATE 를 놓쳐도,
-    //    탭 복귀(visible/focus) 시 재조회해 상태를 보정한다. (놓친 done 이 그제서야 반영)
-    const onReturn = () => {
-      if (cancelled || terminal) return;
-      if (document.visibilityState === 'visible') void fetchOnce(false);
-    };
-    document.addEventListener('visibilitychange', onReturn);
-    window.addEventListener('focus', onReturn);
+    // 3) 백그라운드 탭 복귀 시 재조회 — realtime WebSocket 이 끊기고 setInterval 이 모바일에서
+    //    얼어 done UPDATE 를 놓쳐도, 복귀 즉시 1회 재조회해 상태를 보정한다.
+    //    ★ 모바일(특히 iOS Safari)은 앱 전환 복귀 시 visibilitychange/focus 가 불안정하고
+    //      pageshow(bfcache 복원)로 돌아오는 경우가 많아 함께 구독한다. online(네트워크 복구)도 포함.
+    //      (증상: 모바일에서 생성 중 다른 앱 갔다 오면 결과로 안 넘어가고 로딩에서 멈춤 → 이 보정으로 해소)
+    const kick = () => { if (!cancelled && !terminal) void fetchOnce(false); };
+    const onVisible = () => { if (document.visibilityState === 'visible') kick(); };
+    document.addEventListener('visibilitychange', onVisible);
+    window.addEventListener('focus', kick);
+    window.addEventListener('pageshow', kick);
+    window.addEventListener('online', kick);
 
     return () => {
       cancelled = true;
       stopPoll();
-      document.removeEventListener('visibilitychange', onReturn);
-      window.removeEventListener('focus', onReturn);
+      document.removeEventListener('visibilitychange', onVisible);
+      window.removeEventListener('focus', kick);
+      window.removeEventListener('pageshow', kick);
+      window.removeEventListener('online', kick);
       void supabase.removeChannel(channel);
     };
   }, [jobId, table]);

@@ -27,6 +27,7 @@ import { runTodayJob } from '@/services/todayJob.server';
 import { runPickedDateJob } from '@/services/pickedDateJob.server';
 import { runMoreFortuneJob, type MoreFortuneCategory } from '@/services/moreFortuneJob.server';
 import { runTarotJob } from '@/services/tarotJob.server';
+import { runConsultationJob } from '@/services/consultationJob.server';
 import type { SajuResult } from '@/utils/sajuCalculator';
 import type { PeriodFortune } from '@/engine/periodFortune';
 import type { TojeongResult } from '@/engine/tojeong';
@@ -167,6 +168,21 @@ interface TarotJobBody {
   idempotencyKey: string;
 }
 
+// 상담소 — saju_records 를 잡 캐리어로 사용(category='consultation'), 답변은 서버가 consultation_records 에 기록.
+// 보관함은 category 별 조회라 consultation 은 보관함에 노출되지 않음.
+interface ConsultationJobBody {
+  category: 'consultation';
+  systemPrompt: string;
+  history: { id: string; role: 'user' | 'assistant'; content: string; createdAt: number }[];
+  userMessage: string;
+  userMessageId: string;
+  conversationId: string;       // `${profileId}::${elementKey}`
+  profileId: string | null;
+  profileName: string | null;
+  sourceBirth: SourceBirth;     // 프로필 birth (saju_records NOT NULL 충족)
+  idempotencyKey: string;       // 권장: `${conversationId}:${userMessageId}`
+}
+
 type CreateJobBody =
   | TraditionalJobBody
   | GunghapJobBody
@@ -177,7 +193,8 @@ type CreateJobBody =
   | TodayJobBody
   | PickedDateJobBody
   | MoreFortuneJobBody
-  | TarotJobBody;
+  | TarotJobBody
+  | ConsultationJobBody;
 
 // 카테고리별 차감 정책 — 다른 운세 추가 시 여기 항목만 추가하면 됨.
 // reason 값은 클라이언트의 CHARGE_REASONS.{category} 와 반드시 동일해야 함
@@ -201,6 +218,7 @@ const CATEGORY_POLICY: Record<
   name: { creditCost: 5, reason: '이름 풀이' },
   dream: { creditCost: 5, reason: '꿈해몽' },
   tarot: { creditCost: 1, reason: '타로' },  // MOON_COST_TAROT, CHARGE_REASONS.tarot
+  consultation: { creditCost: 1, reason: '상담소 질문' },  // MOON_COST_CONSULTATION_QUESTION, CHARGE_REASONS.consultation
 };
 
 const CREDIT_TYPE = 'moon';
@@ -230,6 +248,11 @@ export async function POST(request: NextRequest) {
     // ── 타로 전용 흐름 — tarot_records 테이블 사용 (saju_records 와 별개) ──
     if (body.category === 'tarot') {
       return await handleTarotJob(body, userId);
+    }
+
+    // ── 상담소 전용 흐름 — saju_records 캐리어 + 답변은 consultation_records 에 기록 ──
+    if (body.category === 'consultation') {
+      return await handleConsultationJob(body, userId);
     }
 
     if (!body.sajuResult || !body.sourceBirth || !body.idempotencyKey) {
@@ -636,6 +659,105 @@ async function handleTarotJob(body: TarotJobBody, userId: string): Promise<NextR
       });
     } catch (e) {
       console.error('[jobs/create:tarot] runTarotJob 치명적 누락 에러:', e);
+    }
+  });
+
+  return NextResponse.json({ jobId });
+}
+
+async function handleConsultationJob(body: ConsultationJobBody, userId: string): Promise<NextResponse> {
+  if (!body.systemPrompt || !body.userMessage?.trim() || !body.userMessageId || !body.conversationId || !body.idempotencyKey) {
+    return NextResponse.json({ error: '필수 정보가 부족해요.' }, { status: 400 });
+  }
+  if (!body.sourceBirth?.birthDate || !body.sourceBirth?.gender) {
+    return NextResponse.json({ error: '프로필 정보가 부족해요.' }, { status: 400 });
+  }
+  const policy = CATEGORY_POLICY.consultation;
+  // 멱등키 — 같은 질문(대화ID:메시지ID)은 1회만 차감 (중복차감 원천 차단)
+  const consumeKey = `consultation:${body.idempotencyKey}`;
+
+  const { data: consumeResult, error: consumeError } = await supabaseAdmin.rpc('consume_credit_atomic', {
+    p_user_id: userId,
+    p_credit_type: CREDIT_TYPE,
+    p_amount: policy.creditCost,
+    p_reason: policy.reason,
+    p_idempotency_key: consumeKey,
+  });
+  if (consumeError) {
+    console.error('[jobs/create:consultation] consume RPC 에러:', consumeError);
+    return NextResponse.json({ error: '결제 처리 중 오류가 발생했어요.' }, { status: 500 });
+  }
+  if (consumeResult === 'insufficient') {
+    return NextResponse.json({ error: '달 크레딧이 부족해요. 충전 후 다시 시도해주세요.' }, { status: 402 });
+  }
+  if (consumeResult !== 'ok' && consumeResult !== 'duplicate') {
+    return NextResponse.json({ error: '결제 처리에 실패했어요.' }, { status: 500 });
+  }
+  // 같은 질문 재요청(duplicate) — 기존 잡 반환 (이미 차감·진행됨)
+  if (consumeResult === 'duplicate') {
+    const { data: existing } = await supabaseAdmin
+      .from('saju_records')
+      .select('id')
+      .eq('user_id', userId)
+      .eq('category', 'consultation')
+      .eq('result_data->>userMessageId', body.userMessageId)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (existing) return NextResponse.json({ jobId: existing.id, deduplicated: true });
+  }
+
+  const { data: inserted, error: insertError } = await supabaseAdmin
+    .from('saju_records')
+    .insert({
+      user_id: userId,
+      category: 'consultation',
+      birth_date: body.sourceBirth.birthDate,
+      birth_time: body.sourceBirth.birthTime,
+      birth_place: body.sourceBirth.birthPlace,
+      gender: body.sourceBirth.gender,
+      calendar_type: body.sourceBirth.calendarType,
+      result_data: { conversationId: body.conversationId, userMessageId: body.userMessageId },
+      credit_type: CREDIT_TYPE,
+      credit_used: policy.creditCost,
+      is_detailed: true,
+      status: 'pending',
+      profile_id: body.profileId,
+      profile_name: body.profileName,
+    })
+    .select('id')
+    .single();
+
+  if (insertError || !inserted) {
+    console.error('[jobs/create:consultation] saju_records INSERT 에러:', insertError);
+    await supabaseAdmin.rpc('refund_credit_atomic', {
+      p_user_id: userId,
+      p_credit_type: CREDIT_TYPE,
+      p_amount: policy.creditCost,
+      p_reason: '상담소 잡 생성 실패 자동 환불',
+      p_idempotency_key: `refund:${consumeKey}`,
+    });
+    return NextResponse.json({ error: '잡 생성에 실패했어요.' }, { status: 500 });
+  }
+
+  const jobId = inserted.id;
+  after(async () => {
+    try {
+      await runConsultationJob({
+        recordId: jobId,
+        userId,
+        systemPrompt: body.systemPrompt,
+        history: body.history ?? [],
+        userMessage: body.userMessage,
+        userMessageId: body.userMessageId,
+        conversationId: body.conversationId,
+        profileId: body.profileId,
+        profileName: body.profileName,
+        consumeIdempotencyKey: consumeKey,
+        creditAmount: policy.creditCost,
+      });
+    } catch (e) {
+      console.error('[jobs/create:consultation] runConsultationJob 치명적 누락 에러:', e);
     }
   });
 

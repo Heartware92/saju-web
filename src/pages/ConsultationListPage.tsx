@@ -6,14 +6,20 @@ import { useRouter } from 'next/navigation';
 import { useProfileStore } from '../store/useProfileStore';
 import { useUserStore } from '../store/useUserStore';
 import { computeSajuFromProfile } from '../utils/profileSaju';
+import { supabase } from '../services/supabase';
 import {
   ELEMENTS,
   type ElementKey,
+  type ChatMessage,
   type StoredConversation,
   defaultElementKey,
+  getElement,
+  elementKeyFromRoomId,
   loadRooms,
+  saveRoom,
   loadUnlockedElements,
   migrateLegacyToRoom,
+  pickFresherConversation,
   formatRelativeTime,
 } from '../lib/consultation';
 
@@ -64,10 +70,39 @@ export default function ConsultationListPage() {
   }, [defaultKey]);
 
   // 프로필 전환 시 레거시 자유대화 → 본인 물상 방 이관(멱등) 후 방별 미리보기 로드
+  // + DB(consultation_records) 하이드레이트 — 다른 기기/브라우저에서 나눈 대화도 목록에 보이게(크로스기기).
   useEffect(() => {
     if (!selectedProfileId || !defaultKey || typeof window === 'undefined') { setRooms(null); return; }
     migrateLegacyToRoom(selectedProfileId, defaultKey);
     setRooms(loadRooms(selectedProfileId));
+
+    let cancelled = false;
+    (async () => {
+      try {
+        const { data } = await supabase
+          .from('consultation_records')
+          .select('conversation_id,messages,updated_at')
+          .like('conversation_id', `${selectedProfileId}::%`);
+        if (cancelled || !Array.isArray(data) || data.length === 0) return;
+        setRooms(prev => {
+          const next: Record<ElementKey, StoredConversation> = { ...(prev ?? loadRooms(selectedProfileId)) };
+          for (const row of data) {
+            const key = elementKeyFromRoomId(row.conversation_id as string);
+            if (!key) continue;
+            const dbConv: StoredConversation = {
+              id: row.conversation_id as string,
+              title: getElement(key).name,
+              messages: Array.isArray(row.messages) ? (row.messages as ChatMessage[]) : [],
+              updatedAt: row.updated_at ? new Date(row.updated_at as string).getTime() : Date.now(),
+            };
+            const merged = pickFresherConversation(next[key] ?? null, dbConv);
+            if (merged) { next[key] = merged; saveRoom(selectedProfileId, merged); }
+          }
+          return next;
+        });
+      } catch { /* ignore */ }
+    })();
+    return () => { cancelled = true; };
   }, [selectedProfileId, defaultKey]);
 
   const handleOpenRoom = (key: ElementKey) => {
