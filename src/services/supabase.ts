@@ -374,6 +374,9 @@ export const sajuDB = {
       .from('saju_records')
       .select('id, user_id, profile_id, profile_name, partner_name, partner_birth_date, birth_date, birth_time, birth_place, gender, calendar_type, category, created_at, is_detailed, credit_type, credit_used, engine_result, status, error_message')
       .eq('user_id', userId)
+      // 상담소 잡 캐리어(category='consultation')는 보관함에 표시하지 않는다.
+      // 상담 내용은 상담소 화면에서만 보이며(consultation_records), 보관함은 풀이 기록 전용.
+      .neq('category', 'consultation')
       .order('created_at', { ascending: false })
       .limit(limit);
 
