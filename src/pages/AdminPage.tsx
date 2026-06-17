@@ -18,6 +18,7 @@ import { InquiriesSection } from '@/components/admin/inquiries/InquiriesSection'
 import { PhoneChangesSection } from '@/components/admin/ops/PhoneChangesSection';
 import { PhoneAllowlistSection } from '@/components/admin/ops/PhoneAllowlistSection';
 import { JobsSection } from '@/components/admin/jobs/JobsSection';
+import { PaymentsSection } from '@/components/admin/payments/PaymentsSection';
 import { PaymentGatewaySection } from '@/components/admin/ops/PaymentGatewaySection';
 import { AudienceFilterBar, EMPTY_AUDIENCE, type AudienceFilterValue } from '@/components/admin/AudienceFilterBar';
 import { toCsv, downloadCsv, timestampSuffix } from '@/components/admin/csvExport';
@@ -85,7 +86,7 @@ interface DeletedMember {
   deleted_at: string;
 }
 
-type Tab = 'overview' | 'members' | 'orders' | 'usage' | 'credits' | 'records' | 'consultations' | 'ops' | 'inquiries' | 'jobs' | 'insights' | 'analytics';
+type Tab = 'overview' | 'members' | 'orders' | 'usage' | 'credits' | 'records' | 'consultations' | 'ops' | 'inquiries' | 'jobs' | 'insights' | 'analytics' | 'payments';
 type SortKey = 'joined' | 'lastSeen' | 'totalSpent' | 'analysisCount' | 'orderCount';
 
 // ── 유틸 ──────────────────────────────────────────────────
@@ -625,6 +626,7 @@ export default function AdminPage() {
     { key: 'ops',      label: `운영${opsSummary?.kpi ? ` (${(opsSummary.kpi.bannedCount ?? 0) + (opsSummary.kpi.notedCount ?? 0)})` : ''}` },
     { key: 'inquiries', label: '문의함' },
     { key: 'jobs',      label: '잡 상태' },
+    { key: 'payments', label: '결제내역' },
     { key: 'insights', label: '인사이트' },
     { key: 'analytics', label: '유입·이탈' },
   ];
@@ -639,7 +641,7 @@ export default function AdminPage() {
     { key: 'g-usage',     label: '서비스 이용', tabs: ['usage', 'records', 'consultations'] },
     { key: 'g-support',   label: '고객 지원',   tabs: ['inquiries'] },
     { key: 'g-analytics', label: '분석',        tabs: ['analytics', 'insights'] },
-    { key: 'g-system',    label: '시스템',      tabs: ['ops', 'jobs'] },
+    { key: 'g-system',    label: '시스템',      tabs: ['ops', 'payments', 'jobs'] },
   ];
   const activeGroup = GROUPS.find(g => g.tabs.includes(tab)) ?? GROUPS[0];
   // 단일 서브탭 그룹은 그 탭 라벨(카운트 포함)을, 복수면 그룹명을 상단에 노출
@@ -1137,6 +1139,10 @@ export default function AdminPage() {
         )}
 
         {/* ── 잡 상태 ── */}
+        {tab === 'payments' && (
+          <PaymentsSection token={token} />
+        )}
+
         {tab === 'jobs' && (
           <JobsSection token={token} onOpenUser={setSelectedUserId} />
         )}
