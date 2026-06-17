@@ -20,7 +20,6 @@ import {
   loadUnlockedElements,
   migrateLegacyToRoom,
   pickFresherConversation,
-  formatRelativeTime,
 } from '../lib/consultation';
 
 export default function ConsultationListPage() {
@@ -184,11 +183,6 @@ export default function ConsultationListPage() {
             {orderedElements.map(el => {
               const unlocked = unlockedKeys.has(el.key);
               const isDefault = defaultKey === el.key;
-              const conv = rooms?.[el.key];
-              const lastMsg = conv && conv.messages.length > 0 ? conv.messages[conv.messages.length - 1] : null;
-              const preview = lastMsg
-                ? (lastMsg.role === 'user' ? '나: ' : '') + lastMsg.content.slice(0, 38).trim()
-                : '';
 
               return (
                 <button
@@ -221,18 +215,9 @@ export default function ConsultationListPage() {
                         </span>
                       )}
                     </div>
-                    {/* 대화가 있을 때만 미리보기 표시 — 디폴트 안내 텍스트는 제거 */}
-                    {unlocked ? (
-                      preview ? (
-                        <p className="text-[13px] text-text-tertiary truncate mt-0.5">{preview}</p>
-                      ) : null
-                    ) : (
+                    {/* 열린 방은 이름만 깔끔하게 — 미리보기·메타(질문수/시간) 모두 제거. 잠긴 방만 안내. */}
+                    {!unlocked && (
                       <p className="text-[13px] text-text-tertiary/70 mt-0.5">준비 중인 방이에요</p>
-                    )}
-                    {unlocked && conv && conv.messages.length > 0 && (
-                      <p className="text-[11px] text-text-tertiary/50 mt-1">
-                        질문 {conv.messages.filter(m => m.role === 'user').length}개 · {formatRelativeTime(conv.updatedAt)}
-                      </p>
                     )}
                   </div>
 

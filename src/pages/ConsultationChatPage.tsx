@@ -567,7 +567,7 @@ export default function ConsultationChatPage() {
         </div>
 
         {/* 입력창 — 탭바 바로 위에 자연 stacking. safe-area 는 탭바가 처리 */}
-        <div className="flex-shrink-0 px-3 py-3 border-t border-[var(--border-subtle)] bg-[rgba(20,12,38,0.5)]">
+        <div className="flex-shrink-0 px-3 pt-2.5 pb-2 border-t border-[var(--border-subtle)] bg-[rgba(20,12,38,0.5)]">
           {/* 소모 안내 — 입력창 위 (타이핑 전 정보) */}
           <div className="flex items-center justify-center mb-2 px-1">
             <span className="text-[12px] text-text-tertiary">
@@ -591,21 +591,21 @@ export default function ConsultationChatPage() {
               className="flex-1 px-4 py-3 rounded-2xl bg-white/5 border border-white/10 text-text-primary text-[16px] placeholder-text-tertiary focus:border-cta/50 focus:outline-none resize-none transition disabled:opacity-60"
               style={{ maxHeight: '100px' }}
             />
-            <button
-              onClick={() => handleSend()}
-              disabled={!inputText.trim() || loading}
-              className="flex-shrink-0 w-11 h-11 rounded-full bg-cta text-white flex items-center justify-center active:scale-95 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
-              aria-label="전송"
-            >
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <line x1="22" y1="2" x2="11" y2="13" />
-                <polygon points="22,2 15,22 11,13 2,9 22,2" />
-              </svg>
-            </button>
-          </div>
-          {/* 글자수 — 입력창 아래 우측 (타이핑 중 피드백) */}
-          <div className="flex justify-end mt-1 px-1">
-            <span className="text-[11px] text-text-tertiary/60">{inputText.length}/300</span>
+            {/* 전송 버튼 + 글자수 — 우측에 세로로 묶음(버튼 아래 0/300) */}
+            <div className="flex-shrink-0 flex flex-col items-center gap-0.5">
+              <button
+                onClick={() => handleSend()}
+                disabled={!inputText.trim() || loading}
+                className="w-9 h-9 rounded-full bg-cta text-white flex items-center justify-center active:scale-95 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+                aria-label="전송"
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="22" y1="2" x2="11" y2="13" />
+                  <polygon points="22,2 15,22 11,13 2,9 22,2" />
+                </svg>
+              </button>
+              <span className="text-[10px] text-text-tertiary/60 leading-none">{inputText.length}/300</span>
+            </div>
           </div>
         </div>
 
