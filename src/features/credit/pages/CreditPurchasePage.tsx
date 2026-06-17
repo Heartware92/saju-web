@@ -5,7 +5,7 @@
  * 패키지: 달 → 화성 → 지구 → 토성 → 목성 → 은하 → 우주
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useCreditStore } from '@/store/useCreditStore';
 import { CREDIT_PACKAGES } from '@/constants/pricing';
@@ -21,6 +21,8 @@ export const CreditPurchasePage: React.FC = () => {
   const [canceledNotice, setCanceledNotice] = useState(false);
   // 결제수단 선택 모달 (구매 버튼 → 토스페이 / 일반카드 중 선택)
   const [methodPkg, setMethodPkg] = useState<CreditPackage | null>(null);
+  // 데스크톱 카드결제(KG iframe) 진행 중 브라우저 뒤로가기를 흡수하기 위한 센티넬 플래그
+  const cardBackGuard = useRef(false);
 
   // 모바일: PortOne이 결제창으로 전체 페이지를 리다이렉트하므로, 결제창에서
   // 브라우저 뒤로가기를 누르면 이 페이지가 bfcache에서 복원된다. 이때 loading('...')
@@ -35,6 +37,20 @@ export const CreditPurchasePage: React.FC = () => {
     };
     window.addEventListener('pageshow', onPageShow);
     return () => window.removeEventListener('pageshow', onPageShow);
+  }, []);
+
+  // 데스크톱: 일반카드(KG)는 페이지 전환 없이 iframe 오버레이로 뜬다. 이 상태의 브라우저
+  // 뒤로가기는 결제 취소 콜백을 거치지 않고 페이지를 이탈시키므로, 카드결제 시작 시
+  // history 센티넬을 넣어(payWithCard) 뒤로가기를 흡수하고, 여기서 전체 리로드로
+  // /credit?canceled=1 로 복귀시킨다(KG 오버레이 확실히 제거 + 취소 모달 표시).
+  useEffect(() => {
+    const onPopState = () => {
+      if (!cardBackGuard.current) return;
+      cardBackGuard.current = false;
+      window.location.replace('/credit?canceled=1');
+    };
+    window.addEventListener('popstate', onPopState);
+    return () => window.removeEventListener('popstate', onPopState);
   }, []);
 
   // 토스페이 로고를 페이지 진입 시 미리 받아둔다(캐시 워밍).
@@ -101,12 +117,17 @@ export const CreditPurchasePage: React.FC = () => {
   const payWithCard = async (pkg: CreditPackage) => {
     setMethodPkg(null);
     setLoading(pkg.id);
+    // 결제창(iframe)이 열린 동안 브라우저 뒤로가기를 흡수하기 위한 history 센티넬
+    cardBackGuard.current = true;
+    try { window.history.pushState({ paymentOpen: true }, ''); } catch { /* noop */ }
     try {
       const result = await processPayment({
         packageId: pkg.id,
         amount: pkg.price,
         creditAmount: pkg.moonCredit,
       });
+      // 정상 resolve(성공/취소/실패) → 뒤로가기 흡수 해제
+      cardBackGuard.current = false;
 
       if (result.success) {
         alert(`${pkg.name} 구매 완료! 🌙 ${pkg.moonCredit}개 충전!`);
