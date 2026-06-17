@@ -99,6 +99,9 @@ export default function ConsultationChatPage() {
   const [typing, setTyping] = useState<{ id: string; n: number } | null>(null);
   const justAnsweredRef = useRef(false); // 잡 완료 직후 도착한 답변만 애니메이션(기존 대화 하이드레이트는 즉시 표시)
   const animatedRef = useRef<Set<string>>(new Set());
+  // 사용자가 직접 전송(타이핑/후속질문 클릭)한 순간엔 무조건 바닥으로 — 후속질문 버튼 제거에 따른
+  // 브라우저 스크롤 앵커링 튐을 무력화한다. (자동 스크롤 가드와 별개로 1회 강제)
+  const forceBottomRef = useRef(false);
 
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -220,6 +223,44 @@ export default function ConsultationChatPage() {
     }
   }, [consultJob?.status, activeJobId, activeConversationId, hydrateRoomFromDb, fetchBalance, consultJob?.errorMessage]);
 
+  // 모바일 폴링 폴백 — Realtime(useFortuneJob)이 done 을 놓쳐도 "엮는 중"이 반드시 풀리게 한다.
+  // 공용 useFortuneJob 은 건드리지 않고(다른 세션이 데스크톱 회귀 때문에 폴링을 뺀 상태) 상담소 안에서만,
+  // 모바일에서만 saju_records 상태를 직접 폴링한다. 데스크톱은 Realtime 이 안정적이라 제외.
+  useEffect(() => {
+    if (!activeJobId || !loading) return;
+    const isMobile = typeof navigator !== 'undefined' &&
+      (navigator.maxTouchPoints > 0 || /Mobi|Android|iP(hone|ad|od)/i.test(navigator.userAgent));
+    if (!isMobile) return;
+    let cancelled = false;
+    const rid = activeConversationId;
+    const poll = async () => {
+      if (cancelled) return;
+      const { data } = await supabase
+        .from('saju_records')
+        .select('status')
+        .eq('id', activeJobId)
+        .maybeSingle();
+      if (cancelled || !data) return;
+      if (data.status === 'done') {
+        justAnsweredRef.current = true;
+        void hydrateRoomFromDb(rid);
+        setActiveJobId(null);
+        setLoading(false);
+        fetchBalance();
+        window.setTimeout(() => { void hydrateRoomFromDb(rid); }, 3000);
+      } else if (data.status === 'failed') {
+        setError('답변 생성에 실패했어요. 크레딧은 자동 환불됐어요.');
+        setConversations(prev => prev.map(c => c.id === rid
+          ? { ...c, messages: c.messages.filter(m => !m.pending) } : c));
+        setActiveJobId(null);
+        setLoading(false);
+        fetchBalance();
+      }
+    };
+    const id = window.setInterval(poll, 4000);
+    return () => { cancelled = true; window.clearInterval(id); };
+  }, [activeJobId, loading, activeConversationId, hydrateRoomFromDb, fetchBalance]);
+
   // 자동 스크롤 — 단, 사용자가 위로 스크롤해서 이전 답변을 읽고 있으면 따라가지 않음.
   // 사용 케이스: 답변 스트리밍 끝난 뒤 "이어서 물어볼까요" followups 가 setMessages 로 추가되면
   // messages 변경 트리거되어 스크롤이 또 바닥으로 점프 → 사용자가 위에서 읽다가 화면이 튐.
@@ -227,6 +268,12 @@ export default function ConsultationChatPage() {
   useEffect(() => {
     const el = scrollRef.current;
     if (!el) return;
+    // 사용자가 방금 전송함 → 후속질문 버튼 제거에 따른 앵커링 튐을 무시하고 즉시 바닥으로.
+    if (forceBottomRef.current) {
+      forceBottomRef.current = false;
+      el.scrollTop = el.scrollHeight; // 즉시(애니메이션 없이) — 점프 방지
+      return;
+    }
     const distanceFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
     if (distanceFromBottom > 120) return;
     el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' });
@@ -288,6 +335,7 @@ export default function ConsultationChatPage() {
       .map(m => ({ id: m.id, role: m.role, content: m.content, createdAt: m.createdAt }));
 
     // 낙관적 표시: 질문 + "생성 중" placeholder
+    forceBottomRef.current = true; // 후속질문 클릭/타이핑 전송 모두 바닥으로 고정(스크롤 튐 방지)
     setMessages(prev => [
       ...prev,
       userMsg,
@@ -415,7 +463,7 @@ export default function ConsultationChatPage() {
         </div>
 
         {/* 메시지 영역 */}
-        <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
+        <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 py-4 space-y-4" style={{ overflowAnchor: 'none' }}>
 
           {showWelcome && (
             <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}>
