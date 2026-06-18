@@ -68,3 +68,4 @@ select amount_granted, amount_remaining, source_type, expires_at, status
 
 ## 실행 이력
 - 2026-06-17: `mylovenst@naver.com`(user_id `6fb9c4f3-31b7-4fb3-9dc7-0a17caa24152`)에 +20 달 지급(경로 B). 0 → 20, lot active(만료 2027-06-17). **1회성 특이 케이스 — 이 계정에 추가 지급 예정 없음(재요청 시 의도 재확인).**
+- 2026-06-18: 위 +20 달 **전액 회수(하드 삭제, 완전 원복)**. 소비 0건이라 상쇄거래 대신 원장 행 직접 삭제: `credit_transactions` 1건 + `credit_lots` 1건 삭제, `moon_balance` 20→0. 검증(잔액0·거래0·lot0) 통과. admin_adjust(무상)라 전자상거래법 보존 대상 아님. **이 계정 크레딧 이력 완전 초기화 — 지급 전 상태.**

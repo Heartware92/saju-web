@@ -11,9 +11,11 @@ import { useUserStore } from '../store/useUserStore';
 import { computeSajuFromProfile } from '../utils/profileSaju';
 import {
   getCharacterFromStem,
-  pillarToHanja,
+  stemToHanja,
+  zhiToHanja,
   STEM_TO_ELEMENT,
 } from '../lib/character';
+import { BRANCH_ELEMENT } from '../lib/data/constants';
 import { MORE_FORTUNE_CONFIGS, MORE_FORTUNE_ORDER, MOON_COST_PER_FORTUNE } from '../constants/moreFortunes';
 import { SUN_COST_BIG, MOON_COST_MORE } from '../constants/creditCosts';
 import { QuickFortuneGate, type QuickFortuneGateProps } from '../components/QuickFortuneGate';
@@ -21,6 +23,11 @@ import { GunghapArchiveListModal } from '../components/GunghapArchiveListModal';
 import type { ArchiveCategory, GunghapArchiveItem } from '../services/archiveService';
 import { findGunghapArchives } from '../services/archiveService';
 import MoonPhase from '../components/MoonPhase';
+
+// 만세력 페이지(SajuReport)와 동일한 오행 색상 — 홈 4기둥 한자 색칠용
+const ELEMENT_COLORS: Record<string, string> = {
+  '목': '#34D399', '화': '#F43F5E', '토': '#F59E0B', '금': '#CBD5E1', '수': '#3B82F6',
+};
 
 /**
  * 운세 서비스 목록
@@ -407,33 +414,50 @@ export default function HomePage() {
                     ].map((col) => (
                       <div
                         key={col.label}
-                        className="rounded-xl bg-[rgba(20,12,38,0.6)]
-                                   border border-[var(--border-subtle)] p-2 text-center"
+                        className="flex flex-col items-center rounded-xl bg-[rgba(20,12,38,0.6)]
+                                   border border-[var(--border-subtle)] px-2 py-2.5 text-center"
                       >
-                        <div className="text-[12px] font-medium text-text-tertiary mb-1">
+                        <div className="text-[12px] font-medium text-text-tertiary mb-1.5">
                           {col.label}
                         </div>
-                        {col.unknown ? (
-                          <div className="text-lg font-bold text-text-tertiary"
-                               style={{ fontFamily: 'var(--font-serif)' }}>
-                            ?
-                          </div>
-                        ) : (
-                          <>
-                            <div
-                              className="text-xl font-bold leading-tight"
-                              style={{ fontFamily: 'var(--font-serif)' }}
-                            >
-                              {pillarToHanja(col.pillar.gan, col.pillar.zhi)
-                                .split('')
-                                .map((char, i) => (
-                                  <div key={i} className="leading-tight text-text-primary">
-                                    {char}
-                                  </div>
-                                ))}
+                        {/* 내용 영역 — flex-1 + 중앙정렬로 '?'칸과 4줄칸 높이·세로정렬 일치 */}
+                        <div className="flex-1 flex flex-col items-center justify-center">
+                          {col.unknown ? (
+                            <div className="text-xl font-bold text-text-tertiary"
+                                 style={{ fontFamily: 'var(--font-serif)' }}>
+                              ?
                             </div>
-                          </>
-                        )}
+                          ) : (
+                            <>
+                              {/* 천간: 한글음(위) + 오행색 한자 — 만세력 페이지와 동일 표기 */}
+                              <div className="text-[10px] font-medium text-text-tertiary leading-none mb-0.5">
+                                {col.pillar.gan}
+                              </div>
+                              <div
+                                className="text-xl font-bold leading-none"
+                                style={{
+                                  fontFamily: 'var(--font-serif)',
+                                  color: ELEMENT_COLORS[STEM_TO_ELEMENT[col.pillar.gan]] ?? 'var(--text-primary)',
+                                }}
+                              >
+                                {stemToHanja(col.pillar.gan)}
+                              </div>
+                              {/* 지지: 오행색 한자 + 한글음(아래) */}
+                              <div
+                                className="text-xl font-bold leading-none mt-1"
+                                style={{
+                                  fontFamily: 'var(--font-serif)',
+                                  color: ELEMENT_COLORS[BRANCH_ELEMENT[col.pillar.zhi]] ?? 'var(--text-primary)',
+                                }}
+                              >
+                                {zhiToHanja(col.pillar.zhi)}
+                              </div>
+                              <div className="text-[10px] font-medium text-text-tertiary leading-none mt-0.5">
+                                {col.pillar.zhi}
+                              </div>
+                            </>
+                          )}
+                        </div>
                       </div>
                     ))}
                   </div>
