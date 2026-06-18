@@ -241,7 +241,11 @@ export default function SajuInputPage() {
     setCustomLoveState('')
 
     if (isProfileOnly) {
-      router.replace(fromPage === 'sangdamso' ? '/sangdamso' : '/saju/profile')
+      const returnTo =
+        fromPage === 'sangdamso' ? '/sangdamso'
+        : fromPage === 'gunghap' ? '/saju/gunghap'
+        : '/saju/profile'
+      router.replace(returnTo)
     }
   }
 

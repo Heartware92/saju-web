@@ -682,6 +682,37 @@ export default function GunghapPage() {
     setStep('input');
   };
 
+  // 상대방 프로필 추가 — 현재 입력 단계 컨텍스트를 저장하고 입력 페이지로 보낸다.
+  // SajuInputPage 가 from=gunghap 으로 /saju/gunghap 에 복귀 → 아래 복원 effect 가
+  // 다시 input 단계로 되돌려, 사용자가 고른 관계/내 프로필이 그대로 유지된다.
+  const goAddPartnerProfile = () => {
+    try {
+      sessionStorage.setItem(
+        'gunghap:resume',
+        JSON.stringify({ category, customLabel, myProfileId, ts: Date.now() }),
+      );
+    } catch { /* noop */ }
+    router.push('/saju/input?mode=profile-only&from=gunghap');
+  };
+
+  // 프로필 추가 후 복귀 시 입력 단계 복원 (1회성). 보관함/결과 진입에는 적용하지 않는다.
+  useEffect(() => {
+    if (isArchiveMode || urlJobId || urlRecordId) return;
+    let raw: string | null = null;
+    try { raw = sessionStorage.getItem('gunghap:resume'); } catch { /* noop */ }
+    if (!raw) return;
+    try { sessionStorage.removeItem('gunghap:resume'); } catch { /* noop */ }
+    try {
+      const s = JSON.parse(raw) as { category?: GunghapCategory; customLabel?: string; myProfileId?: string; ts?: number };
+      if (!s || Date.now() - (s.ts ?? 0) > 10 * 60 * 1000) return; // 10분 만료
+      if (s.category) setCategory(s.category);
+      if (typeof s.customLabel === 'string') setCustomLabel(s.customLabel);
+      if (s.myProfileId) setMyProfileId(s.myProfileId);
+      setStep('input');
+    } catch { /* noop */ }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // 직접 입력 분류 API 호출 — handleAnalyze 안에서 본 풀이 직전에 사용.
   // 성공: { valid:true, ... } 저장 → dynamic generator 로 사용
   // valid:false: 인라인 에러 + STEP 1 복귀 → 비싼 본 풀이 차단
@@ -1067,7 +1098,7 @@ export default function GunghapPage() {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center px-6 text-center">
         <p className="text-text-secondary mb-4">내 프로필을 먼저 등록해야 궁합을 볼 수 있어요.</p>
-        <Link href="/saju/input?mode=profile-only" className="text-cta font-semibold underline">프로필 등록</Link>
+        <Link href="/saju/input?mode=profile-only&from=gunghap" className="text-cta font-semibold underline">프로필 등록</Link>
       </div>
     );
   }
@@ -1397,7 +1428,7 @@ export default function GunghapPage() {
                     SajuInputPage 로 라우팅해 저장 후 돌아오면 birth_profiles 에 추가되어 위 칩 리스트에 자동 노출. */}
                 <button
                   type="button"
-                  onClick={() => router.push('/saju/input?mode=profile-only')}
+                  onClick={goAddPartnerProfile}
                   className="mt-3 w-full rounded-2xl border-2 border-dashed border-[var(--border-subtle)] hover:border-cta/40 p-4 flex items-center justify-center gap-2 text-text-tertiary hover:text-cta transition-all"
                 >
                   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
