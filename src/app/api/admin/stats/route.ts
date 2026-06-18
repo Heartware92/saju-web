@@ -8,6 +8,7 @@ import { requireAdmin } from '../_auth';
 import { cached, shouldForce } from '../_cache';
 import { excludedUserIds, excludeUsers } from '../_excluded';
 import { resolveAudience, includeAudience } from '../_audience';
+import { loadPreservedOrders } from '../_preservedRevenue';
 
 const STATS_CACHE_KEY = 'admin:stats:v1';
 const STATS_TTL_SECONDS = 30;
@@ -86,10 +87,22 @@ async function computeStats(audience: Set<string> | null) {
   const orders = ordersRes.data ?? [];
   const completedOrders = orders.filter(o => o.status === 'completed');
   const refundedOrders = orders.filter(o => o.status === 'refunded');
-  const totalRevenue = completedOrders.reduce((s, o) => s + (o.amount ?? 0), 0);
-  const thisMonthRevenue = (monthRevenueRes.data ?? []).reduce((s, o) => s + (o.amount ?? 0), 0);
-  const prevMonthRevenue = (prevMonthRevenueRes.data ?? []).reduce((s, o) => s + (o.amount ?? 0), 0);
-  const refundedRevenue = refundedOrders.reduce((s, o) => s + (o.amount ?? 0), 0);
+
+  // 탈퇴 회원 보존 주문 — 탈퇴 시 orders 가 CASCADE 삭제되어 매출에서 빠지는 것을 복원.
+  // 코호트(오디언스) 필터 시엔 탈퇴자 인구통계 식별 불가라 합산하지 않는다.
+  const preserved = audience ? [] : await loadPreservedOrders();
+  const presCompleted = preserved.filter(o => o.status === 'completed');
+  const presRefunded = preserved.filter(o => o.status === 'refunded');
+  const sumAmt = (arr: { amount: number | null }[]) => arr.reduce((s, o) => s + (o.amount ?? 0), 0);
+  const presInMonth = presCompleted.filter(o => o.created_at && o.created_at >= monthStart);
+  const presInPrevMonth = presCompleted.filter(o => o.created_at && o.created_at >= prevMonthStart && o.created_at < monthStart);
+
+  const completedCount = completedOrders.length + presCompleted.length;
+  const refundedCount = refundedOrders.length + presRefunded.length;
+  const totalRevenue = sumAmt(completedOrders) + sumAmt(presCompleted);
+  const thisMonthRevenue = (monthRevenueRes.data ?? []).reduce((s, o) => s + (o.amount ?? 0), 0) + sumAmt(presInMonth);
+  const prevMonthRevenue = (prevMonthRevenueRes.data ?? []).reduce((s, o) => s + (o.amount ?? 0), 0) + sumAmt(presInPrevMonth);
+  const refundedRevenue = sumAmt(refundedOrders) + sumAmt(presRefunded);
 
   const credits = creditsRes.data ?? [];
   const totalMoonIssued = credits.reduce((s, c) => s + (c.total_moon_purchased ?? 0), 0);
@@ -105,6 +118,12 @@ async function computeStats(audience: Set<string> | null) {
   const tarotByDay = new Array(30).fill(0);
 
   for (const o of dailyOrdersRes.data ?? []) {
+    const idx = dayIndex.get(dayKey(o.created_at));
+    if (idx !== undefined) revenueByDay[idx] += o.amount ?? 0;
+  }
+  // 탈퇴 회원 보존 주문(완료)도 결제 시점 기준으로 일별 매출에 반영
+  for (const o of presCompleted) {
+    if (!o.created_at || o.created_at < thirtyDaysAgo) continue;
     const idx = dayIndex.get(dayKey(o.created_at));
     if (idx !== undefined) revenueByDay[idx] += o.amount ?? 0;
   }
@@ -137,10 +156,10 @@ async function computeStats(audience: Set<string> | null) {
       thisMonth: monthUsersRes.count ?? 0,
     },
     orders: {
-      completed: completedOrders.length,
-      refunded: refundedOrders.length,
-      refundRate: completedOrders.length > 0
-        ? Math.round((refundedOrders.length / (completedOrders.length + refundedOrders.length)) * 100)
+      completed: completedCount,
+      refunded: refundedCount,
+      refundRate: completedCount > 0
+        ? Math.round((refundedCount / (completedCount + refundedCount)) * 100)
         : 0,
     },
     revenue: {

@@ -8,6 +8,7 @@ import { requireAdmin } from '../../_auth';
 import { cached, shouldForce } from '../../_cache';
 import { excludedUserIds, excludeUsers } from '../../_excluded';
 import { resolveAudience, includeAudience } from '../../_audience';
+import { loadPreservedOrders } from '../../_preservedRevenue';
 
 const CACHE_KEY = 'admin:orders:summary:v1';
 const TTL_SECONDS = 30;
@@ -40,7 +41,13 @@ async function computeSummary(audience: Set<string> | null) {
     includeAudience(excludeUsers(supabaseAdmin.from('birth_profiles').select('user_id', { count: 'exact', head: true }).eq('is_primary', true), ex), audience),
   ]);
 
-  const orders = ordersRes.data ?? [];
+  let orders = ordersRes.data ?? [];
+  // 탈퇴 회원 보존 주문 합산 — 탈퇴 시 orders 가 CASCADE 삭제되어 매출에서 빠지는 것을 복원.
+  // 코호트(오디언스) 필터 시엔 탈퇴자 인구통계 식별 불가라 합산하지 않는다.
+  if (!audience) {
+    const preserved = await loadPreservedOrders();
+    if (preserved.length) orders = [...orders, ...preserved];
+  }
   const totalUsers = usersRes.count ?? 0;
 
   const completed = orders.filter(o => o.status === 'completed');
