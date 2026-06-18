@@ -83,13 +83,24 @@ export async function loadAdminBundle(): Promise<RawBundle> {
   // 분석 제외 계정도 회원목록엔 표시(체크 토글용)하므로 여기서 거르지 않고 플래그만 단다.
   // 실제 제외는 분석 소비처(users/summary·_audience)와 집계 라우트(excludeUsers)에서 적용된다.
   const excluded = await excludedUserIds();
-  // 가입 완료(약관 동의 = user_agreements 행 보유) 회원만 집계 대상.
-  // 미완성 가입(소셜 로그인 인증만 하고 동의/가입을 끝내지 않고 이탈)은 회원이 아니므로 제외.
+  // 가입 완료(약관 동의 = user_agreements 행 보유 + 휴대폰 인증 완료) 회원만 집계 대상.
+  // 미완성 가입(소셜 로그인/약관까지만 하고 휴대폰 인증 전에 이탈)은 회원이 아니므로 제외.
   // 조회 실패 시엔 필터하지 않고 전체 유지(어드민이 0명으로 보이는 사고 방지).
   const { data: agreementRows, error: agErr } = await supabaseAdmin.from('user_agreements').select('user_id');
   const completedIds = new Set((agreementRows ?? []).map((a) => a.user_id as string));
   const allUsers = authList?.users ?? [];
-  const users = agErr ? allUsers : allUsers.filter((u) => completedIds.has(u.id));
+  // 휴대폰 인증 완료 판정:
+  //   - 소셜(구글·카카오): 우리 전용 키 user_metadata.phone_verified_at 로 판정
+  //     (Supabase 기본 phone_verified 는 카카오 재로그인 시 false 로 덮어써져 신뢰 불가)
+  //   - 이메일: 가입 폼에서 OTP 인증 후 user_metadata.phone 만 저장(phone_verified_at 미설정)
+  const isPhoneVerified = (u: (typeof allUsers)[number]) => {
+    const provider = u.app_metadata?.provider;
+    const isSocial = !!provider && provider !== 'email';
+    return isSocial
+      ? !!u.user_metadata?.phone_verified_at
+      : !!(u.user_metadata?.phone || u.user_metadata?.phone_verified_at);
+  };
+  const users = agErr ? allUsers : allUsers.filter((u) => completedIds.has(u.id) && isPhoneVerified(u));
 
   const userIds = users.map(u => u.id);
   if (userIds.length === 0) {
