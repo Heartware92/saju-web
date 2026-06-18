@@ -271,7 +271,7 @@ export default function SharePageClient({ type, record }: Props) {
   const createdAt = record.created_at;
 
   return (
-    <div className="min-h-screen px-4 pt-4 pb-12 max-w-lg mx-auto">
+    <div className="min-h-screen px-4 pt-4 pb-12 max-w-[430px] mx-auto">
       {/* 브랜드 헤더 */}
       <div className="text-center mb-6">
         <a href="/" className="inline-block">
