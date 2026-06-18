@@ -76,12 +76,17 @@ export function OrdersSummarySection({ summary }: { summary: OrdersSummary | nul
   const methods = Array.isArray(summary.methods) ? summary.methods : [];
   const monthly = Array.isArray(summary.monthly) ? summary.monthly : [];
 
-  const packageSlices = packages.slice(0, 7).map((p, i) => ({
-    key: p.id,
-    label: p.name,
-    value: p.revenue,
-    color: DONUT_COLORS[i % DONUT_COLORS.length],
-  }));
+  // 패키지별 도넛 = 판매 "건수" 기준(어느 패키지가 가장 많이 팔리는지). 금액 아님.
+  const totalPackageCount = packages.reduce((s, p) => s + p.count, 0);
+  const packageSlices = [...packages]
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 7)
+    .map((p, i) => ({
+      key: p.id,
+      label: p.name,
+      value: p.count,
+      color: DONUT_COLORS[i % DONUT_COLORS.length],
+    }));
 
   const methodBars = methods.map((m, i) => ({
     key: m.method,
@@ -126,13 +131,13 @@ export function OrdersSummarySection({ summary }: { summary: OrdersSummary | nul
       {/* 패키지 + 결제수단 */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
         <div className="bg-white/5 border border-white/10 rounded-xl p-4">
-          <h3 className="text-[14px] font-semibold text-text-primary mb-3">패키지별 매출</h3>
+          <h3 className="text-[14px] font-semibold text-text-primary mb-3">패키지별 판매 비중 (건수)</h3>
           {packageSlices.length === 0
             ? <p className="text-[13px] text-text-tertiary py-6 text-center">데이터 없음</p>
             : <DonutChart
                 slices={packageSlices}
-                centerValue={fmtWon(kpi.totalRevenue).replace('원', '')}
-                centerLabel="총 매출(원)"
+                centerValue={fmt(totalPackageCount)}
+                centerLabel="총 판매(건)"
               />}
         </div>
 
