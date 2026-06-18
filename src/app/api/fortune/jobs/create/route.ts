@@ -582,45 +582,26 @@ async function handleTarotJob(body: TarotJobBody, userId: string): Promise<NextR
   const policy = CATEGORY_POLICY.tarot;
   const consumeKey = `tarot:${body.idempotencyKey}`;
 
-  // 차감
-  const { data: consumeResult, error: consumeError } = await supabaseAdmin.rpc(
-    'consume_credit_atomic',
-    {
-      p_user_id: userId,
-      p_credit_type: CREDIT_TYPE,
-      p_amount: policy.creditCost,
-      p_reason: policy.reason,
-      p_idempotency_key: consumeKey,
-    },
-  );
-  if (consumeError) {
-    console.error('[jobs/create:tarot] consume RPC 에러:', consumeError);
+  // 선(先) 잔액 확인 — 여기서는 차감하지 않는다(게이트 역할). 실제 차감은
+  // 풀이가 정상 생성된 뒤(runTarotJob → chargeOnSuccess)에만 멱등하게 일어난다.
+  // 잔액 0 사용자가 LLM 호출을 일으키는 어뷰징은 이 게이트 + 레이트리밋으로 막는다.
+  const { data: credits, error: balError } = await supabaseAdmin
+    .from('user_credits')
+    .select('moon_balance')
+    .eq('user_id', userId)
+    .maybeSingle();
+  if (balError) {
+    console.error('[jobs/create:tarot] 잔액 조회 에러:', balError);
     return NextResponse.json({ error: '결제 처리 중 오류가 발생했어요.' }, { status: 500 });
   }
-  if (consumeResult === 'insufficient') {
+  if (!credits || (credits.moon_balance ?? 0) < policy.creditCost) {
     return NextResponse.json(
       { error: '달 크레딧이 부족해요. 충전 후 다시 시도해주세요.' },
       { status: 402 },
     );
   }
-  if (consumeResult !== 'ok' && consumeResult !== 'duplicate') {
-    return NextResponse.json({ error: '결제 처리에 실패했어요.' }, { status: 500 });
-  }
-  if (consumeResult === 'duplicate') {
-    const { data: existing } = await supabaseAdmin
-      .from('tarot_records')
-      .select('id')
-      .eq('user_id', userId)
-      .eq('spread_type', body.spreadType)
-      .order('created_at', { ascending: false })
-      .limit(1)
-      .maybeSingle();
-    if (existing) {
-      return NextResponse.json({ jobId: existing.id, deduplicated: true });
-    }
-  }
 
-  // tarot_records INSERT (status='pending')
+  // tarot_records INSERT (status='pending') — 아직 차감하지 않음
   const { data: inserted, error: insertError } = await supabaseAdmin
     .from('tarot_records')
     .insert({
@@ -637,13 +618,7 @@ async function handleTarotJob(body: TarotJobBody, userId: string): Promise<NextR
 
   if (insertError || !inserted) {
     console.error('[jobs/create:tarot] tarot_records INSERT 에러:', insertError);
-    await supabaseAdmin.rpc('refund_credit_atomic', {
-      p_user_id: userId,
-      p_credit_type: CREDIT_TYPE,
-      p_amount: policy.creditCost,
-      p_reason: '타로 잡 생성 실패 자동 환불',
-      p_idempotency_key: `refund:${consumeKey}`,
-    });
+    // 차감 전이라 환불할 것이 없음.
     return NextResponse.json({ error: '잡 생성에 실패했어요.' }, { status: 500 });
   }
 
@@ -656,6 +631,7 @@ async function handleTarotJob(body: TarotJobBody, userId: string): Promise<NextR
         prompt: body.prompt,
         consumeIdempotencyKey: consumeKey,
         creditAmount: policy.creditCost,
+        chargeReason: policy.reason,
       });
     } catch (e) {
       console.error('[jobs/create:tarot] runTarotJob 치명적 누락 에러:', e);
