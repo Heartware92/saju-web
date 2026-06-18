@@ -18,7 +18,20 @@ import { callAI } from '@/lib/ai/aiClients';
 import {
   generateJungtongsajuCorePrompt,
   generateJungtongsajuApplicationPrompt,
+  HANJA_TABLE_BLOCK,
 } from '@/constants/prompts';
+
+// ★ 정통사주 전용 시스템 프롬프트 (2026-06-18 톤 대수정).
+//   기존엔 systemPrompt 미지정 → DEFAULT_SYSTEM_PROMPT("핵심만 간결·실용적")가 적용돼
+//   본문 프롬프트의 풍부한 서술 톤을 눌러버렸다. 혼합 톤(시적 담백 본문 + 친근 마무리)을
+//   시스템 레벨에서 강제. 상세 규칙은 prompts.ts 의 JUNGTONGSAJU_TONE_BLOCK 과 짝.
+const JUNGTONGSAJU_SYSTEM_PROMPT =
+  '당신은 정통 사주명리에 통달한 해설가입니다. 결과는 사전·교재가 아니라 곁에서 차분히 들려주는 이야기여야 합니다. ' +
+  '일간에 어울리는 자연 물상 하나를 골라 그 이미지 하나로 글 전체를 관통시키고, 전문 용어(십성·격국·신살 등)는 그대로 늘어놓지 말고 일상어 의미로 풀어 녹이세요. ' +
+  '본문은 시적이되 담백한 존댓말("~합니다/~입니다")로 한 호흡에 읽히게 쓰고, 각 섹션의 마지막 한두 문장만 곁의 정령이 다정하게 건네듯 따뜻하게 닫으세요. ' +
+  '항목 나열·보고서체·"분석 결과/데이터에 따르면" 류 표현과 이모지는 쓰지 마세요. ' +
+  '단, 프롬프트가 제시한 사주 사실관계(없는 십성을 있다고 말하지 않기 등)는 정확히 지키세요.\n\n' +
+  HANJA_TABLE_BLOCK;
 import {
   parseJungtongsaju,
   extractMetaphorAliases,
@@ -75,7 +88,7 @@ export async function runJungtongsajuJob(input: RunJungtongsajuJobInput): Promis
   try {
     // ── 1차: Core 4섹션 ──
     const corePrompt = generateJungtongsajuCorePrompt(sajuResult);
-    const coreRaw = await callAI(corePrompt, 7000);
+    const coreRaw = await callAI(corePrompt, 7000, { systemPrompt: JUNGTONGSAJU_SYSTEM_PROMPT });
     const coreContent = sanitizeAIOutput(coreRaw.content);
     const coreSections = parseJungtongsaju(coreContent);
 
@@ -107,7 +120,7 @@ export async function runJungtongsajuJob(input: RunJungtongsajuJobInput): Promis
 
     for (let attempt = 1; attempt <= MAX_APP_ATTEMPTS; attempt++) {
       try {
-        const raw = await callAI(appPrompt, 14000);
+        const raw = await callAI(appPrompt, 14000, { systemPrompt: JUNGTONGSAJU_SYSTEM_PROMPT });
         const content = sanitizeAIOutput(raw.content);
         const sections = parseJungtongsaju(content);
         const parsedKeys = Object.keys(sections) as JungtongsajuSectionKey[];
