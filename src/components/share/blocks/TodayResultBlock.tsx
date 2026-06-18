@@ -14,9 +14,8 @@ import {
   type TodayFortuneV3AIResult,
 } from '@/services/fortuneService';
 import { renderTodaySectionVisual } from '@/components/saju/TodaySectionVisuals';
-import { computeSajuFromProfile } from '@/utils/profileSaju';
+import { sajuFromRecord } from '@/utils/profileSaju';
 import { extractMetaphor } from '@/utils/parseMetaphor';
-import type { BirthProfile } from '@/types/credit';
 
 interface Props {
   record: Record<string, any>;
@@ -110,20 +109,8 @@ export function TodayResultBlock({ record, showSectionVisuals = false }: Props) 
   const userContext = eng.userContext as { hobbies?: string[]; customHobby?: string; timeSlot?: TodayTimeSlot; jobState?: string; loveState?: string } | undefined;
   const isoDate = eng.isoDate as string | undefined;
 
-  const profile: BirthProfile = {
-    id: record.profile_id ?? 'share',
-    user_id: '',
-    name: record.profile_name ?? '',
-    birth_date: record.birth_date,
-    birth_time: record.birth_time ?? undefined,
-    birth_place: record.birth_place ?? 'seoul',
-    gender: record.gender,
-    calendar_type: record.calendar_type ?? 'solar',
-    is_primary: false,
-    created_at: '',
-    updated_at: '',
-  };
-  const result = computeSajuFromProfile(profile);
+  // ★ 저장된 result_data 를 그대로 미러링 — 생성·보관함과 100% 동일(재계산 X).
+  const result = sajuFromRecord(record);
 
   // 제품 페이지(TodayFortunePage)와 동일한 시각 카드 렌더용 report — showSectionVisuals 일 때만 사용
   const report = {

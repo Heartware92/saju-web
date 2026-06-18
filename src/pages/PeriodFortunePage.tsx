@@ -29,8 +29,8 @@ import { useFortuneJob } from '../hooks/useFortuneJob';
 import { findRecentArchive } from '../services/archiveService';
 import { BackButton } from '../components/ui/BackButton';
 import { SUN_COST_BIG, CHARGE_REASONS } from '../constants/creditCosts';
-import { computeSajuFromProfile } from '../utils/profileSaju';
-import { calculateSaju } from '../utils/sajuCalculator';
+import { computeSajuFromProfile, sajuFromRecord } from '../utils/profileSaju';
+import { calculateSaju, type SajuResult } from '../utils/sajuCalculator';
 import { calculatePeriodFortune, type FortuneScope, type FortuneGrade, type PeriodFortune } from '../engine/periodFortune';
 import { getPeriodDomainsDescription, getNewyearReport, getPickedDateReport, parsePickedDateReport, parseDateFlowScores, stripAllSectionTags, DATE_TIME_SLOT_LABELS, type NewyearReportAIResult, type PickedDateReportAIResult, type DateTimeSlot, type DateFlowScores } from '../services/fortuneService';
 import { NEWYEAR_SECTION_KEYS, NEWYEAR_SECTION_LABELS, PICKED_DATE_SECTION_KEYS, PICKED_DATE_SECTION_LABELS } from '../constants/prompts';
@@ -408,6 +408,8 @@ export default function PeriodFortunePage({ scope }: { scope: FortuneScope | 'da
   // archive 재생 모드에서 record 의 engine_result.year 가 로드되면 그 값을 우선 사용
   // (연도별 운세 list 모달에서 다른 연도 record 클릭 시 URL.year 와 다른 record.year 가 충돌하는 사고 방지)
   const [archiveYear, setArchiveYear] = useState<number | null>(null);
+  // 보관함 재생 시 저장된 result_data(SajuResult) 미러링용 — 생성·공유와 동일 보장
+  const [archiveSaju, setArchiveSaju] = useState<SajuResult | null>(null);
   const targetYear = (() => {
     if (archiveYear !== null) return archiveYear;
     const y = searchParams?.get('year');
@@ -415,8 +417,10 @@ export default function PeriodFortunePage({ scope }: { scope: FortuneScope | 'da
     return new Date().getFullYear();
   })();
 
-  // 계산 — URL에 간지 원국이 들어오면 그것 사용, 아니면 대표 프로필
+  // 계산 — 보관함이면 저장본 미러링, URL에 간지 원국이 들어오면 그것 사용, 아니면 대표 프로필
   const saju = useMemo(() => {
+    // ★ 보관함 재생: 생성 시 저장된 result_data 를 그대로 사용 (재계산 X → 공유와 동일)
+    if (archiveSaju) return archiveSaju;
     // URL 쿼리로 birth 정보가 들어왔을 경우
     const q = searchParams;
     if (q?.get('year') && q?.get('month') && q?.get('day')) {
@@ -435,7 +439,7 @@ export default function PeriodFortunePage({ scope }: { scope: FortuneScope | 'da
       }
     }
     return targetProfile ? computeSajuFromProfile(targetProfile) : null;
-  }, [searchParams, targetProfile, scope]);
+  }, [archiveSaju, searchParams, targetProfile, scope]);
 
   const fortune: PeriodFortune | null = useMemo(() => {
     if (!saju) return null;
@@ -540,6 +544,8 @@ export default function PeriodFortunePage({ scope }: { scope: FortuneScope | 'da
     sajuDB.getRecordById(recordId)
       .then((record) => {
         if (cancelled || !record) return;
+        // ★ 저장된 result_data 미러링 — 보관함 사주가 생성·공유와 100% 동일
+        setArchiveSaju(sajuFromRecord(record));
         const content = record.interpretation_detailed ?? record.interpretation_basic ?? '';
         // archive 의 engine_result.year 가 있으면 targetYear override (헤더·prompt 동기화)
         const recordYear = (record.engine_result as { year?: number | string } | null)?.year;

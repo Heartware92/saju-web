@@ -1,8 +1,7 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import { computeSajuFromProfile } from '@/utils/profileSaju';
-import type { BirthProfile } from '@/types/credit';
+import { sajuFromRecord } from '@/utils/profileSaju';
 import { calculatePeriodFortune, type FortuneGrade, type FortuneScope } from '@/engine/periodFortune';
 import { parseNewyearReport, parsePickedDateReport } from '@/services/fortuneService';
 import { NEWYEAR_SECTION_KEYS, NEWYEAR_SECTION_LABELS, PICKED_DATE_SECTION_KEYS, PICKED_DATE_SECTION_LABELS } from '@/constants/prompts';
@@ -64,20 +63,8 @@ export function PeriodResultBlock({ record }: Props) {
   const isoDate = eng.isoDate as string | undefined;
   const year = eng.year as number | undefined;
 
-  const profile: BirthProfile = {
-    id: record.profile_id ?? 'share',
-    user_id: '',
-    name: record.profile_name ?? '',
-    birth_date: record.birth_date,
-    birth_time: record.birth_time ?? undefined,
-    birth_place: record.birth_place ?? 'seoul',
-    gender: record.gender,
-    calendar_type: record.calendar_type ?? 'solar',
-    is_primary: false,
-    created_at: '',
-    updated_at: '',
-  };
-  const saju = computeSajuFromProfile(profile);
+  // ★ 저장된 result_data 를 그대로 미러링 — 생성·보관함과 100% 동일(재계산 X).
+  const saju = sajuFromRecord(record);
   if (!saju) {
     return (
       <div className="rounded-2xl p-5 mb-3 bg-[rgba(20,12,38,0.55)] border border-[var(--border-subtle)]">

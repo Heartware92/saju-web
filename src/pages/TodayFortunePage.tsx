@@ -20,7 +20,7 @@ import { useCreditStore } from '../store/useCreditStore';
 import { useReportCacheStore, sajuKey, type ReportKind } from '../store/useReportCacheStore';
 import { RestoreReportModal } from '../components/RestoreReportModal';
 import { QuickFortuneGate } from '../components/QuickFortuneGate';
-import { computeSajuFromProfile } from '../utils/profileSaju';
+import { computeSajuFromProfile, sajuFromRecord } from '../utils/profileSaju';
 import { MOON_COST_MORE, CHARGE_REASONS } from '../constants/creditCosts';
 import { calculateSaju, type SajuResult } from '../utils/sajuCalculator';
 import {
@@ -406,22 +406,9 @@ export default function TodayFortunePage() {
       .then((record) => {
         if (cancelled || !record) return;
         try {
-          // ★ 보관함 재생도 최초 생성·공유와 동일하게 computeSajuFromProfile 사용.
-          //   (calculateSaju 직접 호출은 한국식 30분 시프트·음력 변환을 건너뛰어
-          //    같은 사람의 보관함/공유 사주가 달라지는 버그 — 정통사주와 동일 픽스)
-          const saju = computeSajuFromProfile({
-            id: record.profile_id ?? 'archive',
-            user_id: '',
-            name: record.profile_name ?? '',
-            birth_date: record.birth_date,
-            birth_time: record.birth_time ?? undefined,
-            birth_place: record.birth_place ?? 'seoul',
-            gender: record.gender as 'male' | 'female',
-            calendar_type: (record.calendar_type as 'solar' | 'lunar') ?? 'solar',
-            is_primary: false,
-            created_at: '',
-            updated_at: '',
-          });
+          // ★ 보관함 재생은 생성 시 저장된 result_data 를 그대로 미러링(재계산 X).
+          //   → 생성·공유·보관함이 항상 100% 동일. (옛 레코드만 birth 로 fallback)
+          const saju = sajuFromRecord(record);
           if (saju) setResult(saju);
         } catch (e) {
           console.error('[archive replay] saju recalc failed', e);
