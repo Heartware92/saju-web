@@ -366,6 +366,32 @@ function NoPrimaryModal({ onClose }: { onClose: () => void }) {
   );
 }
 
+// 다시 펼치기 확인 — 새로 뽑으면 달 1개가 차감되므로 사용자에게 먼저 안내
+function RedrawConfirmModal({ onConfirm, onClose }: { onConfirm: () => void; onClose: () => void }) {
+  return (
+    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-sm px-4 pb-[calc(64px+env(safe-area-inset-bottom,0px))] sm:pb-4">
+      <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }}
+        className="rounded-2xl p-6 max-w-sm w-full bg-[rgba(20,12,38,0.95)] border border-[var(--border-subtle)]">
+        <div className="text-center">
+          <div className="text-[32px] mb-3">✦</div>
+          <h3 className="text-[17px] font-bold text-text-primary mb-2">타로 다시 보시겠어요?</h3>
+          <p className="text-[15px] text-text-secondary leading-relaxed mb-5">
+            새로 카드를 뽑으면 달 1개가 차감돼요.<br />지금 풀이는 사라집니다.
+          </p>
+          <div className="flex gap-2">
+            <button onClick={onClose} className="flex-1 py-2.5 rounded-xl border border-[var(--border-subtle)] text-[15px] text-text-secondary">취소</button>
+            <button onClick={onConfirm}
+              className="flex-1 py-2.5 rounded-xl font-bold text-white text-[15px]"
+              style={{ background: 'var(--cta-primary)' }}>
+              네, 다시 뽑기
+            </button>
+          </div>
+        </div>
+      </motion.div>
+    </div>
+  );
+}
+
 // ── 메인 페이지 ───────────────────────────────────────────────────────────────
 export default function TarotPage() {
   const router = useRouter();
@@ -383,6 +409,8 @@ export default function TarotPage() {
 
   const [mode, setMode] = useState<TarotMode>('today');
   const [showNoPrimaryModal, setShowNoPrimaryModal] = useState(false);
+  // 다시 펼치기 확인 모달 — 확인 시 실행할 리셋 동작을 담아둔다
+  const [redrawAction, setRedrawAction] = useState<(() => void) | null>(null);
 
   // 오늘/이달
   const [autoState, setAutoState] = useState<AutoState>('idle');
@@ -458,6 +486,16 @@ export default function TarotPage() {
     setAiContent(null);
     setAiLoading(false);
     setAiError(null);
+    // 이전 모드 잡 참조 제거 — 안 비우면 직전 잡의 startedAt이 새 모드 로딩바에
+    // 그대로 반영돼 진행률이 90%에서 시작하는 문제가 생긴다.
+    setCreatedJobId(null);
+    if (typeof window !== 'undefined') {
+      const u = new URL(window.location.href);
+      if (u.searchParams.has('jobId')) {
+        u.searchParams.delete('jobId');
+        window.history.replaceState(null, '', u.toString());
+      }
+    }
   }, [mode, isArchiveMode]);
 
   // 보관함 재생은 /tarot/result 로 분리됨. /tarot 은 라이브 드로잉 전용.
@@ -555,6 +593,18 @@ export default function TarotPage() {
     }
   };
 
+  // 직전 잡 참조 제거 — 새로 뽑을 때 이전 잡의 startedAt이 로딩바에 잘못 반영되는 것 방지
+  const clearJobRef = () => {
+    setCreatedJobId(null);
+    if (typeof window !== 'undefined') {
+      const u = new URL(window.location.href);
+      if (u.searchParams.has('jobId')) {
+        u.searchParams.delete('jobId');
+        window.history.replaceState(null, '', u.toString());
+      }
+    }
+  };
+
   const resetAuto = () => {
     setAutoState('idle');
     setAutoDrawn([]);
@@ -564,6 +614,7 @@ export default function TarotPage() {
     setAiContent(null);
     setAiError(null);
     setAiLoading(false);
+    clearJobRef();
   };
 
   // 셔플 → 팬 스프레드 (22장 펼치기)
@@ -646,6 +697,12 @@ export default function TarotPage() {
   return (
     <div className="w-full px-4 pt-4 pb-10">
       {showNoPrimaryModal && <NoPrimaryModal onClose={() => setShowNoPrimaryModal(false)} />}
+      {redrawAction && (
+        <RedrawConfirmModal
+          onConfirm={() => { redrawAction(); setRedrawAction(null); }}
+          onClose={() => setRedrawAction(null)}
+        />
+      )}
 
       {/* 헤더 — 메인 페이지라 뒤로가기 없음. 타이틀 + 우측 차감 안내 */}
       <div className="flex items-center mb-4 relative">
@@ -780,10 +837,12 @@ export default function TarotPage() {
                   </div>
                 )}
                 {aiContent && <AIReadingView content={aiContent} color={primaryColor} />}
-                <button onClick={resetAuto}
-                  className="w-full mt-4 py-3 rounded-xl border border-[var(--border-subtle)] text-[15px] text-text-secondary">
-                  다시 펼치기
-                </button>
+                {aiContent && (
+                  <button onClick={() => setRedrawAction(() => resetAuto)}
+                    className="w-full mt-4 py-3 rounded-xl border border-[var(--border-subtle)] text-[15px] text-text-secondary">
+                    타로 다시 보기
+                  </button>
+                )}
               </motion.div>
             )}
           </AnimatePresence>
@@ -868,11 +927,13 @@ export default function TarotPage() {
                   </div>
                 )}
                 {aiContent && <AIReadingView content={aiContent} color={primaryColor} />}
-                <button
-                  onClick={() => { setQState('select'); setQDrawn(null); setQSpread([]); setAiContent(null); setAiError(null); }}
-                  className="w-full mt-4 py-3 rounded-xl border border-[var(--border-subtle)] text-[15px] text-text-secondary">
-                  다른 질문 · 다시 뽑기
-                </button>
+                {aiContent && (
+                  <button
+                    onClick={() => setRedrawAction(() => () => { setQState('select'); setQDrawn(null); setQSpread([]); setAiContent(null); setAiError(null); clearJobRef(); })}
+                    className="w-full mt-4 py-3 rounded-xl border border-[var(--border-subtle)] text-[15px] text-text-secondary">
+                    다른 질문 · 다시 뽑기
+                  </button>
+                )}
               </motion.div>
             )}
           </>

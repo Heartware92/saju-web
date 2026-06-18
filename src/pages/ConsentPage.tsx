@@ -125,79 +125,112 @@ export default function ConsentPage() {
             )}
 
             <div className="space-y-3">
-              <label className="flex items-start gap-3 cursor-pointer pb-3 border-b border-[var(--border-subtle)] text-left">
+              {/* 인앱 브라우저(카카오/네이버 WebView)에서 네이티브 label↔checkbox 탭 포워딩이
+                  불안정해 체크가 누락되는 제보 → 행 전체를 React가 직접 제어하는 토글로 변경.
+                  체크박스는 표시 전용(pointer-events-none), 탭은 행 div가 단일 처리. */}
+              <div
+                role="checkbox" aria-checked={allAgreed} tabIndex={0}
+                onClick={() => toggleAllAgree(!allAgreed)}
+                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleAllAgree(!allAgreed); } }}
+                className="flex items-start gap-3 cursor-pointer pb-3 border-b border-[var(--border-subtle)] text-left touch-manipulation select-none"
+              >
                 <input
                   type="checkbox"
                   checked={allAgreed}
-                  onChange={(e) => toggleAllAgree(e.target.checked)}
-                  className="w-5 h-5 mt-0.5 rounded accent-[var(--cta-primary)] cursor-pointer shrink-0"
+                  readOnly
+                  tabIndex={-1}
+                  className="w-5 h-5 mt-0.5 rounded accent-[var(--cta-primary)] shrink-0 pointer-events-none"
                 />
                 <span className="text-sm font-semibold text-text-primary flex-1 text-left">
                   모두 동의 (필수 + 선택 포함)
                 </span>
-              </label>
+              </div>
 
-              <label className="flex items-start gap-3 cursor-pointer text-left">
+              <div
+                role="checkbox" aria-checked={agreedTerms} tabIndex={0}
+                onClick={() => setAgreedTerms((v) => !v)}
+                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setAgreedTerms((v) => !v); } }}
+                className="flex items-start gap-3 cursor-pointer text-left touch-manipulation select-none"
+              >
                 <input
                   type="checkbox"
                   checked={agreedTerms}
-                  onChange={(e) => setAgreedTerms(e.target.checked)}
-                  className="w-5 h-5 mt-0.5 rounded accent-[var(--cta-primary)] cursor-pointer shrink-0"
+                  readOnly
+                  tabIndex={-1}
+                  className="w-5 h-5 mt-0.5 rounded accent-[var(--cta-primary)] shrink-0 pointer-events-none"
                 />
                 <span className="text-sm text-text-secondary flex-1 text-left">
                   <span className="text-status-error font-bold">[필수]</span>{' '}이용약관 동의{' '}
                   <button
                     type="button"
-                    onClick={() => setShowPolicy('terms')}
+                    onClick={(e) => { e.stopPropagation(); setShowPolicy('terms'); }}
                     className="text-cta hover:underline font-medium"
                   >
                     보기
                   </button>
                 </span>
-              </label>
+              </div>
 
-              <label className="flex items-start gap-3 cursor-pointer text-left">
+              <div
+                role="checkbox" aria-checked={agreedPrivacy} tabIndex={0}
+                onClick={() => setAgreedPrivacy((v) => !v)}
+                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setAgreedPrivacy((v) => !v); } }}
+                className="flex items-start gap-3 cursor-pointer text-left touch-manipulation select-none"
+              >
                 <input
                   type="checkbox"
                   checked={agreedPrivacy}
-                  onChange={(e) => setAgreedPrivacy(e.target.checked)}
-                  className="w-5 h-5 mt-0.5 rounded accent-[var(--cta-primary)] cursor-pointer shrink-0"
+                  readOnly
+                  tabIndex={-1}
+                  className="w-5 h-5 mt-0.5 rounded accent-[var(--cta-primary)] shrink-0 pointer-events-none"
                 />
                 <span className="text-sm text-text-secondary flex-1 text-left">
                   <span className="text-status-error font-bold">[필수]</span>{' '}개인정보처리방침 동의{' '}
                   <button
                     type="button"
-                    onClick={() => setShowPolicy('privacy')}
+                    onClick={(e) => { e.stopPropagation(); setShowPolicy('privacy'); }}
                     className="text-cta hover:underline font-medium"
                   >
                     보기
                   </button>
                 </span>
-              </label>
+              </div>
 
-              <label className="flex items-start gap-3 cursor-pointer text-left">
+              <div
+                role="checkbox" aria-checked={agreedAge14} tabIndex={0}
+                onClick={() => setAgreedAge14((v) => !v)}
+                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setAgreedAge14((v) => !v); } }}
+                className="flex items-start gap-3 cursor-pointer text-left touch-manipulation select-none"
+              >
                 <input
                   type="checkbox"
                   checked={agreedAge14}
-                  onChange={(e) => setAgreedAge14(e.target.checked)}
-                  className="w-5 h-5 mt-0.5 rounded accent-[var(--cta-primary)] cursor-pointer shrink-0"
+                  readOnly
+                  tabIndex={-1}
+                  className="w-5 h-5 mt-0.5 rounded accent-[var(--cta-primary)] shrink-0 pointer-events-none"
                 />
                 <span className="text-sm text-text-secondary flex-1 text-left">
                   <span className="text-status-error font-bold">[필수]</span>{' '}만 14세 이상입니다
                 </span>
-              </label>
+              </div>
 
-              <label className="flex items-start gap-3 cursor-pointer text-left">
+              <div
+                role="checkbox" aria-checked={agreedMarketing} tabIndex={0}
+                onClick={() => setAgreedMarketing((v) => !v)}
+                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setAgreedMarketing((v) => !v); } }}
+                className="flex items-start gap-3 cursor-pointer text-left touch-manipulation select-none"
+              >
                 <input
                   type="checkbox"
                   checked={agreedMarketing}
-                  onChange={(e) => setAgreedMarketing(e.target.checked)}
-                  className="w-5 h-5 mt-0.5 rounded accent-[var(--cta-primary)] cursor-pointer shrink-0"
+                  readOnly
+                  tabIndex={-1}
+                  className="w-5 h-5 mt-0.5 rounded accent-[var(--cta-primary)] shrink-0 pointer-events-none"
                 />
                 <span className="text-sm text-text-secondary flex-1 text-left">
                   <span className="text-text-tertiary font-bold">[선택]</span>{' '}이벤트·혜택 등 마케팅 정보 수신 동의
                 </span>
-              </label>
+              </div>
             </div>
 
             <button
