@@ -187,15 +187,24 @@ export default function SajuResultPage() {
       .then((record) => {
         if (cancelled || !record) return;
         try {
-          const [yStr, mStr, dStr] = record.birth_date.split('-');
-          const year = parseInt(yStr, 10);
-          const month = parseInt(mStr, 10);
-          const day = parseInt(dStr, 10);
-          const hour = record.birth_time ? parseInt(record.birth_time.split(':')[0], 10) : 12;
-          const minute = record.birth_time ? parseInt(record.birth_time.split(':')[1] || '0', 10) : 0;
-          const unknownTime = !record.birth_time;
-          setResult(calculateSaju(year, month, day, hour, minute, record.gender, unknownTime));
-          if (!unknownTime && record.birth_time) {
+          // ★ 보관함 재생도 최초 생성·공유와 동일하게 computeSajuFromProfile 사용.
+          //   과거엔 calculateSaju 에 시계시간을 그대로 넘겨 한국식 30분 시프트·음력 변환이
+          //   빠져, 같은 사람의 보관함/공유 사주(시주·신강·십성)가 달라지는 버그가 있었음.
+          const saju = computeSajuFromProfile({
+            id: record.profile_id ?? 'archive',
+            user_id: '',
+            name: record.profile_name ?? '',
+            birth_date: record.birth_date,
+            birth_time: record.birth_time ?? undefined,
+            birth_place: record.birth_place ?? 'seoul',
+            gender: record.gender as 'male' | 'female',
+            calendar_type: (record.calendar_type as 'solar' | 'lunar') ?? 'solar',
+            is_primary: false,
+            created_at: '',
+            updated_at: '',
+          });
+          if (saju) setResult(saju);
+          if (record.birth_time) {
             setDisplayBirthTime(record.birth_time.slice(0, 5));
           }
           // 보관함 풀이의 프로필명 — record.profile_name 스냅샷 우선, 없으면 profile_id 매칭으로 fallback.

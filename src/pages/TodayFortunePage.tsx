@@ -406,14 +406,23 @@ export default function TodayFortunePage() {
       .then((record) => {
         if (cancelled || !record) return;
         try {
-          const [yStr, mStr, dStr] = record.birth_date.split('-');
-          const year = parseInt(yStr, 10);
-          const month = parseInt(mStr, 10);
-          const day = parseInt(dStr, 10);
-          const hour = record.birth_time ? parseInt(record.birth_time.split(':')[0], 10) : 12;
-          const minute = record.birth_time ? parseInt(record.birth_time.split(':')[1] || '0', 10) : 0;
-          const unknownTime = !record.birth_time;
-          setResult(calculateSaju(year, month, day, hour, minute, record.gender, unknownTime));
+          // ★ 보관함 재생도 최초 생성·공유와 동일하게 computeSajuFromProfile 사용.
+          //   (calculateSaju 직접 호출은 한국식 30분 시프트·음력 변환을 건너뛰어
+          //    같은 사람의 보관함/공유 사주가 달라지는 버그 — 정통사주와 동일 픽스)
+          const saju = computeSajuFromProfile({
+            id: record.profile_id ?? 'archive',
+            user_id: '',
+            name: record.profile_name ?? '',
+            birth_date: record.birth_date,
+            birth_time: record.birth_time ?? undefined,
+            birth_place: record.birth_place ?? 'seoul',
+            gender: record.gender as 'male' | 'female',
+            calendar_type: (record.calendar_type as 'solar' | 'lunar') ?? 'solar',
+            is_primary: false,
+            created_at: '',
+            updated_at: '',
+          });
+          if (saju) setResult(saju);
         } catch (e) {
           console.error('[archive replay] saju recalc failed', e);
         }
