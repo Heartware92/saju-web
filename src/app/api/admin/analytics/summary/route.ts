@@ -288,6 +288,65 @@ async function computeFunnel(
   };
 }
 
+/**
+ * 가입 후 첫 운세 — 회원별 가입시각 이후 처음 실행한 풀이(사주 category + 타로 spread)의 분포.
+ *  - 대상: 가입 완료(번들) 코호트. 제외 계정·오디언스 필터 일관 적용.
+ *  - 활성화율: 가입자 중 풀이를 1건이라도 한 비율(온보딩 핵심 지표).
+ *  - 소요시간: 가입 → 첫 풀이까지 평균·중앙(시간 단위).
+ *  - analytics_events 무관(records 테이블 기반)이라 전체 회원 역사에 적용된다.
+ * 타로 키는 사주 category 와 충돌(today 등) 방지 위해 'tarot:' 프리픽스로 구분.
+ */
+async function computeFirstReading(audience: Set<string> | null, excluded: Set<string>) {
+  const bundle = await cachedLoadAdminBundle();
+  let cohort = bundle.users.filter((u) => !excluded.has(u.id));
+  if (audience) cohort = cohort.filter((u) => audience.has(u.id));
+  const signupAtById = new Map<string, number>();
+  for (const u of cohort) {
+    const t = u.created_at ? new Date(u.created_at).getTime() : 0;
+    if (t) signupAtById.set(u.id, t);
+  }
+  const totalSignups = signupAtById.size;
+
+  const [sajuR, tarotR] = await Promise.all([
+    includeAudience(excludeUsers(supabaseAdmin.from('saju_records').select('user_id, category, created_at'), excluded), audience),
+    includeAudience(excludeUsers(supabaseAdmin.from('tarot_records').select('user_id, spread_type, created_at'), excluded), audience),
+  ]);
+
+  const firstByUser = new Map<string, { cat: string; at: number }>();
+  const consider = (uid: string | null, label: string, createdAt: string | null) => {
+    if (!uid || !createdAt) return;
+    if (!signupAtById.has(uid)) return; // 가입 완료 코호트만
+    const t = new Date(createdAt).getTime();
+    const prev = firstByUser.get(uid);
+    if (!prev || t < prev.at) firstByUser.set(uid, { cat: label, at: t });
+  };
+  for (const r of sajuR.data ?? []) consider(r.user_id, r.category ?? '(미상)', r.created_at);
+  for (const r of tarotR.data ?? []) consider(r.user_id, `tarot:${r.spread_type ?? '(미상)'}`, r.created_at);
+
+  const dist = new Map<string, number>();
+  const hoursList: number[] = [];
+  for (const [uid, first] of firstByUser) {
+    dist.set(first.cat, (dist.get(first.cat) ?? 0) + 1);
+    const hours = (first.at - signupAtById.get(uid)!) / 3_600_000;
+    if (hours >= 0) hoursList.push(hours);
+  }
+  const activated = firstByUser.size;
+  hoursList.sort((a, b) => a - b);
+  const avgHours = hoursList.length ? hoursList.reduce((s, h) => s + h, 0) / hoursList.length : 0;
+  const medianHours = hoursList.length ? hoursList[Math.floor((hoursList.length - 1) / 2)] : 0;
+
+  return {
+    totalSignups,
+    activated,
+    activationRate: totalSignups ? Math.round((activated / totalSignups) * 1000) / 10 : 0,
+    avgHoursToFirst: Math.round(avgHours * 10) / 10,
+    medianHoursToFirst: Math.round(medianHours * 10) / 10,
+    distribution: [...dist.entries()]
+      .map(([key, count]) => ({ key, count }))
+      .sort((a, b) => b.count - a.count),
+  };
+}
+
 async function computeSummary(audience: Set<string> | null) {
   const sinceIso = new Date(Date.now() - WINDOW_DAYS * 86_400_000).toISOString();
   const { rows: allRows, truncated } = await fetchWindowRows(sinceIso);
@@ -367,13 +426,55 @@ async function computeSummary(audience: Set<string> | null) {
     return { date: d, sessions: a.sessions.size, visitors: a.visitors.size, pageviews: a.pv };
   });
 
+  // ── 페이지 흐름: 각 출발 페이지에서 바로 다음에 간 화면(+이탈) ──
+  // 세션별 경로를 시간순(rows 는 created_at asc)으로 모아 연속 쌍(a→b)을 누적.
+  // 세션의 마지막 페이지는 a→(이탈) 로 집계 → "홈에서 바로 이탈" 같은 신호 포착.
+  const EXIT_KEY = '(이탈)';
+  const sessionSeq = new Map<string, string[]>();
+  for (const r of rows) {
+    const arr = sessionSeq.get(r.session_id);
+    if (arr) arr.push(r.path);
+    else sessionSeq.set(r.session_id, [r.path]);
+  }
+  const flowOut = new Map<string, Map<string, number>>();
+  for (const seq of sessionSeq.values()) {
+    for (let i = 0; i < seq.length; i++) {
+      const fromPath = seq[i];
+      const toPath = i + 1 < seq.length ? seq[i + 1] : EXIT_KEY;
+      if (toPath !== EXIT_KEY && toPath === fromPath) continue; // 동일 페이지 연속 무시
+      const m = flowOut.get(fromPath) ?? new Map<string, number>();
+      m.set(toPath, (m.get(toPath) ?? 0) + 1);
+      flowOut.set(fromPath, m);
+    }
+  }
+  const pageFlows = [...flowOut.entries()]
+    .map(([path, toMap]) => {
+      const next = [...toMap.entries()]
+        .map(([key, count]) => ({ key, count }))
+        .sort((a, b) => b.count - a.count);
+      const total = next.reduce((s, n) => s + n.count, 0);
+      const exitCount = toMap.get(EXIT_KEY) ?? 0;
+      return {
+        path,
+        total,
+        exitCount,
+        exitRate: total ? Math.round((exitCount / total) * 1000) / 10 : 0,
+        next: next.slice(0, 12),
+      };
+    })
+    .sort((a, b) => b.total - a.total)
+    .slice(0, 20);
+
   const totalSessions = sessions.size;
   const retention = await computeRetention(excluded, audience);
   const funnel = await computeFunnel(audience, excluded, visitors.size, filtered);
+  const firstReading = await computeFirstReading(audience, excluded);
 
   return {
     truncated,
     funnel,
+    pageFlows,
+    firstReading,
     kpi: {
       sessions: totalSessions,
       visitors: visitors.size,

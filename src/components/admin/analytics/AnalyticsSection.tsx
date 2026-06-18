@@ -6,8 +6,9 @@
  */
 'use client';
 
+import { useMemo, useState } from 'react';
 import { VerticalBarChart } from '@/components/admin/charts/VerticalBarChart';
-import { pathLabel } from '@/constants/adminLabels';
+import { pathLabel, SAJU_CATEGORY_LABEL, TAROT_SPREAD_LABEL } from '@/constants/adminLabels';
 
 interface Counted { key: string; count: number; }
 
@@ -56,6 +57,15 @@ export interface AnalyticsSummary {
   sharePages: Counted[];
   sharePagesDetailed?: { key: string; kakao: number; url: number; count: number }[];
   shareChannels: { kakao: number; url: number; total: number };
+  pageFlows?: { path: string; total: number; exitCount: number; exitRate: number; next: Counted[] }[];
+  firstReading?: {
+    totalSignups: number;
+    activated: number;
+    activationRate: number;
+    avgHoursToFirst: number;
+    medianHoursToFirst: number;
+    distribution: Counted[];
+  };
 }
 
 const fmt = (n: number) => n.toLocaleString('ko-KR');
@@ -197,6 +207,72 @@ function FunnelCards({ funnel }: { funnel: ConversionFunnel }) {
   );
 }
 
+/** 페이지 흐름 — 선택한 화면에서 바로 다음에 간 곳(+이탈). 기본 선택은 홈 */
+function PageFlowCard({ flows }: { flows: NonNullable<AnalyticsSummary['pageFlows']> }) {
+  const [path, setPath] = useState<string>('');
+  const selected = useMemo(
+    () => flows.find((f) => f.path === path) ?? flows.find((f) => f.path === '/') ?? flows[0] ?? null,
+    [flows, path],
+  );
+  if (!flows.length || !selected) {
+    return (
+      <Card title="페이지 흐름" sub="선택한 화면을 본 세션이 바로 다음에 간 화면">
+        <p className="text-[13px] text-text-tertiary py-6 text-center">흐름 데이터 없음 (2026-06-02부터 수집)</p>
+      </Card>
+    );
+  }
+  const flowLabel = (key: string) => (key === '(이탈)' ? '여기서 이탈(나감)' : pathLabel(key));
+  return (
+    <Card title="페이지 흐름" sub="선택한 화면을 본 세션이 바로 다음에 간 화면(+이탈) · 2026-06-02부터">
+      <div className="flex items-center gap-2 mb-4 flex-wrap">
+        <select
+          value={selected.path}
+          onChange={(e) => setPath(e.target.value)}
+          className="px-3 py-2 rounded-lg bg-white/5 border border-white/15 text-[14px] text-text-primary focus:outline-none focus:border-cta/50 max-w-[280px]"
+        >
+          {flows.map((f) => (
+            <option key={f.path} value={f.path}>
+              {pathLabel(f.path)} ({fmt(f.total)})
+            </option>
+          ))}
+        </select>
+        <span className="text-[12px] text-text-tertiary">
+          총 {fmt(selected.total)}회 · 이 화면에서 바로 이탈 {selected.exitRate}%
+        </span>
+      </div>
+      <RankBars items={selected.next} color="rgba(96, 165, 250, 0.7)" empty="다음 행동 데이터 없음" labelFn={flowLabel} />
+    </Card>
+  );
+}
+
+/** 가입 후 첫 운세 — 첫 풀이 카테고리 분포 + 활성화율 + 소요시간 */
+function FirstReadingCard({ data }: { data: NonNullable<AnalyticsSummary['firstReading']> }) {
+  const fmtDur = (h: number) => {
+    if (!h) return '-';
+    if (h < 1) return `${Math.round(h * 60)}분`;
+    if (h < 48) return `${h}시간`;
+    return `${Math.round((h / 24) * 10) / 10}일`;
+  };
+  const readingLabel = (key: string) => {
+    if (key.startsWith('tarot:')) {
+      const s = key.slice(6);
+      return `타로 · ${TAROT_SPREAD_LABEL[s] ?? s}`;
+    }
+    return SAJU_CATEGORY_LABEL[key] ?? key;
+  };
+  return (
+    <Card title="가입 후 첫 운세" sub="회원이 가입하고 처음 본 풀이 분포 · 사주+타로 통합 · 전체 회원 기준">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5 mb-4">
+        <MiniStat label="가입자" value={fmt(data.totalSignups)} />
+        <MiniStat label="첫 풀이 실행" value={fmt(data.activated)} />
+        <MiniStat label="활성화율" value={`${data.activationRate}%`} color="text-emerald-300" />
+        <MiniStat label="가입→첫풀이(중앙)" value={fmtDur(data.medianHoursToFirst)} color="text-sky-300" />
+      </div>
+      <RankBars items={data.distribution} color="rgba(52, 211, 153, 0.7)" empty="첫 운세 데이터 없음" labelFn={readingLabel} />
+    </Card>
+  );
+}
+
 export function AnalyticsSection({ summary }: { summary: AnalyticsSummary | null }) {
   if (!summary) {
     return <p className="text-[14px] text-text-tertiary py-10 text-center">데이터를 불러오는 중…</p>;
@@ -251,6 +327,9 @@ export function AnalyticsSection({ summary }: { summary: AnalyticsSummary | null
       {/* 전환 깔때기 (가입 → 풀이 → 결제) */}
       {summary.funnel && <FunnelCards funnel={summary.funnel} />}
 
+      {/* 가입 후 첫 운세 (온보딩 활성화) */}
+      {summary.firstReading && <FirstReadingCard data={summary.firstReading} />}
+
       {/* 일별 방문자 추이 */}
       <Card title="일별 방문자 추이" sub="최근 30일 고유 방문자(visitor) 기준">
         <VerticalBarChart bars={visitorBars} color="rgba(96, 165, 250, 0.75)" height={180} />
@@ -275,6 +354,9 @@ export function AnalyticsSection({ summary }: { summary: AnalyticsSummary | null
           <RankBars items={summary.exitPages} color="rgba(248, 113, 113, 0.7)" empty="데이터 없음" labelFn={pathLabel} />
         </Card>
       </div>
+
+      {/* 페이지 흐름 (홈에서 어디로 갔는지 등) */}
+      {summary.pageFlows && <PageFlowCard flows={summary.pageFlows} />}
 
       {/* 인기 페이지 + 공유 많은 페이지 */}
       <div className="grid md:grid-cols-2 gap-4">
