@@ -2293,7 +2293,7 @@ export const JUNGTONGSAJU_SECTION_LABELS: Record<JungtongsajuSectionKey, string>
 };
 
 /** 오행 → "ㅇㅇ·ㅇㅇ" 천간 텍스트 (프롬프트에서 ${...} 보간용) */
-const ELEMENT_TO_STEMS_TEXT: Record<string, string> = {
+export const ELEMENT_TO_STEMS_TEXT: Record<string, string> = {
   '목': '갑목·을목', '화': '병화·정화', '토': '무토·기토',
   '금': '경금·신금', '수': '임수·계수',
 };
@@ -2303,7 +2303,7 @@ const ELEMENT_TO_STEMS_TEXT: Record<string, string> = {
  * 이 헬퍼가 사주 원국·신살·합충·대운 등 모든 데이터 표현을 책임지며,
  * 두 프롬프트는 이 블록 + 자기 섹션 지침만 추가하면 된다.
  */
-function buildJungtongsajuInput(result: SajuResult) {
+export function buildJungtongsajuInput(result: SajuResult) {
   const { pillars, elementPercent, isStrong, yongSinElement, yongSin, sinSals, interactions, daeWoon, seWoon, gender, hourUnknown } = result;
   const gyeokguk = determineGyeokguk(result);
   const sipseongCounts = computeSipseongCounts(result);
