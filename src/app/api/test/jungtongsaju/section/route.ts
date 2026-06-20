@@ -42,10 +42,12 @@ export async function POST(req: NextRequest) {
 
   let sajuResult: SajuResult;
   let section: JungtongsajuSectionKey;
+  let priorSections: Array<{ label: string; text: string }> = [];
   try {
     const body = await req.json();
     sajuResult = body.sajuResult;
     section = body.section;
+    if (Array.isArray(body.priorSections)) priorSections = body.priorSections;
     if (!sajuResult || !section) {
       return NextResponse.json({ error: 'sajuResult·section 필요' }, { status: 400 });
     }
@@ -58,6 +60,21 @@ export async function POST(req: NextRequest) {
     ? generateJungtongsajuCorePromptTest(sajuResult)
     : generateJungtongsajuApplicationPromptTest(sajuResult, '', []);
 
+  // 이미 생성된 다른 섹션들 — 같은 만세력이라 도입·표현이 겹치기 쉬우니 반복 금지 컨텍스트로 주입
+  const priorBlock = priorSections.length > 0
+    ? `
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+[이미 다른 섹션에 쓴 글 — 도입·표현·은유·문장 구조를 반복하지 말 것]
+같은 사람의 사주라 비슷해지기 쉽습니다. 아래 글들과 ★다르게★ 쓰세요. 특히:
+- "나는 당신 곁에서 ~ 지켜봤어요" 같은 정령 도입을 매 섹션 똑같이 쓰지 말 것. 이번 섹션은 완전히 다른 방식으로 시작.
+- 같은 은유·같은 첫 문장·같은 비유(호수, 고요/깊은 물 등)를 재사용 금지.
+- 표현이 겹친다 싶으면 다른 어휘·다른 장면으로 바꿀 것.
+
+${priorSections.map(p => `[${p.label}]\n${p.text}`).join('\n\n')}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`
+    : '';
+
   const override = `
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -68,7 +85,7 @@ export async function POST(req: NextRequest) {
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`;
 
   try {
-    const raw = await callAI(basePrompt + override, 6000);
+    const raw = await callAI(basePrompt + priorBlock + override, 6000);
     const content = sanitizeAIOutput(raw.content);
     const parsed = parseJungtongsaju(content);
     const text = parsed[section] ?? content; // 마커 누락 시 통짜 fallback

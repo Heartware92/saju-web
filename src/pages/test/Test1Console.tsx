@@ -46,10 +46,18 @@ export default function Test1Console() {
         birth.gender as 'male' | 'female', birth.unknown,
       );
 
+      // 이미 생성한 다른 섹션들 — 반복 회피 컨텍스트로 함께 전송
+      const priorSections = Object.entries(results)
+        .filter(([k, t]) => k !== key && !!t)
+        .map(([k, t]) => ({
+          label: k === 'advice' ? '개운법' : (JUNGTONGSAJU_SECTION_LABELS[k as keyof typeof JUNGTONGSAJU_SECTION_LABELS] ?? k),
+          text: t,
+        }));
+
       const res = await fetch('/api/test/jungtongsaju/section', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-        body: JSON.stringify({ sajuResult: saju, section: key }),
+        body: JSON.stringify({ sajuResult: saju, section: key, priorSections }),
       });
       const json = await res.json();
       if (!res.ok || !json.success) { alert(json.error ?? '생성 실패'); return; }

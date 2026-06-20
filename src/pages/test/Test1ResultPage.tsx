@@ -440,10 +440,18 @@ export default function Test1ResultPage() {
       const { data: sessionData } = await supabase.auth.getSession();
       const accessToken = sessionData.session?.access_token;
       if (!accessToken) { alert('로그인이 필요해요.'); return; }
+      // 이미 생성된 다른 섹션들 — 반복 회피 컨텍스트로 함께 전송
+      const priorSections = Object.entries(report?.sections ?? {})
+        .filter(([k, t]) => k !== key && !!t)
+        .map(([k, t]) => ({
+          label: k === 'advice' ? '개운법' : (JUNGTONGSAJU_SECTION_LABELS[k as keyof typeof JUNGTONGSAJU_SECTION_LABELS] ?? k),
+          text: t as string,
+        }));
+
       const res = await fetch('/api/test/jungtongsaju/section', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${accessToken}` },
-        body: JSON.stringify({ sajuResult: result, section: key }),
+        body: JSON.stringify({ sajuResult: result, section: key, priorSections }),
       });
       const data = await res.json();
       if (!res.ok || !data.success) {
