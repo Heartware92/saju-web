@@ -13,7 +13,7 @@ import {
 } from '@/utils/sajuCalculator';
 import { computeSajuFromProfile } from '@/utils/profileSaju';
 import { generateTodayFortuneV3Prompt } from '@/constants/prompts';
-import { callAI } from '@/lib/ai/aiClients';
+import { callAI, TODAY_FORTUNE_SYSTEM_PROMPT } from '@/lib/ai/aiClients';
 import type { BirthProfile } from '@/types/credit';
 
 export const maxDuration = 300;
@@ -78,7 +78,7 @@ export async function POST(req: NextRequest) {
 
   const todayGz = calcTodayGz(result, isoDate);
   const prompt = generateTodayFortuneV3Prompt(result, todayGz as never, isoDate, ctx, null);
-  const ai = await callAI(prompt, 9500, { temperature: 0.85 }); // prod today 와 동일
+  const ai = await callAI(prompt, 9500, { temperature: 0.85, systemPrompt: TODAY_FORTUNE_SYSTEM_PROMPT }); // prod today(todayJob) 와 동일
   const raw = ai.content;
 
   const record = {

@@ -11,7 +11,7 @@
 
 import { motion } from 'framer-motion';
 import { extractMetaphor } from '../../utils/parseMetaphor';
-import { renderEmphasis } from '../../utils/renderEmphasis';
+import { renderEmphasizedBody } from '../../utils/renderEmphasizedBody';
 import { SectionCollapsible } from './SectionCollapsible';
 import { renderTodaySectionVisual } from './TodaySectionVisuals';
 import { stripStrayMarkers, type TodayFortuneV3AIResult } from '../../services/fortuneService';
@@ -370,7 +370,7 @@ export function TodayResultView({ report, result, reportDateStr, ctxLabel, initi
                 {renderTodaySectionVisual(key, report)}
                 <div className="text-[17px] text-text-secondary leading-[1.85] tracking-[-0.005em] space-y-3">
                   {bodyText.split(/\n\n+/).map((para, pi) => (
-                    <p key={pi} className="whitespace-pre-line">{renderEmphasis(para.trim())}</p>
+                    <p key={pi} className="whitespace-pre-line">{renderEmphasizedBody(para.trim())}</p>
                   ))}
                 </div>
               </SectionCollapsible>
