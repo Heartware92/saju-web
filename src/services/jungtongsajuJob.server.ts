@@ -18,7 +18,7 @@
 //   4. 12섹션 마커 재구성 → UPDATE status='done'
 //   5. core 가 하나도 안 나오면 status='failed' + 환불
 
-import { callAI } from '@/lib/ai/aiClients';
+import { callAI, JUNGTONGSAJU_SYSTEM_PROMPT } from '@/lib/ai/aiClients';
 import {
   generateJungtongsajuCorePrompt,
   generateJungtongsajuApplicationPrompt,
@@ -127,7 +127,7 @@ export async function runJungtongsajuJob(input: RunJungtongsajuJobInput): Promis
 async function generateSection(prompt: string, key: JungtongsajuSectionKey): Promise<string | null> {
   for (let attempt = 1; attempt <= MAX_SECTION_ATTEMPTS; attempt++) {
     try {
-      const raw = await callAI(prompt, 6000);
+      const raw = await callAI(prompt, 6000, { systemPrompt: JUNGTONGSAJU_SYSTEM_PROMPT });
       const content = sanitizeAIOutput(raw.content);
       const parsed = parseJungtongsaju(content);
       const text = parsed[key] ?? content; // 마커 누락 시 통짜 fallback
