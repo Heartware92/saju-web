@@ -18,54 +18,89 @@ export default function Test1Console() {
   const [birth, setBirth] = useState({ y: 1992, m: 9, d: 14, h: 13, min: 24, gender: 'male', unknown: false });
   const [results, setResults] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState<string | null>(null);
+  const [allProgress, setAllProgress] = useState<number | null>(null); // 전체 생성 진행(완료 수), null=미실행
 
   const num = (v: string) => parseInt(v, 10) || 0;
+  const busy = loading !== null || allProgress !== null;
+  const TOTAL = JUNGTONGSAJU_SECTION_KEYS.length;
+
+  const labelOf = (k: string) =>
+    k === 'advice' ? '개운법' : (JUNGTONGSAJU_SECTION_LABELS[k as keyof typeof JUNGTONGSAJU_SECTION_LABELS] ?? k);
+
+  const getToken = async () => {
+    const { data } = await supabase.auth.getSession();
+    const token = data.session?.access_token;
+    if (!token) { alert('로그인이 필요해요. /login 에서 로그인 후 다시 시도하세요.'); return null; }
+    return token;
+  };
+
+  // 만세력과 동일한 -30분 시간 보정 후 사주 계산
+  const buildSaju = (): SajuResult => {
+    let fy = birth.y, fm = birth.m, fd = birth.d, fh = 12, fmin = 0;
+    if (!birth.unknown) {
+      const dt = new Date(birth.y, birth.m - 1, birth.d, birth.h, birth.min);
+      const s = new Date(dt.getTime() - 30 * 60 * 1000);
+      fy = s.getFullYear(); fm = s.getMonth() + 1; fd = s.getDate(); fh = s.getHours(); fmin = s.getMinutes();
+    }
+    return calculateSaju(fy, fm, fd, fh, fmin, birth.gender as 'male' | 'female', birth.unknown);
+  };
+
+  // 한 섹션 생성 — priorArr: 반복 회피용 이미 생성된 섹션들
+  const genOne = async (key: string, token: string, saju: SajuResult, priorArr: Array<{ label: string; text: string }>) => {
+    const res = await fetch('/api/test/jungtongsaju/section', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+      body: JSON.stringify({ sajuResult: saju, section: key, priorSections: priorArr }),
+    });
+    const json = await res.json();
+    if (!res.ok || !json.success) throw new Error(json.error ?? '생성 실패');
+    return json.text as string;
+  };
 
   const generate = async (key: string) => {
-    if (loading) return;
+    if (busy) return;
     setLoading(key);
     try {
-      const { data } = await supabase.auth.getSession();
-      const token = data.session?.access_token;
-      if (!token) { alert('로그인이 필요해요. /login 에서 로그인 후 다시 시도하세요.'); return; }
-
-      // ★ 실제 만세력과 동일한 시간 보정(-30분) 후 계산 — 안 하면 시주가 어긋나
-      //   오행·용신이 전부 틀어진다(예: 13:24가 미시로 잡혀 목이 생김). SajuResultPage 와 동일.
-      let fy = birth.y, fm = birth.m, fd = birth.d, fh = 12, fmin = 0;
-      if (!birth.unknown) {
-        const dt = new Date(birth.y, birth.m - 1, birth.d, birth.h, birth.min);
-        const shifted = new Date(dt.getTime() - 30 * 60 * 1000);
-        fy = shifted.getFullYear();
-        fm = shifted.getMonth() + 1;
-        fd = shifted.getDate();
-        fh = shifted.getHours();
-        fmin = shifted.getMinutes();
-      }
-      const saju: SajuResult = calculateSaju(
-        fy, fm, fd, fh, fmin,
-        birth.gender as 'male' | 'female', birth.unknown,
-      );
-
-      // 이미 생성한 다른 섹션들 — 반복 회피 컨텍스트로 함께 전송
-      const priorSections = Object.entries(results)
+      const token = await getToken();
+      if (!token) return;
+      const priorArr = Object.entries(results)
         .filter(([k, t]) => k !== key && !!t)
-        .map(([k, t]) => ({
-          label: k === 'advice' ? '개운법' : (JUNGTONGSAJU_SECTION_LABELS[k as keyof typeof JUNGTONGSAJU_SECTION_LABELS] ?? k),
-          text: t,
-        }));
-
-      const res = await fetch('/api/test/jungtongsaju/section', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-        body: JSON.stringify({ sajuResult: saju, section: key, priorSections }),
-      });
-      const json = await res.json();
-      if (!res.ok || !json.success) { alert(json.error ?? '생성 실패'); return; }
-      setResults(prev => ({ ...prev, [key]: json.text }));
+        .map(([k, t]) => ({ label: labelOf(k), text: t }));
+      const text = await genOne(key, token, buildSaju(), priorArr);
+      setResults(prev => ({ ...prev, [key]: text }));
     } catch (e) {
       alert(e instanceof Error ? e.message : '생성 오류');
     } finally {
       setLoading(null);
+    }
+  };
+
+  // 전체 생성 — 위에서부터 순서대로(앞 섹션을 다음 섹션 반복 회피 컨텍스트로 누적)
+  const generateAll = async () => {
+    if (busy) return;
+    const token = await getToken();
+    if (!token) return;
+    const saju = buildSaju();
+    const acc: Record<string, string> = {};
+    setAllProgress(0);
+    setResults({}); // 새로 전체 생성 — 기존 결과 초기화
+    try {
+      for (let i = 0; i < JUNGTONGSAJU_SECTION_KEYS.length; i++) {
+        const key = JUNGTONGSAJU_SECTION_KEYS[i];
+        setLoading(key);
+        const priorArr = Object.entries(acc).map(([k, t]) => ({ label: labelOf(k), text: t }));
+        try {
+          const text = await genOne(key, token, saju, priorArr);
+          acc[key] = text;
+          setResults(prev => ({ ...prev, [key]: text }));
+        } catch (e) {
+          console.error('[generateAll]', key, e);
+        }
+        setAllProgress(i + 1);
+      }
+    } finally {
+      setLoading(null);
+      setAllProgress(null);
     }
   };
 
@@ -75,7 +110,7 @@ export default function Test1Console() {
     <div className="min-h-screen px-4 pt-5 pb-16 max-w-2xl mx-auto">
       <h1 className="text-xl font-bold text-text-primary mb-1">정통사주 프롬프트 테스트 콘솔</h1>
       <p className="text-[13px] text-text-secondary mb-4">
-        섹션별로 따로 생성합니다 (크레딧·저장 없음). 프롬프트 수정 → 배포 → 해당 섹션 버튼으로 확인.
+        전체 한 번에, 또는 섹션별로 생성 (크레딧·저장 없음). 프롬프트 수정 → 배포 → 버튼으로 확인.
       </p>
 
       {/* 생년월일 입력 */}
@@ -97,7 +132,17 @@ export default function Test1Console() {
           <input type="checkbox" checked={birth.unknown} onChange={e => setBirth({ ...birth, unknown: e.target.checked })} /> 시간모름
         </label>
       </div>
-      <p className="text-[12px] text-text-tertiary mb-5">양력 기준. 입력 바꾸면 다음 생성부터 반영돼요.</p>
+      <p className="text-[12px] text-text-tertiary mb-3">양력 기준. 입력 바꾸면 다음 생성부터 반영돼요.</p>
+
+      {/* 전체 한 번에 생성 — 위에서부터 순서대로(앞 섹션을 다음 섹션 중복회피에 활용) */}
+      <button
+        type="button"
+        onClick={generateAll}
+        disabled={busy}
+        className="w-full mb-5 px-4 py-3 rounded-xl bg-cta text-white font-bold disabled:opacity-50"
+      >
+        {allProgress !== null ? `전체 생성 중… (${allProgress}/${TOTAL})` : '전체 한 번에 생성'}
+      </button>
 
       {/* 섹션 목록 */}
       <div className="space-y-2">
@@ -108,7 +153,7 @@ export default function Test1Console() {
               <button
                 type="button"
                 onClick={() => generate(key)}
-                disabled={loading !== null}
+                disabled={busy}
                 className="px-3 py-1.5 rounded-md bg-cta text-white text-[13px] font-bold disabled:opacity-50"
               >
                 {loading === key ? '생성 중…' : results[key] ? '다시 생성' : '생성'}
