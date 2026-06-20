@@ -1,5 +1,6 @@
 'use client';
 
+import type { ReactNode } from 'react';
 import { motion } from 'framer-motion';
 import type { AdviceMeta } from '../../services/fortuneService';
 import { annotateTimeSlot } from '../../utils/annotateTimeSlot';
@@ -105,10 +106,12 @@ function ColorSwatch({ name, css }: { name: string; css: string }) {
 interface AdviceCardProps {
   yongSinElement: string; // '목' | '화' | '토' | '금' | '수'
   meta: AdviceMeta;
+  /** 본문 렌더 함수(옵션). 미지정 시 기존처럼 plain 텍스트. test 에서 강조 렌더 주입용. */
+  renderBody?: (text: string) => ReactNode;
 }
 
 
-export function AdviceCard({ yongSinElement, meta }: AdviceCardProps) {
+export function AdviceCard({ yongSinElement, meta, renderBody }: AdviceCardProps) {
   // 한자 포함된 경우 매핑
   const elementKey = Object.keys(YONGSIN_MAP).find(k =>
     yongSinElement === k || yongSinElement.startsWith(k)
@@ -172,7 +175,7 @@ export function AdviceCard({ yongSinElement, meta }: AdviceCardProps) {
       {/* 본문 — 정통사주 다른 섹션 본문과 동일 스펙(17px / 1.85 / -0.005em) */}
       {meta.body && (
         <p className="text-[17px] text-text-secondary leading-[1.85] tracking-[-0.005em] whitespace-pre-line">
-          {meta.body}
+          {renderBody ? renderBody(meta.body) : meta.body}
         </p>
       )}
 

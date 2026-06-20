@@ -10,7 +10,7 @@
  * (2열 그리드 · 색칩 · 미니 막대 · 라디얼 그라데이션).
  */
 
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import type { SajuResult, DaeWoon } from '../../utils/sajuCalculator';
 import { determineGyeokguk } from '../../engine/gyeokguk';
 import { getDayPillarTraits } from '../../constants/gapjaTraits';
@@ -729,7 +729,7 @@ function parseLuckByDaeWoon(text: string): { ageStart: number; body: string }[] 
   return out.length > 0 ? out : null;
 }
 
-function LuckVisual({ saju, sectionText }: { saju: SajuResult; sectionText?: string }) {
+function LuckVisual({ saju, sectionText, renderBody }: { saju: SajuResult; sectionText?: string; renderBody?: (s: string) => ReactNode }) {
   const now = new Date().getFullYear();
   const birthYear = saju.solarDate ? new Date(saju.solarDate).getFullYear() : 0;
   const toAge = (yr: number) => (birthYear > 0 ? yr - birthYear : yr);
@@ -808,7 +808,7 @@ function LuckVisual({ saju, sectionText }: { saju: SajuResult; sectionText?: str
                     {toAge(d.startAge)}~{toAge(d.endAge)}세 · {d.gan}{d.zhi}({d.ganElement}{d.zhiElement}·{d.tenGod})
                   </span>
                   <span className="text-[17px] text-text-secondary leading-relaxed whitespace-pre-line" style={{ wordBreak: 'keep-all' }}>
-                    {desc ?? '이 풀이는 대운별 상세 설명 추가 전에 받으셨어요. 같은 사주로 다시 풀이 받으시면 각 대운별 흐름이 칩마다 나타나요.'}
+                    {desc ? (renderBody ? renderBody(desc) : desc) : '이 풀이는 대운별 상세 설명 추가 전에 받으셨어요. 같은 사주로 다시 풀이 받으시면 각 대운별 흐름이 칩마다 나타나요.'}
                   </span>
                 </div>
               );
@@ -839,6 +839,8 @@ export function renderJungtongsajuSectionVisual(
   saju: SajuResult | null,
   /** luck 섹션 — 대운별 칩 펼침에 쓸 [luck] 본문. 다른 섹션은 미사용. */
   sectionText?: string,
+  /** luck 대운별 본문 렌더 함수(옵션). 미지정 시 plain. test 강조 렌더 주입용. */
+  renderBody?: (s: string) => ReactNode,
 ) {
   if (!saju) return null;
   switch (key) {
@@ -863,7 +865,7 @@ export function renderJungtongsajuSectionVisual(
     case 'relation':
       return <RelationVisual saju={saju} />;
     case 'luck':
-      return <LuckVisual saju={saju} sectionText={sectionText} />;
+      return <LuckVisual saju={saju} sectionText={sectionText} renderBody={renderBody} />;
     default:
       return null;
   }

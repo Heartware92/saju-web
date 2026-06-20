@@ -33,8 +33,7 @@ export function stripHanjaParens(text: string): string {
 }
 
 /**
- * 마커 제거 후 순수 텍스트 — 마커(==,**)를 못 푸는 공유 컴포넌트(AdviceCard·LuckVisual)에
- * 넘기기 전 정리용. 강조 기호·한자병기·필러 제거 + (옵션) 문단 내 단일 줄바꿈을 공백으로.
+ * 마커 제거 후 순수 텍스트 — 마커(==,**)를 못 푸는 공유 컴포넌트에 넘기기 전 정리용.
  */
 export function toPlainTest(text: string, collapseNewlines = false): string {
   if (!text) return text;
@@ -42,6 +41,17 @@ export function toPlainTest(text: string, collapseNewlines = false): string {
     .replace(/\*\*([\s\S]+?)\*\*/g, '$1')
     .replace(/==([\s\S]+?)==/g, '$1');
   if (collapseNewlines) t = t.replace(/[ \t]*\n[ \t]*/g, ' ').replace(/\s{2,}/g, ' ').trim();
+  return t;
+}
+
+/**
+ * 마커(==,**)는 그대로 두고 한자병기·필러만 정리 + (옵션) 줄바꿈 정상화.
+ * → renderBody(renderEmphasizedBodyTest)로 넘겨 볼드 강조까지 살릴 때 사용.
+ */
+export function cleanKeepMarkers(text: string, collapseNewlines = false): string {
+  if (!text) return text;
+  let t = stripHanjaParens(stripLeadingFiller(text));
+  if (collapseNewlines) t = t.replace(/[ \t]*\n[ \t]*/g, ' ').replace(/[ \t]{2,}/g, ' ').trim();
   return t;
 }
 
