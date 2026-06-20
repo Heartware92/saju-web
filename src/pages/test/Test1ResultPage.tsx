@@ -695,7 +695,7 @@ export default function Test1ResultPage() {
             return (
               <SectionCollapsible
                 key={key}
-                title={JUNGTONGSAJU_SECTION_LABELS[key]}
+                title={key === 'advice' ? '개운법' : JUNGTONGSAJU_SECTION_LABELS[key]}
                 metaphorTitle={metaphorTitle}
                 defaultOpen={idx === 0}
                 enterDelay={0.06 * idx}

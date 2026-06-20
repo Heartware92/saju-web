@@ -96,7 +96,7 @@ export default function Test1Console() {
         {JUNGTONGSAJU_SECTION_KEYS.map((key) => (
           <div key={key} className="rounded-xl bg-[rgba(20,12,38,0.55)] border border-[var(--border-subtle)] overflow-hidden">
             <div className="flex items-center justify-between px-4 py-3">
-              <span className="text-[15px] font-semibold text-text-primary">{JUNGTONGSAJU_SECTION_LABELS[key]}</span>
+              <span className="text-[15px] font-semibold text-text-primary">{key === 'advice' ? '개운법' : JUNGTONGSAJU_SECTION_LABELS[key]}</span>
               <button
                 type="button"
                 onClick={() => generate(key)}
