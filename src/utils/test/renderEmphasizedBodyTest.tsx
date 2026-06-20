@@ -16,9 +16,10 @@ import { ReactNode } from 'react';
  */
 const EMPHASIS_RE = /\*\*([\s\S]+?)\*\*|==([\s\S]+?)==/g;
 
-// "단어(漢字…)" 또는 "(漢字…)" — 괄호 안이 한자·중점·공백으로만 이뤄진 묶음.
-// 앞 단어(공백 전까지)까지 함께 잡아 "편인격(偏印格)" 전체를 한 덩어리로 유지.
-const HANJA_GROUP_RE = /([^\s（(]*[（(][㐀-鿿·\s]+[）)])/g;
+// "(漢字…)" — 괄호 안이 한자·중점·공백으로만 이뤄진 부분만 nowrap.
+// 앞 단어까지 묶으면(예: "계사(癸巳)") 덩어리가 길어져 줄 끝에 빈칸이 생기므로
+// 괄호 부분만 묶어 한자 내부 쪼개짐만 막는다. 앞 단어는 본문과 자연스럽게 흐름.
+const HANJA_GROUP_RE = /([（(][㐀-鿿·\s]+[）)])/g;
 
 /** 일반 텍스트 조각에서 한자 괄호 묶음만 nowrap 으로 감싸 nodes 에 push. */
 function pushTextWithHanjaGuard(nodes: ReactNode[], text: string, keyBase: string): void {
