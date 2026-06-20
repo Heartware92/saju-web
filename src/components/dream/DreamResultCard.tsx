@@ -13,6 +13,7 @@
 import { motion, AnimatePresence } from 'framer-motion';
 import { useState } from 'react';
 import { SectionCollapsible } from '../saju/SectionCollapsible';
+import { renderEmphasis } from '../../utils/renderEmphasis';
 import {
   TIME_BANDS,
   SIJIN_RULES,
@@ -102,7 +103,7 @@ function BodyParagraphs({ text }: { text: string; boxed?: boolean }) {
     <div className="flex flex-col gap-3">
       {paras.map((p, i) => (
         <p key={i} className="text-[17px] text-text-secondary leading-[1.85] tracking-[-0.005em] whitespace-pre-line break-all">
-          {p}
+          {renderEmphasis(p)}
         </p>
       ))}
     </div>

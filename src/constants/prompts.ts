@@ -3261,7 +3261,7 @@ ${monthlyLine}
 4) 위 엔진 점수의 길흉 방향성을 뒤집지 말 것. 해석은 허용, 등급 변경은 금지.
 5) 각 섹션 첫 문장에서 결론을 먼저 말하고 근거를 이어붙이는 방식.
 6) 전문 용어(십성·격국·용신·대운 등)는 첫 등장 시 괄호로 쉬운 말 병기.
-7) "~일 수 있습니다" "혹시" 같은 흐린 표현은 전체 답변에서 2회 이하. 단정적 어투 유지.
+7) "~일 수 있습니다" "혹시" 같은 막연한 추측은 전체 답변에서 2회 이하. 단, 딱딱한 단정·보고서체로 쓰라는 뜻이 아니라 '이천점 별 정령'의 다정한 수다체는 그대로 유지(시스템 지침 말투).
 8) 출력은 [general] 마커부터 시작. 마커 이전에 어떤 텍스트도 없어야 함.
 9) 아래 9개 마커를 빠짐없이 정확히 사용. 마커는 줄 처음에 단독으로 위치. 마커 뒤 바로 내용 시작.
    반드시 포함해야 하는 마커 체크리스트: [general] [wealth] [career] [study] [love] [health] [relation] [monthly] [lucky] — 하나라도 빠지면 실패.
@@ -3470,7 +3470,7 @@ export const generateZamidusuPrompt = (z: ZamidusuResult): string => {
       ).join('\n')
     : '(특별한 격국 없음 — 표준 명반)';
 
-  return `당신은 자미두수(紫微斗數) 전문가입니다. 아래 명반을 바탕으로 ${z.gender === '남' ? '한 남성' : '한 여성'}의 인생 별자리를 읽어줍니다.
+  return `당신은 '이천점'의 작은 별 정령으로서, 자미두수(紫微斗數) 명반을 바탕으로 ${z.gender === '남' ? '한 남성' : '한 여성'}의 인생 별자리를 다정하게 들려줍니다.
 
 [의뢰인 명반 기본 정보]
 양력 생년월일: ${z.solarDate} ${z.timeRange}(${z.time}) / 음력: ${z.lunarDate} / 간지: ${z.chineseDate}
@@ -3534,7 +3534,7 @@ ${METAPHOR_SHORT_GUIDE}
 [작성 규칙 — 절대 준수]
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-1) **Markdown 절대 금지**: #, ##, ###, **, \`\`, > 같은 기호 전부 금지. 본문은 평서문 문장으로만.
+1) Markdown 헤더·코드블록 금지(#, ##, \`\`, >). 단 강조 마커 ==키워드== 는 허용. 본문은 딱딱한 평서문·보고서체가 아니라 '이천점 별 정령'의 친근한 수다체로(시스템 지침의 말투를 따른다).
 2) **이모지 금지**.
 3) **AI 티 제거**: "AI로서", "분석 결과", "제공된 데이터에 따르면", "자미두수 AI가" 같은 표현 절대 금지. 35년 경력 도사가 직접 말하듯이 쓰세요.
 4) **반드시 제공된 별 해설과 궁 역할을 근거로만 풀이할 것**. 위 목록에 없는 별 이름·사화를 창작하지 말 것.
@@ -5473,7 +5473,7 @@ export const generateLoverGunghapPrompt = (
     `${otherName} 용신(${other.yongSinElement}) vs ${myName} 기신(${me.giSin}): ${other.yongSinElement === me.giSin ? '충돌 — 에너지 소진 주의' : '충돌 없음'}`,
   ].join('\n');
 
-  return `당신은 사주명리 전문가입니다. 두 사람의 연인 궁합을 아래 10개 섹션으로 풀이하세요.
+  return `당신은 '이천점'의 작은 별 정령으로서, 두 사람의 연인 궁합을 아래 10개 섹션으로 풀이하세요.
 
 [절대 규칙]
 - Markdown·이모지 금지. 섹션 제목은 반드시 "▶ 제목" 형식으로만.
@@ -5579,7 +5579,7 @@ export const generateFriendGunghapPrompt = (
   const crossInteractions = buildCrossJiziInteractions(me, other, myName, otherName);
   const ohaengCompare = buildOhaengCompare(me, other, myName, otherName);
 
-  return `당신은 사주명리 전문가입니다. 두 사람의 친구 궁합을 아래 10개 섹션으로 풀이하세요.
+  return `당신은 '이천점'의 작은 별 정령으로서, 두 사람의 친구 궁합을 아래 10개 섹션으로 풀이하세요.
 
 [절대 규칙]
 - Markdown·이모지 금지. 섹션 제목은 "▶ 제목" 형식으로만.
@@ -5686,7 +5686,7 @@ export const generateFamilyGunghapPrompt = (
 
   const crossInteractions = buildCrossJiziInteractions(me, other, myName, otherName);
 
-  return `당신은 사주명리 전문가입니다. 두 사람의 가족 궁합(${relation})을 아래 10개 섹션으로 풀이하세요.
+  return `당신은 '이천점'의 작은 별 정령으로서, 두 사람의 가족 궁합(${relation})을 아래 10개 섹션으로 풀이하세요.
 
 [절대 규칙]
 - Markdown·이모지 금지. 섹션 제목은 "▶ 제목" 형식으로만.
@@ -5785,7 +5785,7 @@ export const generateWorkGunghapPrompt = (
 
   const crossInteractions = buildCrossJiziInteractions(me, other, myName, otherName);
 
-  return `당신은 사주명리 전문가입니다. 두 사람의 직장동료 궁합을 아래 11개 섹션으로 풀이하세요.
+  return `당신은 '이천점'의 작은 별 정령으로서, 두 사람의 직장동료 궁합을 아래 11개 섹션으로 풀이하세요.
 
 [절대 규칙]
 - Markdown·이모지 금지. 섹션 제목은 "▶ 제목" 형식으로만.
@@ -5878,7 +5878,7 @@ export const generateGeneralGunghapPrompt = (
   const ohaengCompare = buildOhaengCompare(me, other, myName, otherName);
   const sipseongCompare = buildGunghapSipseong(me, other, myName, otherName);
 
-  return `당신은 사주명리 전문가입니다. 두 사람의 ${relationLabel} 관계 궁합을 아래 10개 섹션으로 풀이하세요.
+  return `당신은 '이천점'의 작은 별 정령으로서, 두 사람의 ${relationLabel} 관계 궁합을 아래 10개 섹션으로 풀이하세요.
 
 [절대 규칙]
 - Markdown·이모지 금지. 섹션 제목은 "▶ 제목" 형식으로만.
@@ -6084,7 +6084,7 @@ export const generateCustomDynamicGunghapPrompt = (
     `${otherName} 용신(${other.yongSinElement}) vs ${myName} 기신(${me.giSin}): ${other.yongSinElement === me.giSin ? '충돌 — 에너지 소진 주의' : '충돌 없음'}`,
   ].join('\n');
 
-  return `당신은 사주명리 전문가입니다. 두 사람의 "${rawLabel}" 관계 궁합을 풀이하세요.
+  return `당신은 '이천점'의 작은 별 정령으로서, 두 사람의 "${rawLabel}" 관계 궁합을 풀이하세요.
 
 [관계 정의 — 본 풀이 전체의 출발점 ★★★]
 - 사용자는 두 사람의 관계를 "${rawLabel}" 라고 직접 표현했습니다.
@@ -6188,7 +6188,7 @@ export const generateSomGunghapPrompt = (
   const crossInteractions = buildCrossJiziInteractions(me, other, myName, otherName);
   const ohaengCompare = buildOhaengCompare(me, other, myName, otherName);
 
-  return `당신은 사주명리 전문가입니다. 두 사람의 썸 관계 궁합을 아래 10개 섹션으로 풀이하세요.
+  return `당신은 '이천점'의 작은 별 정령으로서, 두 사람의 썸 관계 궁합을 아래 10개 섹션으로 풀이하세요.
 
 [절대 규칙]
 - Markdown·이모지 금지. 섹션 제목은 "▶ 제목" 형식으로만.
@@ -6311,7 +6311,7 @@ export const generateSpouseGunghapPrompt = (
     return `${femaleName} 식상(자녀성): ${fSiksang.toFixed(1)}개 / ${maleName} 관성(자녀성): ${mGwan.toFixed(1)}개`;
   })();
 
-  return `당신은 사주명리 전문가입니다. 두 사람의 배우자 궁합을 아래 10개 섹션으로 풀이하세요.
+  return `당신은 '이천점'의 작은 별 정령으로서, 두 사람의 배우자 궁합을 아래 10개 섹션으로 풀이하세요.
 
 [절대 규칙]
 - 모든 분석은 반드시 제공된 사주 데이터를 근거로 서술. 추상적·일반론 금지. 구체적 글자(천간·지지)와 오행 관계를 인용할 것.
@@ -6436,7 +6436,7 @@ export const generateExRelationGunghapPrompt = (
     ? `${marriageSinsalLine(me, myName)}\n${marriageSinsalLine(other, otherName)}`
     : '';
 
-  return `당신은 사주명리 전문가입니다. 두 사람의 ${label} 관계 궁합을 아래 11개 섹션으로 풀이하세요.
+  return `당신은 '이천점'의 작은 별 정령으로서, 두 사람의 ${label} 관계 궁합을 아래 11개 섹션으로 풀이하세요.
 
 - 모든 분석은 반드시 제공된 사주 데이터를 근거로 서술. 추상적·일반론 금지. 구체적 글자(천간·지지)와 오행 관계를 인용할 것.
 [절대 규칙]
@@ -6560,7 +6560,7 @@ export const generateBusinessGunghapPrompt = (
 
   const crossInteractions = buildCrossJiziInteractions(me, other, myName, otherName);
 
-  return `당신은 사주명리 전문가입니다. 두 사람의 사업 파트너 궁합을 아래 11개 섹션으로 풀이하세요.
+  return `당신은 '이천점'의 작은 별 정령으로서, 두 사람의 사업 파트너 궁합을 아래 11개 섹션으로 풀이하세요.
 - 모든 분석은 반드시 제공된 사주 데이터를 근거로 서술. 추상적·일반론 금지. 구체적 글자(천간·지지)와 오행 관계를 인용할 것.
 
 [절대 규칙]
@@ -6781,7 +6781,7 @@ export const generateSoulmateGunghapPrompt = (
   const sipseongCompare = buildGunghapSipseong(me, other, myName, otherName);
   const ohaengCompare = buildOhaengCompare(me, other, myName, otherName);
 
-  return `당신은 사주명리 전문가입니다. 두 사람의 소울메이트 관계를 아래 10개 섹션으로 풀이하세요.
+  return `당신은 '이천점'의 작은 별 정령으로서, 두 사람의 소울메이트 관계를 아래 10개 섹션으로 풀이하세요.
 
 [절대 규칙]
 - Markdown·이모지 금지. 섹션 제목은 "▶ 제목" 형식으로만.
@@ -6897,7 +6897,7 @@ export const generateRivalGunghapPrompt = (
   const crossInteractions = buildCrossJiziInteractions(me, other, myName, otherName);
   const ohaengCompare = buildOhaengCompare(me, other, myName, otherName);
 
-  return `당신은 사주명리 전문가입니다. 두 사람의 라이벌 관계를 아래 11개 섹션으로 풀이하세요.
+  return `당신은 '이천점'의 작은 별 정령으로서, 두 사람의 라이벌 관계를 아래 11개 섹션으로 풀이하세요.
 
 [절대 규칙]
 - Markdown·이모지 금지. 섹션 제목은 "▶ 제목" 형식으로만.
@@ -7022,7 +7022,7 @@ export const generateMentorGunghapPrompt = (
     ? `${otherName}(신강)이 ${myName}(신약)을 이끄는 구조 — ${otherName}이 멘토 역할 자연스러움`
     : '비슷한 신강신약 — 수평적 성장 파트너십, 서로 다른 분야에서 번갈아 이끔';
 
-  return `당신은 사주명리 전문가입니다. 두 사람의 멘토·멘티 관계를 아래 11개 섹션으로 풀이하세요.
+  return `당신은 '이천점'의 작은 별 정령으로서, 두 사람의 멘토·멘티 관계를 아래 11개 섹션으로 풀이하세요.
 
 [절대 규칙]
 - Markdown·이모지 금지. 섹션 제목은 "▶ 제목" 형식으로만.

@@ -1522,7 +1522,7 @@ export default function PeriodFortunePage({ scope }: { scope: FortuneScope | 'da
                       <MonthlySectionView bodyText={bodyText} monthlyFlow={fortune?.monthlyFlow ?? []} />
                     ) : (
                       <p className="text-[17px] text-text-secondary leading-[1.85] tracking-[-0.005em] whitespace-pre-line">
-                        {bodyText}
+                        {renderEmphasis(bodyText)}
                       </p>
                     )}
                   </SectionCollapsible>
@@ -1622,7 +1622,7 @@ export default function PeriodFortunePage({ scope }: { scope: FortuneScope | 'da
                         {/* 시그널은 SectionCollapsible 의 좌측 색띠(barColor) 로 전달. */}
                         <div className="text-[17px] text-text-secondary leading-[1.85] tracking-[-0.005em] space-y-3">
                           {bodyText.split(/\n\n+/).map((para, pi) => (
-                            <p key={pi} className="whitespace-pre-line">{para.trim()}</p>
+                            <p key={pi} className="whitespace-pre-line">{renderEmphasis(para.trim())}</p>
                           ))}
                         </div>
                       </>
@@ -1902,7 +1902,7 @@ function MonthlySectionView({
                     {/* 본문 — 다른 섹션과 동일 톤 (leading-[1.85] 룰이 SUIT + 자간 0.16em 자동 적용) */}
                     <div className="relative px-4 pt-3 pb-4">
                       <p className="text-[16px] text-text-secondary leading-[1.85] tracking-[-0.005em]">
-                        {m.body}
+                        {renderEmphasis(m.body)}
                       </p>
                     </div>
                   </div>
@@ -1966,7 +1966,7 @@ function MonthlySectionView({
                   letterSpacing: '-0.005em',
                 }}
               >
-                {item}
+                {renderEmphasis(item)}
               </li>
             ))}
           </ul>
