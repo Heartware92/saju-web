@@ -25,7 +25,7 @@ import { determineGyeokguk } from '@/engine/gyeokguk';
 import { stemToHanja, zhiToHanja } from '@/lib/character';
 import { AdviceCard } from '@/components/saju/AdviceCard';
 import { extractMetaphor } from '@/utils/parseMetaphor';
-import { renderEmphasizedBodyTest as renderEmphasizedBody, stripHanjaTest } from '@/utils/test/renderEmphasizedBodyTest';
+import { renderEmphasizedBodyTest as renderEmphasizedBody } from '@/utils/test/renderEmphasizedBodyTest';
 import { LifetimeFortuneChart } from '@/components/saju/LifetimeFortuneChart';
 import { SectionCollapsible } from '@/components/saju/SectionCollapsible';
 import { renderJungtongsajuSectionVisual } from '@/components/saju/JungtongsajuSectionVisuals';
@@ -727,7 +727,7 @@ export default function Test1ResultPage() {
                      옛 record (대운 마커 없음) 는 LuckVisual 내부에서 통짜 본문 fallback. */
                   /* 대운·세운은 LuckVisual(공유)이 마커를 안 풀어 == 가 글자로 노출됨
                      → test 강조 마커를 미리 제거해 깔끔히 표시 (칩 UI는 유지) */
-                  renderJungtongsajuSectionVisual('luck', result, stripHanjaTest(bodyText.replace(/\*\*([\s\S]+?)\*\*/g, '$1').replace(/==([\s\S]+?)==/g, '$1')))
+                  renderJungtongsajuSectionVisual('luck', result, bodyText.replace(/\*\*([\s\S]+?)\*\*/g, '$1').replace(/==([\s\S]+?)==/g, '$1'))
                 ) : (
                   <>
                     {/* 섹션별 시각 데이터 카드 — 본문 줄글 위 한눈 요약 */}
