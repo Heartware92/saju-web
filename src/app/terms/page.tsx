@@ -24,7 +24,7 @@ export default async function TermsPage({ searchParams }: { searchParams: Promis
 
       <div className="rounded-2xl p-6 bg-[rgba(20,12,38,0.55)] border border-[var(--border-subtle)]">
         <p className="text-[13px] text-text-tertiary mb-4">
-          시행일: 2026-06-15 / 버전 1.0
+          시행일: 2026-06-01 / 버전 1.0
         </p>
 
         <section className="space-y-6 text-[14px] text-text-secondary leading-relaxed">
@@ -333,7 +333,7 @@ export default async function TermsPage({ searchParams }: { searchParams: Promis
 
           {/* ── 부칙 ── */}
           <h2 className="text-[15px] font-bold text-cta/80 mt-4">부칙</h2>
-          <p>본 약관은 2026년 6월 15일부터 시행합니다.</p>
+          <p>본 약관은 2026년 6월 1일부터 시행합니다.</p>
 
         </section>
 

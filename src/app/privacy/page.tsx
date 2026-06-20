@@ -24,7 +24,7 @@ export default async function PrivacyPage({ searchParams }: { searchParams: Prom
 
       <div className="rounded-2xl p-6 bg-[rgba(20,12,38,0.55)] border border-[var(--border-subtle)]">
         <p className="text-[13px] text-text-tertiary mb-4">
-          시행일: 2026-06-15 / 버전 1.0
+          시행일: 2026-06-01 / 버전 1.0
         </p>
 
         <section className="space-y-6 text-[14px] text-text-secondary leading-relaxed">
@@ -122,6 +122,10 @@ export default async function PrivacyPage({ searchParams }: { searchParams: Prom
                 <tr className="border-t border-[var(--border-subtle)]">
                   <td className="px-3 py-2">서비스 개선</td>
                   <td className="px-3 py-2">접속 빈도 파악, 이용 통계 분석</td>
+                </tr>
+                <tr className="border-t border-[var(--border-subtle)]">
+                  <td className="px-3 py-2">맞춤 분석</td>
+                  <td className="px-3 py-2">생년월일·성별·연령대 등을 반영한 풀이 정확도 향상 및 이용 통계 분석</td>
                 </tr>
                 <tr className="border-t border-[var(--border-subtle)]">
                   <td className="px-3 py-2">마케팅 (선택 동의 시)</td>
@@ -395,7 +399,7 @@ export default async function PrivacyPage({ searchParams }: { searchParams: Prom
 
           {/* ── 부칙 ── */}
           <h2 className="text-[15px] font-bold text-cta/80 mt-4">부칙</h2>
-          <p>본 개인정보처리방침은 2026년 6월 15일부터 시행합니다.</p>
+          <p>본 개인정보처리방침은 2026년 6월 1일부터 시행합니다.</p>
 
         </section>
 
