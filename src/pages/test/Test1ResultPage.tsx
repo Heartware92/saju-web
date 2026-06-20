@@ -441,9 +441,58 @@ export default function Test1ResultPage() {
   useEffect(() => {
     if (!testGen || !result || testGenRanRef.current) return;
     testGenRanRef.current = true;
-    void runTestPrompt();
+    void runTestAllSections();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [testGen, result]);
+
+  // ── testgen 순차 생성 — 섹션별 집중 생성(톤 강함)으로 위에서부터 채움 + 앞 섹션 중복회피 ──
+  const runTestAllSections = async () => {
+    if (!result) return;
+    setTestGenLoading(true);
+    setReportLoading(true);
+    setReport({ success: true, sections: {} });
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const accessToken = sessionData.session?.access_token;
+      if (!accessToken) {
+        setReport({ success: false, error: '로그인이 필요해요.' });
+        return;
+      }
+      const acc: Record<string, string> = {};
+      let adviceMetaAcc: unknown = undefined;
+      for (const key of JUNGTONGSAJU_SECTION_KEYS) {
+        const priorSections = Object.entries(acc).map(([k, t]) => ({
+          label: k === 'advice' ? '개운법' : (JUNGTONGSAJU_SECTION_LABELS[k as keyof typeof JUNGTONGSAJU_SECTION_LABELS] ?? k),
+          text: t,
+        }));
+        try {
+          const res = await fetch('/api/test/jungtongsaju/section', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${accessToken}` },
+            body: JSON.stringify({ sajuResult: result, section: key, priorSections }),
+          });
+          const data = await res.json();
+          if (res.ok && data.success) {
+            acc[key] = data.text;
+            if (key === 'advice' && data.adviceMeta) adviceMetaAcc = data.adviceMeta;
+            // 도착하는 대로 화면에 채움(첫 섹션부터 보임)
+            setReport({ success: true, sections: { ...acc }, adviceMeta: adviceMetaAcc as JungtongsajuAIResult['adviceMeta'] });
+            if (Object.keys(acc).length === 1) setReportLoading(false);
+          }
+        } catch (e) {
+          console.error('[testgen]', key, e);
+        }
+      }
+      if (Object.keys(acc).length === 0) {
+        setReport({ success: false, error: 'TEST 생성 실패' });
+      }
+    } catch (e) {
+      setReport({ success: false, error: e instanceof Error ? e.message : 'TEST 생성 오류' });
+    } finally {
+      setTestGenLoading(false);
+      setReportLoading(false);
+    }
+  };
 
   // ── 섹션 단건 재생성 — /api/test/jungtongsaju/section (그 섹션만 교체) ──
   const regenSection = async (key: string) => {
@@ -567,7 +616,7 @@ export default function Test1ResultPage() {
       {/* ── TEST 프롬프트 생성 버튼 (개발자 전용, 크레딧·DB 미반영) ── */}
       <button
         type="button"
-        onClick={runTestPrompt}
+        onClick={() => { testGenRanRef.current = true; void runTestAllSections(); }}
         disabled={testGenLoading || !result}
         className="fixed bottom-5 right-5 z-50 px-4 py-3 rounded-full bg-black/80 text-white text-sm font-bold shadow-lg backdrop-blur disabled:opacity-50"
       >
