@@ -74,26 +74,31 @@ export default function Test1Console() {
     }
   };
 
-  // 전체 생성 — 2-pass(한 컨텍스트로 Core 4 + App 8을 각각 한 번에). 모델이 스스로 변주해 반복↓
+  // 전체 생성 — 섹션별 순차(톤 강함, 결과 페이지와 동일 엔진) + 앞 섹션 중복회피 누적
   const generateAll = async () => {
     if (busy) return;
     const token = await getToken();
     if (!token) return;
     const saju = buildSaju();
-    setAllProgress(0); // 실행 중 표시(2-pass는 단일 호출이라 진행 카운트 없음)
+    const acc: Record<string, string> = {};
+    setAllProgress(0);
     setResults({});
     try {
-      const res = await fetch('/api/test/jungtongsaju', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-        body: JSON.stringify({ sajuResult: saju }),
-      });
-      const json = await res.json();
-      if (!res.ok || !json.success) { alert(json.error ?? '전체 생성 실패'); return; }
-      setResults(json.sections ?? {});
-    } catch (e) {
-      alert(e instanceof Error ? e.message : '전체 생성 오류');
+      for (let i = 0; i < JUNGTONGSAJU_SECTION_KEYS.length; i++) {
+        const key = JUNGTONGSAJU_SECTION_KEYS[i];
+        setLoading(key);
+        const prior = Object.entries(acc).map(([k, t]) => ({ label: labelOf(k), text: t }));
+        try {
+          const text = await genOne(key, token, saju, prior);
+          acc[key] = text;
+          setResults(prev => ({ ...prev, [key]: text }));
+        } catch (e) {
+          console.error('[generateAll]', key, e);
+        }
+        setAllProgress(i + 1);
+      }
     } finally {
+      setLoading(null);
       setAllProgress(null);
     }
   };
@@ -135,10 +140,10 @@ export default function Test1Console() {
         disabled={busy}
         className="w-full mb-5 px-4 py-3 rounded-xl bg-cta text-white font-bold disabled:opacity-50"
       >
-        {allProgress !== null ? '전체 생성 중… (2-pass · 1~3분 걸려요)' : '전체 한 번에 생성 (2-pass)'}
+        {allProgress !== null ? `전체 생성 중… (${allProgress}/${JUNGTONGSAJU_SECTION_KEYS.length})` : '전체 한 번에 생성'}
       </button>
 
-      {/* 실서비스 UI로 보기 — 위 생년월일로 정통사주 결과 페이지(실 UI)를 test 2-pass로 자동 생성 */}
+      {/* 실서비스 UI로 보기 — 위 생년월일로 정통사주 결과 페이지(실 UI)를 test 섹션별 생성으로 자동 표시 */}
       <a
         href={`/test_1/result?testgen=1&year=${birth.y}&month=${birth.m}&day=${birth.d}&hour=${birth.h}&minute=${birth.min}&gender=${birth.gender}&calendarType=solar${birth.unknown ? '&unknownTime=true' : ''}`}
         className="block w-full mb-5 px-4 py-3 rounded-xl border border-cta text-cta text-center font-bold"
