@@ -52,8 +52,8 @@ export const sanitizeAIOutput = (raw: string): string => {
   text = text.replace(/^\s*#{1,6}\s+/gm, '');
   // 3) 줄머리 blockquote
   text = text.replace(/^\s*>\s+/gm, '');
-  // 4) 볼드/이탤릭
-  text = text.replace(/\*\*(.+?)\*\*/g, '$1');
+  // 4) 이탤릭만 제거 — ★ '**문장**' 굵게 강조는 렌더러(renderEmphasis/renderEmphasizedBody)가
+  //    소비하는 강조 마커이므로 여기서 지우면 안 된다(지우면 강조가 렌더 전에 죽음). 단일 * _ 만 정리.
   text = text.replace(/__(.+?)__/g, '$1');
   text = text.replace(/(^|[^*])\*(?!\s)([^*\n]+?)\*(?!\*)/g, '$1$2');
   text = text.replace(/(^|[^_])_(?!\s)([^_\n]+?)_(?!_)/g, '$1$2');

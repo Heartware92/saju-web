@@ -1198,9 +1198,8 @@ export function stripStrayMarkers(text: string): string {
     .replace(/\[\s*today[_\s-]?[a-z_]+\s*\]\s*:?/gi, '')
     // 점수 마커 잔여
     .replace(/\[\s*today[_\s-]?(scores|flow)\s*\][^\n]*\n?/gi, '')
-    // 마크다운 헤더·강조
+    // 마크다운 헤더 제거 (★ '**문장**' 굵게는 renderEmphasis 가 소비하는 강조 마커라 지우지 않음)
     .replace(/^#{1,6}\s+/gm, '')
-    .replace(/\*\*(.+?)\*\*/g, '$1')
     // 줄 앞 불릿·세모 기호 제거 (today_lucky_card / today_domains_brief 줄별 라벨 형식 보정)
     .replace(/^[\s]*[▶▷►▸▶︎▷︎]+\s*/gm, '')
     // ── today_domains_brief / today_lucky_card 라벨 시작 줄 앞에 빈 줄 강제 ──
