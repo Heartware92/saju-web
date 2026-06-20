@@ -1334,17 +1334,9 @@
   grid-template-columns: repeat(4, 1fr);
 }
 
-/* 신살 보드 — 라벨을 위로 빼고 4컬럼으로 넓혀 모바일 답답함 완화 */
+/* 신살 보드 — 4컬럼으로 넓혀 모바일 답답함 완화 (라벨은 상단 헤더로 대체, 행 라벨 제거) */
 .sinsalBoardWrap .pillarsHeader {
   grid-template-columns: repeat(4, 1fr);
-}
-
-.sinsalRowLabel {
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--text-secondary);
-  text-align: left;
-  margin: 2px 0 10px;
 }
 
 .sinsalTagCell {

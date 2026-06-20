@@ -1004,7 +1004,6 @@ function SinSalBoard({
         시주/일주/월주/년주 컬럼 헤더만 남겨 신살/길성 행 하나만 보여준다.
       */}
       <div className={styles.pillarsTable}>
-        <div className={styles.sinsalRowLabel}>신살/길성</div>
         <div className={styles.pillarsHeader}>
           <span>시주</span>
           <span>일주</span>
