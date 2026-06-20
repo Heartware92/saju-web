@@ -13,6 +13,10 @@ declare global {
       Share: {
         sendDefault: (options: KakaoShareOptions) => void;
       };
+      Channel?: {
+        addChannel: (settings: { channelPublicId: string }) => void;
+        chat?: (settings: { channelPublicId: string }) => void;
+      };
     };
   }
 }
@@ -124,5 +128,20 @@ export async function shareToKakao({
     return 'shared';
   } catch {
     return 'failed';
+  }
+}
+
+/**
+ * 카카오톡 채널 추가 팝업 열기. 추가 자체는 카카오 UI에서 사용자가 직접 수행한다.
+ * (추가 완료 콜백은 제공되지 않으므로, 완료 여부는 서버의 채널관계 조회로 확인)
+ */
+export async function addKakaoChannel(channelPublicId: string): Promise<'opened' | 'no-sdk'> {
+  const ready = await ensureKakaoReady();
+  if (!ready || !window.Kakao?.Channel) return 'no-sdk';
+  try {
+    window.Kakao.Channel.addChannel({ channelPublicId });
+    return 'opened';
+  } catch {
+    return 'no-sdk';
   }
 }

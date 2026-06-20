@@ -138,6 +138,14 @@ export default function Test1Console() {
         {allProgress !== null ? '전체 생성 중… (2-pass · 1~3분 걸려요)' : '전체 한 번에 생성 (2-pass)'}
       </button>
 
+      {/* 실서비스 UI로 보기 — 위 생년월일로 정통사주 결과 페이지(실 UI)를 test 2-pass로 자동 생성 */}
+      <a
+        href={`/test_1/result?testgen=1&year=${birth.y}&month=${birth.m}&day=${birth.d}&hour=${birth.h}&minute=${birth.min}&gender=${birth.gender}&calendarType=solar${birth.unknown ? '&unknownTime=true' : ''}`}
+        className="block w-full mb-5 px-4 py-3 rounded-xl border border-cta text-cta text-center font-bold"
+      >
+        실서비스 UI로 보기 (결과 페이지 · 만세력·그래프·카드 포함)
+      </a>
+
       {/* 섹션 목록 */}
       <div className="space-y-2">
         {JUNGTONGSAJU_SECTION_KEYS.map((key) => (

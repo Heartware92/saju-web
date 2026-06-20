@@ -47,3 +47,29 @@ export async function requestWelcomeBonus(): Promise<WelcomeBonusResult | null> 
     return null;
   }
 }
+
+export interface KakaoChannelBonusResult {
+  /** granted | already | not_added | not_kakao | not_configured | check_failed | grant_failed | error */
+  status: string;
+  amount?: number;
+}
+
+/**
+ * 카카오 채널 추가 보너스(달 5개) 검증·지급 요청.
+ * 서버가 카카오 채널 관계(ADDED)를 확인한 경우에만 지급. 멱등은 서버 보장.
+ */
+export async function requestKakaoChannelBonus(): Promise<KakaoChannelBonusResult | null> {
+  try {
+    const { data: { session } } = await supabase.auth.getSession();
+    const token = session?.access_token;
+    if (!token) return null;
+    const res = await fetch('/api/credit/kakao-channel-bonus', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) return null;
+    return (await res.json()) as KakaoChannelBonusResult;
+  } catch {
+    return null;
+  }
+}

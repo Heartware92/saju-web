@@ -63,6 +63,7 @@ export default function Test1ResultPage() {
   const profileId = searchParams?.get('profileId') ?? null;
   const recordId = searchParams?.get('recordId') ?? null;
   const urlJobId = searchParams?.get('jobId') ?? null;
+  const testGen = searchParams?.get('testgen') === '1'; // 직접 birth로 진입해 test 2-pass 자동 생성
   const isArchiveMode = !!recordId;
   const needsProfileSelect = !profileId && !isArchiveMode && !urlJobId && !(searchParams?.get('year') && searchParams?.get('month') && searchParams?.get('day'));
   const { profiles, fetchProfiles, hydrated, loading: profilesLoading, lastFetchedAt } = useProfileStore();
@@ -100,6 +101,7 @@ export default function Test1ResultPage() {
   const [testGenLoading, setTestGenLoading] = useState(false);
   // ── 섹션별 단건 재생성 로딩 (현재 재생성 중인 섹션 key) ──
   const [sectionLoading, setSectionLoading] = useState<string | null>(null);
+  const testGenRanRef = useRef(false);
 
   // 2-pass 응답 도착 시 스크롤 점프 방지용 ref —
   // 1차(partial)가 이미 도착해 사용자가 페이지를 보고 있는 상태에서,
@@ -293,6 +295,7 @@ export default function Test1ResultPage() {
   // useFortuneJob 이 같은 잡을 재구독 → AI 재호출 0.
   useEffect(() => {
     if (isArchiveMode) return;
+    if (testGen) return;              // testgen 모드: 라이브잡 대신 test 2-pass 자동 실행(아래 effect)
     if (!result) return;
     if (effectiveJobId) return;       // 이미 잡 있음 (URL ?jobId 또는 createdJobId)
     if (needsProfileSelect) return;
@@ -401,7 +404,7 @@ export default function Test1ResultPage() {
   const runTestPrompt = async () => {
     if (!result || testGenLoading) return;
     setTestGenLoading(true);
-    setReportLoading(false);
+    setReportLoading(true); // 생성 동안 로딩바 표시(2-pass ~1~3분)
     setReport(null);
     try {
       const { data: sessionData } = await supabase.auth.getSession();
@@ -409,6 +412,7 @@ export default function Test1ResultPage() {
       if (!accessToken) {
         setReport({ success: false, error: '로그인이 필요해요.' });
         setTestGenLoading(false);
+        setReportLoading(false);
         return;
       }
       const res = await fetch('/api/test/jungtongsaju', {
@@ -429,8 +433,17 @@ export default function Test1ResultPage() {
       setReport({ success: false, error: e instanceof Error ? e.message : 'TEST 생성 오류' });
     } finally {
       setTestGenLoading(false);
+      setReportLoading(false);
     }
   };
+
+  // ── testgen 다이렉트 모드: 허진우 등 birth 파라미터로 진입 시 라이브잡 대신 test 2-pass 자동 실행 ──
+  useEffect(() => {
+    if (!testGen || !result || testGenRanRef.current) return;
+    testGenRanRef.current = true;
+    void runTestPrompt();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [testGen, result]);
 
   // ── 섹션 단건 재생성 — /api/test/jungtongsaju/section (그 섹션만 교체) ──
   const regenSection = async (key: string) => {

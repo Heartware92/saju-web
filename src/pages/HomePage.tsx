@@ -23,8 +23,13 @@ import { GunghapArchiveListModal } from '../components/GunghapArchiveListModal';
 import type { ArchiveCategory, GunghapArchiveItem } from '../services/archiveService';
 import { findGunghapArchives } from '../services/archiveService';
 import MoonPhase from '../components/MoonPhase';
-import { requestWelcomeBonus } from '../services/notify';
+import { requestWelcomeBonus, requestKakaoChannelBonus } from '../services/notify';
 import { useCreditStore } from '../store/useCreditStore';
+import { addKakaoChannel } from '../lib/kakao';
+
+// 카카오 채널 추가 보너스 — 운영 준비(Admin키·plusfriends 선택동의·도메인) 완료 시 env 플래그로 활성화
+const CHANNEL_BONUS_ENABLED = process.env.NEXT_PUBLIC_KAKAO_CHANNEL_BONUS_ENABLED === '1';
+const KAKAO_CHANNEL_ID = process.env.NEXT_PUBLIC_KAKAO_CHANNEL_ID || '_UCExjX';
 
 // 만세력 페이지(SajuReport)와 동일한 오행 색상 — 홈 4기둥 한자 색칠용
 const ELEMENT_COLORS: Record<string, string> = {
@@ -174,7 +179,49 @@ export default function HomePage() {
   const [gunghapArchiveList, setGunghapArchiveList] = useState<GunghapArchiveItem[]>([]);
   // 회원가입 환영 보너스 모달 — 가입 직후 첫 홈 진입 시 1회만
   const [welcomeBonus, setWelcomeBonus] = useState<number | null>(null);
+  // 카카오 채널 추가 보너스 모달 — 환영 모달 닫은 뒤, 카카오 가입자에게만
+  const [showChannelBonus, setShowChannelBonus] = useState(false);
+  const [channelStep, setChannelStep] = useState<'intro' | 'verify'>('intro');
+  const [channelMsg, setChannelMsg] = useState<string | null>(null);
+  const [channelLoading, setChannelLoading] = useState(false);
   const router = useRouter();
+
+  const isKakaoUser = user?.app_metadata?.provider === 'kakao';
+  const channelBonusEligible = CHANNEL_BONUS_ENABLED && isKakaoUser;
+
+  // 환영 모달 확인 → 카카오 가입자면 채널 보너스 모달로 이어서 노출
+  const closeWelcome = useCallback(() => {
+    setWelcomeBonus(null);
+    if (channelBonusEligible) setShowChannelBonus(true);
+  }, [channelBonusEligible]);
+
+  const handleAddChannel = useCallback(async () => {
+    const r = await addKakaoChannel(KAKAO_CHANNEL_ID);
+    if (r === 'no-sdk') {
+      setChannelMsg('카카오를 불러오지 못했어요. 잠시 후 다시 시도해주세요.');
+      return;
+    }
+    // 추가 팝업엔 완료 콜백이 없어, 사용자가 추가 후 직접 확인을 누르게 한다.
+    setChannelStep('verify');
+    setChannelMsg(null);
+  }, []);
+
+  const handleVerifyChannel = useCallback(async () => {
+    if (!user) return;
+    setChannelLoading(true);
+    setChannelMsg(null);
+    const res = await requestKakaoChannelBonus();
+    setChannelLoading(false);
+    if (res && (res.status === 'granted' || res.status === 'already')) {
+      void useCreditStore.getState().fetchBalance(user.id, { force: true });
+      setChannelMsg(`달 ${res.amount ?? 5}개가 지급되었어요!`);
+      setTimeout(() => setShowChannelBonus(false), 1400);
+    } else if (res?.status === 'not_added') {
+      setChannelMsg('아직 채널 추가가 확인되지 않았어요. 추가 후 다시 눌러주세요.');
+    } else {
+      setChannelMsg('확인에 실패했어요. 잠시 후 다시 시도해주세요.');
+    }
+  }, [user]);
 
   useEffect(() => {
     if (user) fetchProfiles();
@@ -634,10 +681,49 @@ export default function HomePage() {
             <p className="text-[15px] text-text-secondary leading-relaxed mb-5">
               회원가입 보너스로 달 {welcomeBonus}개가 지급되었습니다.
             </p>
-            <button onClick={() => setWelcomeBonus(null)}
+            <button onClick={closeWelcome}
               className="w-full py-3 rounded-xl font-bold text-white text-[15px]"
               style={{ background: 'var(--cta-primary)' }}>
               확인
+            </button>
+          </motion.div>
+        </div>
+      )}
+
+      {/* 카카오 채널 추가 보너스 모달 — 가입 직후 카카오 가입자에게 1회 */}
+      {showChannelBonus && (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/60 backdrop-blur-sm px-4 pb-[calc(64px+env(safe-area-inset-bottom,0px))] sm:pb-4">
+          <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }}
+            className="rounded-2xl p-6 max-w-sm w-full bg-[rgba(20,12,38,0.95)] border border-[var(--border-subtle)] text-center">
+            <h3 className="text-[18px] font-bold text-text-primary mb-2">카카오 채널 추가하고 달 5개 더 받기</h3>
+            <p className="text-[15px] text-text-secondary leading-relaxed mb-2">
+              이천점 카카오 채널을 추가하면 달 5개를 더 드려요.
+            </p>
+            <p className="text-[12px] text-text-tertiary leading-relaxed mb-5">
+              채널을 추가하면 채널 메시지(광고성 정보)를 받을 수 있어요. 추가는 자유롭게 하실 수 있습니다.
+            </p>
+
+            {channelMsg && (
+              <p className="text-[14px] text-cta mb-4">{channelMsg}</p>
+            )}
+
+            {channelStep === 'intro' ? (
+              <button onClick={handleAddChannel}
+                className="w-full py-3 rounded-xl font-bold text-white text-[15px] mb-2"
+                style={{ background: 'var(--cta-primary)' }}>
+                채널 추가하기
+              </button>
+            ) : (
+              <button onClick={handleVerifyChannel} disabled={channelLoading}
+                className="w-full py-3 rounded-xl font-bold text-white text-[15px] mb-2 disabled:opacity-60"
+                style={{ background: 'var(--cta-primary)' }}>
+                {channelLoading ? '확인 중...' : '추가 완료 · 달 5개 받기'}
+              </button>
+            )}
+
+            <button onClick={() => setShowChannelBonus(false)}
+              className="w-full py-2.5 rounded-xl border border-[var(--border-subtle)] text-[14px] text-text-secondary">
+              나중에 하기
             </button>
           </motion.div>
         </div>
