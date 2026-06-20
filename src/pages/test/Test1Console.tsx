@@ -29,8 +29,20 @@ export default function Test1Console() {
       const token = data.session?.access_token;
       if (!token) { alert('로그인이 필요해요. /login 에서 로그인 후 다시 시도하세요.'); return; }
 
+      // ★ 실제 만세력과 동일한 시간 보정(-30분) 후 계산 — 안 하면 시주가 어긋나
+      //   오행·용신이 전부 틀어진다(예: 13:24가 미시로 잡혀 목이 생김). SajuResultPage 와 동일.
+      let fy = birth.y, fm = birth.m, fd = birth.d, fh = 12, fmin = 0;
+      if (!birth.unknown) {
+        const dt = new Date(birth.y, birth.m - 1, birth.d, birth.h, birth.min);
+        const shifted = new Date(dt.getTime() - 30 * 60 * 1000);
+        fy = shifted.getFullYear();
+        fm = shifted.getMonth() + 1;
+        fd = shifted.getDate();
+        fh = shifted.getHours();
+        fmin = shifted.getMinutes();
+      }
       const saju: SajuResult = calculateSaju(
-        birth.y, birth.m, birth.d, birth.h, birth.min,
+        fy, fm, fd, fh, fmin,
         birth.gender as 'male' | 'female', birth.unknown,
       );
 
