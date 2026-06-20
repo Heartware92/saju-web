@@ -7,10 +7,37 @@ import { ReactNode } from 'react';
  *  · `**문장**`   → 섹션 핵심 문장 콜아웃 (굵게 + 19px). (기존 동작 유지)
  *  · `==키워드==` → 문장 속 중요 구절·단어 (굵게 + 포인트 색, 본문 크기). 신규.
  *
- * 마커(`**`, `==`) 자체는 제거되어 렌더된다.
- * 정통사주 test 결과 페이지(Test1ResultPage) 전용.
+ * + 한자 괄호 묶음 보호:
+ *  · "편인격(偏印格)", "신강(身强)" 같은 한자 병기가 줄 끝에서 쪼개지지 않게
+ *    해당 묶음만 white-space:nowrap 으로 통째 유지. (indents.md 의 "특수 라벨 nowrap 예외")
+ *  · 한국어 본문 자체는 정책대로 단어 중간 줄바꿈 허용(건드리지 않음).
+ *
+ * 마커(`**`, `==`)는 제거되어 렌더된다. 정통사주 test 결과 페이지 전용.
  */
 const EMPHASIS_RE = /\*\*([\s\S]+?)\*\*|==([\s\S]+?)==/g;
+
+// "단어(漢字…)" 또는 "(漢字…)" — 괄호 안이 한자·중점·공백으로만 이뤄진 묶음.
+// 앞 단어(공백 전까지)까지 함께 잡아 "편인격(偏印格)" 전체를 한 덩어리로 유지.
+const HANJA_GROUP_RE = /([^\s（(]*[（(][㐀-鿿·\s]+[）)])/g;
+
+/** 일반 텍스트 조각에서 한자 괄호 묶음만 nowrap 으로 감싸 nodes 에 push. */
+function pushTextWithHanjaGuard(nodes: ReactNode[], text: string, keyBase: string): void {
+  if (!text) return;
+  let last = 0;
+  let m: RegExpExecArray | null;
+  const re = new RegExp(HANJA_GROUP_RE.source, 'g');
+
+  while ((m = re.exec(text)) !== null) {
+    if (m.index > last) nodes.push(text.slice(last, m.index));
+    nodes.push(
+      <span key={`${keyBase}-h-${m.index}`} style={{ whiteSpace: 'nowrap' }}>
+        {m[1]}
+      </span>,
+    );
+    last = m.index + m[0].length;
+  }
+  if (last < text.length) nodes.push(text.slice(last));
+}
 
 export function renderEmphasizedBodyTest(text: string): ReactNode[] {
   if (!text) return [text];
@@ -22,7 +49,7 @@ export function renderEmphasizedBodyTest(text: string): ReactNode[] {
 
   while ((match = re.exec(text)) !== null) {
     if (match.index > lastIndex) {
-      nodes.push(text.slice(lastIndex, match.index));
+      pushTextWithHanjaGuard(nodes, text.slice(lastIndex, match.index), `t-${match.index}`);
     }
 
     if (match[1] !== undefined) {
@@ -51,7 +78,7 @@ export function renderEmphasizedBodyTest(text: string): ReactNode[] {
   }
 
   if (lastIndex < text.length) {
-    nodes.push(text.slice(lastIndex));
+    pushTextWithHanjaGuard(nodes, text.slice(lastIndex), 't-end');
   }
 
   return nodes.length > 0 ? nodes : [text];
