@@ -195,8 +195,8 @@ export function LifetimeFortuneChart({ saju }: Props) {
         style={{ fontFamily: 'var(--font-body)', letterSpacing: '0.04em' }}
       >
         1세부터 99세까지 종합 운세 점수예요. 대운(10년 주기)·세운(연 단위)의 천간·지지가 원국과
-        어떻게 상호작용하는지 점수화한 결과로, 차트를 좌우로 밀거나 원하는 나이를 탭하면 상세
-        정보가 표시돼요.
+        어떻게 상호작용하는지 점수화한 결과로, 차트를 좌우로 밀거나 원하는 나이를 탭하면 그 해의
+        점수와 운을 볼 수 있어요.
       </p>
 
       {/* 선택된 나이 — 2층 카드 */}
@@ -574,7 +574,7 @@ export function LifetimeFortuneChart({ saju }: Props) {
           color: 'rgba(255,255,255,0.65)',
         }}
       >
-        좌우로 밀어보세요 · 원하는 나이를 탭하면 상세 정보가 표시돼요
+        좌우로 밀어보세요 · 원하는 나이를 탭하면 그 해의 점수와 운을 볼 수 있어요
       </p>
     </motion.div>
   );
