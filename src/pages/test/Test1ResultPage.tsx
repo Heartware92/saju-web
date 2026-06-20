@@ -532,6 +532,29 @@ export default function Test1ResultPage() {
     }
   };
 
+  // ── 대운 칩 본문 렌더 — 대운 풀이 + (있으면) '향후 5년 세운'을 구분 헤더로 분리 ──
+  const renderLuckDesc = (text: string) => {
+    const lines = text.split('\n');
+    const yearIdx = lines.findIndex((l) => /^\s*20\d\d\s*년/.test(l));
+    const wrap = { wordBreak: 'normal' as const, overflowWrap: 'anywhere' as const };
+    if (yearIdx === -1) {
+      return <span style={wrap}>{renderEmphasizedBody(text)}</span>;
+    }
+    const daewoonPart = lines.slice(0, yearIdx).join('\n').trim();
+    const sewoonLines = lines.slice(yearIdx).map((l) => l.trim()).filter(Boolean);
+    return (
+      <span style={wrap}>
+        {renderEmphasizedBody(daewoonPart)}
+        <span style={{ display: 'block', marginTop: 16, marginBottom: 8, paddingTop: 12, borderTop: '1px solid var(--border-subtle)', fontWeight: 700, fontSize: 14, color: 'var(--cta-primary)' }}>
+          향후 5년 세운 (한 해 한 해 흐름)
+        </span>
+        {sewoonLines.map((l, i) => (
+          <span key={i} style={{ display: 'block', marginTop: i === 0 ? 0 : 6 }}>{renderEmphasizedBody(l)}</span>
+        ))}
+      </span>
+    );
+  };
+
   // ── 프로필 선택 가드 ──────────────────────────────────
   if (needsProfileSelect) {
     return (
@@ -791,8 +814,7 @@ export default function Test1ResultPage() {
                      한자병기만 정리(줄바꿈은 보존 — 첫 대운 끝의 향후 5년 세운 5줄을 살리기 위함).
                      들쭉날쭉(keep-all)은 word-break:normal 로 덮어써 해결. */
                   renderJungtongsajuSectionVisual(
-                    'luck', result, cleanKeepMarkers(bodyText, false),
-                    (t) => <span style={{ wordBreak: 'normal', overflowWrap: 'anywhere' }}>{renderEmphasizedBody(t)}</span>,
+                    'luck', result, cleanKeepMarkers(bodyText, false), renderLuckDesc,
                   )
                 ) : (
                   <>
