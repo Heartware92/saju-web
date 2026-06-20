@@ -28,6 +28,7 @@ import {
 import {
   parseJungtongsaju,
   sanitizeAIOutput,
+  sectionOpeningDirective,
   type JungtongsajuSectionKey,
 } from './jungtongsajuShared';
 import { supabaseAdmin } from './supabaseAdmin';
@@ -173,7 +174,7 @@ function buildSectionOverride(key: JungtongsajuSectionKey): string {
 [★★★ 이번 호출 한정 — 위의 '출력 순서·전체 섹션 작성' 지침은 모두 무시]
 이번에는 오직 [${key}] 섹션 하나만 작성합니다.
 - 출력은 [${key}] 마커 한 줄로 시작해, 그 섹션 본문만 쓰고 즉시 끝냅니다.
-- 다른 섹션([general]·[character] 등) 마커나 본문은 절대 출력하지 마세요.
+- 다른 섹션([general]·[character] 등) 마커나 본문은 절대 출력하지 마세요.${sectionOpeningDirective(key)}
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`;
 }
 
