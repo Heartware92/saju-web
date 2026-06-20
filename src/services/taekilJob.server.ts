@@ -1,7 +1,7 @@
 // src/services/taekilJob.server.ts
 // 택일(taekil) 백그라운드 잡 처리기 — server-only. 1-pass.
 
-import { callAI } from '@/lib/ai/aiClients';
+import { callAI, SPIRIT_SYSTEM_PROMPT } from '@/lib/ai/aiClients';
 import { sanitizeAIOutput } from './jungtongsajuShared';
 import { supabaseAdmin } from './supabaseAdmin';
 
@@ -29,7 +29,7 @@ export async function runTaekilJob(input: RunTaekilJobInput): Promise<void> {
   }
 
   try {
-    const raw = await callAI(prompt, MAX_TOKENS);
+    const raw = await callAI(prompt, MAX_TOKENS, { systemPrompt: SPIRIT_SYSTEM_PROMPT });
     if (raw.truncated) {
       throw new Error('응답이 길어서 일부 잘렸어요. 잠시 후 다시 시도해주세요.');
     }

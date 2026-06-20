@@ -10,8 +10,8 @@
 
 import React from 'react';
 
-// 비탐욕 매칭. 줄바꿈 허용([\s\S]).
-const EMPHASIS_RE = /\*\*([\s\S]+?)\*\*/g;
+// 2단계 강조. **문장** → 굵게(흰색), ==키워드== → 굵게+포인트색(cta). 비탐욕·줄바꿈 허용.
+const EMPHASIS_RE = /\*\*([\s\S]+?)\*\*|==([\s\S]+?)==/g;
 
 export function renderEmphasis(text: string): React.ReactNode[] {
   if (!text) return [text];
@@ -24,14 +24,21 @@ export function renderEmphasis(text: string): React.ReactNode[] {
     if (match.index > lastIndex) {
       nodes.push(text.slice(lastIndex, match.index));
     }
-    nodes.push(
-      <strong
-        key={`em-${match.index}`}
-        style={{ color: 'var(--text-primary)', fontWeight: 700 }}
-      >
-        {match[1]}
-      </strong>,
-    );
+    if (match[1] !== undefined) {
+      // **문장** — 섹션 핵심 문장
+      nodes.push(
+        <strong key={`em-s-${match.index}`} style={{ color: 'var(--text-primary)', fontWeight: 700 }}>
+          {match[1]}
+        </strong>,
+      );
+    } else {
+      // ==키워드== — 중요 단어/구절 (포인트색)
+      nodes.push(
+        <strong key={`em-k-${match.index}`} className="font-bold text-cta">
+          {match[2]}
+        </strong>,
+      );
+    }
     lastIndex = match.index + match[0].length;
   }
   if (lastIndex < text.length) {

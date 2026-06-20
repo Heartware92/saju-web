@@ -5,7 +5,7 @@
 // 클라이언트가 prompt 까지 완성해서 보낸다 (14개 카테고리 분기·custom resolve·role injection
 // 모두 GunghapPage 에 검증된 채 유지). 서버는 callAI + sanitize + DB update 만.
 
-import { callAI } from '@/lib/ai/aiClients';
+import { callAI, SPIRIT_SYSTEM_PROMPT } from '@/lib/ai/aiClients';
 import { sanitizeAIOutput } from './jungtongsajuShared';
 import { supabaseAdmin } from './supabaseAdmin';
 
@@ -42,7 +42,7 @@ export async function runGunghapJob(input: RunGunghapJobInput): Promise<void> {
 
   try {
     // ── AI 호출 (1-pass) ──
-    const raw = await callAI(prompt, MAX_TOKENS);
+    const raw = await callAI(prompt, MAX_TOKENS, { systemPrompt: SPIRIT_SYSTEM_PROMPT });
 
     if (raw.truncated) {
       throw new Error('응답이 길어서 일부 잘렸어요. 잠시 후 다시 시도해주세요.');

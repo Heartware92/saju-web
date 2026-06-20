@@ -1,7 +1,7 @@
 // src/services/pickedDateJob.server.ts
 // 지정일 운세(date / category='period') 백그라운드 잡 처리기 — 2-pass + partial.
 
-import { callAI } from '@/lib/ai/aiClients';
+import { callAI, SPIRIT_SYSTEM_PROMPT } from '@/lib/ai/aiClients';
 import { sanitizeAIOutput } from './jungtongsajuShared';
 import { supabaseAdmin } from './supabaseAdmin';
 
@@ -35,7 +35,7 @@ export async function runPickedDateJob(input: RunPickedDateJobInput): Promise<vo
     const pass1Prompt =
       prompt +
       `\n\n★ 이번 응답에서는 [date_flow] 데이터 줄과 [${PASS1_KEYS.slice(1).join('] [')}] 섹션만 출력하세요. 나머지는 다음 호출에서 작성합니다. 각 섹션 분량 지침을 충실히 따라 깊이 있게 작성하세요.`;
-    const pass1Raw = await callAI(pass1Prompt, PASS1_MAX_TOKENS);
+    const pass1Raw = await callAI(pass1Prompt, PASS1_MAX_TOKENS, { systemPrompt: SPIRIT_SYSTEM_PROMPT });
     const pass1Content = sanitizeAIOutput(pass1Raw.content);
     if (pass1Content.length < 300) {
       throw new Error('1차 응답이 비정상적으로 짧아요. 잠시 후 다시 시도해주세요.');
@@ -48,7 +48,7 @@ export async function runPickedDateJob(input: RunPickedDateJobInput): Promise<vo
         prompt +
         `\n\n★ 이번 응답에서는 [${PASS2_KEYS.join('] [')}] 섹션만 출력하세요. 앞의 섹션들은 이미 완료되었습니다. 각 섹션 분량 지침을 충실히 따라 깊이 있게 작성하세요.` +
         `\n\n[이미 작성된 1차 내용 — 참고만, 출력하지 말 것]\n${pass1Content}`;
-      const pass2Raw = await callAI(pass2Prompt, PASS2_MAX_TOKENS);
+      const pass2Raw = await callAI(pass2Prompt, PASS2_MAX_TOKENS, { systemPrompt: SPIRIT_SYSTEM_PROMPT });
       pass2Content = sanitizeAIOutput(pass2Raw.content);
     } catch (e) {
       console.warn('[pickedDateJob] 2차 실패. 1차만 done:', e);

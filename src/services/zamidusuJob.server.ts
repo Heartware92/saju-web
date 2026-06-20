@@ -2,7 +2,7 @@
 // 자미두수(zamidusu) 백그라운드 잡 처리기 — server-only.
 // 단순 2-pass + partial. 옛 getZamidusuReading 의 흐름 그대로.
 
-import { callAI } from '@/lib/ai/aiClients';
+import { callAI, SPIRIT_SYSTEM_PROMPT } from '@/lib/ai/aiClients';
 import {
   generateZamidusuPrompt,
   type ZamidusuSectionKey,
@@ -71,7 +71,7 @@ export async function runZamidusuJob(input: RunZamidusuJobInput): Promise<void> 
     const pass1Prompt =
       basePrompt +
       `\n\n★ 이번 응답에서는 [${PASS1_KEYS.join('] [')}] 6개 섹션만 출력하세요. 나머지 6개는 다음 호출에서 작성합니다. 각 섹션의 분량 지침을 충실히 따라 깊이 있게 작성하세요.`;
-    const pass1Raw = await callAI(pass1Prompt, PASS1_MAX_TOKENS);
+    const pass1Raw = await callAI(pass1Prompt, PASS1_MAX_TOKENS, { systemPrompt: SPIRIT_SYSTEM_PROMPT });
     const pass1Content = sanitizeAIOutput(pass1Raw.content);
 
     if (pass1Content.length < 300) {
@@ -88,7 +88,7 @@ export async function runZamidusuJob(input: RunZamidusuJobInput): Promise<void> 
         basePrompt +
         `\n\n★ 이번 응답에서는 [${PASS2_KEYS.join('] [')}] 6개 섹션만 출력하세요. [${PASS1_KEYS.join('] [')}]는 이미 완료되었습니다. 각 섹션의 분량 지침을 충실히 따라 깊이 있게 작성하세요.` +
         `\n\n[이미 작성된 1차 내용 — 참고만, 출력하지 말 것]\n${pass1Content}`;
-      const pass2Raw = await callAI(pass2Prompt, PASS2_MAX_TOKENS);
+      const pass2Raw = await callAI(pass2Prompt, PASS2_MAX_TOKENS, { systemPrompt: SPIRIT_SYSTEM_PROMPT });
       pass2Content = sanitizeAIOutput(pass2Raw.content);
     } catch (e) {
       console.warn('[zamidusuJob] 2차 실패. 1차만으로 done:', e);

@@ -2,7 +2,7 @@
 // 토정비결(tojeong) 백그라운드 잡 처리기 — server-only.
 // 옛 getTojeongReading 의 2-pass 흐름. 4단 폴백은 제거 (실패 시 자동 환불로 보호).
 
-import { callAI } from '@/lib/ai/aiClients';
+import { callAI, SPIRIT_SYSTEM_PROMPT } from '@/lib/ai/aiClients';
 import {
   generateTojeongPass1Prompt,
   generateTojeongPass2Prompt,
@@ -69,7 +69,7 @@ export async function runTojeongJob(input: RunTojeongJobInput): Promise<void> {
   try {
     // ── 1차: 총운 + 월별 12달 (TOJEONG_SECTION_KEYS 중 일부) ──
     const pass1Prompt = generateTojeongPass1Prompt(tojeongResult, sajuResult, userCtx);
-    const pass1Raw = await callAI(pass1Prompt, PASS1_MAX_TOKENS);
+    const pass1Raw = await callAI(pass1Prompt, PASS1_MAX_TOKENS, { systemPrompt: SPIRIT_SYSTEM_PROMPT });
     const pass1Content = sanitizeAIOutput(pass1Raw.content);
 
     if (pass1Content.length < 300) {
@@ -83,7 +83,7 @@ export async function runTojeongJob(input: RunTojeongJobInput): Promise<void> {
     let pass2Content = '';
     try {
       const pass2Prompt = generateTojeongPass2Prompt(tojeongResult, pass1Content, sajuResult, userCtx);
-      const pass2Raw = await callAI(pass2Prompt, PASS2_MAX_TOKENS);
+      const pass2Raw = await callAI(pass2Prompt, PASS2_MAX_TOKENS, { systemPrompt: SPIRIT_SYSTEM_PROMPT });
       pass2Content = sanitizeAIOutput(pass2Raw.content);
     } catch (e) {
       console.warn('[tojeongJob] 2차 실패. 1차만으로 done:', e);

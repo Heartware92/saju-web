@@ -6,7 +6,7 @@
 // - dream                            : 3-pass. 1차 분류기 → 2차 동양 + 3차 서양 (병렬).
 //   클라가 dreamInput(text, timeBandId, isRepeating)을 보내면 서버가 3개 호출 직접 실행.
 
-import { callAI } from '@/lib/ai/aiClients';
+import { callAI, SPIRIT_SYSTEM_PROMPT } from '@/lib/ai/aiClients';
 import { sanitizeAIOutput } from './jungtongsajuShared';
 import { supabaseAdmin } from './supabaseAdmin';
 import {
@@ -91,7 +91,7 @@ export async function runMoreFortuneJob(input: RunMoreFortuneJobInput): Promise<
     } else {
       // 1-pass: study / children / personality / name 또는 dream 폴백
       const tokens = maxTokens ?? DEFAULT_MAX_TOKENS[category];
-      const raw = await callAI(prompt, tokens);
+      const raw = await callAI(prompt, tokens, { systemPrompt: SPIRIT_SYSTEM_PROMPT });
       sanitized = sanitizeAIOutput(raw.content);
     }
 
@@ -149,8 +149,8 @@ async function runDream3Pass(input: DreamJobInput): Promise<{ text: string; clas
   const westernPrompt = generateDreamWesternPrompt(input.dreamText, promptOptions, classification);
 
   const [orientalRes, westernRes] = await Promise.allSettled([
-    callAI(orientalPrompt, DREAM_ORIENTAL_TOKENS),
-    callAI(westernPrompt, DREAM_WESTERN_TOKENS),
+    callAI(orientalPrompt, DREAM_ORIENTAL_TOKENS, { systemPrompt: SPIRIT_SYSTEM_PROMPT }),
+    callAI(westernPrompt, DREAM_WESTERN_TOKENS, { systemPrompt: SPIRIT_SYSTEM_PROMPT }),
   ]);
 
   const orientalOk = orientalRes.status === 'fulfilled';
