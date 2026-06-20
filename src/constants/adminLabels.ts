@@ -31,6 +31,8 @@ export const SAJU_CATEGORY_LABEL: Record<string, string> = {
   personality: '성격 분석',
   name: '이름 풀이',
   dream: '꿈 해몽',
+  // 상담소 (saju_records 에 category='consultation' 로 적재됨)
+  consultation: '상담소',
   // 레거시 (과거 데이터 호환)
   hybrid: '사주·타로 하이브리드',
   relation: '인간관계',
