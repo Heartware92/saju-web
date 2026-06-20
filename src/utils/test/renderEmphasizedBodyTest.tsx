@@ -14,6 +14,12 @@ import { ReactNode } from 'react';
  */
 const EMPHASIS_RE = /\*\*([\s\S]+?)\*\*|==([\s\S]+?)==/g;
 
+/** 문단·문장 첫머리의 감탄사 필러("음,", "흠,", "아,", "자,") 제거 — 반복 도입 안전망. */
+export function stripLeadingFiller(text: string): string {
+  if (!text) return text;
+  return text.replace(/(^|\n)[ \t]*(음|흠|아|자)[,，][ \t]*/g, '$1');
+}
+
 // "(漢字…)" — 괄호 안이 한자·중점·공백으로만 이뤄진 부분만 nowrap.
 const HANJA_GROUP_RE = /([（(][㐀-鿿·\s]+[）)])/g;
 
@@ -35,6 +41,7 @@ function pushTextWithHanjaGuard(nodes: ReactNode[], text: string, keyBase: strin
 
 export function renderEmphasizedBodyTest(text: string): ReactNode[] {
   if (!text) return [text];
+  text = stripLeadingFiller(text);
 
   const nodes: ReactNode[] = [];
   let lastIndex = 0;
