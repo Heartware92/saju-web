@@ -25,7 +25,7 @@ import { determineGyeokguk } from '../engine/gyeokguk';
 import { stemToHanja, zhiToHanja } from '../lib/character';
 import { AdviceCard } from '../components/saju/AdviceCard';
 import { extractMetaphor } from '../utils/parseMetaphor';
-import { renderEmphasizedBody } from '../utils/renderEmphasizedBody';
+import { renderEmphasizedBody, cleanKeepMarkers } from '../utils/renderEmphasizedBody';
 import { LifetimeFortuneChart } from '../components/saju/LifetimeFortuneChart';
 import { SectionCollapsible } from '../components/saju/SectionCollapsible';
 import { renderJungtongsajuSectionVisual } from '../components/saju/JungtongsajuSectionVisuals';
@@ -393,6 +393,29 @@ export default function SajuResultPage() {
     return () => { cancelled = true; };
   }, [result, isArchiveMode, effectiveJobId, needsProfileSelect, searchParams, targetProfile]);
 
+  // ── 대운 칩 본문 렌더 — 대운 풀이 + (있으면) '향후 5년 세운'을 구분 헤더로 분리 ──
+  const renderLuckDesc = (text: string) => {
+    const lines = text.split('\n');
+    const yearIdx = lines.findIndex((l) => /^\s*20\d\d\s*년/.test(l));
+    const wrap = { wordBreak: 'normal' as const, overflowWrap: 'anywhere' as const };
+    if (yearIdx === -1) {
+      return <span style={wrap}>{renderEmphasizedBody(text)}</span>;
+    }
+    const daewoonPart = lines.slice(0, yearIdx).join('\n').trim();
+    const sewoonLines = lines.slice(yearIdx).map((l) => l.trim()).filter(Boolean);
+    return (
+      <span style={wrap}>
+        {renderEmphasizedBody(daewoonPart)}
+        <span style={{ display: 'block', marginTop: 16, marginBottom: 8, paddingTop: 12, borderTop: '1px solid var(--border-subtle)', fontWeight: 700, fontSize: 14, color: 'var(--cta-primary)' }}>
+          향후 5년 세운 (한 해 한 해 흐름)
+        </span>
+        {sewoonLines.map((l, i) => (
+          <span key={i} style={{ display: 'block', marginTop: i === 0 ? 0 : 6 }}>{renderEmphasizedBody(l)}</span>
+        ))}
+      </span>
+    );
+  };
+
   // ── 프로필 선택 가드 ──────────────────────────────────
   if (needsProfileSelect) {
     return (
@@ -616,20 +639,22 @@ export default function SajuResultPage() {
             return (
               <SectionCollapsible
                 key={key}
-                title={JUNGTONGSAJU_SECTION_LABELS[key]}
+                title={key === 'advice' ? '개운법' : JUNGTONGSAJU_SECTION_LABELS[key]}
                 metaphorTitle={metaphorTitle}
                 defaultOpen={idx === 0}
                 enterDelay={0.06 * idx}
               >
                 {isAdvice && report.adviceMeta ? (
+                  /* 개운법 — body 는 마커 보존(한자병기만 정리)하고 renderBody 로 ==/** 강조 렌더 */
                   <AdviceCard
                     yongSinElement={result.yongSinElement}
-                    meta={report.adviceMeta}
+                    meta={{ ...report.adviceMeta, body: cleanKeepMarkers(report.adviceMeta.body ?? '') }}
+                    renderBody={renderEmphasizedBody}
                   />
                 ) : key === 'luck' ? (
                   /* 대운·세운 — LuckVisual 이 대운별 칩+인라인 펼침으로 본문까지 전담.
-                     옛 record (대운 마커 없음) 는 LuckVisual 내부에서 통짜 본문 fallback. */
-                  renderJungtongsajuSectionVisual('luck', result, bodyText)
+                     renderBody 로 ==/** 강조 + 향후 5년 세운 구분 헤더. 한자병기만 정리(줄바꿈 보존). */
+                  renderJungtongsajuSectionVisual('luck', result, cleanKeepMarkers(bodyText, false), renderLuckDesc)
                 ) : (
                   <>
                     {/* 섹션별 시각 데이터 카드 — 본문 줄글 위 한눈 요약 */}
