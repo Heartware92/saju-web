@@ -22,7 +22,6 @@ export default function Test1Console() {
 
   const num = (v: string) => parseInt(v, 10) || 0;
   const busy = loading !== null || allProgress !== null;
-  const TOTAL = JUNGTONGSAJU_SECTION_KEYS.length;
 
   const labelOf = (k: string) =>
     k === 'advice' ? '개운법' : (JUNGTONGSAJU_SECTION_LABELS[k as keyof typeof JUNGTONGSAJU_SECTION_LABELS] ?? k);
@@ -75,31 +74,26 @@ export default function Test1Console() {
     }
   };
 
-  // 전체 생성 — 위에서부터 순서대로(앞 섹션을 다음 섹션 반복 회피 컨텍스트로 누적)
+  // 전체 생성 — 2-pass(한 컨텍스트로 Core 4 + App 8을 각각 한 번에). 모델이 스스로 변주해 반복↓
   const generateAll = async () => {
     if (busy) return;
     const token = await getToken();
     if (!token) return;
     const saju = buildSaju();
-    const acc: Record<string, string> = {};
-    setAllProgress(0);
-    setResults({}); // 새로 전체 생성 — 기존 결과 초기화
+    setAllProgress(0); // 실행 중 표시(2-pass는 단일 호출이라 진행 카운트 없음)
+    setResults({});
     try {
-      for (let i = 0; i < JUNGTONGSAJU_SECTION_KEYS.length; i++) {
-        const key = JUNGTONGSAJU_SECTION_KEYS[i];
-        setLoading(key);
-        const priorArr = Object.entries(acc).map(([k, t]) => ({ label: labelOf(k), text: t }));
-        try {
-          const text = await genOne(key, token, saju, priorArr);
-          acc[key] = text;
-          setResults(prev => ({ ...prev, [key]: text }));
-        } catch (e) {
-          console.error('[generateAll]', key, e);
-        }
-        setAllProgress(i + 1);
-      }
+      const res = await fetch('/api/test/jungtongsaju', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({ sajuResult: saju }),
+      });
+      const json = await res.json();
+      if (!res.ok || !json.success) { alert(json.error ?? '전체 생성 실패'); return; }
+      setResults(json.sections ?? {});
+    } catch (e) {
+      alert(e instanceof Error ? e.message : '전체 생성 오류');
     } finally {
-      setLoading(null);
       setAllProgress(null);
     }
   };
@@ -141,7 +135,7 @@ export default function Test1Console() {
         disabled={busy}
         className="w-full mb-5 px-4 py-3 rounded-xl bg-cta text-white font-bold disabled:opacity-50"
       >
-        {allProgress !== null ? `전체 생성 중… (${allProgress}/${TOTAL})` : '전체 한 번에 생성'}
+        {allProgress !== null ? '전체 생성 중… (2-pass · 1~3분 걸려요)' : '전체 한 번에 생성 (2-pass)'}
       </button>
 
       {/* 섹션 목록 */}
