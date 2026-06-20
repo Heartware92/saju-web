@@ -3,12 +3,13 @@
  */
 'use client';
 
+import { useState } from 'react';
 import { HorizontalBarChart } from '@/components/admin/charts/HorizontalBarChart';
 import { VerticalBarChart } from '@/components/admin/charts/VerticalBarChart';
 import { HeatmapChart } from '@/components/admin/charts/HeatmapChart';
 import {
   SAJU_CATEGORY_LABEL, TAROT_SPREAD_LABEL,
-  SAJU_BIG_CATEGORIES, SAJU_MORE_CATEGORIES,
+  SAJU_BIG_CATEGORIES, SAJU_MORE_CATEGORIES, lookupServiceLabel,
 } from '@/constants/adminLabels';
 
 export interface UsageSummary {
@@ -27,12 +28,61 @@ export interface UsageSummary {
   daily: { date: string; saju: number; tarot: number; consult?: number; total: number }[];
   heatmap: number[][];
   credit: { moonConsumed: number; moonTxn: number };
+  consumptionSeq?: {
+    totalConsumers: number;
+    maxStep: number;
+    steps: { step: number; users: number; distribution: { key: string; count: number }[] }[];
+  };
 }
 
 const fmt = (n: number) => n.toLocaleString('ko-KR');
 
 const BIG_SET = new Set<string>(SAJU_BIG_CATEGORIES);
 const MORE_SET = new Set<string>(SAJU_MORE_CATEGORIES);
+
+/** 달 소비 순서 — 유저가 몇 번째로 어느 서비스에 달을 쓰는지(단계 선택). 보너스·결제 무관 */
+function ConsumptionSequenceCard({ seq }: { seq: NonNullable<UsageSummary['consumptionSeq']> }) {
+  const [step, setStep] = useState(1);
+  if (!seq.steps.length) {
+    return (
+      <div className="bg-white/5 border border-white/10 rounded-xl p-4">
+        <h3 className="text-[14px] font-semibold text-text-primary mb-1">달 소비 순서</h3>
+        <p className="text-[13px] text-text-tertiary py-6 text-center">아직 달을 소비한 회원이 없습니다</p>
+      </div>
+    );
+  }
+  const cur = seq.steps.find((s) => s.step === step) ?? seq.steps[0];
+  const bars = cur.distribution.map((d) => ({ key: d.key, label: lookupServiceLabel(d.key), value: d.count }));
+  return (
+    <div className="bg-white/5 border border-white/10 rounded-xl p-4">
+      <div className="flex items-baseline justify-between mb-1 flex-wrap gap-x-3 gap-y-1">
+        <h3 className="text-[14px] font-semibold text-text-primary">달 소비 순서 <span className="text-text-tertiary font-normal">(몇 번째로 어디에 쓰는지)</span></h3>
+        <p className="text-[12px] text-text-tertiary">보너스·결제 무관 · 전체 기간 · 소비 경험 {fmt(seq.totalConsumers)}명</p>
+      </div>
+      {/* 단계 버튼 — 괄호 안 인원 = 그 단계까지 도달(드롭오프) */}
+      <div className="flex gap-1.5 flex-wrap my-3">
+        {seq.steps.map((s) => (
+          <button
+            key={s.step}
+            onClick={() => setStep(s.step)}
+            className={`px-2.5 py-1.5 rounded-lg text-[12px] font-medium border transition-colors ${
+              step === s.step
+                ? 'bg-cta text-white border-cta'
+                : 'bg-white/5 text-text-secondary border-white/15 hover:bg-white/10'
+            }`}
+          >
+            {s.step}번째 <span className={step === s.step ? 'text-white/80' : 'text-text-tertiary'}>({fmt(s.users)}명)</span>
+          </button>
+        ))}
+      </div>
+      <p className="text-[12px] text-text-tertiary mb-2">
+        <span className="text-text-primary font-medium">{cur.step}번째</span> 달 소비 — 이 단계까지 온{' '}
+        <span className="text-text-primary font-medium">{fmt(cur.users)}명</span>이 쓴 서비스
+      </p>
+      <HorizontalBarChart bars={bars} defaultColor="rgba(129, 140, 248, 0.7)" />
+    </div>
+  );
+}
 
 export function UsageAnalyticsSection({ summary }: { summary: UsageSummary | null }) {
   if (!summary) return <div className="text-[14px] text-text-tertiary py-6">로딩 중…</div>;
@@ -86,6 +136,9 @@ export function UsageAnalyticsSection({ summary }: { summary: UsageSummary | nul
           <Kpi label="달 소비" value={fmt(credit.moonConsumed)} sub={`거래장부 ${fmt(credit.moonTxn)}`} />
         </div>
       </div>
+
+      {/* 달 소비 순서 (첫 소비 → N번째 소비 경로) */}
+      {summary.consumptionSeq && <ConsumptionSequenceCard seq={summary.consumptionSeq} />}
 
       {/* 30일 추이 + 해/달 비중 */}
       <div className="grid grid-cols-1 lg:grid-cols-[2fr_1fr] gap-3">

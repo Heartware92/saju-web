@@ -43,7 +43,7 @@ async function computeSummary(audience: Set<string> | null) {
   const [sajuRes, tarotRes, creditRes, consultRes] = await Promise.all([
     includeAudience(excludeUsers(supabaseAdmin.from('saju_records').select('user_id, category, credit_used, created_at'), ex), audience),
     includeAudience(excludeUsers(supabaseAdmin.from('tarot_records').select('user_id, spread_type, credit_used, created_at'), ex), audience),
-    includeAudience(excludeUsers(supabaseAdmin.from('credit_transactions').select('amount, reason, type, created_at').eq('type', 'consume').eq('credit_type', 'moon'), ex), audience),
+    includeAudience(excludeUsers(supabaseAdmin.from('credit_transactions').select('user_id, amount, reason, type, created_at').eq('type', 'consume').eq('credit_type', 'moon'), ex), audience),
     includeAudience(excludeUsers(supabaseAdmin.from('consultation_records').select('user_id, message_count, created_at, updated_at'), ex), audience),
   ]);
 
@@ -128,6 +128,43 @@ async function computeSummary(audience: Set<string> | null) {
 
   const totalConsultMessages = consult.reduce((s, c) => s + (c.message_count ?? 0), 0);
 
+  // ── 달 소비 순서: 유저가 1번째·2번째·…N번째로 어느 서비스에 달을 쓰는지 ──
+  // 보너스/결제 무관, credit_transactions 의 consume 기록을 유저별 시간순으로 늘어놓아
+  // step 위치별 reason 분포 + 각 step 도달 인원(드롭오프)을 집계. 전체 기간 기준.
+  const MAX_STEPS = 12;
+  const byUserConsume = new Map<string, { reason: string; at: string }[]>();
+  for (const t of creditConsumed) {
+    if (!t.user_id || !t.created_at) continue;
+    const e = { reason: t.reason ?? '(미상)', at: t.created_at };
+    const arr = byUserConsume.get(t.user_id);
+    if (arr) arr.push(e); else byUserConsume.set(t.user_id, [e]);
+  }
+  const stepReason: Map<string, number>[] = Array.from({ length: MAX_STEPS }, () => new Map());
+  const stepUsers = new Array(MAX_STEPS).fill(0);
+  let totalConsumers = 0;
+  for (const list of byUserConsume.values()) {
+    totalConsumers++;
+    list.sort((a, b) => (a.at < b.at ? -1 : a.at > b.at ? 1 : 0));
+    for (let i = 0; i < Math.min(list.length, MAX_STEPS); i++) {
+      stepUsers[i]++;
+      const m = stepReason[i];
+      m.set(list[i].reason, (m.get(list[i].reason) ?? 0) + 1);
+    }
+  }
+  let maxStep = 0;
+  for (let i = 0; i < MAX_STEPS; i++) if (stepUsers[i] > 0) maxStep = i + 1;
+  const consumptionSeq = {
+    totalConsumers,
+    maxStep,
+    steps: Array.from({ length: maxStep }, (_, i) => ({
+      step: i + 1,
+      users: stepUsers[i],
+      distribution: [...stepReason[i].entries()]
+        .map(([key, count]) => ({ key, count }))
+        .sort((a, b) => b.count - a.count),
+    })),
+  };
+
   return {
     kpi: {
       sajuTotal: saju.length,
@@ -147,6 +184,7 @@ async function computeSummary(audience: Set<string> | null) {
       moonConsumed,
       moonTxn,
     },
+    consumptionSeq,
   };
 }
 
