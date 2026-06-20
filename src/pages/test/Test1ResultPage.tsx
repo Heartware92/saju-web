@@ -25,7 +25,7 @@ import { determineGyeokguk } from '@/engine/gyeokguk';
 import { stemToHanja, zhiToHanja } from '@/lib/character';
 import { AdviceCard } from '@/components/saju/AdviceCard';
 import { extractMetaphor } from '@/utils/parseMetaphor';
-import { renderEmphasizedBody } from '@/utils/renderEmphasizedBody';
+import { renderEmphasizedBodyTest as renderEmphasizedBody } from '@/utils/test/renderEmphasizedBodyTest';
 import { LifetimeFortuneChart } from '@/components/saju/LifetimeFortuneChart';
 import { SectionCollapsible } from '@/components/saju/SectionCollapsible';
 import { renderJungtongsajuSectionVisual } from '@/components/saju/JungtongsajuSectionVisuals';

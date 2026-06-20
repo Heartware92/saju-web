@@ -12,7 +12,6 @@ import {
   buildJungtongsajuInput,
   METAPHOR_KB,
   METAPHOR_TITLE_RULE,
-  KEY_SENTENCE_EMPHASIS_RULE,
   ELEMENT_TO_STEMS_TEXT,
 } from '@/constants/prompts';
 
@@ -46,6 +45,30 @@ const TONE_TARGET_RULE = `━━━━━━━━━━━━━━━━━━
 - 점집 말투("~할 운명이오"), 과장된 단언, 불안 조장.
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`;
 
+/**
+ * ★ 강조 규칙(2단계) — test 전용. 렌더러: renderEmphasizedBodyTest.
+ *   ==키워드== (구절 강조) + **문장** (핵심 문장 콜아웃).
+ *   라이브 KEY_SENTENCE_EMPHASIS_RULE 대체.
+ */
+const EMPHASIS_RULE_TEST = `[문장 강조 — 입체적 가독성 규칙 ★★]
+
+두 가지 강조 마커를 함께 씁니다. 앱이 마커를 감지해 자동으로 굵게/크게 렌더하니, 마커만 정확히 넣으세요.
+
+1) ==키워드== — 문장 속 중요한 구절·키워드를 감쌉니다 (굵게 + 포인트색으로 도드라짐).
+   · 목적: 긴 문단도 핵심 단어가 눈에 띄어 입체적으로 읽히게 하는 것.
+   · 한 문단(2~4문장)에 2~4개 정도. 명사·동사 중심의 짧은 구절(2~12자) 위주.
+   · 예: "처음에는 ==조용히 관찰하는 쪽==이지만, 친해지면 ==숨겨둔 유머==가 터져 나와요."
+   · 너무 많이 감싸면 강조 효과가 사라지니 정말 중요한 것만.
+
+2) **문장** — 그 섹션을 관통하는 핵심 문장 1개를 통째로 감쌉니다 (굵게 + 큰 글씨 콜아웃).
+   · 한 섹션당 최대 1개. 독자가 꼭 기억할 결론·통찰 한 문장.
+   · 완전한 문장(마침표 포함) 통째로. 예: "**결국 당신의 무기는 속도가 아니라 깊이예요.**"
+
+[형식 규칙]
+   · ==...== 와 **...** 를 서로 중첩하지 말 것. **문장** 안에서 또 ==...== 쓰지 말 것.
+   · 은유 부제목 줄에는 어떤 강조 마커도 쓰지 말 것.
+   · 별표 2개(**), 등호 2개(==) 형태를 정확히 — 다른 기호로 대체 금지.`;
+
 export const generateJungtongsajuCorePromptTest = (result: SajuResult): string => {
   const v = buildJungtongsajuInput(result);
   const { inputBlock, commonRules, yongSinElement, pillars, gyeokguk, elementPercent, zeroElements, maxEl, interactionStr, dayTraits, strengthStatus, missingSipseongStr } = v;
@@ -66,7 +89,7 @@ ${METAPHOR_KB}
 
 ${METAPHOR_TITLE_RULE}
 
-${KEY_SENTENCE_EMPHASIS_RULE}
+${EMPHASIS_RULE_TEST}
 
 [섹션 지침 — 1차 핵심 4섹션]
 
@@ -245,7 +268,7 @@ ${METAPHOR_KB}
 
 ${METAPHOR_TITLE_RULE}
 
-${KEY_SENTENCE_EMPHASIS_RULE}
+${EMPHASIS_RULE_TEST}
 
 [섹션 지침 — 2차 응용 8섹션]
 
