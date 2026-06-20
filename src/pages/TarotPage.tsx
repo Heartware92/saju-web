@@ -609,8 +609,12 @@ export default function TarotPage() {
   // 팬에서 카드 선택 — 오늘 1장, 이달 3장
   const pickAutoCard = (spreadIdx: number, currentMode: TarotMode) => {
     if (autoState !== 'spread') return;
-    if (selectedSpreadIdxs.includes(spreadIdx)) return;
     const neededCount = currentMode === 'monthly' ? 3 : 1;
+    // 이미 선택한 카드를 한 번 더 누르면 선택 취소
+    if (selectedSpreadIdxs.includes(spreadIdx)) {
+      setSelectedSpreadIdxs(selectedSpreadIdxs.filter((i) => i !== spreadIdx));
+      return;
+    }
     if (selectedSpreadIdxs.length >= neededCount) return;
 
     const newSelected = [...selectedSpreadIdxs, spreadIdx];
@@ -740,7 +744,7 @@ export default function TarotPage() {
                             animate={
                               isShuffling
                                 ? { x: (Math.random() - 0.5) * 300, y: (Math.random() - 0.5) * 140, rotate: (Math.random() - 0.5) * 60 }
-                                : { x: (i - 10.5) * 14, y: Math.sin((i - 10.5) * 0.3) * 18, rotate: (i - 10.5) * 2 }
+                                : { x: (i - 10.5) * 18, y: Math.sin((i - 10.5) * 0.3) * 18, rotate: (i - 10.5) * 2 }
                             }
                             transition={{ duration: 0.5, delay: i * 0.02 }}
                             className="absolute"
@@ -748,7 +752,7 @@ export default function TarotPage() {
                               width: 58, height: 92, borderRadius: 8, overflow: 'hidden',
                               boxShadow: isSelected ? '0 0 14px rgba(124,92,252,0.9)' : '0 3px 10px rgba(0,0,0,0.4)',
                               border: `2px solid ${isSelected ? 'rgba(124,92,252,1)' : 'rgba(124,92,252,0.5)'}`,
-                              cursor: isShuffling || isSelected ? 'default' : 'pointer',
+                              cursor: isShuffling ? 'default' : 'pointer',
                               backgroundColor: '#2a1660',
                             }}
                           >
@@ -859,7 +863,7 @@ export default function TarotPage() {
                     initial={{ x: 0, y: 0, rotate: 0 }}
                     animate={
                       qState === 'spread'
-                        ? { x: (i - 10.5) * 14, y: Math.sin((i - 10.5) * 0.3) * 18, rotate: (i - 10.5) * 2 }
+                        ? { x: (i - 10.5) * 18, y: Math.sin((i - 10.5) * 0.3) * 18, rotate: (i - 10.5) * 2 }
                         : { x: (Math.random() - 0.5) * 300, y: (Math.random() - 0.5) * 140, rotate: (Math.random() - 0.5) * 60 }
                     }
                     transition={{ duration: 0.5, delay: i * 0.02 }}
