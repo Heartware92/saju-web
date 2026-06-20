@@ -21,3 +21,29 @@ export async function notifySignupWelcome(): Promise<void> {
     /* 비차단 — 가입 흐름을 막지 않는다 */
   }
 }
+
+export interface WelcomeBonusResult {
+  granted: boolean;
+  alreadyGranted?: boolean;
+  amount: number;
+}
+
+/**
+ * 회원가입 환영 보너스(달 5개) 지급 요청. 멱등은 서버 보장(유저당 1회).
+ * 가입 완료 직후 + 홈 첫 진입(모달 표시 시) 양쪽에서 호출해도 안전(멱등).
+ */
+export async function requestWelcomeBonus(): Promise<WelcomeBonusResult | null> {
+  try {
+    const { data: { session } } = await supabase.auth.getSession();
+    const token = session?.access_token;
+    if (!token) return null;
+    const res = await fetch('/api/credit/welcome-bonus', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) return null;
+    return (await res.json()) as WelcomeBonusResult;
+  } catch {
+    return null;
+  }
+}

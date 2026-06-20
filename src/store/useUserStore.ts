@@ -8,7 +8,7 @@ import { supabase, auth, agreement } from '../services/supabase';
 import { useCreditStore } from './useCreditStore';
 import { useProfileStore } from './useProfileStore';
 import { trackEvent } from '../lib/analytics/track';
-import { notifySignupWelcome } from '../services/notify';
+import { notifySignupWelcome, requestWelcomeBonus } from '../services/notify';
 import type { AuthUser } from '../types/user';
 
 interface UserState {
@@ -125,12 +125,13 @@ export const useUserStore = create<UserState>()(
             } catch (e) {
               console.error('Agreement upsert failed at signup (will be retried at first login):', e);
             }
-            // 이메일 가입 완료 — 회원가입 환영 알림톡 (비차단·멱등은 서버 보장)
+            // 이메일 가입 완료 — 환영 알림톡 + 환영 보너스(달 5개) 지급 (비차단·멱등은 서버 보장)
             void notifySignupWelcome();
+            void requestWelcomeBonus();
+            try { sessionStorage.setItem('welcome_bonus_show', '1'); } catch { /* noop */ }
           }
 
-          // 회원가입 시 자동으로 1엽전이 Supabase Trigger로 지급됨
-          // 크레딧 정보 로드
+          // 환영 보너스(달 5개)는 /api/credit/welcome-bonus 가 멱등 지급. 크레딧 정보 로드
           setTimeout(() => {
             useCreditStore.getState().fetchBalance();
           }, 1000);

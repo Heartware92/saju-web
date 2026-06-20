@@ -4,7 +4,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '../services/supabase';
 import { useUserStore } from '../store/useUserStore';
-import { notifySignupWelcome } from '../services/notify';
+import { notifySignupWelcome, requestWelcomeBonus } from '../services/notify';
 import { AlertModal } from '../components/ui/Modal';
 
 export default function PhoneVerifyPage() {
@@ -118,8 +118,10 @@ export default function PhoneVerifyPage() {
         useUserStore.setState({ user: updatedUser });
       }
 
-      // 소셜 가입 완료 — 회원가입 환영 알림톡 (비차단·멱등은 서버 보장)
+      // 소셜 가입 완료 — 환영 알림톡 + 환영 보너스(달 5개) 지급 (비차단·멱등은 서버 보장)
       void notifySignupWelcome();
+      void requestWelcomeBonus();
+      try { sessionStorage.setItem('welcome_bonus_show', '1'); } catch { /* noop */ }
 
       router.replace('/');
     } catch (err: any) {

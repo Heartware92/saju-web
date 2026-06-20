@@ -23,6 +23,8 @@ import { GunghapArchiveListModal } from '../components/GunghapArchiveListModal';
 import type { ArchiveCategory, GunghapArchiveItem } from '../services/archiveService';
 import { findGunghapArchives } from '../services/archiveService';
 import MoonPhase from '../components/MoonPhase';
+import { requestWelcomeBonus } from '../services/notify';
+import { useCreditStore } from '../store/useCreditStore';
 
 // 만세력 페이지(SajuReport)와 동일한 오행 색상 — 홈 4기둥 한자 색칠용
 const ELEMENT_COLORS: Record<string, string> = {
@@ -170,11 +172,35 @@ export default function HomePage() {
   // 궁합 archive list 모달 — 다른 풀이 모달처럼 홈 위에 fade-in (페이지 라우팅 없이)
   const [gunghapModalOpen, setGunghapModalOpen] = useState(false);
   const [gunghapArchiveList, setGunghapArchiveList] = useState<GunghapArchiveItem[]>([]);
+  // 회원가입 환영 보너스 모달 — 가입 직후 첫 홈 진입 시 1회만
+  const [welcomeBonus, setWelcomeBonus] = useState<number | null>(null);
   const router = useRouter();
 
   useEffect(() => {
     if (user) fetchProfiles();
   }, [user, fetchProfiles]);
+
+  // 가입 직후 1회 — 환영 보너스(달 5개) 멱등 지급 확정 후 환영 모달 표시.
+  // 플래그는 가입 완료 시점에만 세팅되므로 일반 홈 진입에선 뜨지 않는다.
+  useEffect(() => {
+    if (!user) return;
+    let flag: string | null = null;
+    try { flag = sessionStorage.getItem('welcome_bonus_show'); } catch { /* noop */ }
+    if (!flag) return;
+    try { sessionStorage.removeItem('welcome_bonus_show'); } catch { /* noop */ }
+    let cancelled = false;
+    (async () => {
+      const res = await requestWelcomeBonus();
+      if (cancelled) return;
+      const amount = res?.amount ?? 5;
+      // 신규 계정이 아니거나(소급 차단) 토큰 없음 등으로 미지급이면 모달 생략.
+      if (res && (res.granted || res.alreadyGranted)) {
+        setWelcomeBonus(amount);
+        void useCreditStore.getState().fetchBalance(user.id, { force: true });
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [user]);
 
   // bfcache(모바일 Safari·Chrome 등) 복원 시 게이트 모달이 떠 있던 상태 그대로
   // 보이는 현상 방지 — 페이지가 다시 보여질 때 강제로 모달 닫기.
@@ -595,6 +621,27 @@ export default function HomePage() {
         }}
         onClose={() => setGunghapModalOpen(false)}
       />
+
+      {/* 회원가입 환영 보너스 모달 — 가입 직후 1회 */}
+      {welcomeBonus !== null && (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/60 backdrop-blur-sm px-4 pb-[calc(64px+env(safe-area-inset-bottom,0px))] sm:pb-4">
+          <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }}
+            className="rounded-2xl p-6 max-w-sm w-full bg-[rgba(20,12,38,0.95)] border border-[var(--border-subtle)] text-center">
+            <div className="flex justify-center mb-3">
+              <MoonPhase size={48} />
+            </div>
+            <h3 className="text-[18px] font-bold text-text-primary mb-2">이천점에 오신 것을 환영합니다</h3>
+            <p className="text-[15px] text-text-secondary leading-relaxed mb-5">
+              회원가입 보너스로 달 {welcomeBonus}개가 지급되었습니다.
+            </p>
+            <button onClick={() => setWelcomeBonus(null)}
+              className="w-full py-3 rounded-xl font-bold text-white text-[15px]"
+              style={{ background: 'var(--cta-primary)' }}>
+              확인
+            </button>
+          </motion.div>
+        </div>
+      )}
 
     </div>
   );
