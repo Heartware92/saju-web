@@ -788,8 +788,13 @@ export default function Test1ResultPage() {
                   />
                 ) : key === 'luck' ? (
                   /* 대운·세운 — LuckVisual 에 renderBody 주입 → 대운별 본문 볼드 렌더.
-                     본문은 한자병기 정리 + 줄바꿈 정상화(마커는 보존) */
-                  renderJungtongsajuSectionVisual('luck', result, cleanKeepMarkers(bodyText, true), renderEmphasizedBody)
+                     본문은 한자병기 정리 + 줄바꿈 정상화(마커는 보존).
+                     LuckVisual 본문 span 의 word-break:keep-all(들쭉날쭉 원인)을
+                     normal 로 덮어써 줄을 꽉 채우게 함(프로젝트 줄바꿈 정책 준수). */
+                  renderJungtongsajuSectionVisual(
+                    'luck', result, cleanKeepMarkers(bodyText, true),
+                    (t) => <span style={{ wordBreak: 'normal', overflowWrap: 'anywhere' }}>{renderEmphasizedBody(t)}</span>,
+                  )
                 ) : (
                   <>
                     {/* 섹션별 시각 데이터 카드 — 본문 줄글 위 한눈 요약 */}
