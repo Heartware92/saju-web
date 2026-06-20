@@ -61,7 +61,7 @@ export default async function PrivacyPage({ searchParams }: { searchParams: Prom
                 </tr>
                 <tr className="border-t border-[var(--border-subtle)]">
                   <td className="px-3 py-2">카카오 로그인</td>
-                  <td className="px-3 py-2">이메일, 닉네임, 카카오 회원번호, 휴대폰 번호</td>
+                  <td className="px-3 py-2">이메일, 닉네임, 카카오 회원번호, 휴대폰 번호, 이름, 성별, 연령대, 생일, 출생 연도</td>
                 </tr>
               </tbody>
             </table>
