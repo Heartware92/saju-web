@@ -98,6 +98,8 @@ export default function Test1ResultPage() {
   const [reportLoading, setReportLoading] = useState(!isArchiveMode && !needsProfileSelect);
   // ── TEST 프롬프트 생성 (크레딧·DB 미반영, jungtongsajuPrompt.test.ts 사용) ──
   const [testGenLoading, setTestGenLoading] = useState(false);
+  // ── 섹션별 단건 재생성 로딩 (현재 재생성 중인 섹션 key) ──
+  const [sectionLoading, setSectionLoading] = useState<string | null>(null);
 
   // 2-pass 응답 도착 시 스크롤 점프 방지용 ref —
   // 1차(partial)가 이미 도착해 사용자가 페이지를 보고 있는 상태에서,
@@ -430,6 +432,36 @@ export default function Test1ResultPage() {
     }
   };
 
+  // ── 섹션 단건 재생성 — /api/test/jungtongsaju/section (그 섹션만 교체) ──
+  const regenSection = async (key: string) => {
+    if (!result || sectionLoading) return;
+    setSectionLoading(key);
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const accessToken = sessionData.session?.access_token;
+      if (!accessToken) { alert('로그인이 필요해요.'); return; }
+      const res = await fetch('/api/test/jungtongsaju/section', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${accessToken}` },
+        body: JSON.stringify({ sajuResult: result, section: key }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        alert(data.error ?? '섹션 재생성 실패');
+        return;
+      }
+      setReport(prev => prev ? {
+        ...prev,
+        sections: { ...(prev.sections ?? {}), [key]: data.text },
+        ...(key === 'advice' && data.adviceMeta ? { adviceMeta: data.adviceMeta } : {}),
+      } : prev);
+    } catch (e) {
+      alert(e instanceof Error ? e.message : '섹션 재생성 오류');
+    } finally {
+      setSectionLoading(null);
+    }
+  };
+
   // ── 프로필 선택 가드 ──────────────────────────────────
   if (needsProfileSelect) {
     return (
@@ -668,6 +700,15 @@ export default function Test1ResultPage() {
                 defaultOpen={idx === 0}
                 enterDelay={0.06 * idx}
               >
+                {/* 섹션 단건 재생성 (개발자 전용 — 프롬프트 튜닝) */}
+                <button
+                  type="button"
+                  onClick={() => regenSection(key)}
+                  disabled={sectionLoading !== null}
+                  className="mb-2 px-2.5 py-1 rounded-md bg-black/40 text-white text-[12px] font-medium border border-white/15 disabled:opacity-50"
+                >
+                  {sectionLoading === key ? '재생성 중…' : '이 섹션만 재생성'}
+                </button>
                 {isAdvice && report.adviceMeta ? (
                   <AdviceCard
                     yongSinElement={result.yongSinElement}
