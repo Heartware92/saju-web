@@ -20,6 +20,7 @@ import {
   generateJungtongsajuCorePromptTest,
   generateJungtongsajuApplicationPromptTest,
 } from '@/constants/test/jungtongsajuPrompt.test';
+import { parseAdviceMeta } from '@/services/fortuneService';
 import type { SajuResult } from '@/utils/sajuCalculator';
 
 // Supabase(Seoul) 와 같은 리전 — 라이브 함수 규칙 준수
@@ -76,9 +77,14 @@ export async function POST(req: NextRequest) {
     const appContent = sanitizeAIOutput(appRaw.content);
     const appSections = parseJungtongsaju(appContent);
 
+    // ── 용신처방(advice) 카드용 메타 파싱 — 라이브와 동일하게 AdviceCard UI 렌더 ──
+    const sections = { ...coreSections, ...appSections };
+    const adviceMeta = sections.advice ? parseAdviceMeta(sections.advice) : undefined;
+
     return NextResponse.json({
       success: true,
-      sections: { ...coreSections, ...appSections },
+      sections,
+      adviceMeta,
     });
   } catch (e) {
     const message = e instanceof Error ? e.message : '생성 중 오류';

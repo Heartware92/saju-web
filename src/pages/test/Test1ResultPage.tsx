@@ -421,7 +421,7 @@ export default function Test1ResultPage() {
       if (!res.ok || !data.success) {
         setReport({ success: false, error: data.error ?? 'TEST 생성 실패' });
       } else {
-        setReport({ success: true, sections: data.sections });
+        setReport({ success: true, sections: data.sections, adviceMeta: data.adviceMeta });
       }
     } catch (e) {
       setReport({ success: false, error: e instanceof Error ? e.message : 'TEST 생성 오류' });
@@ -676,7 +676,9 @@ export default function Test1ResultPage() {
                 ) : key === 'luck' ? (
                   /* 대운·세운 — LuckVisual 이 대운별 칩+인라인 펼침으로 본문까지 전담.
                      옛 record (대운 마커 없음) 는 LuckVisual 내부에서 통짜 본문 fallback. */
-                  renderJungtongsajuSectionVisual('luck', result, bodyText)
+                  /* 대운·세운은 LuckVisual(공유)이 마커를 안 풀어 == 가 글자로 노출됨
+                     → test 강조 마커를 미리 제거해 깔끔히 표시 (칩 UI는 유지) */
+                  renderJungtongsajuSectionVisual('luck', result, bodyText.replace(/\*\*([\s\S]+?)\*\*/g, '$1').replace(/==([\s\S]+?)==/g, '$1'))
                 ) : (
                   <>
                     {/* 섹션별 시각 데이터 카드 — 본문 줄글 위 한눈 요약 */}
