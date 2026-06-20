@@ -574,7 +574,8 @@ export function LifetimeFortuneChart({ saju }: Props) {
           color: 'rgba(255,255,255,0.65)',
         }}
       >
-        좌우로 밀어보세요 · 원하는 나이를 탭하면 그 해의 점수와 운을 볼 수 있어요
+        좌우로 밀어보세요<br />
+        원하는 나이를 탭하면 그 해의 점수와 운을 볼 수 있어요
       </p>
     </motion.div>
   );
