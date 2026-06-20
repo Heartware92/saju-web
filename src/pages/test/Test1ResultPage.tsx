@@ -25,7 +25,7 @@ import { determineGyeokguk } from '@/engine/gyeokguk';
 import { stemToHanja, zhiToHanja } from '@/lib/character';
 import { AdviceCard } from '@/components/saju/AdviceCard';
 import { extractMetaphor } from '@/utils/parseMetaphor';
-import { renderEmphasizedBodyTest as renderEmphasizedBody, stripHanjaParens } from '@/utils/test/renderEmphasizedBodyTest';
+import { renderEmphasizedBodyTest as renderEmphasizedBody, toPlainTest } from '@/utils/test/renderEmphasizedBodyTest';
 import { LifetimeFortuneChart } from '@/components/saju/LifetimeFortuneChart';
 import { SectionCollapsible } from '@/components/saju/SectionCollapsible';
 import { renderJungtongsajuSectionVisual } from '@/components/saju/JungtongsajuSectionVisuals';
@@ -780,16 +780,15 @@ export default function Test1ResultPage() {
                   {sectionLoading === key ? '재생성 중…' : '이 섹션만 재생성'}
                 </button>
                 {isAdvice && report.adviceMeta ? (
+                  /* AdviceCard(공유)는 meta.body 를 plain 출력 → 마커·한자병기 제거해서 넘김(== 글자 노출 방지) */
                   <AdviceCard
                     yongSinElement={result.yongSinElement}
-                    meta={report.adviceMeta}
+                    meta={{ ...report.adviceMeta, body: toPlainTest(report.adviceMeta.body ?? '') }}
                   />
                 ) : key === 'luck' ? (
-                  /* 대운·세운 — LuckVisual 이 대운별 칩+인라인 펼침으로 본문까지 전담.
-                     옛 record (대운 마커 없음) 는 LuckVisual 내부에서 통짜 본문 fallback. */
-                  /* 대운·세운은 LuckVisual(공유)이 마커를 안 풀어 == 가 글자로 노출됨
-                     → test 강조 마커를 미리 제거해 깔끔히 표시 (칩 UI는 유지) */
-                  renderJungtongsajuSectionVisual('luck', result, stripHanjaParens(bodyText.replace(/\*\*([\s\S]+?)\*\*/g, '$1').replace(/==([\s\S]+?)==/g, '$1')))
+                  /* 대운·세운 — LuckVisual(공유)은 마커를 안 풀고 줄바꿈도 그대로 출력 →
+                     마커 제거 + 한자병기 제거 + 대운별 본문 줄바꿈 정상화(공백)해서 넘김 */
+                  renderJungtongsajuSectionVisual('luck', result, toPlainTest(bodyText, true))
                 ) : (
                   <>
                     {/* 섹션별 시각 데이터 카드 — 본문 줄글 위 한눈 요약 */}

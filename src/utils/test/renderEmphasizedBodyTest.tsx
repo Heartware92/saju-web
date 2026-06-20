@@ -32,6 +32,19 @@ export function stripHanjaParens(text: string): string {
     .replace(/[ \t]{2,}/g, ' ');
 }
 
+/**
+ * 마커 제거 후 순수 텍스트 — 마커(==,**)를 못 푸는 공유 컴포넌트(AdviceCard·LuckVisual)에
+ * 넘기기 전 정리용. 강조 기호·한자병기·필러 제거 + (옵션) 문단 내 단일 줄바꿈을 공백으로.
+ */
+export function toPlainTest(text: string, collapseNewlines = false): string {
+  if (!text) return text;
+  let t = stripHanjaParens(stripLeadingFiller(text))
+    .replace(/\*\*([\s\S]+?)\*\*/g, '$1')
+    .replace(/==([\s\S]+?)==/g, '$1');
+  if (collapseNewlines) t = t.replace(/[ \t]*\n[ \t]*/g, ' ').replace(/\s{2,}/g, ' ').trim();
+  return t;
+}
+
 // "(漢字…)" — 괄호 안이 한자·중점·공백으로만 이뤄진 부분만 nowrap.
 const HANJA_GROUP_RE = /([（(][㐀-鿿·\s]+[）)])/g;
 
