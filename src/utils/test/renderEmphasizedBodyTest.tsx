@@ -20,6 +20,18 @@ export function stripLeadingFiller(text: string): string {
   return text.replace(/(^|\n)[ \t]*(음|흠|아|자)[,，][ \t]*/g, '$1');
 }
 
+/**
+ * 한자-only 괄호 제거 — "목(木)"→"목", "정재(正財)"→"정재", "계묘(癸卯)"→"계묘".
+ * 괄호 안이 한자·중점·공백뿐일 때만 제거(=교과서식 한자 병기). 한글 풀이 괄호 "목(나무)",
+ * "(생각·배움의 힘)" 는 그대로 보존. 한자 자체를 다 지우진 않고 '병기 괄호'만 정리.
+ */
+export function stripHanjaParens(text: string): string {
+  if (!text) return text;
+  return text
+    .replace(/\s*[（(][㐀-鿿\s·,]+[）)]/g, '')
+    .replace(/[ \t]{2,}/g, ' ');
+}
+
 // "(漢字…)" — 괄호 안이 한자·중점·공백으로만 이뤄진 부분만 nowrap.
 const HANJA_GROUP_RE = /([（(][㐀-鿿·\s]+[）)])/g;
 
@@ -41,7 +53,7 @@ function pushTextWithHanjaGuard(nodes: ReactNode[], text: string, keyBase: strin
 
 export function renderEmphasizedBodyTest(text: string): ReactNode[] {
   if (!text) return [text];
-  text = stripLeadingFiller(text);
+  text = stripHanjaParens(stripLeadingFiller(text));
 
   const nodes: ReactNode[] = [];
   let lastIndex = 0;
