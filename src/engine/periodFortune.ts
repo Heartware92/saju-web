@@ -445,15 +445,22 @@ function buildDomainSummary(key: FortuneDomain['key'], grade: FortuneGrade, targ
   };
 }
 
-function buildHeadline(target: TargetGanZhi, grade: FortuneGrade, scope: FortuneScope): string {
-  const when = scope === 'year' ? '올해' : scope === 'day' ? '오늘' : '이 날';
+function buildHeadline(target: TargetGanZhi, grade: FortuneGrade, scope: FortuneScope, year?: number): string {
+  // year scope: 올해면 '올해', 다른 연도(연도별 운세)면 '${year}년'으로 구분.
+  const isCurrentYear = year == null || year === new Date().getFullYear();
+  const when = scope === 'year'
+    ? (isCurrentYear ? '올해' : `${year}년`)
+    : scope === 'day' ? '오늘' : '이 날';
+  // 받침 유무로 주제 조사(은/는) 선택 — '올해'→는, '2027년'→은
+  const lc = when.charCodeAt(when.length - 1);
+  const josa = (lc >= 0xAC00 && lc <= 0xD7A3 && (lc - 0xAC00) % 28 !== 0) ? '은' : '는';
   const toneMap: Record<FortuneGrade, string> = {
-    '대길': `${when}은 크게 열리는 시기입니다`,
-    '길': `${when}은 순풍이 불어옵니다`,
-    '중길': `${when}은 잔잔히 흘러갑니다`,
-    '평': `${when}은 담담한 하루·해가 됩니다`,
-    '중흉': `${when}은 신중히 돌아갈 때입니다`,
-    '흉': `${when}은 몸을 낮춰 지나가야 합니다`,
+    '대길': `${when}${josa} 크게 열리는 시기입니다`,
+    '길': `${when}${josa} 순풍이 불어옵니다`,
+    '중길': `${when}${josa} 잔잔히 흘러갑니다`,
+    '평': `${when}${josa} 담담한 흐름이 됩니다`,
+    '중흉': `${when}${josa} 신중히 돌아갈 때입니다`,
+    '흉': `${when}${josa} 몸을 낮춰 지나가야 합니다`,
   };
   return `${toneMap[grade]} — ${target.tenGodGan}의 기운`;
 }
@@ -751,7 +758,7 @@ export function calculatePeriodFortune(
   const luckyEl = saju.yongSinElement || target.ganElement;
   const monthlyFlow = opts.scope === 'year' ? buildMonthlyFlow(saju, opts.year ?? new Date().getFullYear()) : undefined;
 
-  const headline = buildHeadline(target, overallGrade, opts.scope);
+  const headline = buildHeadline(target, overallGrade, opts.scope, opts.year);
   const summary =
     overallGrade === '대길' || overallGrade === '길'
       ? `${target.ganZhi}의 기운이 일간 ${dayGan}에 ${target.tenGodGan}으로 작용하며 흐름을 밀어줍니다. ${luckyEl} 기운을 활용해 기회를 잡을 때입니다.`
