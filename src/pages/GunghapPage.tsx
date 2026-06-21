@@ -989,7 +989,8 @@ export default function GunghapPage() {
       // parseGunghapHeader → setResult + setGunghapTitle/Score/Domain 으로 매핑.
       // jobCreated=true 로 finally 의 setLoading(false) skip → 잡 동기화 useEffect 가 책임.
       jobCreated = true;
-      const minuteBucket = Math.floor(Date.now() / 60000);
+      // ★ 자동 진입은 안정 멱등키(분 미포함) → 재진입 재차감 차단. 명시적 재생성(fresh=1)만 분 버킷.
+      const explicitRegen = urlFresh;
       await createGunghapJob({
         prompt,
         sajuResult: myResult,
@@ -1013,7 +1014,7 @@ export default function GunghapPage() {
           partnerCalendarType: otherBase.calendar_type ?? 'solar',
           partnerGender: otherBase.gender ?? 'female',
         },
-        idempotencyKey: `${cacheKey}:${minuteBucket}`,
+        idempotencyKey: explicitRegen ? `${cacheKey}:${Math.floor(Date.now() / 60000)}` : cacheKey,
       });
 
     } catch (e: unknown) {

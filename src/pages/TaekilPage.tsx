@@ -249,8 +249,9 @@ export default function TaekilPage() {
       if (!accessToken) throw new Error('로그인이 만료됐어요. 다시 로그인해주세요.');
 
       const prompt = generateTaekilAdvicePrompt(saju, payload, detail.trim() || undefined);
-      const minuteBucket = Math.floor(Date.now() / 60000);
-      const idempotencyKey = `${taekilCacheKey}:${minuteBucket}`;
+      // ★ 자동 진입은 안정 멱등키(분 미포함) → 재진입 재차감 차단. 명시적 재생성만 분 버킷.
+      const explicitRegen = refetchNonce > 0 || searchParams?.get('fresh') === '1';
+      const idempotencyKey = explicitRegen ? `${taekilCacheKey}:${Math.floor(Date.now() / 60000)}` : taekilCacheKey;
       const res = await fetch('/api/fortune/jobs/create', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${accessToken}` },

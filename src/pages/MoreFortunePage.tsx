@@ -754,8 +754,9 @@ export default function MoreFortunePage({ category }: Props) {
 
       if (!prompt) throw new Error('알 수 없는 카테고리예요.');
 
-      const minuteBucket = Math.floor(Date.now() / 60000);
       const idemSuffix = cacheKey ?? `${category}:${Date.now()}`;
+      // ★ 자동 진입은 안정 멱등키(분 미포함) → 재진입 재차감 차단. 명시적 재생성만 분 버킷.
+      const explicitRegen = refetchNonce > 0 || freshParam;
       const res = await fetch('/api/fortune/jobs/create', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${accessToken}` },
@@ -777,7 +778,7 @@ export default function MoreFortunePage({ category }: Props) {
               }
             : null,
           engineResult,
-          idempotencyKey: `${category}:${idemSuffix}:${minuteBucket}`,
+          idempotencyKey: explicitRegen ? `${category}:${idemSuffix}:${Math.floor(Date.now() / 60000)}` : `${category}:${idemSuffix}`,
         }),
       });
       if (!res.ok) {

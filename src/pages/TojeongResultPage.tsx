@@ -453,8 +453,9 @@ export default function TojeongResultPage() {
           setAiLoading(false);
           return;
         }
-        const minuteBucket = Math.floor(Date.now() / 60000);
-        const idempotencyKey = `${cacheKey}:${minuteBucket}`;
+        // ★ 자동 진입은 안정 멱등키(분 미포함) → 재진입 시 서버 재차감 차단. 명시적 재생성만 분 버킷.
+        const explicitRegen = isFresh || refetchNonce > 0;
+        const idempotencyKey = explicitRegen ? `${cacheKey}:${Math.floor(Date.now() / 60000)}` : cacheKey;
         const res = await fetch('/api/fortune/jobs/create', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${accessToken}` },

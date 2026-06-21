@@ -562,7 +562,8 @@ export default function TodayFortunePage() {
         }
         const { prompt, todayGz } = await buildTodayV3Prompt(result, userCtx, todayIso);
         if (cancelled) return;
-        const minuteBucket = Math.floor(Date.now() / 60000);
+        // ★ 자동 진입은 안정 멱등키(분 미포함, 날짜는 cacheKey에 포함) → 같은 날 재진입 재차감 차단.
+        const explicitRegen = isFresh;
         const res = await fetch('/api/fortune/jobs/create', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${accessToken}` },
@@ -579,7 +580,7 @@ export default function TodayFortunePage() {
               calendarType: (targetProfile?.calendar_type ?? 'solar') as 'solar' | 'lunar',
             },
             engineResult: { todayGz, isoDate: todayIso, userContext: userCtx, version: 'v3' },
-            idempotencyKey: `today:${cacheKey}:${minuteBucket}`,
+            idempotencyKey: explicitRegen ? `today:${cacheKey}:${Math.floor(Date.now() / 60000)}` : `today:${cacheKey}`,
           }),
         });
         if (!res.ok) {

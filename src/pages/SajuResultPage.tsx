@@ -332,10 +332,11 @@ export default function SajuResultPage() {
             : targetProfile?.birth_time ?? null;
         const birthPlace = targetProfile?.birth_place ?? '서울';
 
-        // idempotencyKey — birth + 1분 단위 시각. 같은 사용자가 1분 내 같은 birth 로
-        // 재요청(예: 더블 클릭, 네트워크 재시도) 시 서버에서 중복 차감 차단.
-        const minuteBucket = Math.floor(Date.now() / 60000);
-        const idempotencyKey = `${birthDate}:${birthTime ?? 'unknown'}:${genderStr}:${calendarType}:${minuteBucket}`;
+        // ★ 멱등키 — 자동 진입은 분 미포함 '안정 키'로 재진입(기존보기→뒤로가기 등) 재차감 차단.
+        //   명시적 재생성(refetchNonce>0 또는 fresh=1)일 때만 분 버킷으로 새 차감.
+        const explicitRegen = refetchNonce > 0 || searchParams?.get('fresh') === '1';
+        const idemBase = `${birthDate}:${birthTime ?? 'unknown'}:${genderStr}:${calendarType}`;
+        const idempotencyKey = explicitRegen ? `${idemBase}:${Math.floor(Date.now() / 60000)}` : idemBase;
 
         const res = await fetch('/api/fortune/jobs/create', {
           method: 'POST',
