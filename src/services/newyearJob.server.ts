@@ -42,7 +42,7 @@ const SECTION_MIN_CHARS: Record<NewyearSectionKey, number> = {
 const SECTION_KO: Record<NewyearSectionKey, string> = {
   general: '총운', wealth: '재물운', career: '직장·사업운', study: '학업·시험운',
   love: '연애·결혼운', health: '건강운', relation: '인간관계운', monthly: '월별 흐름',
-  lucky: '행운 처방',
+  lucky: '개운법',
 };
 function buildLengthDirective(keys: NewyearSectionKey[]): string {
   const lines = keys.map(

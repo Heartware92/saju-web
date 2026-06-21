@@ -182,20 +182,26 @@ export function LuckyVisualCard({
         </div>
       </div>
 
-      {/* 숫자 + 시간대 — 좌측 정렬·폰트 통일 (AdviceCard 와 동일 스펙) */}
-      <div className="grid grid-cols-2 gap-2">
+      {/* 숫자(좁게 auto) + 시간대(넓게 1fr) — 시간대 줄바꿈 방지·빠른 시간 순 정렬 */}
+      <div className="grid grid-cols-[auto_1fr] gap-2">
         <div className="rounded-xl p-3 bg-white/5 border border-white/10">
           <div className="text-[13px] text-text-tertiary mb-1.5">행운 숫자</div>
           <div
-            className="text-[22px] font-bold text-text-primary tracking-widest leading-none"
+            className="text-[22px] font-bold text-text-primary tracking-widest leading-none whitespace-nowrap"
             style={{ fontFamily: 'var(--font-serif)' }}
           >
             {numbers.join(' · ')}
           </div>
         </div>
-        <div className="rounded-xl p-3 bg-white/5 border border-white/10">
+        <div className="rounded-xl p-3 bg-white/5 border border-white/10 min-w-0">
           <div className="text-[13px] text-text-tertiary mb-1.5">유리한 시간대</div>
-          <div className="text-[16px] text-text-primary font-semibold leading-snug">{annotateTimeSlot(timeSlot)}</div>
+          <div className="flex flex-wrap gap-x-2 gap-y-0.5 text-[15px] text-text-primary font-semibold leading-snug">
+            {annotateTimeSlot(timeSlot)
+              .split(' · ')
+              .map((s) => ({ s, h: parseInt(s.match(/(\d{1,2})/)?.[1] ?? '99', 10) }))
+              .sort((a, b) => a.h - b.h)
+              .map((o, i) => <span key={i} className="whitespace-nowrap">{o.s}</span>)}
+          </div>
         </div>
       </div>
 
