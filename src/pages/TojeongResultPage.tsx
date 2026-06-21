@@ -912,7 +912,7 @@ export default function TojeongResultPage() {
                 style={{ fontFamily: 'var(--font-body)' }}
               >
                 <span style={{ color: '#34D399' }}>✓</span>
-                <span>{a}</span>
+                <span>{renderEmphasis(a)}</span>
               </li>
             ))}
           </ul>
@@ -927,7 +927,7 @@ export default function TojeongResultPage() {
                 style={{ fontFamily: 'var(--font-body)' }}
               >
                 <span style={{ color: '#F87171' }}>!</span>
-                <span>{w}</span>
+                <span>{renderEmphasis(w)}</span>
               </li>
             ))}
           </ul>
@@ -1109,7 +1109,7 @@ export default function TojeongResultPage() {
             className="text-[15px] text-text-secondary leading-[1.85] whitespace-pre-line tracking-[-0.005em]"
             style={{ fontFamily: 'var(--font-body)' }}
           >
-            {stripAllSectionTags(aiContent)}
+            {renderEmphasis(stripAllSectionTags(aiContent))}
           </p>
         </section>
       )}

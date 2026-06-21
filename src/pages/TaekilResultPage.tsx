@@ -731,7 +731,7 @@ export default function TaekilResultPage() {
                                 fontFamily: 'var(--font-body)',
                               }}
                             >
-                              {adv.summary}
+                              {renderEmphasis(adv.summary)}
                             </p>
                           </div>
                         )}

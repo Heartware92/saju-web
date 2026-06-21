@@ -311,7 +311,7 @@ function SymbolCardGrid({ symbols }: { symbols: DreamSymbolCardData[] }) {
               </div>
             </div>
             <p className="text-[15px] text-text-secondary leading-[1.8] tracking-[-0.005em] break-all m-0">
-              {s.meaning}
+              {renderEmphasis(s.meaning)}
             </p>
           </motion.div>
         );
@@ -363,7 +363,7 @@ function DomainBarsCard({ domains }: { domains: DreamDomainScore[] }) {
             </div>
             {d.note && (
               <p className="text-[15px] text-text-secondary leading-[1.8] tracking-[-0.005em] break-all m-0">
-                {d.note}
+                {renderEmphasis(d.note)}
               </p>
             )}
           </motion.div>
@@ -758,7 +758,7 @@ function ArchetypeCardGrid({ items }: { items: DreamArchetypeCard[] }) {
             </div>
             {it.note && (
               <p className="text-[15px] text-text-secondary leading-[1.8] tracking-[-0.005em] break-all mb-1.5">
-                {it.note}
+                {renderEmphasis(it.note)}
               </p>
             )}
             {meta?.desc && (

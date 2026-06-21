@@ -2408,7 +2408,7 @@ function MoreFortuneSectionedCard({
                                   {text.split(/\n\n+/).map((para, pi) => {
                                     const trimmed = para.trim();
                                     if (!trimmed) return null;
-                                    return <p key={pi} className="whitespace-pre-line">{trimmed}</p>;
+                                    return <p key={pi} className="whitespace-pre-line">{renderEmphasis(trimmed)}</p>;
                                   })}
                                 </div>
                               )}
@@ -2431,7 +2431,7 @@ function MoreFortuneSectionedCard({
                       const trimmed = para.trim();
                       if (!trimmed) return null;
                       return (
-                        <p key={pi} className="whitespace-pre-line">{trimmed}</p>
+                        <p key={pi} className="whitespace-pre-line">{renderEmphasis(trimmed)}</p>
                       );
                     });
                   })()}

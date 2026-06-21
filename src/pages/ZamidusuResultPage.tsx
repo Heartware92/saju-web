@@ -1676,7 +1676,7 @@ export default function ZamidusuResultPage() {
         {aiResult?.content && Object.keys(sections).length === 0 && (
           <div className={styles.section}>
             <p className="leading-[1.85]" style={{ fontSize: 13, color: 'var(--text-secondary)', whiteSpace: 'pre-line', margin: 0 }}>
-              {stripAllSectionTags(aiResult.content)}
+              {renderEmphasis(stripAllSectionTags(aiResult.content))}
             </p>
           </div>
         )}
