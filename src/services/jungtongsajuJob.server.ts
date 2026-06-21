@@ -128,7 +128,9 @@ export async function runJungtongsajuJob(input: RunJungtongsajuJobInput): Promis
 async function generateSection(prompt: string, key: JungtongsajuSectionKey): Promise<string | null> {
   for (let attempt = 1; attempt <= MAX_SECTION_ATTEMPTS; attempt++) {
     try {
-      const raw = await callAI(prompt, 6000, { systemPrompt: JUNGTONGSAJU_SYSTEM_PROMPT });
+      // temperature 0.75 — 정통은 깊은 명리 분석이라 기본 0.4에선 표현이 딱딱하게 굳음.
+      // 발랄 정령 톤을 살리되(실시간 0.85보다 보수적) 명리 정확성 안전마진 확보.
+      const raw = await callAI(prompt, 6000, { temperature: 0.75, systemPrompt: JUNGTONGSAJU_SYSTEM_PROMPT });
       const content = sanitizeAIOutput(raw.content);
       const parsed = parseJungtongsaju(content);
       const text = parsed[key] ?? content; // 마커 누락 시 통짜 fallback
