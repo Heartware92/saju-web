@@ -2154,7 +2154,7 @@ function TimeFlowSectionView({
                     className="text-[17px] text-text-secondary leading-[1.85] tracking-[-0.005em]"
                     style={{ fontFamily: 'var(--font-body)' }}
                   >
-                    {body}
+                    {renderEmphasis(body)}
                   </p>
                 </div>
               </div>
