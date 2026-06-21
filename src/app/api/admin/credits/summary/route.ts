@@ -118,14 +118,18 @@ async function computeSummary(audience: Set<string> | null) {
   const moonConsumed = credits.reduce((s, c) => s + (c.total_moon_consumed ?? 0), 0);
   const moonBalance = credits.reduce((s, c) => s + (c.moon_balance ?? 0), 0);
 
-  const reasonMap = new Map<string, number>();
+  // reason별: moon=소비 달 갯수(금액 합), count=소비 횟수(거래 건수). 둘 다 노출.
+  const reasonMap = new Map<string, { moon: number; count: number }>();
   for (const t of txns) {
     if (t.type !== 'consume') continue;
     const key = t.reason ?? '(미상)';
-    reasonMap.set(key, (reasonMap.get(key) ?? 0) + Math.abs(t.amount ?? 0));
+    const e = reasonMap.get(key) ?? { moon: 0, count: 0 };
+    e.moon += Math.abs(t.amount ?? 0);
+    e.count += 1;
+    reasonMap.set(key, e);
   }
   const reasonBreakdown = [...reasonMap.entries()]
-    .map(([reason, moon]) => ({ reason, moon, total: moon }))
+    .map(([reason, v]) => ({ reason, moon: v.moon, count: v.count, total: v.moon }))
     .sort((a, b) => b.total - a.total);
 
   const months = lastNMonths(12);

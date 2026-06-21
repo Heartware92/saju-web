@@ -19,7 +19,7 @@ export interface CreditsSummary {
     depletedLots?: number;
     outstandingPurchaseLots?: number;
   };
-  reasonBreakdown: { reason: string; moon: number; total: number }[];
+  reasonBreakdown: { reason: string; moon: number; count: number; total: number }[];
   monthly: {
     month: string;
     moonIssued: number; moonConsumed: number;
@@ -53,12 +53,6 @@ export function CreditsFlowSection({ summary }: { summary: CreditsSummary | null
   const reasonBreakdown = Array.isArray(summary.reasonBreakdown) ? summary.reasonBreakdown : [];
   const monthly = Array.isArray(summary.monthly) ? summary.monthly : [];
   const txnTypes = Array.isArray(summary.txnTypes) ? summary.txnTypes : [];
-
-  const reasonBars = reasonBreakdown.slice(0, 12).map(r => ({
-    key: r.reason,
-    label: CREDIT_REASON_LABEL[r.reason] ?? r.reason,
-    value: r.total,
-  }));
 
   const moonNetBars = monthly.map(m => ({
     key: m.month,
@@ -111,8 +105,10 @@ export function CreditsFlowSection({ summary }: { summary: CreditsSummary | null
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
         <div className="bg-white/5 border border-white/10 rounded-xl p-4">
-          <h3 className="text-[14px] font-semibold text-text-primary mb-3">소비 사유(reason) 랭킹</h3>
-          <HorizontalBarChart bars={reasonBars} />
+          <h3 className="text-[14px] font-semibold text-text-primary mb-3">
+            소비 사유(reason) 랭킹 <span className="text-text-tertiary font-normal text-[12px]">달 갯수 · 횟수</span>
+          </h3>
+          <ReasonRanking items={reasonBreakdown} />
         </div>
         <div className="bg-white/5 border border-white/10 rounded-xl p-4">
           <h3 className="text-[14px] font-semibold text-text-primary mb-3">거래 유형별 건수</h3>
@@ -120,6 +116,36 @@ export function CreditsFlowSection({ summary }: { summary: CreditsSummary | null
           <p className="text-[12px] text-text-tertiary mt-3">총 거래 {fmt(kpi.txnCount)}건</p>
         </div>
       </div>
+    </div>
+  );
+}
+
+/** 소비 사유 랭킹 — 막대는 달 갯수 기준, 우측에 갯수+횟수 동시 표기 */
+function ReasonRanking({ items }: { items: { reason: string; moon: number; count: number }[] }) {
+  const rows = items.slice(0, 12);
+  const totalMoon = rows.reduce((s, r) => s + r.moon, 0);
+  const maxMoon = Math.max(1, ...rows.map(r => r.moon));
+  if (rows.length === 0 || totalMoon === 0) {
+    return <p className="text-[13px] text-text-tertiary py-6 text-center">데이터 없음</p>;
+  }
+  return (
+    <div className="space-y-2">
+      {rows.map(r => {
+        const widthPct = Math.max(2, (r.moon / maxMoon) * 100);
+        const pct = Math.round((r.moon / totalMoon) * 100);
+        const label = CREDIT_REASON_LABEL[r.reason] ?? r.reason;
+        return (
+          <div key={r.reason} className="grid grid-cols-[100px_1fr_auto] items-center gap-2 text-[13px]">
+            <span className="text-text-secondary truncate" title={label}>{label}</span>
+            <div className="h-5 rounded bg-white/5 overflow-hidden">
+              <div className="h-full rounded" style={{ width: `${widthPct}%`, background: 'rgba(167, 139, 250, 0.7)' }} />
+            </div>
+            <span className="text-text-primary font-medium tabular-nums min-w-[140px] text-right whitespace-nowrap">
+              {fmt(r.moon)}달 · {fmt(r.count)}회 <span className="text-text-tertiary">({pct}%)</span>
+            </span>
+          </div>
+        );
+      })}
     </div>
   );
 }
