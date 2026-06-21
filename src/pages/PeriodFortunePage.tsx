@@ -834,8 +834,12 @@ export default function PeriodFortunePage({ scope }: { scope: FortuneScope | 'da
             }
             return;
           }
-          const minuteBucket = Math.floor(Date.now() / 60000);
-          const idempotencyKey = `${sajuKey(saju)}:${targetYear}:${isFromYearFortune ? 'yf' : 'ny'}:${minuteBucket}`;
+          // ★ 멱등키 — 자동 진입은 '안정 키'(분 미포함): 같은 신년/연도별을 다시 열어도
+          //   서버 consume_credit 이 duplicate 로 막아 재차감 0 (클라 dedup 모달이 빗나가도 안전).
+          //   명시적 재생성(fresh=1 또는 refetchNonce>0)일 때만 분 버킷을 붙여 새 풀이로 차감.
+          const explicitRegen = isFresh || refetchNonce > 0;
+          const idemBase = `${sajuKey(saju)}:${targetYear}:${isFromYearFortune ? 'yf' : 'ny'}`;
+          const idempotencyKey = explicitRegen ? `${idemBase}:${Math.floor(Date.now() / 60000)}` : idemBase;
           const res = await fetch('/api/fortune/jobs/create', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${accessToken}` },
@@ -930,8 +934,11 @@ export default function PeriodFortunePage({ scope }: { scope: FortuneScope | 'da
             loveState: targetProfile?.love_state ?? null,
             customLoveState: targetProfile?.custom_love_state ?? null,
           });
-          const minuteBucket = Math.floor(Date.now() / 60000);
-          const idempotencyKey = `period:${sajuKey(saju)}:${pickedDate}:${minuteBucket}`;
+          // ★ 멱등키 — 자동 진입은 '안정 키'(분 미포함): 같은 날짜를 다시 열어도 서버가 재차감 차단.
+          //   명시적 재생성(fresh=1 또는 refetchNonce>0)일 때만 분 버킷으로 새 차감.
+          const explicitRegen = isFresh || refetchNonce > 0;
+          const idemBase = `period:${sajuKey(saju)}:${pickedDate}`;
+          const idempotencyKey = explicitRegen ? `${idemBase}:${Math.floor(Date.now() / 60000)}` : idemBase;
           const res = await fetch('/api/fortune/jobs/create', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${accessToken}` },
