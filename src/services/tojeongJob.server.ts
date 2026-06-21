@@ -6,6 +6,7 @@ import { callAI, SPIRIT_SYSTEM_PROMPT } from '@/lib/ai/aiClients';
 import {
   generateTojeongPass1Prompt,
   generateTojeongPass2Prompt,
+  SPIRIT_TONE_RULE,
   TOJEONG_SECTION_KEYS,
   type TojeongSectionKey,
 } from '@/constants/prompts';
@@ -69,7 +70,7 @@ export async function runTojeongJob(input: RunTojeongJobInput): Promise<void> {
   try {
     // ── 1차: 총운 + 월별 12달 (TOJEONG_SECTION_KEYS 중 일부) ──
     const pass1Prompt = generateTojeongPass1Prompt(tojeongResult, sajuResult, userCtx);
-    const pass1Raw = await callAI(pass1Prompt, PASS1_MAX_TOKENS, { systemPrompt: SPIRIT_SYSTEM_PROMPT });
+    const pass1Raw = await callAI(SPIRIT_TONE_RULE + '\n\n' + pass1Prompt, PASS1_MAX_TOKENS, { temperature: 0.75, systemPrompt: SPIRIT_SYSTEM_PROMPT });
     const pass1Content = sanitizeAIOutput(pass1Raw.content);
 
     if (pass1Content.length < 300) {
@@ -83,7 +84,7 @@ export async function runTojeongJob(input: RunTojeongJobInput): Promise<void> {
     let pass2Content = '';
     try {
       const pass2Prompt = generateTojeongPass2Prompt(tojeongResult, pass1Content, sajuResult, userCtx);
-      const pass2Raw = await callAI(pass2Prompt, PASS2_MAX_TOKENS, { systemPrompt: SPIRIT_SYSTEM_PROMPT });
+      const pass2Raw = await callAI(SPIRIT_TONE_RULE + '\n\n' + pass2Prompt, PASS2_MAX_TOKENS, { temperature: 0.75, systemPrompt: SPIRIT_SYSTEM_PROMPT });
       pass2Content = sanitizeAIOutput(pass2Raw.content);
     } catch (e) {
       console.warn('[tojeongJob] 2차 실패. 1차만으로 done:', e);

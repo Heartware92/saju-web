@@ -3,6 +3,7 @@
 // saju_records 가 아닌 tarot_records 테이블 사용 (별도 보관함 탭).
 
 import { callAI, SPIRIT_SYSTEM_PROMPT } from '@/lib/ai/aiClients';
+import { SPIRIT_TONE_RULE } from '@/constants/prompts';
 import { sanitizeAIOutput } from './jungtongsajuShared';
 import { supabaseAdmin } from './supabaseAdmin';
 
@@ -35,7 +36,7 @@ export async function runTarotJob(input: RunTarotJobInput): Promise<void> {
   }
 
   try {
-    const raw = await callAI(prompt, MAX_TOKENS, { systemPrompt: SPIRIT_SYSTEM_PROMPT });
+    const raw = await callAI(SPIRIT_TONE_RULE + '\n\n' + prompt, MAX_TOKENS, { temperature: 0.75, systemPrompt: SPIRIT_SYSTEM_PROMPT });
     const content = sanitizeAIOutput(raw.content);
     if (content.length < MIN_CONTENT_LENGTH) {
       throw new Error('타로 응답이 비정상적으로 짧아요. 잠시 후 다시 시도해주세요.');

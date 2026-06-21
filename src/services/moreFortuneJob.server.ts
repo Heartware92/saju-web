@@ -13,6 +13,7 @@ import {
   generateDreamClassifierPrompt,
   generateDreamOrientalPrompt,
   generateDreamWesternPrompt,
+  SPIRIT_TONE_RULE,
   type DreamClassification,
   type DreamPromptOptions,
 } from '@/constants/prompts';
@@ -91,7 +92,7 @@ export async function runMoreFortuneJob(input: RunMoreFortuneJobInput): Promise<
     } else {
       // 1-pass: study / children / personality / name 또는 dream 폴백
       const tokens = maxTokens ?? DEFAULT_MAX_TOKENS[category];
-      const raw = await callAI(prompt, tokens, { systemPrompt: SPIRIT_SYSTEM_PROMPT });
+      const raw = await callAI(SPIRIT_TONE_RULE + '\n\n' + prompt, tokens, { temperature: 0.75, systemPrompt: SPIRIT_SYSTEM_PROMPT });
       sanitized = sanitizeAIOutput(raw.content);
     }
 
@@ -149,8 +150,8 @@ async function runDream3Pass(input: DreamJobInput): Promise<{ text: string; clas
   const westernPrompt = generateDreamWesternPrompt(input.dreamText, promptOptions, classification);
 
   const [orientalRes, westernRes] = await Promise.allSettled([
-    callAI(orientalPrompt, DREAM_ORIENTAL_TOKENS, { systemPrompt: SPIRIT_SYSTEM_PROMPT }),
-    callAI(westernPrompt, DREAM_WESTERN_TOKENS, { systemPrompt: SPIRIT_SYSTEM_PROMPT }),
+    callAI(SPIRIT_TONE_RULE + '\n\n' + orientalPrompt, DREAM_ORIENTAL_TOKENS, { temperature: 0.75, systemPrompt: SPIRIT_SYSTEM_PROMPT }),
+    callAI(SPIRIT_TONE_RULE + '\n\n' + westernPrompt, DREAM_WESTERN_TOKENS, { temperature: 0.75, systemPrompt: SPIRIT_SYSTEM_PROMPT }),
   ]);
 
   const orientalOk = orientalRes.status === 'fulfilled';
