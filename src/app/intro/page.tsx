@@ -13,6 +13,7 @@
  */
 
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import ShaderSky from './ShaderSky';
 import IntroMotif from './IntroMotif';
 import styles from './intro.module.css';
@@ -76,6 +77,7 @@ const SLIDES: Slide[] = [
 const LINE_STEP = 0.6; // 줄 사이 등장 간격(초)
 
 export default function IntroPage() {
+  const router = useRouter();
   const [index, setIndex] = useState(0);
   const touchStartX = useRef<number | null>(null);
 
@@ -219,13 +221,13 @@ export default function IntroPage() {
               type="button"
               onClick={(e) => {
                 e.stopPropagation();
-                // TODO: 로그인/회원가입 → 1장(별 찾기) 로 연결 (후속 와이어링)
+                router.push('/login'); // 인트로 → 로그인/회원가입(0단계)
               }}
               className={`mt-12 inline-flex items-center gap-2 rounded-full border border-[var(--border-default)] bg-[rgba(20,12,38,0.6)] px-8 py-3.5 text-[15px] font-medium text-text-primary backdrop-blur-sm transition-colors hover:border-cta active:opacity-70 ${styles.cta}`}
               style={{ animationDelay: `${lines.length * LINE_STEP + 0.3}s` }}
             >
               <span aria-hidden="true">☾</span>
-              시작하기
+              별빛 따라 들어가기
             </button>
           )}
         </div>
