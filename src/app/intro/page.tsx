@@ -29,7 +29,7 @@ const SLIDES: Slide[] = [
       '사람이 태어나는 순간,',
       '그 사람만을 위한 별 하나가 떨어집니다.',
     ],
-    image: '/intro/opening.webp',
+    image: '/intro/opening-v2.webp',
     fit: 'contain',
   },
   {
