@@ -19,7 +19,7 @@ import type { SajuResult } from '@/utils/sajuCalculator';
 const METAPHOR_DOMAINS = `
 
 [★ 은유·비유 소재 — 섹션마다 아래 '오행 만물 패밀리'를 주 소재로 (다섯 기운을 골고루, 같은 소재 두 섹션 반복 금지)]
-[general]=빛·하늘·노을 / [daymaster]=물·이슬·수정·강 / [element]=흙·산·들·정원 / [interaction]=나무·숲·덩굴·길 / [character]=불·불꽃·화로 / [career]=금·보석·거울·연장 / [wealth]=흙·곳간·열매·샘 / [love]=꽃·정원·새싹 / [health]=물·바다·바람 / [relation]=소리·울림·악기 / [luck]=무지개·별빛·보석 / [advice]=여명·새싹·문`;
+[general]=우주·별·은하수·항해 / [daymaster]=물·이슬·수정·강 / [element]=흙·산·들·정원 / [interaction]=나무·숲·덩굴·길 / [character]=불·불꽃·화로 / [career]=금·보석·거울·연장 / [wealth]=흙·곳간·열매·샘 / [love]=달·별빛·달무리 / [health]=물·바다·바람 / [relation]=소리·울림·악기 / [luck]=별·궤도·운석·북극성 / [advice]=여명·샛별·동틀녘`;
 
 const toPersona = (prompt: string): string => {
   const swapped = prompt.includes(SPIRIT_TONE_RULE)
@@ -50,6 +50,8 @@ export function stripSpiritGaze(text: string): string {
       /(^|\n|[.!?]\s|["“'']?\s*)(?:제가\s*|저도\s*|저는\s*)?(?:가만히\s*|문득\s*|곰곰이\s*|살며시\s*|옆에서\s*)*(?:당신을|당신의\s*사주를|사주를|당신의\s*별자리를|명반을|[가-힣]{2,8}\s*님을)\s*(?:가만히\s*|곰곰이\s*)*(?:지켜보|들여다보|살펴보)(?:니|면서|면|다가|았더니|고는|곤\s*해요)?\S*[,\s]*/g,
       '$1',
     )
+    // 문장 첫머리의 '들여다보니/지켜보니/살펴보니,' 관찰 전환구 일반형(목적어 무관) 제거
+    .replace(/(^|\n|[.!?]\s)[가-힣\s]{0,14}?(?:들여다보니|지켜보니|살펴보니)[,\s]+/g, '$1')
     // 페르소나는 == 만 사용 — 새어나온 ** 굵게 마커 제거(텍스트는 보존)
     .replace(/\*\*/g, '');
 }
