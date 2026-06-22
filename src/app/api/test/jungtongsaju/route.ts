@@ -19,6 +19,7 @@ import {
 import {
   generateJungtongsajuCorePromptTest,
   generateJungtongsajuApplicationPromptTest,
+  stripSpiritGaze,
 } from '@/constants/test/jungtongsajuPrompt.test';
 import { parseAdviceMeta } from '@/services/fortuneService';
 import type { SajuResult } from '@/utils/sajuCalculator';
@@ -53,8 +54,8 @@ export async function POST(req: NextRequest) {
   try {
     // ── 1차: Core 4섹션 ──
     const corePrompt = generateJungtongsajuCorePromptTest(sajuResult);
-    const coreRaw = await callAI(corePrompt, 7000, { temperature: 0.8, systemPrompt: JUNGTONGSAJU_PERSONA_SYSTEM_PROMPT });
-    const coreContent = sanitizeAIOutput(coreRaw.content);
+    const coreRaw = await callAI(corePrompt, 7000, { temperature: 0.75, systemPrompt: JUNGTONGSAJU_PERSONA_SYSTEM_PROMPT });
+    const coreContent = stripSpiritGaze(sanitizeAIOutput(coreRaw.content));
     const coreSections = parseJungtongsaju(coreContent);
 
     if (Object.keys(coreSections).length === 0) {
@@ -73,8 +74,8 @@ export async function POST(req: NextRequest) {
       coreContent,
       forbiddenAliases,
     );
-    const appRaw = await callAI(appPrompt, 14000, { temperature: 0.8, systemPrompt: JUNGTONGSAJU_PERSONA_SYSTEM_PROMPT });
-    const appContent = sanitizeAIOutput(appRaw.content);
+    const appRaw = await callAI(appPrompt, 14000, { temperature: 0.75, systemPrompt: JUNGTONGSAJU_PERSONA_SYSTEM_PROMPT });
+    const appContent = stripSpiritGaze(sanitizeAIOutput(appRaw.content));
     const appSections = parseJungtongsaju(appContent);
 
     // ── 용신처방(advice) 카드용 메타 파싱 — 라이브와 동일하게 AdviceCard UI 렌더 ──
