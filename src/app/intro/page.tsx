@@ -34,7 +34,7 @@ const SLIDES: Slide[] = [
   },
   {
     lines: ['그 별은 빛을 잃고 작은 정령이 되어,', '평생 그 사람의 곁을 맴돕니다.'],
-    image: '/intro/fading.webp',
+    image: '/intro/fading-v2.webp',
     fit: 'contain',
   },
   {
