@@ -1,11 +1,30 @@
 /**
- * 정통사주 프롬프트 — TEST 사본 (이제 라이브와 단일 출처).
+ * 정통사주 프롬프트 — TEST 사본 (test_1 미러 전용).
  *
- * 검증이 끝나 라이브(`@/constants/prompts`)로 이식된 뒤로는, test 도 라이브 함수를
- * 그대로 가리킨다(드리프트 방지). test_1 환경은 라이브와 100% 동일한 프롬프트로 동작한다.
+ * 라이브 프롬프트(@/constants/prompts)를 그대로 쓰되, 톤 레이어만 '별 정령 페르소나 카드'로
+ * 치환해 test_1 에서 새 말투를 실험한다. 라이브(/saju/*)는 영향 없음.
+ * 검증이 끝나면 SPIRIT_PERSONA_RULE 을 라이브로 이식.
  * 호출처: /api/test/jungtongsaju, /api/test/jungtongsaju/section
  */
-export {
-  generateJungtongsajuCorePrompt as generateJungtongsajuCorePromptTest,
-  generateJungtongsajuApplicationPrompt as generateJungtongsajuApplicationPromptTest,
+import {
+  generateJungtongsajuCorePrompt,
+  generateJungtongsajuApplicationPrompt,
+  SPIRIT_TONE_RULE,
+  SPIRIT_PERSONA_RULE,
 } from '@/constants/prompts';
+import type { SajuResult } from '@/utils/sajuCalculator';
+
+const toPersona = (prompt: string): string =>
+  prompt.includes(SPIRIT_TONE_RULE)
+    ? prompt.replace(SPIRIT_TONE_RULE, SPIRIT_PERSONA_RULE)
+    : `${SPIRIT_PERSONA_RULE}\n\n${prompt}`;
+
+export const generateJungtongsajuCorePromptTest = (result: SajuResult): string =>
+  toPersona(generateJungtongsajuCorePrompt(result));
+
+export const generateJungtongsajuApplicationPromptTest = (
+  result: SajuResult,
+  coreContext: string = '',
+  forbiddenAliases: string[] = [],
+): string =>
+  toPersona(generateJungtongsajuApplicationPrompt(result, coreContext, forbiddenAliases));
