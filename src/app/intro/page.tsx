@@ -175,10 +175,17 @@ export default function IntroPage() {
             </div>
           )}
 
-          <div className={hasImage ? `rounded-3xl px-6 py-5 ${styles.plate}` : undefined}>
+          <div className={hasImage ? `px-2 ${styles.textHalo}` : undefined}>
           <p
             className="text-[19px] leading-[2.1] text-text-primary [text-wrap:balance]"
-            style={hasImage ? { textShadow: '0 1px 8px rgba(0,0,0,0.6)' } : undefined}
+            style={
+              hasImage
+                ? {
+                    textShadow:
+                      '0 0 2px rgba(0,0,0,0.95), 0 1px 2px rgba(0,0,0,0.9), 0 2px 14px rgba(0,0,0,0.8), 0 0 30px rgba(0,0,0,0.45)',
+                  }
+                : undefined
+            }
           >
             {lines.map((line, i) => {
               // 마지막 장의 "이천점" 강조

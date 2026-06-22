@@ -54,13 +54,24 @@
   .kenburns { animation: none; }
 }
 
-/* ── 텍스트 배경 패널 (프로스티드 글래스) — 풀블리드 이미지 위 가독성 보장 ── */
-.plate {
-  background: rgba(8, 5, 18, 0.5);
-  -webkit-backdrop-filter: blur(12px) saturate(118%);
-  backdrop-filter: blur(12px) saturate(118%);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  box-shadow: 0 10px 44px rgba(0, 0, 0, 0.42);
+/* ── 텍스트 가독성: 불투명 판 대신 글자 주변만 부드럽게 어둡게 ──
+   가장자리가 흐려져 사라지는 그림자 풀 — 배경 이미지는 거의 그대로 보임 */
+.textHalo {
+  position: relative;
+}
+.textHalo::before {
+  content: '';
+  position: absolute;
+  inset: -10% -6%;
+  z-index: -1;
+  background: radial-gradient(
+    ellipse 76% 66% at 50% 52%,
+    rgba(5, 3, 14, 0.55) 0%,
+    rgba(5, 3, 14, 0.22) 52%,
+    rgba(5, 3, 14, 0) 78%
+  );
+  filter: blur(10px);
+  pointer-events: none;
 }
 
 /* ── 분위기 레이어: 필름 그레인 (비네트는 셰이더가 처리) ── */
