@@ -18,7 +18,7 @@
 //   4. 12섹션 마커 재구성 → UPDATE status='done'
 //   5. core 가 하나도 안 나오면 status='failed' + 환불
 
-import { callAI, JUNGTONGSAJU_SYSTEM_PROMPT } from '@/lib/ai/aiClients';
+import { callAI, JUNGTONGSAJU_PERSONA_SYSTEM_PROMPT } from '@/lib/ai/aiClients';
 import {
   generateJungtongsajuCorePrompt,
   generateJungtongsajuApplicationPrompt,
@@ -28,6 +28,7 @@ import {
 import {
   parseJungtongsaju,
   sanitizeAIOutput,
+  stripSpiritGaze,
   sectionOpeningDirective,
   type JungtongsajuSectionKey,
 } from './jungtongsajuShared';
@@ -128,10 +129,11 @@ export async function runJungtongsajuJob(input: RunJungtongsajuJobInput): Promis
 async function generateSection(prompt: string, key: JungtongsajuSectionKey): Promise<string | null> {
   for (let attempt = 1; attempt <= MAX_SECTION_ATTEMPTS; attempt++) {
     try {
-      // temperature 0.75 — 정통은 깊은 명리 분석이라 기본 0.4에선 표현이 딱딱하게 굳음.
-      // 발랄 정령 톤을 살리되(실시간 0.85보다 보수적) 명리 정확성 안전마진 확보.
-      const raw = await callAI(prompt, 6000, { temperature: 0.75, systemPrompt: JUNGTONGSAJU_SYSTEM_PROMPT });
-      const content = sanitizeAIOutput(raw.content);
+      // temperature 0.8 — 별 정령 페르소나(체감 비유)가 풍부하게 살아나는 값(test_1 검증).
+      // 명리 팩트는 프롬프트 데이터 블록에서 결정론적이라 표현만 다양해짐.
+      const raw = await callAI(prompt, 6000, { temperature: 0.8, systemPrompt: JUNGTONGSAJU_PERSONA_SYSTEM_PROMPT });
+      // stripSpiritGaze — '지켜보니/들여다보니' 전환구·새어나온 ** 제거(test_1 과 동일 가드).
+      const content = stripSpiritGaze(sanitizeAIOutput(raw.content));
       const parsed = parseJungtongsaju(content);
       const text = parsed[key] ?? content; // 마커 누락 시 통짜 fallback
       if (text && text.trim()) {
