@@ -151,16 +151,24 @@ function FallingStar() {
   );
 }
 
-/* 1 — 빛 정령 */
-function Spirit() {
+/* 1 — 빛 정령 (실제 일러스트, 가장자리 페더 마스크로 우주에 녹임) */
+function SpiritImage() {
+  const mask = 'radial-gradient(ellipse 72% 72% at 50% 47%, #000 48%, transparent 100%)';
   return (
-    <svg width={SIZE} height={SIZE} viewBox="0 0 120 120" fill="none" aria-hidden="true">
-      <Defs />
-      <Dust pts={[[24, 34, 1.1, 0.3], [94, 40, 1, 0.9], [88, 84, 1.2, 1.5], [30, 86, 0.9, 0.6]]} />
-      <g className={styles.breathe}>
-        <Orb cx={60} cy={60} r={24} />
-      </g>
-    </svg>
+    <div className={styles.float} style={{ width: 'min(82vw, 330px)' }}>
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src="/intro/spirit.webp"
+        alt=""
+        aria-hidden="true"
+        className="h-auto w-full"
+        style={{
+          WebkitMaskImage: mask,
+          maskImage: mask,
+          filter: 'drop-shadow(0 0 22px rgba(201, 166, 255, 0.35))',
+        }}
+      />
+    </div>
   );
 }
 
@@ -243,25 +251,43 @@ function MoonHouse() {
   );
 }
 
-/* 5 — 달 조각 두 개 (이천) */
-function TwoMoons() {
+/* 4각 별 한 개 (재사용) */
+function Star({ cx, cy, s }: { cx: number; cy: number; s: number }) {
+  const d =
+    `M${cx} ${cy - s} ` +
+    `C ${cx + s * 0.14} ${cy - s * 0.34}, ${cx + s * 0.5} ${cy - s * 0.12}, ${cx + s} ${cy} ` +
+    `C ${cx + s * 0.5} ${cy + s * 0.12}, ${cx + s * 0.14} ${cy + s * 0.34}, ${cx} ${cy + s} ` +
+    `C ${cx - s * 0.14} ${cy + s * 0.34}, ${cx - s * 0.5} ${cy + s * 0.12}, ${cx - s} ${cy} ` +
+    `C ${cx - s * 0.5} ${cy - s * 0.12}, ${cx - s * 0.14} ${cy - s * 0.34}, ${cx} ${cy - s} Z`;
+  return (
+    <>
+      <circle cx={cx} cy={cy} r={s * 1.4} fill="url(#glow)" filter="url(#haze)" />
+      <path d={d} fill="#fffdf5" filter="url(#soft)" />
+      <path
+        d={`M${cx} ${cy - s * 0.62} C ${cx + s * 0.09} ${cy - s * 0.2}, ${cx + s * 0.32} ${cy - s * 0.07}, ${cx + s * 0.62} ${cy} C ${cx + s * 0.32} ${cy + s * 0.07}, ${cx + s * 0.09} ${cy + s * 0.2}, ${cx} ${cy + s * 0.62} C ${cx - s * 0.09} ${cy + s * 0.2}, ${cx - s * 0.32} ${cy + s * 0.07}, ${cx - s * 0.62} ${cy} C ${cx - s * 0.32} ${cy - s * 0.07}, ${cx - s * 0.09} ${cy - s * 0.2}, ${cx} ${cy - s * 0.62} Z`}
+        fill="#ffffff"
+      />
+    </>
+  );
+}
+
+/* 5 — 별 두 개 (별 하나에 천 원, 별 두 개에 이천 원) */
+function TwoStars() {
   return (
     <svg width={SIZE} height={SIZE} viewBox="0 0 120 120" fill="none" aria-hidden="true">
       <Defs />
       <Dust pts={[[26, 30, 1.1, 0.5], [98, 36, 1, 1.3], [70, 96, 0.9, 0.8]]} />
       <g className={styles.float}>
-        <circle cx="44" cy="52" r="30" fill="url(#glow)" filter="url(#haze)" />
-        <path d="M44 24 a28 28 0 1 0 0 56 a20 28 0 1 1 0 -56 Z" fill="url(#moon)" />
+        <Star cx={44} cy={54} s={22} />
       </g>
       <g className={styles.float} style={{ animationDelay: '0.7s' }}>
-        <circle cx="86" cy="66" r="22" fill="url(#glow)" filter="url(#haze)" />
-        <path d="M86 46 a20 20 0 1 0 0 40 a14 20 0 1 1 0 -40 Z" fill="url(#moon)" opacity="0.95" />
+        <Star cx={84} cy={66} s={16} />
       </g>
     </svg>
   );
 }
 
-const MOTIFS = [FallingStar, Spirit, TenSpirits, SleepingSpirit, MoonHouse, TwoMoons];
+const MOTIFS = [FallingStar, SpiritImage, TenSpirits, SleepingSpirit, MoonHouse, TwoStars];
 
 export default function IntroMotif({ index }: { index: number }) {
   const Motif = MOTIFS[index] ?? FallingStar;
