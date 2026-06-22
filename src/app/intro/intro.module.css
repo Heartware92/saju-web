@@ -54,6 +54,15 @@
   .kenburns { animation: none; }
 }
 
+/* ── 텍스트 배경 패널 (프로스티드 글래스) — 풀블리드 이미지 위 가독성 보장 ── */
+.plate {
+  background: rgba(8, 5, 18, 0.5);
+  -webkit-backdrop-filter: blur(12px) saturate(118%);
+  backdrop-filter: blur(12px) saturate(118%);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 10px 44px rgba(0, 0, 0, 0.42);
+}
+
 /* ── 분위기 레이어: 필름 그레인 (비네트는 셰이더가 처리) ── */
 .grain {
   position: absolute;

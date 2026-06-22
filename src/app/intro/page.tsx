@@ -65,6 +65,8 @@ const SLIDES: Slide[] = [
       '당신의 별이 어디로 흘러가는지',
       '들려준다고 해요.',
     ],
+    image: '/intro/jeomjip.webp',
+    fit: 'contain',
   },
   {
     lines: ['별 하나에 천 원.', '별 두 개에 이천 원.', '그래서 이름을 이천점이라 합니다.'],
@@ -173,13 +175,10 @@ export default function IntroPage() {
             </div>
           )}
 
+          <div className={hasImage ? `rounded-3xl px-6 py-5 ${styles.plate}` : undefined}>
           <p
             className="text-[19px] leading-[2.1] text-text-primary [text-wrap:balance]"
-            style={
-              hasImage
-                ? { textShadow: '0 2px 16px rgba(0,0,0,0.92), 0 0 4px rgba(0,0,0,0.7)' }
-                : undefined
-            }
+            style={hasImage ? { textShadow: '0 1px 8px rgba(0,0,0,0.6)' } : undefined}
           >
             {lines.map((line, i) => {
               // 마지막 장의 "이천점" 강조
@@ -205,6 +204,7 @@ export default function IntroPage() {
               );
             })}
           </p>
+          </div>
 
           {/* 마지막 장 — 시작 CTA (아직 미연결) */}
           {isLast && (
