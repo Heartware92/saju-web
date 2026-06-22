@@ -13,6 +13,7 @@ export interface CreditsSummary {
     moonConsumeRate: number;
     debtWon: number;
     withMoon: number;
+    adminGranted?: number;
     txnCount: number;
     avgDepletionDays?: number;
     medianDepletionDays?: number;
@@ -71,10 +72,10 @@ export function CreditsFlowSection({ summary }: { summary: CreditsSummary | null
       <div>
         <h2 className="text-[14px] font-semibold text-text-secondary mb-3">달 크레딧</h2>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          <Kpi label="발행" value={fmt(kpi.moonIssued)} />
+          <Kpi label="발행" value={fmt(kpi.moonIssued)} sub="구매분 (관리자 지급 제외)" />
           <Kpi label="소비" value={fmt(kpi.moonConsumed)} sub={`소진율 ${kpi.moonConsumeRate}%`} />
-          <Kpi label="잔여" value={fmt(kpi.moonBalance)} sub={`${fmt(kpi.withMoon)}명 보유`} color="text-indigo-300" />
-          <Kpi label="추정 부채" value={fmtWon(kpi.debtWon)} sub="달 1 ≈ 300원" />
+          <Kpi label="잔여" value={fmt(kpi.moonBalance)} sub={`관리자 지급 제외${kpi.adminGranted ? ` (지급 ${fmt(kpi.adminGranted)} 제외됨)` : ''}`} color="text-indigo-300" />
+          <Kpi label="추정 부채" value={fmtWon(kpi.debtWon)} sub="잔여(관리자 지급 제외)×300원" />
           <Kpi
             label="충전 후 평균 소진일"
             value={kpi.depletedLots ? `${kpi.avgDepletionDays ?? 0}일` : '-'}
@@ -92,7 +93,7 @@ export function CreditsFlowSection({ summary }: { summary: CreditsSummary | null
           <p className="text-[22px] font-bold text-amber-300">{fmtWon(kpi.debtWon)}</p>
         </div>
         <p className="text-[12px] text-text-tertiary mt-1">
-          잔여 크레딧 × 추정 단가 — 회원이 미소비 상태의 기대 가치. 환불 요청·서비스 종료 시 부담.
+          잔여 크레딧(관리자 지급 제외) × 추정 단가 — 회원이 미소비 상태의 기대 가치. 환불 요청·서비스 종료 시 부담.
         </p>
       </div>
 

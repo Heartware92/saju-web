@@ -62,6 +62,7 @@ async function computeStats(audience: Set<string> | null) {
     dailySignupsRes,
     dailySajuRes,
     dailyTarotRes,
+    adminAdjRes,
   ] = await Promise.all([
     // 총 회원/신규 = 가입 완료(약관 동의) 기준. user_credits(가입 보너스)는 신뢰 불가 — 보너스 폐지 + 미완성 가입도 행 생성됨.
     includeAudience(excludeUsers(supabaseAdmin.from('user_agreements').select('user_id', { count: 'exact', head: true }), ex), audience),
@@ -82,6 +83,8 @@ async function computeStats(audience: Set<string> | null) {
     includeAudience(excludeUsers(supabaseAdmin.from('user_agreements').select('terms_agreed_at').gte('terms_agreed_at', thirtyDaysAgo), ex), audience),
     includeAudience(excludeUsers(supabaseAdmin.from('saju_records').select('created_at').gte('created_at', thirtyDaysAgo), ex), audience),
     includeAudience(excludeUsers(supabaseAdmin.from('tarot_records').select('created_at').gte('created_at', thirtyDaysAgo), ex), audience),
+    // 관리자 지급(admin_adjust) 순액 — 잔여에서 제외용
+    includeAudience(excludeUsers(supabaseAdmin.from('credit_transactions').select('amount').eq('type', 'admin_adjust').eq('credit_type', 'moon'), ex), audience),
   ]);
 
   const orders = ordersRes.data ?? [];
@@ -107,7 +110,9 @@ async function computeStats(audience: Set<string> | null) {
   const credits = creditsRes.data ?? [];
   const totalMoonIssued = credits.reduce((s, c) => s + (c.total_moon_purchased ?? 0), 0);
   const totalMoonConsumed = credits.reduce((s, c) => s + (c.total_moon_consumed ?? 0), 0);
-  const totalMoonBalance = credits.reduce((s, c) => s + (c.moon_balance ?? 0), 0);
+  // 잔여 = 전체 moon_balance − 관리자 지급(admin_adjust 순액). 무료 지급분 제외.
+  const adminGranted = (adminAdjRes.data ?? []).reduce((s, t) => s + (t.amount ?? 0), 0);
+  const totalMoonBalance = Math.max(0, credits.reduce((s, c) => s + (c.moon_balance ?? 0), 0) - adminGranted);
 
   // ── 30일 일별 시계열 집계 (KST 기준) ──
   const days = lastNDays(30);

@@ -114,9 +114,12 @@ async function computeSummary(audience: Set<string> | null) {
   const credits = creditsRes.data ?? [];
   const txns = txnRes.data ?? [];
 
-  const moonIssued = credits.reduce((s, c) => s + (c.total_moon_purchased ?? 0), 0);
+  const moonIssued = credits.reduce((s, c) => s + (c.total_moon_purchased ?? 0), 0); // 구매분만(관리자 지급 제외)
   const moonConsumed = credits.reduce((s, c) => s + (c.total_moon_consumed ?? 0), 0);
-  const moonBalance = credits.reduce((s, c) => s + (c.moon_balance ?? 0), 0);
+  const moonBalanceRaw = credits.reduce((s, c) => s + (c.moon_balance ?? 0), 0);
+  // 관리자 지급(admin_adjust 순액) 제외 — 무료 지급분은 잔여/부채에서 뺀다(매출 기반 실부채 아님).
+  const adminGranted = txns.reduce((s, t) => s + (t.type === 'admin_adjust' ? (t.amount ?? 0) : 0), 0);
+  const moonBalance = Math.max(0, moonBalanceRaw - adminGranted);
 
   // reason별: moon=소비 달 갯수(금액 합), count=소비 횟수(거래 건수). 둘 다 노출.
   const reasonMap = new Map<string, { moon: number; count: number }>();
@@ -140,7 +143,7 @@ async function computeSummary(audience: Set<string> | null) {
     const idx = mi.get(monthKey(t.created_at));
     if (idx === undefined) continue;
     const abs = Math.abs(t.amount ?? 0);
-    if (t.type === 'purchase' || t.type === 'signup_bonus' || t.type === 'admin_adjust') moonIssuedMo[idx] += (t.amount ?? 0) > 0 ? abs : 0;
+    if (t.type === 'purchase' || t.type === 'signup_bonus') moonIssuedMo[idx] += (t.amount ?? 0) > 0 ? abs : 0; // 관리자 지급 제외
     else if (t.type === 'consume' || t.type === 'expire') moonConsumedMo[idx] += abs;
   }
   const monthly = months.map((m, i) => ({
@@ -173,6 +176,7 @@ async function computeSummary(audience: Set<string> | null) {
       moonConsumeRate,
       debtWon,
       withMoon,
+      adminGranted,
       txnCount: txns.length,
       ...depletion,
     },

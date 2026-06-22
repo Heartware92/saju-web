@@ -219,14 +219,17 @@ export default function AdminPage() {
   // API key 입력 상태
   const [keyInput, setKeyInput] = useState('');
   const [keyError, setKeyError] = useState('');
+  // 자동 로그인 유지 — ON이면 localStorage(브라우저 닫아도 유지), OFF면 sessionStorage(탭 닫으면 사라짐).
+  // 모바일 브라우저는 sessionStorage를 자주 비워 매번 재입력되던 문제 해결.
+  const [rememberKey, setRememberKey] = useState(true);
 
   // CSV export — 훅 순서 보존을 위해 early return 앞에서 선언
   const [exporting, setExporting] = useState(false);
 
-  // sessionStorage에서 저장된 API key 복원
+  // 저장된 API key 복원 — localStorage 우선, 없으면 sessionStorage(이전 방식 마이그레이션)
   useEffect(() => {
     try {
-      const saved = sessionStorage.getItem('admin:apiKey');
+      const saved = localStorage.getItem('admin:apiKey') ?? sessionStorage.getItem('admin:apiKey');
       if (saved) setToken(saved);
     } catch { /* ignore */ }
   }, []);
@@ -572,7 +575,11 @@ export default function AdminPage() {
       const res = await fetch('/api/admin/stats', { headers: { 'x-admin-key': keyInput.trim() } });
       if (res.ok) {
         setToken(keyInput.trim());
-        try { sessionStorage.setItem('admin:apiKey', keyInput.trim()); } catch {}
+        try {
+          const store = rememberKey ? localStorage : sessionStorage;
+          store.setItem('admin:apiKey', keyInput.trim());
+          (rememberKey ? sessionStorage : localStorage).removeItem('admin:apiKey');
+        } catch {}
       } else {
         const json = await res.json().catch(() => ({}));
         setKeyError(json.error || '인증에 실패했습니다.');
@@ -584,7 +591,7 @@ export default function AdminPage() {
 
   const handleLogoutAdmin = () => {
     setToken(null);
-    try { sessionStorage.removeItem('admin:apiKey'); } catch {}
+    try { localStorage.removeItem('admin:apiKey'); sessionStorage.removeItem('admin:apiKey'); } catch {}
   };
 
   if (!token) return (
@@ -605,6 +612,15 @@ export default function AdminPage() {
           autoFocus
           className="w-full h-11 rounded-lg bg-white/5 border border-white/15 px-3 text-text-primary text-sm outline-none focus:border-cta/50 focus:ring-1 focus:ring-cta/30 mb-3"
         />
+        <label className="flex items-center gap-2 mb-4 text-[13px] text-text-secondary cursor-pointer select-none">
+          <input
+            type="checkbox"
+            checked={rememberKey}
+            onChange={e => setRememberKey(e.target.checked)}
+            className="w-4 h-4 accent-cta"
+          />
+          이 기기에서 자동 로그인 유지
+        </label>
         <button
           type="submit"
           className="w-full h-11 rounded-lg bg-cta text-white font-bold text-sm hover:opacity-90 transition-all"
