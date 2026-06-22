@@ -40,7 +40,9 @@ export default function StarFindPage() {
   const [leaving, setLeaving] = useState(false);
 
   const submit = () => {
-    if (!birthDate) return setError('생년월일을 알려주세요.');
+    if (birthDate.length !== 8) return setError('생년월일 8자리를 입력해주세요. (예: 19920914)');
+    if (!timeUnknown && birthTime && birthTime.length !== 4)
+      return setError('시간은 4자리로 입력해주세요. (예: 1322)');
     if (!gender) return setError('성별을 선택해주세요.');
     setError('');
     setLeaving(true);
@@ -111,7 +113,16 @@ export default function StarFindPage() {
 
           <div>
             <label className="mb-1.5 block text-[13px] text-text-secondary">생년월일</label>
-            <input type="date" value={birthDate} onChange={(e) => setBirthDate(e.target.value)} className={inputCls} />
+            <input
+              type="text"
+              inputMode="numeric"
+              maxLength={8}
+              value={birthDate}
+              onChange={(e) => setBirthDate(e.target.value.replace(/\D/g, '').slice(0, 8))}
+              placeholder="YYYYMMDD (예: 19920914)"
+              className={inputCls}
+            />
+            <p className="mt-1.5 text-[12px] text-text-tertiary">생년월일 8자리를 숫자로 입력해주세요. (예: 19920914)</p>
           </div>
 
           <div>
@@ -137,7 +148,20 @@ export default function StarFindPage() {
                 괜찮아요. 별은 시간을 몰라도 당신을 알아본답니다.
               </p>
             ) : (
-              <input type="time" value={birthTime} onChange={(e) => setBirthTime(e.target.value)} className={inputCls} />
+              <>
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  maxLength={4}
+                  value={birthTime}
+                  onChange={(e) => setBirthTime(e.target.value.replace(/\D/g, '').slice(0, 4))}
+                  placeholder="HHMM (예: 1322)"
+                  className={inputCls}
+                />
+                <p className="mt-1.5 text-[12px] text-text-tertiary">
+                  오전·오후 없이 24시간 기준으로 입력해주세요. (예: 오후 1시 22분 → 1322)
+                </p>
+              </>
             )}
           </div>
 
