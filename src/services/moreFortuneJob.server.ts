@@ -7,13 +7,14 @@
 //   클라가 dreamInput(text, timeBandId, isRepeating)을 보내면 서버가 3개 호출 직접 실행.
 
 import { callAI, SPIRIT_SYSTEM_PROMPT } from '@/lib/ai/aiClients';
-import { sanitizeAIOutput } from './jungtongsajuShared';
+import { sanitizeAIOutput, stripSpiritGaze } from './jungtongsajuShared';
 import { supabaseAdmin } from './supabaseAdmin';
 import {
   generateDreamClassifierPrompt,
   generateDreamOrientalPrompt,
   generateDreamWesternPrompt,
   SPIRIT_TONE_RULE,
+  SPIRIT_IMAGERY_RULE,
   type DreamClassification,
   type DreamPromptOptions,
 } from '@/constants/prompts';
@@ -92,8 +93,8 @@ export async function runMoreFortuneJob(input: RunMoreFortuneJobInput): Promise<
     } else {
       // 1-pass: study / children / personality / name 또는 dream 폴백
       const tokens = maxTokens ?? DEFAULT_MAX_TOKENS[category];
-      const raw = await callAI(SPIRIT_TONE_RULE + '\n\n' + prompt, tokens, { temperature: 0.75, systemPrompt: SPIRIT_SYSTEM_PROMPT });
-      sanitized = sanitizeAIOutput(raw.content);
+      const raw = await callAI(SPIRIT_TONE_RULE + '\n' + SPIRIT_IMAGERY_RULE + '\n\n' + prompt, tokens, { temperature: 0.8, systemPrompt: SPIRIT_SYSTEM_PROMPT });
+      sanitized = stripSpiritGaze(sanitizeAIOutput(raw.content));
     }
 
     const minLen = DEFAULT_MIN_LENGTH[category];
@@ -150,14 +151,14 @@ async function runDream3Pass(input: DreamJobInput): Promise<{ text: string; clas
   const westernPrompt = generateDreamWesternPrompt(input.dreamText, promptOptions, classification);
 
   const [orientalRes, westernRes] = await Promise.allSettled([
-    callAI(SPIRIT_TONE_RULE + '\n\n' + orientalPrompt, DREAM_ORIENTAL_TOKENS, { temperature: 0.75, systemPrompt: SPIRIT_SYSTEM_PROMPT }),
-    callAI(SPIRIT_TONE_RULE + '\n\n' + westernPrompt, DREAM_WESTERN_TOKENS, { temperature: 0.75, systemPrompt: SPIRIT_SYSTEM_PROMPT }),
+    callAI(SPIRIT_TONE_RULE + '\n' + SPIRIT_IMAGERY_RULE + '\n\n' + orientalPrompt, DREAM_ORIENTAL_TOKENS, { temperature: 0.8, systemPrompt: SPIRIT_SYSTEM_PROMPT }),
+    callAI(SPIRIT_TONE_RULE + '\n' + SPIRIT_IMAGERY_RULE + '\n\n' + westernPrompt, DREAM_WESTERN_TOKENS, { temperature: 0.8, systemPrompt: SPIRIT_SYSTEM_PROMPT }),
   ]);
 
   const orientalOk = orientalRes.status === 'fulfilled';
   const westernOk = westernRes.status === 'fulfilled';
-  const orientalContent = orientalOk ? sanitizeAIOutput(orientalRes.value.content) : '';
-  const westernContent = westernOk ? sanitizeAIOutput(westernRes.value.content) : '';
+  const orientalContent = orientalOk ? stripSpiritGaze(sanitizeAIOutput(orientalRes.value.content)) : '';
+  const westernContent = westernOk ? stripSpiritGaze(sanitizeAIOutput(westernRes.value.content)) : '';
 
   if (!orientalContent && !westernContent) {
     throw new Error('꿈해몽 동양·서양 풀이 모두 실패했어요. 잠시 후 다시 시도해주세요.');

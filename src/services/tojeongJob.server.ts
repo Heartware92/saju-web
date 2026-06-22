@@ -7,10 +7,11 @@ import {
   generateTojeongPass1Prompt,
   generateTojeongPass2Prompt,
   SPIRIT_TONE_RULE,
+  SPIRIT_IMAGERY_RULE,
   TOJEONG_SECTION_KEYS,
   type TojeongSectionKey,
 } from '@/constants/prompts';
-import { sanitizeAIOutput } from './jungtongsajuShared';
+import { sanitizeAIOutput, stripSpiritGaze } from './jungtongsajuShared';
 import { supabaseAdmin } from './supabaseAdmin';
 import type { SajuResult } from '@/utils/sajuCalculator';
 import type { TojeongResult } from '@/engine/tojeong';
@@ -70,8 +71,8 @@ export async function runTojeongJob(input: RunTojeongJobInput): Promise<void> {
   try {
     // ── 1차: 총운 + 월별 12달 (TOJEONG_SECTION_KEYS 중 일부) ──
     const pass1Prompt = generateTojeongPass1Prompt(tojeongResult, sajuResult, userCtx);
-    const pass1Raw = await callAI(SPIRIT_TONE_RULE + '\n\n' + pass1Prompt, PASS1_MAX_TOKENS, { temperature: 0.75, systemPrompt: SPIRIT_SYSTEM_PROMPT });
-    const pass1Content = sanitizeAIOutput(pass1Raw.content);
+    const pass1Raw = await callAI(SPIRIT_TONE_RULE + '\n' + SPIRIT_IMAGERY_RULE + '\n\n' + pass1Prompt, PASS1_MAX_TOKENS, { temperature: 0.8, systemPrompt: SPIRIT_SYSTEM_PROMPT });
+    const pass1Content = stripSpiritGaze(sanitizeAIOutput(pass1Raw.content));
 
     if (pass1Content.length < 300) {
       throw new Error('1차 응답이 비정상적으로 짧아요. 잠시 후 다시 시도해주세요.');
@@ -84,8 +85,8 @@ export async function runTojeongJob(input: RunTojeongJobInput): Promise<void> {
     let pass2Content = '';
     try {
       const pass2Prompt = generateTojeongPass2Prompt(tojeongResult, pass1Content, sajuResult, userCtx);
-      const pass2Raw = await callAI(SPIRIT_TONE_RULE + '\n\n' + pass2Prompt, PASS2_MAX_TOKENS, { temperature: 0.75, systemPrompt: SPIRIT_SYSTEM_PROMPT });
-      pass2Content = sanitizeAIOutput(pass2Raw.content);
+      const pass2Raw = await callAI(SPIRIT_TONE_RULE + '\n' + SPIRIT_IMAGERY_RULE + '\n\n' + pass2Prompt, PASS2_MAX_TOKENS, { temperature: 0.8, systemPrompt: SPIRIT_SYSTEM_PROMPT });
+      pass2Content = stripSpiritGaze(sanitizeAIOutput(pass2Raw.content));
     } catch (e) {
       console.warn('[tojeongJob] 2차 실패. 1차만으로 done:', e);
     }

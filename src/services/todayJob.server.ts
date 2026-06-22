@@ -2,7 +2,8 @@
 // 실시간 운세(today) 백그라운드 잡 처리기 — 1-pass + 3회 retry.
 
 import { callAI, TODAY_FORTUNE_SYSTEM_PROMPT } from '@/lib/ai/aiClients';
-import { sanitizeAIOutput } from './jungtongsajuShared';
+import { SPIRIT_IMAGERY_RULE } from '@/constants/prompts';
+import { sanitizeAIOutput, stripSpiritGaze } from './jungtongsajuShared';
 import { supabaseAdmin } from './supabaseAdmin';
 
 const MAX_TOKENS = 9500;
@@ -36,8 +37,8 @@ export async function runTodayJob(input: RunTodayJobInput): Promise<void> {
       try {
         // temperature 상향(0.85) — 실시간 운세는 매일 변주가 중요. 일진×사주 정밀 블록(프롬프트)
         // 으로 매일 다른 명리 근거를 주고, temperature 로 표현·장면 다양성까지 확보.
-        const raw = await callAI(prompt, MAX_TOKENS, { temperature: 0.85, systemPrompt: TODAY_FORTUNE_SYSTEM_PROMPT });
-        const sanitized = sanitizeAIOutput(raw.content);
+        const raw = await callAI(SPIRIT_IMAGERY_RULE + '\n\n' + prompt, MAX_TOKENS, { temperature: 0.85, systemPrompt: TODAY_FORTUNE_SYSTEM_PROMPT });
+        const sanitized = stripSpiritGaze(sanitizeAIOutput(raw.content));
         if (sanitized.length < 500) {
           lastError = `너무 짧음 (${sanitized.length}자)`;
           if (attempt < MAX_ATTEMPTS) {

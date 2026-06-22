@@ -12,7 +12,7 @@ import {
   HANJA_TABLE_BLOCK,
   type NewyearSectionKey,
 } from '@/constants/prompts';
-import { sanitizeAIOutput } from './jungtongsajuShared';
+import { sanitizeAIOutput, stripSpiritGaze } from './jungtongsajuShared';
 import { supabaseAdmin } from './supabaseAdmin';
 import { calculateSeWoonRange } from '@/utils/sajuCalculator';
 import type { SajuResult } from '@/utils/sajuCalculator';
@@ -153,8 +153,8 @@ export async function runNewyearJob(input: RunNewyearJobInput): Promise<void> {
       basePrompt +
       `\n\n★ 이번 응답에서는 [${PASS1_KEYS.join('] [')}] ${PASS1_KEYS.length}개 섹션만 출력. 나머지 ${PASS2_KEYS.length}개는 다음 호출에서 작성.` +
       buildLengthDirective(PASS1_KEYS);
-    const pass1Raw = await callAI(pass1Prompt, PASS1_MAX_TOKENS, { temperature: 0.75, systemPrompt: NEWYEAR_SYSTEM_PROMPT });
-    const pass1Content = sanitizeAIOutput(pass1Raw.content);
+    const pass1Raw = await callAI(pass1Prompt, PASS1_MAX_TOKENS, { temperature: 0.8, systemPrompt: NEWYEAR_SYSTEM_PROMPT });
+    const pass1Content = stripSpiritGaze(sanitizeAIOutput(pass1Raw.content));
 
     if (pass1Raw.truncated || pass1Content.length < 300) {
       throw new Error('1차 응답이 비정상적으로 짧거나 잘렸어요. 잠시 후 다시 시도해주세요.');
@@ -169,8 +169,8 @@ export async function runNewyearJob(input: RunNewyearJobInput): Promise<void> {
       `\n\n★ 이번 응답에서는 [${PASS2_KEYS.join('] [')}] ${PASS2_KEYS.length}개 섹션만 출력. [${PASS1_KEYS.join('] [')}]는 이미 완료.` +
       buildLengthDirective(PASS2_KEYS) +
       `\n\n[이미 작성된 1차 내용 — 참고만, 출력하지 말 것]\n${pass1Content}`;
-    const pass2Raw = await callAI(pass2Prompt, PASS2_MAX_TOKENS, { temperature: 0.75, systemPrompt: NEWYEAR_SYSTEM_PROMPT });
-    const pass2Content = sanitizeAIOutput(pass2Raw.content);
+    const pass2Raw = await callAI(pass2Prompt, PASS2_MAX_TOKENS, { temperature: 0.8, systemPrompt: NEWYEAR_SYSTEM_PROMPT });
+    const pass2Content = stripSpiritGaze(sanitizeAIOutput(pass2Raw.content));
 
     // 2차는 부분 누락 허용 (1차만이라도 보존). 다만 빈 응답은 에러.
     if (pass2Content.length < 100) {

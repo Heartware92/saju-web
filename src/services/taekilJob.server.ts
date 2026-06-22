@@ -2,8 +2,8 @@
 // 택일(taekil) 백그라운드 잡 처리기 — server-only. 1-pass.
 
 import { callAI, SPIRIT_SYSTEM_PROMPT } from '@/lib/ai/aiClients';
-import { SPIRIT_TONE_RULE } from '@/constants/prompts';
-import { sanitizeAIOutput } from './jungtongsajuShared';
+import { SPIRIT_TONE_RULE, SPIRIT_IMAGERY_RULE } from '@/constants/prompts';
+import { sanitizeAIOutput, stripSpiritGaze } from './jungtongsajuShared';
 import { supabaseAdmin } from './supabaseAdmin';
 
 const MAX_TOKENS = 12000;
@@ -30,11 +30,11 @@ export async function runTaekilJob(input: RunTaekilJobInput): Promise<void> {
   }
 
   try {
-    const raw = await callAI(SPIRIT_TONE_RULE + '\n\n' + prompt, MAX_TOKENS, { temperature: 0.75, systemPrompt: SPIRIT_SYSTEM_PROMPT });
+    const raw = await callAI(SPIRIT_TONE_RULE + '\n' + SPIRIT_IMAGERY_RULE + '\n\n' + prompt, MAX_TOKENS, { temperature: 0.8, systemPrompt: SPIRIT_SYSTEM_PROMPT });
     if (raw.truncated) {
       throw new Error('응답이 길어서 일부 잘렸어요. 잠시 후 다시 시도해주세요.');
     }
-    const sanitized = sanitizeAIOutput(raw.content);
+    const sanitized = stripSpiritGaze(sanitizeAIOutput(raw.content));
     const match = sanitized.match(/\[taekil_advice\]\s*([\s\S]+)/);
     const advice = match ? match[1].trim() : sanitized.trim();
     if (advice.length < MIN_CONTENT_LENGTH) {
