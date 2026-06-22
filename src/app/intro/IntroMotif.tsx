@@ -21,7 +21,7 @@ const OHAENG = [
   'var(--water-core)',
 ];
 
-const SIZE = 160;
+const SIZE = 188;
 
 /* 모든 모티프가 공유하는 필터/그라데이션 — 한 번에 하나만 렌더되므로 id 충돌 없음 */
 function Defs() {
@@ -151,22 +151,24 @@ function FallingStar() {
   );
 }
 
-/* 1 — 빛 정령 (실제 일러스트, 가장자리 페더 마스크로 우주에 녹임) */
+/* 1 — 빛 정령 (실제 일러스트, 크고 또렷하게 — 먼 구석만 살짝 우주에 녹임) */
 function SpiritImage() {
-  const mask = 'radial-gradient(ellipse 72% 72% at 50% 47%, #000 48%, transparent 100%)';
+  // 캐릭터는 풀강도 유지, 바깥 가장자리(별자리 링·연꽃)만 부드럽게 페이드
+  const mask = 'radial-gradient(ellipse 90% 86% at 50% 46%, #000 82%, transparent 100%)';
   return (
-    <div className={styles.float} style={{ width: 'min(82vw, 330px)' }}>
+    <div className={`relative ${styles.float}`} style={{ width: 'min(96vw, 430px)' }}>
+      {/* 뒤 컬러 글로우 — 이미지를 죽이지 않고 띄움 */}
+      <div
+        className="absolute inset-0 -z-10"
+        style={{ background: 'radial-gradient(ellipse 60% 55% at 50% 50%, rgba(201,166,255,0.45), transparent 70%)', filter: 'blur(28px)' }}
+      />
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
         src="/intro/spirit.webp"
         alt=""
         aria-hidden="true"
         className="h-auto w-full"
-        style={{
-          WebkitMaskImage: mask,
-          maskImage: mask,
-          filter: 'drop-shadow(0 0 22px rgba(201, 166, 255, 0.35))',
-        }}
+        style={{ WebkitMaskImage: mask, maskImage: mask }}
       />
     </div>
   );
