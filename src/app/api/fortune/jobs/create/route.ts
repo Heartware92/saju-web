@@ -32,6 +32,7 @@ import type { SajuResult } from '@/utils/sajuCalculator';
 import type { PeriodFortune } from '@/engine/periodFortune';
 import type { TojeongResult } from '@/engine/tojeong';
 import type { ZamidusuResult } from '@/engine/zamidusu';
+import { buildBirthInfo } from '@/engine/zamidusu/horoscope';
 
 // Vercel Fluid Compute — 정통사주 2-pass 60~120초 + retry 여유
 export const maxDuration = 300;
@@ -492,6 +493,13 @@ export async function POST(request: NextRequest) {
             recordId: jobId,
             userId,
             zamidusuResult: body.zamidusuResult,
+            // 유년·유월 사화 계산용 생년(시프트 적용) — AI 연도 환각 방지
+            birth: buildBirthInfo(
+              body.sourceBirth.birthDate,
+              body.sourceBirth.birthTime,
+              body.sourceBirth.gender,
+              body.sourceBirth.calendarType,
+            ),
             consumeIdempotencyKey: consumeKey,
             creditAmount: policy.creditCost,
           });

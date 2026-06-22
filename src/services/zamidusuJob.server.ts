@@ -11,6 +11,7 @@ import {
 import { sanitizeAIOutput } from './jungtongsajuShared';
 import { supabaseAdmin } from './supabaseAdmin';
 import type { ZamidusuResult } from '@/engine/zamidusu';
+import type { BirthInfo } from '@/engine/zamidusu/horoscope';
 
 const PASS1_MAX_TOKENS = 8000;
 const PASS2_MAX_TOKENS = 8000;
@@ -47,12 +48,14 @@ export interface RunZamidusuJobInput {
   recordId: string;
   userId: string;
   zamidusuResult: ZamidusuResult;
+  /** 유년·유월 사화 계산용 생년 정보(시프트 적용) — null이면 연도 기준만 주입 */
+  birth?: BirthInfo | null;
   consumeIdempotencyKey: string;
   creditAmount: number;
 }
 
 export async function runZamidusuJob(input: RunZamidusuJobInput): Promise<void> {
-  const { recordId, userId, zamidusuResult, consumeIdempotencyKey, creditAmount } = input;
+  const { recordId, userId, zamidusuResult, birth, consumeIdempotencyKey, creditAmount } = input;
 
   const startedAt = new Date().toISOString();
   const { error: markError } = await supabaseAdmin
@@ -66,7 +69,7 @@ export async function runZamidusuJob(input: RunZamidusuJobInput): Promise<void> 
   }
 
   try {
-    const basePrompt = generateZamidusuPrompt(zamidusuResult);
+    const basePrompt = generateZamidusuPrompt(zamidusuResult, birth);
 
     // ── 1차: 6섹션 (명궁·외부 관계·재물) ──
     const pass1Prompt =

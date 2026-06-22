@@ -3447,6 +3447,7 @@ ${hasLove ? `★ 연애 상태(${loveLabel}) 반영 — 결혼·이별·만남·
 import type { ZamidusuResult } from '../engine/zamidusu';
 import { collectKnowledge } from '../engine/zamidusu/knowledge';
 import { detectGekkuk } from '../engine/zamidusu/gekkuk';
+import { getYearlyHoroscopes, getMonthlyHoroscopes, type BirthInfo } from '../engine/zamidusu/horoscope';
 
 // 자미두수 결과 섹션 키 — 결과 페이지에서 파싱해 카드별 렌더
 // 12 섹션 (구 8 → 신 12): 명궁 영역을 주성/보조성/신궁 3개로 분리,
@@ -3484,7 +3485,27 @@ export const ZAMIDUSU_SECTION_LABELS: Record<ZamidusuSectionKey, string> = {
   advice:       '별이 건네는 조언',
 };
 
-export const generateZamidusuPrompt = (z: ZamidusuResult): string => {
+export const generateZamidusuPrompt = (z: ZamidusuResult, birth?: BirthInfo | null): string => {
+  // ★ 유년(流年)·유월(流月) 사화는 코드로 계산해 주입한다.
+  //   (과거 버그: 프롬프트가 "올해(현재 연도)"라고만 해서 AI가 학습 시점 기준 2024년으로 추정·환각)
+  const cy = new Date().getFullYear();
+  let horoscopeBlock = `\n[★ 시점 기준 — 오늘 기준 '올해'는 ${cy}년이다. 유년·유월 풀이에서 연도를 임의 추정(2024년 등)하지 말고 반드시 ${cy}년 기준으로 쓸 것.]\n`;
+  if (birth) {
+    try {
+      const yh = getYearlyHoroscopes(birth, [cy, cy + 1, cy + 2]);
+      const yearLines = yh
+        .map((h) => `· ${h.year}년(${h.heavenlyStem}${h.earthlyBranch}年): 화록=${h.mutagen.록} / 화권=${h.mutagen.권} / 화과=${h.mutagen.과} / 화기=${h.mutagen.기}`)
+        .join('\n');
+      const mh = getMonthlyHoroscopes(birth, cy);
+      const monthLines = mh
+        .map((h) => `${h.month}월: 화록 ${h.mutagen.록}·화기 ${h.mutagen.기}`)
+        .join(' / ');
+      horoscopeBlock += `[유년(流年) 사화 — 아래 수치를 그대로 사용]\n${yearLines}\n[유월(流月) ${cy}년 월별 화록·화기]\n${monthLines}\n`;
+    } catch {
+      /* 계산 실패 시 연도 기준 안내만 유지 */
+    }
+  }
+
   const palaceSummary = z.palaces.map((p) => {
     const majors = p.majorStars.map((s) => {
       const mut = s.mutagen ? `·${s.mutagen}` : '';
@@ -3716,6 +3737,7 @@ ${METAPHOR_SHORT_GUIDE}
 - 가장 빛날 대한 1개 + 가장 신중해야 할 대한 1개 짚기
 - 인생 후반기(50세 이후) 흐름 한 문장
 
+${horoscopeBlock}
 [sohan] — 유년·유월 가까운 시기 흐름 (400~560자)
 ※ 키 이름은 'sohan'이지만 콘텐츠는 정통 자미두수 4단위(대한·유년·유월·유일)에
   맞춘 **유년(流年, 1년)·유월(流月, 1달)** 풀이. 소한(小限)은 학파별 사용 갈리는
@@ -3724,10 +3746,10 @@ ${METAPHOR_SHORT_GUIDE}
 첫 줄: 은유 제목 (가까운 미래의 시기 흐름을 자연 이미지 대비로)
 본문: 유년·유월 — 그 해와 그 달의 사화 비행을 통한 시기 운.
 - 유년이 무엇인지 한 줄로 쉽게 (1년마다 천간이 바뀌며 사화 4개 별이 다른 자리로 비행 → 그 해 영향)
-- 올해(현재 연도)의 유년 사화 4개 별을 명시하고, 길흉의 흐름 (특히 화록·화기 별의 영역) 한 문장
-- 향후 1~2년 (다음 해, 그 다음 해)의 유년 사화 변화와 핵심 영역 변동 한 문장씩
+- ★ 위 [유년(流年) 사화] 데이터에서 '올해(${cy}년)' 줄의 사화 4개 별을 그대로 사용해 명시(연도·간지·별 이름을 바꾸거나 2024년 등 다른 해로 추정 절대 금지). 그 해 화록·화기 별이 어느 궁에 드는지와 길흉 흐름 한 문장.
+- 위 데이터의 다음 2개 연도(${cy + 1}·${cy + 2}년) 줄로 유년 사화 변화와 핵심 영역 변동 한 문장씩.
 - 유월(流月, 1달 단위)이 무엇인지 한 줄로 (한 달마다 천간 바뀌며 즉각 의사결정 단위)
-- 올해 12개월 중 특히 주의·기회의 달 2~3개 (화기 화록이 본명 명궁·재백·관록에 비행하는 달) 한 문장
+- 위 [유월(流月)] 데이터를 근거로, 올해 12개월 중 특히 주의·기회의 달 2~3개(화기·화록 별이 본명 명궁·재백·관록에 드는 달) 한 문장
 - 대한 + 유년이 만나는 영역에서 발생할 변화 한 문장 (예: 대한 화록 + 유년 화기가 같은 궁에 비행하면 큰 변동)
 
 [advice] — 별이 건네는 조언 (400~520자)

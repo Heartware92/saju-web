@@ -26,6 +26,31 @@ export interface BirthInfo {
   calendarType: 'solar' | 'lunar';
 }
 
+/**
+ * 생년 입력(문자열) → BirthInfo. 한국식 30분 시프트(시진 경계 보정) 적용 — ZamidusuResultPage 와 동일.
+ * 시간 모름(birthTime null)이면 정오(12:00) 기본값 — 유년 사화(별)는 연(年) 천간에만 의존해 정확하다.
+ */
+export function buildBirthInfo(
+  birthDate: string,
+  birthTime: string | null,
+  gender: 'male' | 'female',
+  calendarType: 'solar' | 'lunar',
+): BirthInfo | null {
+  const [y, m, d] = (birthDate || '').split('-').map(Number);
+  if (!y || !m || !d) return null;
+  const [h, min] = birthTime ? birthTime.split(':').map(Number) : [12, 0];
+  const dt = new Date(y, m - 1, d, h ?? 12, min ?? 0);
+  const shifted = new Date(dt.getTime() - 30 * 60 * 1000);
+  return {
+    year: shifted.getFullYear(),
+    month: shifted.getMonth() + 1,
+    day: shifted.getDate(),
+    hour: shifted.getHours(),
+    gender,
+    calendarType,
+  };
+}
+
 /** 유년/유월/유일 공통 — 시기별 사화 비행과 12궁 매핑 */
 export interface HoroscopeWindow {
   /** 운한 라벨 (예: "2026년", "2026년 5월") */
