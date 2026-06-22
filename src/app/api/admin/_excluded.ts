@@ -28,12 +28,17 @@ const DEFAULT_EXCLUDED_EMAILS = [
   'kg@test.com',
 ];
 
-function configuredEmails(): Set<string> {
+/** 제외 이메일 집합 = 기본(PG 테스트) ∪ env(ADMIN_EXCLUDED_EMAILS). 삭제된 계정은 user_id가 없어 이메일로만 거를 수 있어 공용 노출. */
+export function configuredExcludedEmails(): Set<string> {
   const env = (process.env.ADMIN_EXCLUDED_EMAILS ?? '')
     .split(',')
     .map((s) => s.trim().toLowerCase())
     .filter(Boolean);
   return new Set<string>([...DEFAULT_EXCLUDED_EMAILS.map((e) => e.toLowerCase()), ...env]);
+}
+
+function configuredEmails(): Set<string> {
+  return configuredExcludedEmails();
 }
 
 export const EXCLUDED_IDS_CACHE_KEY = 'admin:excluded-ids:v1';

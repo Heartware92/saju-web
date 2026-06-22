@@ -11,6 +11,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAdmin } from '../_auth';
 import { supabaseAdmin } from '@/services/supabaseAdmin';
+import { configuredExcludedEmails } from '../_excluded';
 
 const DEFAULT_PAGE_SIZE = 50;
 const MAX_PAGE_SIZE = 500;
@@ -28,11 +29,17 @@ export async function GET(request: NextRequest) {
     const from = searchParams.get('from')?.trim() || '';
     const to = searchParams.get('to')?.trim() || '';
 
+    // 분석 제외 이메일(= 내부/테스트/관리자 직접 삭제 계정)은 탈퇴 목록에서도 숨긴다.
+    // 삭제된 계정은 user_id가 사라져 이메일로만 식별 가능 → 이메일 not-in 필터.
+    const exEmails = [...configuredExcludedEmails()];
+    const exInList = exEmails.length ? `(${exEmails.map((e) => `"${e}"`).join(',')})` : '';
+
     let query = supabaseAdmin
       .from('account_deletion_logs')
       .select('id, user_id, email, reason, reason_code, metadata, deleted_at', { count: 'exact' })
       .order('deleted_at', { ascending: false });
 
+    if (exInList) query = query.not('email', 'in', exInList);
     if (search) query = query.ilike('email', `%${search}%`);
     if (reasonCode) query = query.eq('reason_code', reasonCode);
     if (from) query = query.gte('deleted_at', from);
@@ -52,10 +59,12 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: '데이터 조회에 실패했습니다.' }, { status: 500 });
     }
 
-    // 사유 카테고리별 집계 (현재 페이지 외 전체 통계)
-    const { data: reasonStats } = await supabaseAdmin
+    // 사유 카테고리별 집계 (현재 페이지 외 전체 통계) — 동일 제외 적용
+    let reasonQuery = supabaseAdmin
       .from('account_deletion_logs')
       .select('reason_code');
+    if (exInList) reasonQuery = reasonQuery.not('email', 'in', exInList);
+    const { data: reasonStats } = await reasonQuery;
     const reasonCounts: Record<string, number> = {};
     (reasonStats ?? []).forEach((r: any) => {
       const key = r.reason_code || 'unknown';
