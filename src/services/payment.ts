@@ -171,7 +171,7 @@ export const processPayment = async (
     }
 
     // 7. 잔액 새로고침
-    await useCreditStore.getState().fetchBalance();
+    await useCreditStore.getState().fetchBalance(undefined, { force: true });
 
     return {
       success: true,
@@ -281,7 +281,7 @@ export const handlePaymentCallback = async (
       };
     }
 
-    await useCreditStore.getState().fetchBalance();
+    await useCreditStore.getState().fetchBalance(undefined, { force: true });
 
     return {
       success: true,
@@ -332,7 +332,7 @@ export const requestRefund = async (orderId: string, reason?: string): Promise<P
       };
     }
 
-    await useCreditStore.getState().fetchBalance();
+    await useCreditStore.getState().fetchBalance(undefined, { force: true });
 
     return {
       success: true,
