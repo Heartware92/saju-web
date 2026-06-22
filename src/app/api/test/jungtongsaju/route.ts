@@ -1,10 +1,9 @@
 /**
  * 정통사주 TEST 생성 엔드포인트 — 프롬프트 실험 전용.
  *
- * 라이브 runJungtongsajuJob 의 2-pass 생성 로직을 그대로 따르되:
- *  · TEST 프롬프트(jungtongsajuPrompt.test.ts) 사용
- *  · 크레딧 차감 X / saju_records 저장 X (프론트 출력만 다르게)
- *  · 결과 9섹션을 그대로 JSON 반환 → Test1ResultPage 가 렌더
+ * ★ 섹션별 개별 생성(12섹션 병렬) — 구식 2-pass(Core 4 + App 8 한 묶음)는 큰 묶음에서
+ *   섹션별 은유 도메인·우주 이미지 지시가 묻혀버려, 섹션마다 따로 생성해 각 섹션이 자기
+ *   도메인을 지키도록 한다. (크레딧·DB 저장 X, 출력만 Test1ResultPage 로 반환)
  *
  * 호출: POST /api/test/jungtongsaju  { sajuResult }
  */
@@ -13,8 +12,9 @@ import { supabaseAdmin } from '@/services/supabaseAdmin';
 import { callAI, JUNGTONGSAJU_PERSONA_SYSTEM_PROMPT } from '@/lib/ai/aiClients';
 import {
   parseJungtongsaju,
-  extractMetaphorAliases,
   sanitizeAIOutput,
+  sectionOpeningDirective,
+  type JungtongsajuSectionKey,
 } from '@/services/jungtongsajuShared';
 import {
   generateJungtongsajuCorePromptTest,
@@ -27,6 +27,9 @@ import type { SajuResult } from '@/utils/sajuCalculator';
 // Supabase(Seoul) 와 같은 리전 — 라이브 함수 규칙 준수
 export const preferredRegion = 'icn1';
 export const maxDuration = 300;
+
+const CORE_KEYS: JungtongsajuSectionKey[] = ['general', 'daymaster', 'element', 'interaction'];
+const APP_KEYS: JungtongsajuSectionKey[] = ['character', 'career', 'wealth', 'love', 'health', 'relation', 'luck', 'advice'];
 
 export async function POST(req: NextRequest) {
   // ── 로그인 가드 — 인증된 사용자만 (AI 토큰 무단 소진 방지) ──
@@ -52,41 +55,39 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    // ── 1차: Core 4섹션 ──
     const corePrompt = generateJungtongsajuCorePromptTest(sajuResult);
-    const coreRaw = await callAI(corePrompt, 7000, { temperature: 0.8, systemPrompt: JUNGTONGSAJU_PERSONA_SYSTEM_PROMPT });
-    const coreContent = stripSpiritGaze(sanitizeAIOutput(coreRaw.content));
-    const coreSections = parseJungtongsaju(coreContent);
+    const appPrompt = generateJungtongsajuApplicationPromptTest(sajuResult, '', []);
 
-    if (Object.keys(coreSections).length === 0) {
-      return NextResponse.json(
-        { error: '1차 마커 파싱 실패', raw: coreContent },
-        { status: 502 },
-      );
+    // 섹션별 단건 생성 — 각 섹션이 자기 은유 도메인·우주 이미지를 온전히 지킨다.
+    const genSection = async (key: JungtongsajuSectionKey): Promise<[string, string]> => {
+      const base = CORE_KEYS.includes(key) ? corePrompt : appPrompt;
+      const override = `
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+[★★★ 이번 호출 한정 — 위 '출력 순서·전체 섹션' 지침은 무시]
+오직 [${key}] 섹션 하나만 작성. [${key}] 마커 한 줄로 시작해 그 섹션 본문만 쓰고 끝냅니다.
+다른 섹션 마커·본문은 출력 금지.${sectionOpeningDirective(key)}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`;
+      const raw = await callAI(base + override, 6000, { temperature: 0.8, systemPrompt: JUNGTONGSAJU_PERSONA_SYSTEM_PROMPT });
+      const content = stripSpiritGaze(sanitizeAIOutput(raw.content));
+      const parsed = parseJungtongsaju(content);
+      return [key, (parsed[key] ?? content).trim()];
+    };
+
+    const allKeys = [...CORE_KEYS, ...APP_KEYS];
+    const settled = await Promise.allSettled(allKeys.map(genSection));
+    const sections: Record<string, string> = {};
+    settled.forEach((r, i) => {
+      if (r.status === 'fulfilled' && r.value[1]) sections[allKeys[i]] = r.value[1];
+    });
+
+    if (Object.keys(sections).length === 0) {
+      return NextResponse.json({ error: '생성 실패 — 다시 시도해주세요.' }, { status: 502 });
     }
 
-    // ── 1차 별칭 추출 (2차 차단용) ──
-    const forbiddenAliases = extractMetaphorAliases(coreContent);
-
-    // ── 2차: Application 8섹션 ──
-    const appPrompt = generateJungtongsajuApplicationPromptTest(
-      sajuResult,
-      coreContent,
-      forbiddenAliases,
-    );
-    const appRaw = await callAI(appPrompt, 14000, { temperature: 0.8, systemPrompt: JUNGTONGSAJU_PERSONA_SYSTEM_PROMPT });
-    const appContent = stripSpiritGaze(sanitizeAIOutput(appRaw.content));
-    const appSections = parseJungtongsaju(appContent);
-
-    // ── 용신처방(advice) 카드용 메타 파싱 — 라이브와 동일하게 AdviceCard UI 렌더 ──
-    const sections = { ...coreSections, ...appSections };
     const adviceMeta = sections.advice ? parseAdviceMeta(sections.advice) : undefined;
 
-    return NextResponse.json({
-      success: true,
-      sections,
-      adviceMeta,
-    });
+    return NextResponse.json({ success: true, sections, adviceMeta });
   } catch (e) {
     const message = e instanceof Error ? e.message : '생성 중 오류';
     console.error('[test/jungtongsaju] 생성 실패:', message);
