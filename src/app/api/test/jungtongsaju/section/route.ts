@@ -88,7 +88,7 @@ ${priorSections.map(p => `[${p.label}]\n${p.text}`).join('\n\n')}
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`;
 
   try {
-    const raw = await callAI(basePrompt + priorBlock + override, 6000, { temperature: 0.75, systemPrompt: JUNGTONGSAJU_PERSONA_SYSTEM_PROMPT });
+    const raw = await callAI(basePrompt + priorBlock + override, 6000, { temperature: 0.8, systemPrompt: JUNGTONGSAJU_PERSONA_SYSTEM_PROMPT });
     const content = stripSpiritGaze(sanitizeAIOutput(raw.content));
     const parsed = parseJungtongsaju(content);
     const text = parsed[section] ?? content; // 마커 누락 시 통짜 fallback

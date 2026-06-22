@@ -18,8 +18,8 @@ import type { SajuResult } from '@/utils/sajuCalculator';
 // ② 섹션마다 '서로 다른 은유 소재군' 강제 — 같은 원소(물/불) 비유로 수렴하는 문제를 구조적으로 차단.
 const METAPHOR_DOMAINS = `
 
-[★ 은유 제목 소재 — 섹션마다 아래 '지정 소재군'에서만 (서로 겹치지 말 것, 물/불 같은 일간 원소 비유 반복 금지)]
-[general]=계절·날씨 / [daymaster]=사물·도구 / [element]=색·빛 / [interaction]=길·여정 / [character]=음식·맛 / [career]=공간·건축 / [wealth]=그릇·살림 / [love]=꽃·정원 / [health]=몸·움직임 / [relation]=악기·소리 / [luck]=여행·장소 / [advice]=문·시작`;
+[★ 은유·비유 소재 — 섹션마다 아래 '오행 만물 패밀리'를 주 소재로 (다섯 기운을 골고루, 같은 소재 두 섹션 반복 금지)]
+[general]=빛·하늘·노을 / [daymaster]=물·이슬·수정·강 / [element]=흙·산·들·정원 / [interaction]=나무·숲·덩굴·길 / [character]=불·불꽃·화로 / [career]=금·보석·거울·연장 / [wealth]=흙·곳간·열매·샘 / [love]=꽃·정원·새싹 / [health]=물·바다·바람 / [relation]=소리·울림·악기 / [luck]=무지개·별빛·보석 / [advice]=여명·새싹·문`;
 
 const toPersona = (prompt: string): string => {
   const swapped = prompt.includes(SPIRIT_TONE_RULE)
