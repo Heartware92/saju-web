@@ -137,12 +137,13 @@ export default function IntroPage() {
                   : `h-full w-full object-cover ${styles.kenburns}` // 꽉 채움 + 느린 줌
               }
             />
-            {/* 스크림 — 하단 텍스트 가독성 */}
+            {/* 스크림 — 하단 텍스트 영역에 어둠 풀 + 바닥 진하게 (위쪽 이미지는 선명 유지) */}
             <div
               className="absolute inset-0"
               style={{
                 background:
-                  'linear-gradient(180deg, rgba(8,4,18,0.30) 0%, rgba(8,4,18,0.0) 38%, rgba(8,4,18,0.55) 70%, rgba(8,4,18,0.92) 100%)',
+                  'radial-gradient(125% 46% at 50% 90%, rgba(5,3,14,0.88) 0%, rgba(5,3,14,0.0) 72%), ' +
+                  'linear-gradient(180deg, rgba(5,3,14,0.0) 0%, rgba(5,3,14,0.0) 44%, rgba(5,3,14,0.5) 64%, rgba(5,3,14,0.9) 86%, rgba(5,3,14,0.97) 100%)',
               }}
             />
           </div>
@@ -174,7 +175,11 @@ export default function IntroPage() {
 
           <p
             className="text-[19px] leading-[2.1] text-text-primary [text-wrap:balance]"
-            style={hasImage ? { textShadow: '0 1px 14px rgba(0,0,0,0.6)' } : undefined}
+            style={
+              hasImage
+                ? { textShadow: '0 2px 16px rgba(0,0,0,0.92), 0 0 4px rgba(0,0,0,0.7)' }
+                : undefined
+            }
           >
             {lines.map((line, i) => {
               // 마지막 장의 "이천점" 강조
