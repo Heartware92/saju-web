@@ -19,7 +19,8 @@ import styles from './intro.module.css';
 
 // 각 슬라이드 = 한 문단. lines 한 줄 = 화면 한 줄(순차로 떠오름).
 // image 가 있으면 풀블리드 장면(전체화면 + 하단 스크림 + 텍스트 하단), 없으면 SVG 모티프 + 중앙.
-type Slide = { lines: string[]; image?: string };
+// fit: 'cover'(기본, 꽉 채우고 가장자리 크롭) | 'contain'(전체 다 보이게, 크롭 없음)
+type Slide = { lines: string[]; image?: string; fit?: 'cover' | 'contain' };
 
 const SLIDES: Slide[] = [
   {
@@ -41,6 +42,7 @@ const SLIDES: Slide[] = [
       '함께 태어났습니다.',
     ],
     image: '/intro/ohaeng.webp',
+    fit: 'contain', // 오행 글자(목화토금수)가 가장자리라 크롭 금지 — 전체를 다 보여줌
   },
   {
     lines: [
@@ -125,7 +127,11 @@ export default function IntroPage() {
               src={slide.image}
               alt=""
               aria-hidden="true"
-              className={`h-full w-full object-cover ${styles.kenburns}`}
+              className={
+                slide.fit === 'contain'
+                  ? 'h-full w-full object-contain' // 전체 표시(크롭·줌 없음)
+                  : `h-full w-full object-cover ${styles.kenburns}` // 꽉 채움 + 느린 줌
+              }
             />
             {/* 스크림 — 하단 텍스트 가독성 */}
             <div
