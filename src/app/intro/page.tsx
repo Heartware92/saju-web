@@ -30,6 +30,7 @@ const SLIDES: Slide[] = [
       '그 사람만을 위한 별 하나가 떨어집니다.',
     ],
     image: '/intro/opening.webp',
+    fit: 'contain',
   },
   {
     lines: ['그 별은 빛을 잃고 작은 정령이 되어,', '평생 그 사람의 곁을 맴돕니다.'],
@@ -51,6 +52,7 @@ const SLIDES: Slide[] = [
       '조용히 잠들어 있죠.',
     ],
     image: '/intro/sleeping.webp',
+    fit: 'contain',
   },
   {
     lines: [
