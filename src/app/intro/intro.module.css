@@ -34,6 +34,26 @@
   50%      { transform: translateY(5px); opacity: 0.9; }
 }
 
+/* ── 풀블리드 장면 이미지: 페이드 인 + 느린 켄번스 줌 ── */
+.bgFade {
+  opacity: 0;
+  animation: bgFadeIn 1s ease-out forwards;
+}
+@keyframes bgFadeIn {
+  to { opacity: 1; }
+}
+.kenburns {
+  will-change: transform;
+  animation: kenburns 22s ease-in-out infinite alternate;
+}
+@keyframes kenburns {
+  from { transform: scale(1.04); }
+  to   { transform: scale(1.13); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .kenburns { animation: none; }
+}
+
 /* ── 분위기 레이어: 필름 그레인 (비네트는 셰이더가 처리) ── */
 .grain {
   position: absolute;
