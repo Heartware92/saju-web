@@ -135,7 +135,7 @@ export default function IntroPage() {
               aria-hidden="true"
               className={
                 slide.fit === 'contain'
-                  ? 'h-full w-full object-contain' // 전체 표시(크롭·줌 없음)
+                  ? 'h-full w-full object-contain object-top' // 전체 표시 + 위로 바짝(여백은 아래로 → 하단이 텍스트 위로 드러남)
                   : `h-full w-full object-cover ${styles.kenburns}` // 꽉 채움 + 느린 줌
               }
             />
