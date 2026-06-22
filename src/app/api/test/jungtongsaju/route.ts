@@ -53,7 +53,7 @@ export async function POST(req: NextRequest) {
   try {
     // ── 1차: Core 4섹션 ──
     const corePrompt = generateJungtongsajuCorePromptTest(sajuResult);
-    const coreRaw = await callAI(corePrompt, 7000, { temperature: 0.75, systemPrompt: JUNGTONGSAJU_PERSONA_SYSTEM_PROMPT });
+    const coreRaw = await callAI(corePrompt, 7000, { temperature: 0.8, systemPrompt: JUNGTONGSAJU_PERSONA_SYSTEM_PROMPT });
     const coreContent = sanitizeAIOutput(coreRaw.content);
     const coreSections = parseJungtongsaju(coreContent);
 
@@ -73,7 +73,7 @@ export async function POST(req: NextRequest) {
       coreContent,
       forbiddenAliases,
     );
-    const appRaw = await callAI(appPrompt, 14000, { temperature: 0.75, systemPrompt: JUNGTONGSAJU_PERSONA_SYSTEM_PROMPT });
+    const appRaw = await callAI(appPrompt, 14000, { temperature: 0.8, systemPrompt: JUNGTONGSAJU_PERSONA_SYSTEM_PROMPT });
     const appContent = sanitizeAIOutput(appRaw.content);
     const appSections = parseJungtongsaju(appContent);
 
