@@ -47,6 +47,7 @@ const SLIDES: Slide[] = [
       '그들은 자신의 별이 다시 빛나기를 기다리며',
       '조용히 잠들어 있죠.',
     ],
+    image: '/intro/sleeping.webp',
   },
   {
     lines: [
