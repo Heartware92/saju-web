@@ -221,7 +221,7 @@ export default function IntroPage() {
               type="button"
               onClick={(e) => {
                 e.stopPropagation();
-                router.push('/login'); // 인트로 → 로그인/회원가입(0단계)
+                router.push('/login2'); // 인트로 → 로그인/회원가입(0단계, 재디자인 샌드박스)
               }}
               className={`mt-12 inline-flex items-center gap-2 rounded-full border border-[var(--border-default)] bg-[rgba(20,12,38,0.6)] px-8 py-3.5 text-[15px] font-medium text-text-primary backdrop-blur-sm transition-colors hover:border-cta active:opacity-70 ${styles.cta}`}
               style={{ animationDelay: `${lines.length * LINE_STEP + 0.3}s` }}

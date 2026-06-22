@@ -1,0 +1,83 @@
+/* 온보딩 1장(별찾기) — 별똥별 떨어지는 연출
+   .track 을 각도만큼 회전 → 내부 .dash 가 그 축을 따라 이동(머리=앞, 꼬리=뒤).
+   회전과 이동을 분리해 각도 계산 없이 자연스러운 낙하. */
+
+.starField {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 2;
+}
+
+.track {
+  position: absolute;
+  transform-origin: left center;
+}
+
+.dash {
+  position: absolute;
+  width: 150px;
+  height: 2px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0) 0%, rgba(201, 166, 255, 0.5) 60%, #ffffff 100%);
+  filter: drop-shadow(0 0 6px rgba(201, 166, 255, 0.85));
+  opacity: 0;
+  animation: dash 3.4s ease-in infinite;
+}
+.dash::after {
+  content: '';
+  position: absolute;
+  right: -1px;
+  top: 50%;
+  width: 6px;
+  height: 6px;
+  margin-top: -3px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 0 12px 4px rgba(255, 255, 255, 0.9);
+}
+
+@keyframes dash {
+  0% { transform: translateX(-170px); opacity: 0; }
+  8% { opacity: 1; }
+  62% { opacity: 1; }
+  100% { transform: translateX(540px); opacity: 0; }
+}
+
+/* 전환 오버레이용 — 화면 중앙을 크게 가로지르는 한 방 */
+.heroDash {
+  position: absolute;
+  top: 30%;
+  left: 50%;
+  width: 220px;
+  height: 3px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0) 0%, rgba(201, 166, 255, 0.6) 55%, #ffffff 100%);
+  filter: drop-shadow(0 0 10px rgba(201, 166, 255, 0.95));
+  transform: rotate(38deg) translateX(-260px);
+  opacity: 0;
+  animation: heroDash 1.7s ease-in forwards;
+}
+.heroDash::after {
+  content: '';
+  position: absolute;
+  right: -2px;
+  top: 50%;
+  width: 9px;
+  height: 9px;
+  margin-top: -4.5px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 0 18px 6px rgba(255, 255, 255, 0.95);
+}
+@keyframes heroDash {
+  0% { transform: rotate(38deg) translateX(-260px); opacity: 0; }
+  15% { opacity: 1; }
+  100% { transform: rotate(38deg) translateX(520px); opacity: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dash,
+  .heroDash { animation: none; opacity: 0.85; }
+}
