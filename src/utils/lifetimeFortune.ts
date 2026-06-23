@@ -57,12 +57,14 @@ export function computeLifetimeFortune(saju: SajuResult, maxAge: number = 99): L
   return points;
 }
 
-/** 현재 만나이 (오늘 - 출생일) */
+/**
+ * 평생 운세 흐름의 '현재' 마커 나이.
+ * ★ 평생 흐름은 연(年) 기준 — 각 점의 year = birthYear + age (위 buildLifetimeFortune).
+ *   그래서 '현재' 마커도 현재 '연도'에 정확히 맞춰야 한다(연나이 = 현재연도 - 출생연도).
+ *   만나이를 쓰면 생일 전 사용자는 birthYear + 만나이 = 작년 연도로 찍혀 "2025년(현재)" 오류 발생.
+ */
 export function getCurrentAge(saju: SajuResult): number {
-  const today = new Date();
-  const birth = new Date(saju.solarDate);
-  let age = today.getFullYear() - birth.getFullYear();
-  const m = today.getMonth() - birth.getMonth();
-  if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) age--;
-  return Math.max(1, age);
+  const birthYear = parseInt(saju.solarDate.slice(0, 4), 10);
+  if (!Number.isFinite(birthYear)) return 1;
+  return Math.max(1, new Date().getFullYear() - birthYear);
 }
