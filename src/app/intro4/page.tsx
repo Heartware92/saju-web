@@ -49,7 +49,7 @@ export default function Onboarding3Page() {
   const need = MOON_COST_BIG - BONUS_MOON;
 
   return (
-    <Layout>
+    <Layout glowTabs={['/sangdamso', '/archive']}>
       <div className="px-4 pt-3 pb-8">
         {/* 헤드라인 */}
         <div className="mb-5 px-1">

@@ -9,6 +9,8 @@ import StarfallBackground from './StarfallBackground';
 
 interface LayoutProps {
   children: React.ReactNode;
+  /** 지정한 경로의 하단 탭에 반짝임(글로우) 효과 — 온보딩 4·5장 발견 유도용. 기본 없음 */
+  glowTabs?: string[];
 }
 
 const navItems = [
@@ -60,7 +62,7 @@ function NavIcon({ name, active }: { name: string; active: boolean }) {
   }
 }
 
-export default function Layout({ children }: LayoutProps) {
+export default function Layout({ children, glowTabs }: LayoutProps) {
   const pathname = usePathname();
   const router = useRouter();
   const { moonBalance } = useCreditStore();
@@ -215,17 +217,21 @@ export default function Layout({ children }: LayoutProps) {
           <div className="flex items-center justify-around h-16">
             {navItems.map((item) => {
               const active = isActive(item.path);
+              const glow = !!glowTabs?.includes(item.path);
+              const lit = active || glow;
               return (
                 <Link
                   key={item.path}
                   href={item.path}
                   className={`
                     flex flex-col items-center gap-1 px-3 py-2 rounded-lg transition-all duration-200 min-w-[56px]
-                    ${active ? 'text-cta' : 'text-text-tertiary'}
+                    ${lit ? 'text-cta' : 'text-text-tertiary'}
                   `}
                 >
                   <div className="relative">
-                    <NavIcon name={item.icon} active={active} />
+                    {glow && <span className="nav-glow" aria-hidden="true" />}
+                    {glow && <span className="nav-sparkle" aria-hidden="true">✦</span>}
+                    <NavIcon name={item.icon} active={lit} />
                     {active && (
                       <div className="absolute -top-1 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-cta shadow-[0_0_6px_var(--cta-primary)]" />
                     )}
