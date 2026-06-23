@@ -685,6 +685,27 @@ export default function PeriodFortunePage({ scope }: { scope: FortuneScope | 'da
     fortuneJob?.jobId,
   ]);
 
+  // ── ★ 결과 완성 후 URL 을 ?jobId → ?recordId 로 승격 ──
+  //   강력새로고침 시 ?jobId 진입은 메인 복원 effect 가 skip(line: effectiveJobId return)되어
+  //   오직 fortuneJob 훅에만 의존 → 레이스로 결과가 빈 채 남는 사고(유저 제보)·로딩 깜빡임 발생.
+  //   결과가 완성되면(=record 가 DB 에 done 으로 저장됨) URL 을 recordId 로 바꿔, 새로고침이
+  //   보관함과 동일한 단일·확정 경로(getRecordById)로 복원되게 한다. archive 모드라 재차감 없음(안전).
+  useEffect(() => {
+    if (isArchiveMode) return;
+    const jid = searchParams?.get('jobId');
+    if (!jid) return;
+    const done =
+      (scope === 'year' && newyearReport?.success === true) ||
+      (scope === 'date' && pickedDateReport?.success === true);
+    if (!done) return;
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('recordId')) return; // 이미 승격됨
+    params.delete('jobId');
+    params.delete('fresh');
+    params.set('recordId', jid);
+    router.replace(`${window.location.pathname}?${params.toString()}`);
+  }, [isArchiveMode, scope, newyearReport, pickedDateReport, searchParams, router]);
+
   // ── 로딩 안전장치: 70초 초과 시 강제 해제 ──
   const [yearTimedOut] = useLoadingGuard(newyearReportLoading, 140_000);
   const [dateTimedOut] = useLoadingGuard(pickedDateReportLoading, 140_000);
