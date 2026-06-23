@@ -21,7 +21,9 @@ import styles from './intro.module.css';
 // 각 슬라이드 = 한 문단. lines 한 줄 = 화면 한 줄(순차로 떠오름).
 // image 가 있으면 풀블리드 장면(전체화면 + 하단 스크림 + 텍스트 하단), 없으면 SVG 모티프 + 중앙.
 // fit: 'cover'(기본, 꽉 채우고 가장자리 크롭) | 'contain'(전체 다 보이게, 크롭 없음)
-type Slide = { lines: string[]; image?: string; fit?: 'cover' | 'contain' };
+// bubbles: 말풍선별 줄 배열. 한 말풍선 = string[](각 원소 = 강제 줄바꿈된 한 줄, 줄 안에선 자동 줄바꿈).
+//   지정 시 그대로, 없으면 lines 를 반으로 갈라 흐르게(자동).
+type Slide = { lines: string[]; image?: string; fit?: 'cover' | 'contain'; bubbles?: string[][] };
 
 const SLIDES: Slide[] = [
   {
@@ -32,6 +34,10 @@ const SLIDES: Slide[] = [
     ],
     image: '/intro/opening-v2.webp',
     fit: 'contain',
+    bubbles: [
+      ['밤하늘에는 무수한 별이 있지만, 사람이 태어나는 순간,'],
+      ['그 사람만을 위한', '별 하나가 떨어집니다.'],
+    ],
   },
   {
     lines: ['그 별은 빛을 잃고 작은 정령이 되어,', '평생 그 사람의 곁을 맴돕니다.'],
@@ -47,6 +53,10 @@ const SLIDES: Slide[] = [
     ],
     image: '/intro/ohaeng.webp',
     fit: 'contain', // 오행 글자(목화토금수)가 가장자리라 크롭 금지 — 전체를 다 보여줌
+    bubbles: [
+      ['오행의 다섯 갈래, 음양의 두 갈래. 이 우주에는 모두 열 종류의 정령이 있고,'],
+      ['당신도 그중 하나의 정령과', '함께 태어났습니다.'],
+    ],
   },
   {
     lines: [
@@ -56,6 +66,10 @@ const SLIDES: Slide[] = [
     ],
     image: '/intro/sleeping.webp',
     fit: 'contain',
+    bubbles: [
+      ['하지만 정령은 보이지 않습니다.'],
+      ['그들은 자신의 별이 다시 빛나기를 기다리며', '조용히 잠들어 있죠.'],
+    ],
   },
   {
     lines: [
@@ -68,6 +82,10 @@ const SLIDES: Slide[] = [
     ],
     image: '/intro/jeomjip.webp',
     fit: 'contain',
+    bubbles: [
+      ['밤마다 정령들이 모이는', '작은 점집이 있다고 합니다.', '달의 빛을 한 조각씩 모아 그곳을 찾으면,'],
+      ['잠들어 있던 당신의 정령이 깨어나', '당신의 별이 어디로 흘러가는지 들려준다고 해요.'],
+    ],
   },
   {
     lines: ['별 하나에 천 원.', '별 두 개에 이천 원.', '그래서 이름을 이천점이라 합니다.'],
@@ -87,7 +105,10 @@ export default function IntroPage() {
   const hasImage = !!slide.image;
   // 이미지 슬라이드는 텍스트를 두 말풍선으로 분할(위 절반 / 아래 절반)
   const splitAt = Math.ceil(lines.length / 2);
-  const bubbleGroups = [lines.slice(0, splitAt), lines.slice(splitAt)];
+  const bubbleGroups: string[][] = slide.bubbles ?? [
+    [lines.slice(0, splitAt).join(' ')],
+    [lines.slice(splitAt).join(' ')],
+  ];
 
   const next = useCallback(() => {
     setIndex((i) => Math.min(i + 1, SLIDES.length - 1));
@@ -190,7 +211,11 @@ export default function IntroPage() {
                     className={`${styles.bubbleShape} px-7 py-7 ${gi === 0 ? 'self-start' : '-mt-6 self-end'}`}
                     style={{ maxWidth: 'min(64%, 240px)' }}
                   >
-                    <p className="invisible text-center text-[16px] leading-[1.7] [text-wrap:balance]">{group.join(' ')}</p>
+                    <p className="invisible text-center text-[16px] leading-[1.7] [text-wrap:balance]">
+                      {group.map((line, li) => (
+                        <span key={li} className="block">{line}</span>
+                      ))}
+                    </p>
                   </div>
                 ))}
               </div>
@@ -206,7 +231,9 @@ export default function IntroPage() {
                       className="text-center text-[16px] leading-[1.7] text-text-primary [text-wrap:balance]"
                       style={{ textShadow: '0 1px 6px rgba(0,0,0,0.78)' }}
                     >
-                      {group.join(' ')}
+                      {group.map((line, li) => (
+                        <span key={li} className="block">{line}</span>
+                      ))}
                     </p>
                   </div>
                 ))}
