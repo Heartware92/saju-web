@@ -61,7 +61,7 @@
 .shapeLayer {
   -webkit-backdrop-filter: blur(12px) saturate(115%);
   backdrop-filter: blur(12px) saturate(115%);
-  opacity: 0.34; /* 그룹 투명도 — 겹침 부분도 균일 */
+  opacity: 0.55; /* 그룹 투명도 — 겹침 부분도 균일 (블러가 같이 흐려져 값을 올림) */
 }
 .bubbleShape {
   background: #100a22; /* 솔리드 동일색 → 겹쳐도 경계 없음 */
