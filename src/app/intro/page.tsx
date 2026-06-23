@@ -36,6 +36,7 @@ const SLIDES: Slide[] = [
     ],
     image: '/intro/opening-v2.webp',
     fit: 'contain',
+    bubbleTop: '58%',
     bubbles: [
       ['밤하늘에는 무수한 별이 있지만, 사람이 태어나는 순간,'],
       ['그 사람만을 위한', '별 하나가 떨어집니다.'],
@@ -45,6 +46,7 @@ const SLIDES: Slide[] = [
     lines: ['그 별은 빛을 잃고 작은 정령이 되어,', '평생 그 사람의 곁을 맴돕니다.'],
     image: '/intro/fading-v3.webp',
     fit: 'contain',
+    bubbleTop: '42%',
   },
   {
     lines: [
@@ -55,6 +57,7 @@ const SLIDES: Slide[] = [
     ],
     image: '/intro/ohaeng.webp',
     fit: 'contain', // 오행 글자(목화토금수)가 가장자리라 크롭 금지 — 전체를 다 보여줌
+    bubbleTop: '40%',
     bubbles: [
       ['오행의 다섯 갈래, 음양의 두 갈래. 이 우주에는 모두 열 종류의 정령이 있고,'],
       ['당신도 그중 하나의 정령과', '함께 태어났습니다.'],
@@ -118,6 +121,15 @@ export default function IntroPage() {
 
   const prev = useCallback(() => {
     setIndex((i) => Math.max(i - 1, 0));
+  }, []);
+
+  // 특정 슬라이드로 바로 열기(?s=N) — 위치 확인/디버그용, 미지정 시 무영향
+  useEffect(() => {
+    const p = new URLSearchParams(window.location.search).get('s');
+    if (p) {
+      const n = parseInt(p, 10);
+      if (!Number.isNaN(n) && n >= 0 && n < SLIDES.length) setIndex(n);
+    }
   }, []);
 
   // 키보드 좌우 — 데스크톱 확인용
