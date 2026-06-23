@@ -55,25 +55,32 @@ export default function SpiritCard({ spirit }: { spirit: Spirit }) {
         <p className="text-[12px] tracking-[0.18em] text-text-tertiary">{spirit.nameEn.toUpperCase()}</p>
       </div>
 
-      {/* 핵심 성향 칩 */}
-      <div className="mb-4 flex flex-wrap justify-center gap-1.5">
-        {spirit.traits.map((t) => (
-          <span
-            key={t}
-            className="rounded-full border px-2.5 py-1 text-[11.5px] text-text-secondary"
-            style={{ borderColor: `color-mix(in srgb, ${color} 40%, transparent)` }}
-          >
-            {t}
-          </span>
+      {/* 핵심 성향 칩 — 5개는 3+2 균형 2줄, 칩은 한 줄 유지 */}
+      <div className="mb-4 flex flex-col items-center gap-1.5">
+        {(spirit.traits.length > 4
+          ? [spirit.traits.slice(0, Math.ceil(spirit.traits.length / 2)), spirit.traits.slice(Math.ceil(spirit.traits.length / 2))]
+          : [spirit.traits]
+        ).map((row, ri) => (
+          <div key={ri} className="flex flex-wrap justify-center gap-1.5">
+            {row.map((t) => (
+              <span
+                key={t}
+                className="whitespace-nowrap rounded-full border px-2.5 py-1 text-[11.5px] text-text-secondary"
+                style={{ borderColor: `color-mix(in srgb, ${color} 40%, transparent)` }}
+              >
+                {t}
+              </span>
+            ))}
+          </div>
         ))}
       </div>
 
       {/* 세계관 한 줄 */}
-      <p className="mb-3 text-center text-[12px] leading-relaxed text-text-tertiary">{spirit.worldview}</p>
+      <p className="mb-3 break-keep text-center text-[12px] leading-relaxed text-text-tertiary">{spirit.worldview}</p>
 
       {/* 한마디 */}
       <div
-        className="rounded-2xl px-4 py-3 text-center text-[13px] leading-relaxed text-text-primary"
+        className="break-keep rounded-2xl px-4 py-3 text-center text-[13px] leading-relaxed text-text-primary"
         style={{ background: `color-mix(in srgb, ${color} 12%, rgba(0,0,0,0.25))` }}
       >
         “{spirit.quote}”
