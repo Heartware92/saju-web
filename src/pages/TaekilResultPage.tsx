@@ -274,14 +274,29 @@ export default function TaekilResultPage() {
   const { user } = useUserStore();
   const { profiles, fetchProfiles } = useProfileStore();
 
-  const [result, setResult] = useState<TaekilResult | null>(null);
-  const [aiAdvice, setAiAdvice] = useState<string>('');
-  const [parsedAdvice, setParsedAdvice] = useState<TaekilParsedAdvice | null>(null);
-  const [profileId, setProfileId] = useState<string | null>(null);
+  // ── ★ 강력새로고침 즉시 복원 — sessionStorage 캐시(같은 탭 reload 시 생존) ──
+  //   이미 본 결과면 DB 조회(getRecordById) 로딩화면 없이 캐시에서 바로 그린다.
+  const cacheKey = recordId || urlJobId;
+  const cached = useMemo(() => {
+    if (typeof window === 'undefined' || !cacheKey) return null;
+    try {
+      const raw = sessionStorage.getItem(`taekil:result:${cacheKey}`);
+      if (!raw) return null;
+      const o = JSON.parse(raw) as { result?: TaekilResult; content?: string; profileId?: string | null };
+      if (!o?.result) return null;
+      const migrated = migrateLegacyCategory(o.result.category as string) ?? o.result.category;
+      return { result: { ...o.result, category: migrated } as TaekilResult, content: o.content ?? '', profileId: o.profileId ?? null };
+    } catch { return null; }
+  }, [cacheKey]);
+
+  const [result, setResult] = useState<TaekilResult | null>(cached?.result ?? null);
+  const [aiAdvice, setAiAdvice] = useState<string>(cached?.content ?? '');
+  const [parsedAdvice, setParsedAdvice] = useState<TaekilParsedAdvice | null>(cached?.content ? parseTaekilStructuredAdvice(cached.content) : null);
+  const [profileId, setProfileId] = useState<string | null>(cached?.profileId ?? null);
   // 키워드 칩 클릭 시 설명을 보여줄 모달. null 이면 닫힘.
   const [activeKeyword, setActiveKeyword] = useState<TaekilKeyword | null>(null);
-  // recordId 또는 jobId 없으면 즉시 에러 상태로 시작
-  const [loading, setLoading] = useState<boolean>(!!recordId || !!urlJobId);
+  // 캐시 적중이면 로딩 없이 즉시 결과. 아니면 recordId/jobId 있을 때 로딩 시작.
+  const [loading, setLoading] = useState<boolean>(cached ? false : (!!recordId || !!urlJobId));
   const [error, setError] = useState<string | null>(
     (recordId || urlJobId) ? null : '잘못된 접근이에요. recordId 또는 jobId 가 없습니다.'
   );
@@ -292,6 +307,7 @@ export default function TaekilResultPage() {
   // ── 잡 결과 → state 동기화 ──
   useEffect(() => {
     if (!urlJobId) return;
+    if (cached) return; // 캐시 적중 — 즉시 복원됨
     if (!fortuneJob) return;
     if (fortuneJob.status === 'done') {
       const content = fortuneJob.interpretationDetailed ?? '';
@@ -303,6 +319,10 @@ export default function TaekilResultPage() {
         setResult({ ...engine, category: migrated });
       }
       setLoading(false);
+      // 강력새로고침 즉시 복원용 캐시 기록
+      if (engine && urlJobId) {
+        try { sessionStorage.setItem(`taekil:result:${urlJobId}`, JSON.stringify({ result: engine, content, profileId: null })); } catch { /* quota */ }
+      }
     } else if (fortuneJob.status === 'failed') {
       setError(fortuneJob.errorMessage ?? '풀이 생성에 실패했어요. 크레딧은 자동 환불됐어요.');
       setLoading(false);
@@ -322,6 +342,7 @@ export default function TaekilResultPage() {
     fortuneJob?.interpretationDetailed,
     fortuneJob?.errorMessage,
     fortuneJob?.engineResult,
+    cached,
   ]);
 
   useEffect(() => {
@@ -331,6 +352,7 @@ export default function TaekilResultPage() {
   // recordId 기반 record load
   useEffect(() => {
     if (!recordId) return;
+    if (cached) return; // 캐시 적중 — DB 조회 없이 즉시 복원됨(로딩화면 skip)
     let cancelled = false;
     sajuDB.getRecordById(recordId)
       .then((record) => {
@@ -352,6 +374,10 @@ export default function TaekilResultPage() {
         }
         setProfileId(record.profile_id ?? null);
         setLoading(false);
+        // 강력새로고침 즉시 복원용 캐시 기록
+        if (engine && recordId) {
+          try { sessionStorage.setItem(`taekil:result:${recordId}`, JSON.stringify({ result: engine, content, profileId: record.profile_id ?? null })); } catch { /* quota */ }
+        }
       })
       .catch((e) => {
         if (cancelled) return;
@@ -360,7 +386,7 @@ export default function TaekilResultPage() {
         setLoading(false);
       });
     return () => { cancelled = true; };
-  }, [recordId]);
+  }, [recordId, cached]);
 
   const targetProfile = useMemo(() => {
     if (!profileId) return null;
