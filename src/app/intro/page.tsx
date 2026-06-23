@@ -85,6 +85,9 @@ export default function IntroPage() {
   const slide = SLIDES[index];
   const lines = slide.lines;
   const hasImage = !!slide.image;
+  // 이미지 슬라이드는 텍스트를 두 말풍선으로 분할(위 절반 / 아래 절반)
+  const splitAt = Math.ceil(lines.length / 2);
+  const bubbleGroups = [lines.slice(0, splitAt), lines.slice(splitAt)];
 
   const next = useCallback(() => {
     setIndex((i) => Math.min(i + 1, SLIDES.length - 1));
@@ -174,36 +177,53 @@ export default function IntroPage() {
             </div>
           )}
 
-          <div className={hasImage ? `${styles.bubble} px-6 py-5` : undefined}>
-          <p
-            className="text-[19px] leading-[2.1] text-text-primary [text-wrap:balance]"
-            style={hasImage ? { textShadow: '0 1px 5px rgba(0,0,0,0.55)' } : undefined}
-          >
-            {lines.map((line, i) => {
-              // 마지막 장의 "이천점" 강조
-              const highlight = isLast && line.includes('이천점');
-              return (
-                <span
-                  key={i}
-                  className={`block ${styles.line}`}
-                  style={{ animationDelay: `${i * LINE_STEP}s` }}
+          {hasImage ? (
+            // 이미지 슬라이드 — 꼬리 없는 둥근 말풍선 2개, 사선으로 겹침
+            <div className="flex w-full flex-col">
+              {bubbleGroups.map((group, gi) => (
+                <div
+                  key={gi}
+                  className={`${styles.bubble} ${styles.bgFade} px-5 py-4 ${
+                    gi === 0 ? 'self-start' : 'z-10 -mt-6 self-end'
+                  }`}
+                  style={{ maxWidth: '84%', animationDelay: `${gi * 0.18}s` }}
                 >
-                  {highlight ? (
-                    <>
-                      그래서 이름을{' '}
-                      <span className="bg-gradient-to-r from-[var(--cta-primary)] to-[var(--cta-secondary)] bg-clip-text font-bold text-transparent">
-                        이천점
-                      </span>
-                      이라 합니다.
-                    </>
-                  ) : (
-                    line
-                  )}
-                </span>
-              );
-            })}
-          </p>
-          </div>
+                  <p className="text-[17px] leading-[1.95] text-text-primary [text-wrap:balance]" style={{ textShadow: '0 1px 5px rgba(0,0,0,0.5)' }}>
+                    {group.map((line, i) => {
+                      const gIndex = gi === 0 ? i : splitAt + i;
+                      return (
+                        <span key={i} className={`block ${styles.line}`} style={{ animationDelay: `${gIndex * LINE_STEP}s` }}>
+                          {line}
+                        </span>
+                      );
+                    })}
+                  </p>
+                </div>
+              ))}
+            </div>
+          ) : (
+            // 모티프 슬라이드(마지막) — 단일 텍스트 + "이천점" 강조
+            <p className="text-[19px] leading-[2.1] text-text-primary [text-wrap:balance]">
+              {lines.map((line, i) => {
+                const highlight = isLast && line.includes('이천점');
+                return (
+                  <span key={i} className={`block ${styles.line}`} style={{ animationDelay: `${i * LINE_STEP}s` }}>
+                    {highlight ? (
+                      <>
+                        그래서 이름을{' '}
+                        <span className="bg-gradient-to-r from-[var(--cta-primary)] to-[var(--cta-secondary)] bg-clip-text font-bold text-transparent">
+                          이천점
+                        </span>
+                        이라 합니다.
+                      </>
+                    ) : (
+                      line
+                    )}
+                  </span>
+                );
+              })}
+            </p>
+          )}
 
           {/* 마지막 장 — 시작 CTA (아직 미연결) */}
           {isLast && (
