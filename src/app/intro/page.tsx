@@ -211,7 +211,7 @@ export default function IntroPage() {
                     className={`${styles.bubbleShape} px-7 py-7 ${gi === 0 ? 'self-start' : '-mt-6 self-end'}`}
                     style={{ maxWidth: 'min(64%, 240px)' }}
                   >
-                    <p className="invisible text-center text-[16px] leading-[1.7] [text-wrap:balance]">
+                    <p className="invisible break-keep text-center text-[16px] leading-[1.7] [text-wrap:balance]">
                       {group.map((line, li) => (
                         <span key={li} className="block">{line}</span>
                       ))}
@@ -228,7 +228,7 @@ export default function IntroPage() {
                     style={{ maxWidth: 'min(64%, 240px)', animationDelay: `${gi * 0.18}s` }}
                   >
                     <p
-                      className="text-center text-[16px] leading-[1.7] text-text-primary [text-wrap:balance]"
+                      className="break-keep text-center text-[16px] leading-[1.7] text-text-primary [text-wrap:balance]"
                       style={{ textShadow: '0 1px 6px rgba(0,0,0,0.78)' }}
                     >
                       {group.map((line, li) => (
