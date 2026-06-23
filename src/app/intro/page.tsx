@@ -35,7 +35,7 @@ const SLIDES: Slide[] = [
   },
   {
     lines: ['그 별은 빛을 잃고 작은 정령이 되어,', '평생 그 사람의 곁을 맴돕니다.'],
-    image: '/intro/fading-v2.webp',
+    image: '/intro/fading-v3.webp',
     fit: 'contain',
   },
   {
@@ -119,12 +119,14 @@ export default function IntroPage() {
   };
 
   return (
-    <div className="app-auth-shell">
+    <div className="app-auth-shell items-center">
       <div
         className="app-auth-container relative flex flex-col items-center justify-center px-8 text-center select-none"
         onClick={next}
         onTouchStart={onTouchStart}
         onTouchEnd={onTouchEnd}
+        // 데스크탑 세로(긴) 창에서 프레임이 너무 길어지지 않게 폰 비율로 캡 + 세로 중앙
+        style={{ minHeight: 0, height: 'min(100dvh, 940px)' }}
       >
         <ShaderSky />
 
@@ -183,12 +185,12 @@ export default function IntroPage() {
               {bubbleGroups.map((group, gi) => (
                 <div
                   key={gi}
-                  className={`${styles.bubble} ${styles.bgFade} px-5 py-4 ${
+                  className={`${styles.bubble} ${styles.bgFade} px-7 py-6 ${
                     gi === 0 ? 'self-start' : 'z-10 -mt-6 self-end'
                   }`}
-                  style={{ maxWidth: '84%', animationDelay: `${gi * 0.18}s` }}
+                  style={{ maxWidth: '80%', animationDelay: `${gi * 0.18}s` }}
                 >
-                  <p className="text-[17px] leading-[1.95] text-text-primary [text-wrap:balance]" style={{ textShadow: '0 1px 5px rgba(0,0,0,0.5)' }}>
+                  <p className="text-[17px] leading-[1.95] text-text-primary [text-wrap:balance]" style={{ textShadow: '0 1px 6px rgba(0,0,0,0.7)' }}>
                     {group.map((line, i) => {
                       const gIndex = gi === 0 ? i : splitAt + i;
                       return (
