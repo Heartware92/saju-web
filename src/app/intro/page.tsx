@@ -23,7 +23,9 @@ import styles from './intro.module.css';
 // fit: 'cover'(기본, 꽉 채우고 가장자리 크롭) | 'contain'(전체 다 보이게, 크롭 없음)
 // bubbles: 말풍선별 줄 배열. 한 말풍선 = string[](각 원소 = 강제 줄바꿈된 한 줄, 줄 안에선 자동 줄바꿈).
 //   지정 시 그대로, 없으면 lines 를 반으로 갈라 흐르게(자동).
-type Slide = { lines: string[]; image?: string; fit?: 'cover' | 'contain'; bubbles?: string[][] };
+// bubbleTop: 말풍선 묶음의 세로 위치(프레임 기준 CSS 값, 예 '40%'·'62%'). 미지정 시 중앙('50%').
+//   배경마다 피사체 위치가 달라 페이지별로 비워둘 자리에 맞춰 조정.
+type Slide = { lines: string[]; image?: string; fit?: 'cover' | 'contain'; bubbles?: string[][]; bubbleTop?: string };
 
 const SLIDES: Slide[] = [
   {
@@ -191,17 +193,13 @@ export default function IntroPage() {
           />
         )}
 
-        {/* 본문 — index 가 바뀌면 key 로 재마운트되어 모티프·문장이 다시 등장 */}
-        <div key={index} className={`relative z-10 ${styles.story}`}>
-          {/* 슬라이드별 모티프 — 풀블리드 이미지 슬라이드에는 생략 */}
-          {!hasImage && (
-            <div className="mb-9 flex justify-center">
-              <IntroMotif index={index} />
-            </div>
-          )}
-
-          {hasImage ? (
-            // 이미지 슬라이드 — 둥근 말풍선 2개. 형태(솔리드 union, 겹침 경계 없음) + 텍스트 2레이어.
+        {hasImage ? (
+          // 이미지 슬라이드 — 말풍선 클러스터를 프레임 기준 절대위치(슬라이드별 세로 위치)
+          <div
+            key={index}
+            className="absolute left-0 right-0 z-10 -translate-y-1/2 px-8"
+            style={{ top: slide.bubbleTop ?? '50%' }}
+          >
             <div className="relative w-full">
               {/* 형태 레이어 — 솔리드 동일색 도형을 그룹 통째로 반투명 → 겹쳐도 경계선 없음 */}
               <div className={`absolute inset-0 flex w-full flex-col ${styles.shapeLayer}`} aria-hidden="true">
@@ -228,8 +226,8 @@ export default function IntroPage() {
                     style={{ maxWidth: 'min(64%, 240px)', animationDelay: `${gi * 0.18}s` }}
                   >
                     <p
-                      className="break-keep text-center text-[16px] leading-[1.7] text-text-primary [text-wrap:balance]"
-                      style={{ color: '#1b1533', textShadow: 'none' }}
+                      className="break-keep text-center text-[16px] leading-[1.7] [text-wrap:balance]"
+                      style={{ color: '#1b1533' }}
                     >
                       {group.map((line, li) => (
                         <span key={li} className="block">{line}</span>
@@ -239,8 +237,13 @@ export default function IntroPage() {
                 ))}
               </div>
             </div>
-          ) : (
-            // 모티프 슬라이드(마지막) — 단일 텍스트 + "이천점" 강조
+          </div>
+        ) : (
+          // 모티프 슬라이드(마지막) — 모티프 + 텍스트 + CTA, 중앙
+          <div key={index} className={`relative z-10 flex flex-col items-center ${styles.story}`}>
+            <div className="mb-9 flex justify-center">
+              <IntroMotif index={index} />
+            </div>
             <p className="text-[19px] leading-[2.1] text-text-primary [text-wrap:balance]">
               {lines.map((line, i) => {
                 const highlight = isLast && line.includes('이천점');
@@ -261,24 +264,22 @@ export default function IntroPage() {
                 );
               })}
             </p>
-          )}
-
-          {/* 마지막 장 — 시작 CTA (아직 미연결) */}
-          {isLast && (
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                router.push('/login2'); // 인트로 → 로그인/회원가입(0단계, 재디자인 샌드박스)
-              }}
-              className={`mt-12 inline-flex items-center gap-2 rounded-full border border-[var(--border-default)] bg-[rgba(20,12,38,0.6)] px-8 py-3.5 text-[15px] font-medium text-text-primary backdrop-blur-sm transition-colors hover:border-cta active:opacity-70 ${styles.cta}`}
-              style={{ animationDelay: `${lines.length * LINE_STEP + 0.3}s` }}
-            >
-              <span aria-hidden="true">☾</span>
-              별빛 따라 들어가기
-            </button>
-          )}
-        </div>
+            {isLast && (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  router.push('/login2'); // 인트로 → 로그인/회원가입(0단계, 재디자인 샌드박스)
+                }}
+                className={`mt-12 inline-flex items-center gap-2 rounded-full border border-[var(--border-default)] bg-[rgba(20,12,38,0.6)] px-8 py-3.5 text-[15px] font-medium text-text-primary backdrop-blur-sm transition-colors hover:border-cta active:opacity-70 ${styles.cta}`}
+                style={{ animationDelay: `${lines.length * LINE_STEP + 0.3}s` }}
+              >
+                <span aria-hidden="true">☾</span>
+                별빛 따라 들어가기
+              </button>
+            )}
+          </div>
+        )}
 
         {/* 진행 점 */}
         <div className="absolute bottom-10 left-1/2 z-20 flex -translate-x-1/2 items-center gap-2">
