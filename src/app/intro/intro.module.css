@@ -61,12 +61,12 @@
 .shapeLayer {
   -webkit-backdrop-filter: blur(12px) saturate(115%);
   backdrop-filter: blur(12px) saturate(115%);
-  opacity: 0.31; /* 그룹 투명도 — 겹침 부분도 균일 */
+  opacity: 0.5; /* 그룹 투명도 — 겹침 부분도 균일 */
 }
 .bubbleShape {
-  background: #100a22; /* 솔리드 동일색 → 겹쳐도 경계 없음 */
+  background: #f0ebfc;
   border-radius: 999px; /* 좁은 박스에서 거의 원형으로 클램프 */
-  box-shadow: 0 8px 26px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 8px 26px rgba(0, 0, 0, 0.3);
 }
 
 /* ── 분위기 레이어: 필름 그레인 (비네트는 셰이더가 처리) ── */

@@ -229,7 +229,7 @@ export default function IntroPage() {
                   >
                     <p
                       className="break-keep text-center text-[16px] leading-[1.7] text-text-primary [text-wrap:balance]"
-                      style={{ textShadow: '0 1px 6px rgba(0,0,0,0.78)' }}
+                      style={{ color: '#1b1533', textShadow: 'none' }}
                     >
                       {group.map((line, li) => (
                         <span key={li} className="block">{line}</span>
