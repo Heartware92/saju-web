@@ -97,6 +97,8 @@ function computeDepletion(txns: TxnRow[]) {
   return {
     avgDepletionDays: Math.round(avg * 10) / 10,
     medianDepletionDays: Math.round(median * 10) / 10,
+    avgDepletionHours: Math.round(avg * 24 * 10) / 10,       // 시간 단위(짧은 소진 가시화)
+    medianDepletionHours: Math.round(median * 24 * 10) / 10,
     depletedLots: n,             // 완전 소진된 충전 배치 수(표본)
     outstandingPurchaseLots,     // 아직 소진중인 충전 배치 수
   };
@@ -153,10 +155,6 @@ async function computeSummary(audience: Set<string> | null) {
     netMoon: moonIssuedMo[i] - moonConsumedMo[i],
   }));
 
-  // 추정 단가 — 달 1개 ≈ 300원 (현재 패키지 평균 기준, 튜닝 가능)
-  const ESTIMATED_MOON_COST_WON = 300;
-  const debtWon = moonBalance * ESTIMATED_MOON_COST_WON;
-
   const moonConsumeRate = moonIssued > 0 ? Math.round((moonConsumed / moonIssued) * 100) : 0;
 
   const withMoon = credits.filter(c => (c.moon_balance ?? 0) > 0).length;
@@ -174,7 +172,6 @@ async function computeSummary(audience: Set<string> | null) {
     kpi: {
       moonIssued, moonConsumed, moonBalance,
       moonConsumeRate,
-      debtWon,
       withMoon,
       adminGranted,
       txnCount: txns.length,
