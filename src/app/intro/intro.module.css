@@ -59,8 +59,8 @@
      겹쳐도 같은 색이라 경계선이 전혀 안 생기고(union), 전체는 균일 반투명.
    텍스트는 별도 레이어에서 풀 불투명으로 얹어 가독성 유지. */
 .shapeLayer {
-  -webkit-backdrop-filter: blur(12px) saturate(115%);
-  backdrop-filter: blur(12px) saturate(115%);
+  /* backdrop-filter 제거 — 사각 레이어 전체가 흐려지던 문제(말풍선 밖까지 페이드).
+     반투명 밝은 채움만으로 말풍선 표현 → 말풍선 형태에만 적용됨 */
   opacity: 0.5; /* 그룹 투명도 — 겹침 부분도 균일 */
 }
 .bubbleShape {
