@@ -65,7 +65,7 @@ function CardInner() {
 
           <button
             type="button"
-            onClick={() => router.push(spirit ? '/' : '/intro2')}
+            onClick={() => router.push(spirit ? '/intro4' : '/intro2')}
             className="mt-8 w-full max-w-[330px] rounded-full bg-gradient-to-r from-cta to-cta-active py-3.5 text-[15px] font-bold text-white shadow-lg shadow-cta/20 transition-all hover:opacity-90 active:opacity-80"
           >
             {spirit ? '내 운명의 문 열기' : '내 별 찾으러 가기'}

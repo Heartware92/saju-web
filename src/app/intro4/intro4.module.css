@@ -1,0 +1,22 @@
+/* 온보딩 3장 — 메인 운세 카드 주변 빛나는 글로우 (추천/유도용) */
+.cardGlow {
+  position: relative;
+}
+.cardGlow::before {
+  content: '';
+  position: absolute;
+  inset: -3px;
+  z-index: -1;
+  border-radius: 14px;
+  background: linear-gradient(135deg, var(--cta-primary), var(--cta-secondary));
+  opacity: 0.4;
+  filter: blur(9px);
+  animation: cardPulse 2.8s ease-in-out infinite;
+}
+@keyframes cardPulse {
+  0%, 100% { opacity: 0.28; transform: scale(0.99); }
+  50% { opacity: 0.7; transform: scale(1.02); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .cardGlow::before { animation: none; opacity: 0.4; }
+}
