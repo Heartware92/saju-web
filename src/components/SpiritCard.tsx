@@ -34,14 +34,17 @@ export default function SpiritCard({ spirit }: { spirit: Spirit }) {
         </span>
       </div>
 
-      {/* 일러스트 (정사각) + 오행 글로우 */}
-      <div className="relative mx-auto mb-4 aspect-square w-full overflow-hidden rounded-2xl">
+      {/* 일러스트 — squircle(모서리 라운드 ~40%)로 우측 하단 워터마크만 잘림, 캐릭터는 보존 */}
+      <div
+        className="relative mx-auto mb-4 aspect-square w-full max-w-[270px] overflow-hidden"
+        style={{ borderRadius: '40%', border: `2px solid ${color}`, boxShadow: `0 0 26px -6px ${color}` }}
+      >
         <div
           className="absolute inset-0"
           style={{ background: `radial-gradient(circle at 50% 45%, color-mix(in srgb, ${color} 38%, transparent) 0%, transparent 68%)` }}
         />
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={spirit.image} alt={spirit.name} className="relative h-full w-full object-contain" />
+        <img src={spirit.image} alt={spirit.name} className="relative h-full w-full object-cover" />
       </div>
 
       {/* 이름 */}
