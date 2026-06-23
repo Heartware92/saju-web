@@ -180,28 +180,37 @@ export default function IntroPage() {
           )}
 
           {hasImage ? (
-            // 이미지 슬라이드 — 꼬리 없는 둥근 말풍선 2개, 사선으로 겹침
-            <div className="flex w-full flex-col">
-              {bubbleGroups.map((group, gi) => (
-                <div
-                  key={gi}
-                  className={`${styles.bubble} ${styles.bgFade} px-7 py-6 ${
-                    gi === 0 ? 'self-start' : 'z-10 -mt-6 self-end'
-                  }`}
-                  style={{ maxWidth: '80%', animationDelay: `${gi * 0.18}s` }}
-                >
-                  <p className="text-[17px] leading-[1.95] text-text-primary [text-wrap:balance]" style={{ textShadow: '0 1px 6px rgba(0,0,0,0.7)' }}>
-                    {group.map((line, i) => {
-                      const gIndex = gi === 0 ? i : splitAt + i;
-                      return (
-                        <span key={i} className={`block ${styles.line}`} style={{ animationDelay: `${gIndex * LINE_STEP}s` }}>
-                          {line}
-                        </span>
-                      );
-                    })}
-                  </p>
-                </div>
-              ))}
+            // 이미지 슬라이드 — 둥근 말풍선 2개. 형태(솔리드 union, 겹침 경계 없음) + 텍스트 2레이어.
+            <div className="relative w-full">
+              {/* 형태 레이어 — 솔리드 동일색 도형을 그룹 통째로 반투명 → 겹쳐도 경계선 없음 */}
+              <div className={`absolute inset-0 flex w-full flex-col ${styles.shapeLayer}`} aria-hidden="true">
+                {bubbleGroups.map((group, gi) => (
+                  <div
+                    key={gi}
+                    className={`${styles.bubbleShape} px-7 py-7 ${gi === 0 ? 'self-start' : '-mt-6 self-end'}`}
+                    style={{ maxWidth: 'min(64%, 240px)' }}
+                  >
+                    <p className="invisible text-center text-[16px] leading-[1.7] [text-wrap:balance]">{group.join(' ')}</p>
+                  </div>
+                ))}
+              </div>
+              {/* 텍스트 레이어 — 풀 불투명 (형태와 동일 레이아웃이라 정확히 겹침) */}
+              <div className="relative flex w-full flex-col">
+                {bubbleGroups.map((group, gi) => (
+                  <div
+                    key={gi}
+                    className={`${styles.bgFade} px-7 py-7 ${gi === 0 ? 'self-start' : '-mt-6 self-end'}`}
+                    style={{ maxWidth: 'min(64%, 240px)', animationDelay: `${gi * 0.18}s` }}
+                  >
+                    <p
+                      className="text-center text-[16px] leading-[1.7] text-text-primary [text-wrap:balance]"
+                      style={{ textShadow: '0 1px 6px rgba(0,0,0,0.78)' }}
+                    >
+                      {group.join(' ')}
+                    </p>
+                  </div>
+                ))}
+              </div>
             </div>
           ) : (
             // 모티프 슬라이드(마지막) — 단일 텍스트 + "이천점" 강조

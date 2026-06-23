@@ -54,16 +54,19 @@
   .kenburns { animation: none; }
 }
 
-/* ── 말풍선(speech bubble) — 꼬리·테두리 없는 둥근 형태 ──
-   테두리가 없어 두 개를 겹치면 경계선이 사라져 자연스럽게 합쳐짐.
-   반투명 프로스티드라 배경 이미지가 비침 */
-.bubble {
-  position: relative;
-  background: rgba(12, 7, 26, 0.3);
+/* ── 말풍선(speech bubble) — 형태/텍스트 2레이어 ──
+   형태 레이어: 솔리드 같은 색 도형 2개를 그룹 통째로 반투명 처리 →
+     겹쳐도 같은 색이라 경계선이 전혀 안 생기고(union), 전체는 균일 반투명.
+   텍스트는 별도 레이어에서 풀 불투명으로 얹어 가독성 유지. */
+.shapeLayer {
   -webkit-backdrop-filter: blur(12px) saturate(115%);
   backdrop-filter: blur(12px) saturate(115%);
-  border-radius: 46px;
-  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.26);
+  opacity: 0.34; /* 그룹 투명도 — 겹침 부분도 균일 */
+}
+.bubbleShape {
+  background: #100a22; /* 솔리드 동일색 → 겹쳐도 경계 없음 */
+  border-radius: 999px; /* 좁은 박스에서 거의 원형으로 클램프 */
+  box-shadow: 0 8px 26px rgba(0, 0, 0, 0.5);
 }
 
 /* ── 분위기 레이어: 필름 그레인 (비네트는 셰이더가 처리) ── */
