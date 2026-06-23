@@ -118,9 +118,7 @@ export default function IntroPage() {
   return (
     <div className="app-auth-shell">
       <div
-        className={`app-auth-container relative flex flex-col items-center px-8 text-center select-none ${
-          hasImage ? 'justify-end pb-32' : 'justify-center'
-        }`}
+        className="app-auth-container relative flex flex-col items-center justify-center px-8 text-center select-none"
         onClick={next}
         onTouchStart={onTouchStart}
         onTouchEnd={onTouchEnd}
@@ -146,8 +144,7 @@ export default function IntroPage() {
               className="absolute inset-0"
               style={{
                 background:
-                  'radial-gradient(125% 46% at 50% 90%, rgba(5,3,14,0.88) 0%, rgba(5,3,14,0.0) 72%), ' +
-                  'linear-gradient(180deg, rgba(5,3,14,0.0) 0%, rgba(5,3,14,0.0) 44%, rgba(5,3,14,0.5) 64%, rgba(5,3,14,0.9) 86%, rgba(5,3,14,0.97) 100%)',
+                  'linear-gradient(180deg, rgba(5,3,14,0.0) 0%, rgba(5,3,14,0.0) 60%, rgba(5,3,14,0.32) 84%, rgba(5,3,14,0.6) 100%)',
               }}
             />
           </div>
@@ -177,17 +174,10 @@ export default function IntroPage() {
             </div>
           )}
 
-          <div className={hasImage ? `px-2 ${styles.textHalo}` : undefined}>
+          <div className={hasImage ? `${styles.bubble} px-6 py-5` : undefined}>
           <p
             className="text-[19px] leading-[2.1] text-text-primary [text-wrap:balance]"
-            style={
-              hasImage
-                ? {
-                    textShadow:
-                      '0 0 2px rgba(0,0,0,0.95), 0 1px 2px rgba(0,0,0,0.9), 0 2px 14px rgba(0,0,0,0.8), 0 0 30px rgba(0,0,0,0.45)',
-                  }
-                : undefined
-            }
+            style={hasImage ? { textShadow: '0 1px 5px rgba(0,0,0,0.55)' } : undefined}
           >
             {lines.map((line, i) => {
               // 마지막 장의 "이천점" 강조
