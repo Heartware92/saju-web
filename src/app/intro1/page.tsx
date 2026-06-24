@@ -24,6 +24,15 @@ const LINES: Line[] = [
   { who: 'ivy', text: '맞아. 너랑 있으면 자라는 게 즐거워.' },
 ];
 
+// 내용 길이에 따라 폰트 크기 자동조절 (원형 말풍선 안에 맞게)
+function fontFor(len: number): number {
+  if (len <= 10) return 15;
+  if (len <= 16) return 13.5;
+  if (len <= 22) return 12;
+  if (len <= 28) return 11;
+  return 10;
+}
+
 const GROUP = 4; // 4번 주고받으면 비움
 const STEP = 3000; // 말풍선 간격(ms)
 const HOLD = 1800; // 다 찼을 때 유지(ms)
@@ -82,20 +91,20 @@ export default function DuvyChatPage() {
           <source src="/intro/duvy.mp4" type="video/mp4" />
         </video>
 
-        {/* 듀 말풍선 — 듀(왼쪽) 머리 위 */}
+        {/* 듀 말풍선 — 듀(왼쪽) 머리 위, 원형 */}
         {dew && (
-          <div key={dew.k} className="absolute z-10 flex justify-center" style={{ left: '3%', bottom: '44%', width: '52%' }}>
-            <div className={`${styles.bubble} ${styles.dew} ${styles.pop} px-3.5 py-2.5`} style={{ maxWidth: '100%' }}>
-              <p className="break-keep text-center text-[13.5px] leading-snug">{dew.text}</p>
+          <div key={dew.k} className="absolute z-10" style={{ left: '4%', bottom: '44%', width: '42%' }}>
+            <div className={`${styles.bubble} ${styles.dew} ${styles.pop} p-3`}>
+              <p className="break-keep" style={{ fontSize: fontFor(dew.text.length), lineHeight: 1.25 }}>{dew.text}</p>
             </div>
           </div>
         )}
 
-        {/* 아이비 말풍선 — 아이비(오른쪽) 머리 위 */}
+        {/* 아이비 말풍선 — 아이비(오른쪽) 머리 위, 원형 */}
         {ivy && (
-          <div key={ivy.k} className="absolute z-10 flex justify-center" style={{ right: '3%', bottom: '43%', width: '52%' }}>
-            <div className={`${styles.bubble} ${styles.ivy} ${styles.pop} px-3.5 py-2.5`} style={{ maxWidth: '100%' }}>
-              <p className="break-keep text-center text-[13.5px] leading-snug">{ivy.text}</p>
+          <div key={ivy.k} className="absolute z-10" style={{ right: '4%', bottom: '43%', width: '42%' }}>
+            <div className={`${styles.bubble} ${styles.ivy} ${styles.pop} p-3`}>
+              <p className="break-keep" style={{ fontSize: fontFor(ivy.text.length), lineHeight: 1.25 }}>{ivy.text}</p>
             </div>
           </div>
         )}
