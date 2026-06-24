@@ -14,14 +14,14 @@ type Line = { who: 'dew' | 'ivy'; text: string };
 type Bubble = { text: string; k: number } | null;
 
 const LINES: Line[] = [
-  { who: 'dew', text: '있지, 너 옆에 있으면 자꾸 새잎이 돋더라?' },
-  { who: 'ivy', text: '네가 자꾸 적셔주니까 그렇지.' },
-  { who: 'dew', text: '물은 원래 나무를 키우는 거니까~' },
-  { who: 'ivy', text: '…나쁘진 않네, 너 곁이.' },
-  { who: 'ivy', text: '근데 너무 적시진 마. 뿌리 썩어.' },
-  { who: 'dew', text: '앗, 미안. 딱 적당히 할게.' },
-  { who: 'ivy', text: '그래, 그 정도가 딱 좋아.' },
-  { who: 'dew', text: '거봐, 우리 은근 잘 맞지?' },
+  { who: 'dew', text: '난 계수, 듀야. 이슬처럼 조용히 스며드는 편이지.' },
+  { who: 'ivy', text: '난 을목, 아이비. 유연하게 휘감고 자라는 덩굴이야.' },
+  { who: 'dew', text: '내 물기가 네 뿌리를 적셔주잖아. 수생목이거든.' },
+  { who: 'ivy', text: '응, 네가 적셔주면 난 쭉쭉 자라서 좋아.' },
+  { who: 'dew', text: '넌 적응력이 좋아서 변덕스런 나도 잘 받아주더라.' },
+  { who: 'ivy', text: '네 섬세함이 딱 필요한 만큼만 주니까 편하고.' },
+  { who: 'dew', text: '그래서 우리가 잘 맞는 거야. 물이랑 나무.' },
+  { who: 'ivy', text: '맞아. 너랑 있으면 자라는 게 즐거워.' },
 ];
 
 const GROUP = 4; // 4번 주고받으면 비움
@@ -84,7 +84,7 @@ export default function DuvyChatPage() {
 
         {/* 듀 말풍선 — 듀(왼쪽) 머리 위 */}
         {dew && (
-          <div key={dew.k} className="absolute z-10 flex justify-center" style={{ left: '3%', bottom: '44%', width: '46%' }}>
+          <div key={dew.k} className="absolute z-10 flex justify-center" style={{ left: '3%', bottom: '44%', width: '52%' }}>
             <div className={`${styles.bubble} ${styles.dew} ${styles.pop} px-3.5 py-2.5`} style={{ maxWidth: '100%' }}>
               <p className="break-keep text-center text-[13.5px] leading-snug">{dew.text}</p>
             </div>
@@ -93,7 +93,7 @@ export default function DuvyChatPage() {
 
         {/* 아이비 말풍선 — 아이비(오른쪽) 머리 위 */}
         {ivy && (
-          <div key={ivy.k} className="absolute z-10 flex justify-center" style={{ right: '3%', bottom: '43%', width: '46%' }}>
+          <div key={ivy.k} className="absolute z-10 flex justify-center" style={{ right: '3%', bottom: '43%', width: '52%' }}>
             <div className={`${styles.bubble} ${styles.ivy} ${styles.pop} px-3.5 py-2.5`} style={{ maxWidth: '100%' }}>
               <p className="break-keep text-center text-[13.5px] leading-snug">{ivy.text}</p>
             </div>
