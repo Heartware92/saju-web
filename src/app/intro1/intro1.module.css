@@ -1,0 +1,35 @@
+/* 듀×아이비 상생 대화 — 영상 위 말풍선 */
+.bubble {
+  position: relative;
+  background: rgba(247, 243, 255, 0.94);
+  color: #1c1533;
+  border-radius: 22px;
+  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.32);
+}
+/* 꼬리 — 캐릭터(아래)를 향함 */
+.tailL::after,
+.tailR::after {
+  content: '';
+  position: absolute;
+  bottom: -9px;
+  width: 0;
+  height: 0;
+  border-left: 9px solid transparent;
+  border-right: 9px solid transparent;
+  border-top: 11px solid rgba(247, 243, 255, 0.94);
+}
+.tailL::after { left: 26px; }
+.tailR::after { right: 26px; }
+
+.fadeUp {
+  opacity: 0;
+  animation: bubbleUp 0.6s ease-out forwards;
+}
+@keyframes bubbleUp {
+  from { opacity: 0; transform: translateY(10px) scale(0.96); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fadeUp { animation: none; opacity: 1; }
+}
