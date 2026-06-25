@@ -63,10 +63,12 @@ export interface PaymentResult {
  * 포트원 결제 처리 (클라이언트 진입점)
  */
 export const processPayment = async (
-  request: PaymentRequest
+  request: PaymentRequest,
+  opts?: { channelKeyOverride?: string; payMethod?: string },
 ): Promise<PaymentResult> => {
   try {
-    const channelKey = await fetchActiveChannelKey();
+    // 테스트(/credit_test)에서 특정 PG 채널키를 명시하면 그 채널로 결제 — 라이브 active_channel 무관.
+    const channelKey = opts?.channelKeyOverride?.trim() || await fetchActiveChannelKey();
     if (!PORTONE_STORE_ID || !channelKey) {
       return {
         success: false,
@@ -116,7 +118,7 @@ export const processPayment = async (
       orderName: `크레딧 ${request.creditAmount}개 (${packageInfo.name})`,
       totalAmount: request.amount,
       currency: 'CURRENCY_KRW',
-      payMethod: 'CARD',
+      payMethod: (opts?.payMethod || 'CARD') as 'CARD',
       redirectUrl: `${BASE_URL}/payment/callback`,
       customer: {
         email: user.email || undefined,
