@@ -4,14 +4,13 @@
  * 듀 × 아이비 상생 대화 데모 (/intro1)
  *
  * idle 영상(duvy.mp4) 위에 각 캐릭터 머리 위로 둥근 말풍선이 번갈아 등장(3초 간격).
- * 4번 주고받으면 비우고 다음 대화로 이어짐(루프). 상생(수생목) 케미.
+ * 한 번에 하나씩 — 현재 말하는 쪽만 표시, 다음 줄로 넘어가면 이전 건 사라짐(루프). 상생(수생목) 케미.
  */
 
 import { useEffect, useState } from 'react';
 import styles from './intro1.module.css';
 
 type Line = { who: 'dew' | 'ivy'; text: string };
-type Bubble = { text: string; k: number } | null;
 
 const LINES: Line[] = [
   { who: 'dew', text: '난 계수, 듀야. 이슬처럼 조용히 스며드는 편이지.' },
@@ -33,39 +32,25 @@ function fontFor(len: number): number {
   return 10;
 }
 
-const GROUP = 4; // 4번 주고받으면 비움
 const STEP = 3000; // 말풍선 간격(ms)
-const HOLD = 1800; // 다 찼을 때 유지(ms)
-const CLEAR_PAUSE = 700;
+
+type Current = { who: 'dew' | 'ivy'; text: string; k: number } | null;
 
 export default function DuvyChatPage() {
-  const [dew, setDew] = useState<Bubble>(null);
-  const [ivy, setIvy] = useState<Bubble>(null);
+  // 한 번에 하나씩 — 현재 말하는 쪽 말풍선만. 다음 줄로 넘어가면 이전 건 사라짐.
+  const [cur, setCur] = useState<Current>(null);
 
   useEffect(() => {
     let idx = 0;
-    let inGroup = 0;
     let k = 0;
     let timer: ReturnType<typeof setTimeout>;
 
     const tick = () => {
       const line = LINES[idx];
       k += 1;
-      if (line.who === 'dew') setDew({ text: line.text, k });
-      else setIvy({ text: line.text, k });
+      setCur({ who: line.who, text: line.text, k });
       idx = (idx + 1) % LINES.length;
-      inGroup += 1;
-
-      if (inGroup >= GROUP) {
-        timer = setTimeout(() => {
-          setDew(null);
-          setIvy(null);
-          inGroup = 0;
-          timer = setTimeout(tick, CLEAR_PAUSE);
-        }, HOLD);
-      } else {
-        timer = setTimeout(tick, STEP);
-      }
+      timer = setTimeout(tick, STEP);
     };
 
     timer = setTimeout(tick, 500);
@@ -91,20 +76,21 @@ export default function DuvyChatPage() {
           <source src="/intro/duvy.mp4" type="video/mp4" />
         </video>
 
-        {/* 듀 말풍선 — 듀(왼쪽) 머리 위, 원형 */}
-        {dew && (
-          <div key={dew.k} className="absolute z-10" style={{ left: '4%', bottom: '44%', width: '42%' }}>
-            <div className={`${styles.bubble} ${styles.dew} ${styles.pop} p-3`}>
-              <p className="break-keep" style={{ fontSize: fontFor(dew.text.length), lineHeight: 1.25 }}>{dew.text}</p>
-            </div>
-          </div>
-        )}
-
-        {/* 아이비 말풍선 — 아이비(오른쪽) 머리 위, 원형 */}
-        {ivy && (
-          <div key={ivy.k} className="absolute z-10" style={{ right: '4%', bottom: '43%', width: '42%' }}>
-            <div className={`${styles.bubble} ${styles.ivy} ${styles.pop} p-3`}>
-              <p className="break-keep" style={{ fontSize: fontFor(ivy.text.length), lineHeight: 1.25 }}>{ivy.text}</p>
+        {/* 현재 말하는 쪽 말풍선 하나만 — 듀=왼쪽 머리 위 / 아이비=오른쪽 머리 위 */}
+        {cur && (
+          <div
+            key={cur.k}
+            className="absolute z-10"
+            style={
+              cur.who === 'dew'
+                ? { left: '4%', bottom: '44%', width: '42%' }
+                : { right: '4%', bottom: '43%', width: '42%' }
+            }
+          >
+            <div className={`${styles.bubble} ${cur.who === 'dew' ? styles.dew : styles.ivy} ${styles.pop} p-3`}>
+              <p className="break-keep" style={{ fontSize: fontFor(cur.text.length), lineHeight: 1.25 }}>
+                {cur.text}
+              </p>
             </div>
           </div>
         )}
