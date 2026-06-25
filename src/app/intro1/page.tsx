@@ -25,14 +25,14 @@ const LINES: Line[] = [
 
 // 내용 길이에 따라 폰트 크기 자동조절 (원형 말풍선 안에 맞게)
 function fontFor(len: number): number {
-  if (len <= 10) return 15;
-  if (len <= 16) return 13.5;
-  if (len <= 22) return 12;
-  if (len <= 28) return 11;
-  return 10;
+  if (len <= 10) return 18;
+  if (len <= 16) return 16;
+  if (len <= 22) return 14.5;
+  if (len <= 28) return 13;
+  return 12;
 }
 
-const STEP = 3000; // 말풍선 간격(ms)
+const STEP = 4000; // 말풍선 간격(ms)
 
 type Current = { who: 'dew' | 'ivy'; text: string; k: number } | null;
 
@@ -83,8 +83,8 @@ export default function DuvyChatPage() {
             className="absolute z-10"
             style={
               cur.who === 'dew'
-                ? { left: '4%', bottom: '44%', width: '42%' }
-                : { right: '4%', bottom: '43%', width: '42%' }
+                ? { left: '4%', bottom: '46%', width: '48%' }
+                : { right: '4%', bottom: '45%', width: '48%' }
             }
           >
             <div className={`${styles.bubble} ${cur.who === 'dew' ? styles.dew : styles.ivy} ${styles.pop} p-3`}>
