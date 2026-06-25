@@ -25,20 +25,21 @@ const LINES: Line[] = [
 
 // 내용 길이에 따라 폰트 크기 자동조절 (원형 말풍선 안에 맞게)
 function fontFor(len: number): number {
-  if (len <= 10) return 18;
-  if (len <= 16) return 16;
-  if (len <= 22) return 14.5;
-  if (len <= 28) return 13;
-  return 12;
+  if (len <= 10) return 20;
+  if (len <= 16) return 18;
+  if (len <= 22) return 16.5;
+  if (len <= 28) return 15;
+  return 13.5;
 }
 
 const STEP = 4000; // 말풍선 간격(ms)
 
-type Current = { who: 'dew' | 'ivy'; text: string; k: number } | null;
+type Bubble = { text: string; k: number } | null;
 
 export default function DuvyChatPage() {
-  // 한 번에 하나씩 — 현재 말하는 쪽 말풍선만. 다음 줄로 넘어가면 이전 건 사라짐.
-  const [cur, setCur] = useState<Current>(null);
+  // 각 캐릭터 말풍선은 항상 머리 위에 유지되고, 그 캐릭터가 말할 때 내용이 '교체'됨(사라졌다 생기지 않음).
+  const [dew, setDew] = useState<Bubble>(null);
+  const [ivy, setIvy] = useState<Bubble>(null);
 
   useEffect(() => {
     let idx = 0;
@@ -48,12 +49,13 @@ export default function DuvyChatPage() {
     const tick = () => {
       const line = LINES[idx];
       k += 1;
-      setCur({ who: line.who, text: line.text, k });
+      if (line.who === 'dew') setDew({ text: line.text, k });
+      else setIvy({ text: line.text, k });
       idx = (idx + 1) % LINES.length;
       timer = setTimeout(tick, STEP);
     };
 
-    timer = setTimeout(tick, 500);
+    timer = setTimeout(tick, 400);
     return () => clearTimeout(timer);
   }, []);
 
@@ -76,20 +78,23 @@ export default function DuvyChatPage() {
           <source src="/intro/duvy.mp4" type="video/mp4" />
         </video>
 
-        {/* 현재 말하는 쪽 말풍선 하나만 — 듀=왼쪽 머리 위 / 아이비=오른쪽 머리 위 */}
-        {cur && (
-          <div
-            key={cur.k}
-            className="absolute z-10"
-            style={
-              cur.who === 'dew'
-                ? { left: '4%', bottom: '46%', width: '48%' }
-                : { right: '4%', bottom: '45%', width: '48%' }
-            }
-          >
-            <div className={`${styles.bubble} ${cur.who === 'dew' ? styles.dew : styles.ivy} ${styles.pop} p-3`}>
-              <p className="break-keep" style={{ fontSize: fontFor(cur.text.length), lineHeight: 1.25 }}>
-                {cur.text}
+        {/* 듀 말풍선 — 왼쪽 머리 위 (항상 유지, 듀가 말하면 내용 교체) */}
+        {dew && (
+          <div key={dew.k} className="absolute z-10" style={{ left: '3%', bottom: '46%', width: '44%' }}>
+            <div className={`${styles.bubble} ${styles.dew} ${styles.pop} p-3`}>
+              <p className="break-keep" style={{ fontSize: fontFor(dew.text.length), lineHeight: 1.25 }}>
+                {dew.text}
+              </p>
+            </div>
+          </div>
+        )}
+
+        {/* 아이비 말풍선 — 오른쪽 머리 위 (항상 유지, 아이비가 말하면 내용 교체) */}
+        {ivy && (
+          <div key={ivy.k} className="absolute z-10" style={{ right: '3%', bottom: '45%', width: '44%' }}>
+            <div className={`${styles.bubble} ${styles.ivy} ${styles.pop} p-3`}>
+              <p className="break-keep" style={{ fontSize: fontFor(ivy.text.length), lineHeight: 1.25 }}>
+                {ivy.text}
               </p>
             </div>
           </div>
