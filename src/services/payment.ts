@@ -64,7 +64,7 @@ export interface PaymentResult {
  */
 export const processPayment = async (
   request: PaymentRequest,
-  opts?: { channelKeyOverride?: string; payMethod?: string },
+  opts?: { channelKeyOverride?: string; payMethod?: string; easyPayProvider?: string },
 ): Promise<PaymentResult> => {
   try {
     // 테스트(/credit_test)에서 특정 PG 채널키를 명시하면 그 채널로 결제 — 라이브 active_channel 무관.
@@ -119,6 +119,10 @@ export const processPayment = async (
       totalAmount: request.amount,
       currency: 'CURRENCY_KRW',
       payMethod: (opts?.payMethod || 'CARD') as 'CARD',
+      // 간편결제(EASY_PAY)는 일부 PG(KPN 등)에서 provider 지정이 필수.
+      ...(opts?.payMethod === 'EASY_PAY' && opts?.easyPayProvider
+        ? { easyPay: { easyPayProvider: opts.easyPayProvider as 'EASY_PAY_PROVIDER_KAKAOPAY' } }
+        : {}),
       redirectUrl: `${BASE_URL}/payment/callback`,
       customer: {
         email: user.email || undefined,

@@ -11,6 +11,15 @@ import { processPayment } from '@/services/payment';
 
 const PAY_METHODS = ['CARD', 'EASY_PAY', 'VIRTUAL_ACCOUNT', 'TRANSFER', 'MOBILE'] as const;
 
+// EASY_PAY 일 때 어느 간편결제사인지 — KPN 등은 provider 지정이 필수
+const EASY_PAY_PROVIDERS: { label: string; value: string }[] = [
+  { label: '카카오페이', value: 'EASY_PAY_PROVIDER_KAKAOPAY' },
+  { label: '네이버페이', value: 'EASY_PAY_PROVIDER_NAVERPAY' },
+  { label: '토스페이', value: 'EASY_PAY_PROVIDER_TOSSPAY' },
+  { label: '페이코', value: 'EASY_PAY_PROVIDER_PAYCO' },
+  { label: '삼성페이', value: 'EASY_PAY_PROVIDER_SAMSUNGPAY' },
+];
+
 // 채널키 프리셋 — 클릭으로 채움. PortOne channelKey는 클라이언트에 노출되는 공개값.
 const CHANNEL_PRESETS: { label: string; key: string }[] = [
   { label: 'KPN (포트원)', key: 'channel-key-8d7ca754-c4de-4a24-bb5c-ac6d27b24659' },
@@ -19,6 +28,7 @@ const CHANNEL_PRESETS: { label: string; key: string }[] = [
 export default function CreditTestClient() {
   const [channelKey, setChannelKey] = useState('');
   const [payMethod, setPayMethod] = useState<string>('CARD');
+  const [easyPayProvider, setEasyPayProvider] = useState<string>('EASY_PAY_PROVIDER_KAKAOPAY');
   const [busy, setBusy] = useState<string | null>(null);
   const [result, setResult] = useState<{ ok: boolean; msg: string } | null>(null);
 
@@ -40,7 +50,7 @@ export default function CreditTestClient() {
     try {
       const r = await processPayment(
         { packageId: pkg.id, amount: pkg.price, creditAmount: pkg.moonCredit },
-        { channelKeyOverride: channelKey.trim(), payMethod },
+        { channelKeyOverride: channelKey.trim(), payMethod, easyPayProvider: payMethod === 'EASY_PAY' ? easyPayProvider : undefined },
       );
       setResult({ ok: !!r.success, msg: r.message || (r.success ? '결제 성공' : r.error || '실패') });
     } catch (e: unknown) {
@@ -91,6 +101,19 @@ export default function CreditTestClient() {
       >
         {PAY_METHODS.map((m) => <option key={m} value={m}>{m}</option>)}
       </select>
+
+      {payMethod === 'EASY_PAY' && (
+        <>
+          <label className="block text-[13px] text-text-secondary mb-1">간편결제사 (easyPayProvider)</label>
+          <select
+            value={easyPayProvider}
+            onChange={(e) => setEasyPayProvider(e.target.value)}
+            className="w-full h-11 rounded-lg bg-white/5 border border-white/15 px-3 text-sm outline-none focus:border-cta/50 mb-5"
+          >
+            {EASY_PAY_PROVIDERS.map((p) => <option key={p.value} value={p.value}>{p.label}</option>)}
+          </select>
+        </>
+      )}
 
       {result && (
         <div className={`mb-4 px-4 py-3 rounded-xl border text-[14px] ${result.ok ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-300' : 'bg-red-500/10 border-red-500/30 text-red-300'}`}>
