@@ -1,6 +1,7 @@
 'use client';
 
 import { motion } from 'framer-motion';
+import { renderEmphasis } from '@/utils/renderEmphasis';
 import {
   TODAY_V3_SECTION_KEYS, TODAY_V3_SECTION_LABELS,
   TODAY_V3_DOMAIN_KEYS, TODAY_V3_DOMAIN_LABELS,
@@ -282,7 +283,7 @@ export function TodayResultBlock({ record, showSectionVisuals = false }: Props) 
               {showSectionVisuals && renderTodaySectionVisual(key, report)}
               <div className="text-[15px] text-text-secondary leading-[1.85] tracking-[-0.005em] space-y-3">
                 {bodyText.split(/\n\n+/).map((para, pi) => (
-                  <p key={pi} className="whitespace-pre-line">{para.trim()}</p>
+                  <p key={pi} className="whitespace-pre-line">{renderEmphasis(para.trim())}</p>
                 ))}
               </div>
             </motion.div>

@@ -1,6 +1,7 @@
 'use client';
 
 import type { TaekilResult, TaekilDay, TaekilGrade } from '@/engine/taekil';
+import { renderEmphasis } from '@/utils/renderEmphasis';
 
 interface Props {
   record: Record<string, any>;
@@ -243,7 +244,7 @@ export function TaekilResultBlock({ record }: Props) {
                     {adv.summary && (
                       <div style={{ marginBottom: 14 }}>
                         <p style={{ fontSize: 15, color: 'var(--text-secondary)', lineHeight: 1.85, margin: 0, whiteSpace: 'pre-line', fontFamily: 'var(--font-body)', letterSpacing: '0.16em' }}>
-                          {adv.summary}
+                          {renderEmphasis(adv.summary)}
                         </p>
                       </div>
                     )}
@@ -322,7 +323,7 @@ export function TaekilResultBlock({ record }: Props) {
                     <span style={{ fontSize: 13, fontWeight: 700, color: '#F87171' }}>피해야 할 날</span>
                   </div>
                   <p style={{ fontSize: 14, color: 'var(--text-secondary)', lineHeight: 1.85, margin: 0, whiteSpace: 'pre-line', fontFamily: 'var(--font-body)', letterSpacing: '0.16em' }}>
-                    {parsedAdvice.avoid}
+                    {renderEmphasis(parsedAdvice.avoid)}
                   </p>
                 </div>
               )}

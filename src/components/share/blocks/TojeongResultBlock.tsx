@@ -6,6 +6,7 @@ import { parseTojeongSections, parseTojeongScores } from '@/services/fortuneServ
 import { calculateTojeong, type TojeongResult } from '@/engine/tojeong';
 import { buildTojeongReading } from '@/engine/tojeong/reading';
 import { extractMetaphor } from '@/utils/parseMetaphor';
+import { renderEmphasis } from '@/utils/renderEmphasis';
 import type { GwaeGrade } from '@/engine/tojeong/gwae-table';
 import type { FortuneGrade } from '@/engine/periodFortune';
 import { RadarChart } from '@/components/charts/RadarChart';
@@ -375,7 +376,7 @@ export function TojeongResultBlock({ record }: Props) {
                   </div>
                 )}
                 <p className="text-[15px] text-text-secondary leading-[1.85] tracking-[-0.005em] whitespace-pre-line">
-                  {bodyText}
+                  {renderEmphasis(bodyText)}
                 </p>
               </motion.section>
             );

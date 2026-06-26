@@ -6,6 +6,7 @@ import { ZAMIDUSU_SECTION_KEYS, ZAMIDUSU_SECTION_LABELS } from '@/constants/prom
 import { parseZamidusuSections } from '@/services/fortuneService';
 import { calculateZamidusu, type ZamidusuResult } from '@/engine/zamidusu';
 import { extractMetaphor } from '@/utils/parseMetaphor';
+import { renderEmphasis } from '@/utils/renderEmphasis';
 import { StarChart } from '@/components/zamidusu/StarChart';
 import { CorePalaceScores } from '@/components/zamidusu/CorePalaceScores';
 import { MutagenCards } from '@/components/zamidusu/MutagenCards';
@@ -165,7 +166,7 @@ export function ZamidusuResultBlock({ record }: Props) {
               const raw = hasHeadline ? body : text;
               return splitIntoParagraphs(raw).map((p, i) => (
                 <p key={i} className="leading-[1.85]" style={{ fontSize: 15, color: 'var(--text-secondary)', margin: i === 0 ? 0 : '14px 0 0' }}>
-                  {p}
+                  {renderEmphasis(p)}
                 </p>
               ));
             })()}

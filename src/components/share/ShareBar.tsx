@@ -188,10 +188,35 @@ export function ShareBar({
   */
 
   const handleCopyLink = async () => {
-    const url = await getShareLink();
-    if (!url) return;
     trackEvent('share_url'); // 공유(링크 복사) 페이지 집계
 
+    // ★ iOS Safari: 비동기 작업(공유 링크 생성 fetch) 후 navigator.clipboard.writeText 는
+    //   사용자 제스처 컨텍스트를 잃어 차단됨 → "자동 복사가 막힌 환경" 이 떴다(보관함·결과 공유 공통).
+    //   해결: ClipboardItem 에 Promise<Blob> 를 넘기면 Safari 가 제스처를 유지한 채 비동기 생성 후
+    //   복사를 허용한다. (미지원 브라우저는 아래 레거시 경로로 폴백)
+    if (typeof ClipboardItem !== 'undefined' && navigator.clipboard?.write) {
+      setLoading(true);
+      try {
+        await navigator.clipboard.write([
+          new ClipboardItem({
+            'text/plain': getShareLink().then((u) => {
+              if (!u) throw new Error('NO_URL');
+              return new Blob([u], { type: 'text/plain' });
+            }),
+          }),
+        ]);
+        setModal({ message: '링크가 복사되었어요', success: true });
+        return;
+      } catch {
+        /* 폴백으로 진행 */
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    // 레거시 폴백 (구형 브라우저·데스크톱 Chrome 등 — 제스처 제약이 느슨)
+    const url = await getShareLink();
+    if (!url) return;
     const ok = await copyTextToClipboard(url);
     if (ok) {
       setModal({ message: '링크가 복사되었어요', success: true });

@@ -10,6 +10,7 @@ import { TermChip } from '@/components/ui/TermChip';
 import { RadarChart } from '@/components/charts/RadarChart';
 import { MonthlyTrendChart } from '@/components/charts/MonthlyTrendChart';
 import { extractMetaphor } from '@/utils/parseMetaphor';
+import { renderEmphasis } from '@/utils/renderEmphasis';
 
 interface Props {
   record: Record<string, any>;
@@ -308,7 +309,7 @@ export function PeriodResultBlock({ record }: Props) {
                     </div>
                   ) : (
                     <p className="text-[15px] text-text-secondary leading-relaxed whitespace-pre-line break-keep">
-                      {bodyText}
+                      {renderEmphasis(bodyText)}
                     </p>
                   )}
                 </motion.div>
@@ -358,7 +359,7 @@ export function PeriodResultBlock({ record }: Props) {
                   )}
                   <div className="text-[15px] text-text-secondary leading-relaxed break-keep space-y-3">
                     {bodyText.split(/\n\n+/).map((para, pi) => (
-                      <p key={pi} className="whitespace-pre-line">{para.trim()}</p>
+                      <p key={pi} className="whitespace-pre-line">{renderEmphasis(para.trim())}</p>
                     ))}
                   </div>
                 </motion.div>

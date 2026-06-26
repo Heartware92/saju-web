@@ -19,6 +19,7 @@ import {
 } from '@/services/fortuneService';
 import { parseGunghapHeader } from '@/lib/gunghap';
 import { extractMetaphor } from '@/utils/parseMetaphor';
+import { renderEmphasis } from '@/utils/renderEmphasis';
 import { GunghapResultBlock } from '@/components/gunghap/GunghapResultBlock';
 import { RadarChart } from '@/components/charts/RadarChart';
 import { SajuTraditionalResultBlock } from '@/components/share/blocks/SajuTraditionalResultBlock';
@@ -457,7 +458,7 @@ function SectionCard({ label, text, idx }: { label: string; text: string; idx: n
 
       <div className="text-[17px] text-text-secondary leading-[1.85] tracking-[-0.005em] space-y-3">
         {bodyText.split(/\n\n+/).map((para, pi) => (
-          <p key={pi} className="whitespace-pre-line">{para.trim()}</p>
+          <p key={pi} className="whitespace-pre-line">{renderEmphasis(para.trim())}</p>
         ))}
       </div>
     </motion.div>

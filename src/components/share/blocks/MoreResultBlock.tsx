@@ -3,6 +3,7 @@
 import { motion } from 'framer-motion';
 import { MORE_FORTUNE_CONFIGS, type MoreFortuneId } from '@/constants/moreFortunes';
 import { extractMetaphor } from '@/utils/parseMetaphor';
+import { renderEmphasis } from '@/utils/renderEmphasis';
 import { parseDreamV4 } from '@/services/fortuneService';
 import { DreamResultCard } from '@/components/dream/DreamResultCard';
 
@@ -141,7 +142,7 @@ export function MoreResultBlock({ record }: Props) {
         <div className="space-y-3">
           {paragraphs.map((p, i) => (
             <p key={i} className="text-[16px] text-text-secondary leading-[1.85] whitespace-pre-line tracking-[-0.005em]">
-              {p}
+              {renderEmphasis(p)}
             </p>
           ))}
         </div>
