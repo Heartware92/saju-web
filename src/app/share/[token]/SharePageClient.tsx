@@ -391,8 +391,10 @@ export default function SharePageClient({ type, record }: Props) {
         </div>
       )}
 
-      {/* 섹션 카드 — 범용 파서 (자체 블록이 처리하는 카테고리는 제외) */}
-      {useUniversal && universalResult && !isGunghap && !isTaekil && !isMore && (
+      {/* 섹션 카드 — 범용 파서 (자체 블록이 처리하는 카테고리는 제외)
+          ★ 궁합: 위 GunghapResultBlock 은 점수·차트만 렌더하므로, 본문(▶ 섹션)은 여기서 그린다.
+            (회귀 사고: 점수 블록 추가 시 !isGunghap 으로 본문까지 막혀 해설이 통째로 사라졌었음) */}
+      {useUniversal && universalResult && !isTaekil && !isMore && (
         <div className="space-y-2">
           {universalResult.sections.map((sec, idx) => (
             <SectionCard key={idx} label={sec.title} text={sec.body} idx={idx} />
