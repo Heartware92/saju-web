@@ -4,7 +4,9 @@
  * 기존 calculatePeriodFortune (오늘운세·신년운세 등 공용) 과 격리되어 있어
  * 가중치를 자유롭게 변경해도 다른 카테고리 점수에 영향 없음.
  *
- * 설계 목표: 변동폭 큰 곡선 — 흉운 해는 25~45, 평년 50~70, 대길은 85~95 분포.
+ * 설계 목표: 변동폭 큰 곡선. 원점수(raw)는 흉운 25~45·평년 50~70·대길 85~95로 계산하되,
+ *   최종 점수는 다른 운세(periodFortune 60~97)와 일관되게 60~97 밴드로 선형 매핑한다
+ *   (곡선의 상대적 굴곡은 보존, 박한 저점만 제거 — 2026-06 일관성 통일).
  *
  * 점수 구성 (base 50 시작):
  *   1) 세운 천간 십신             (range +15 ~ -6)
@@ -16,7 +18,7 @@
  *   7) 12운성 (일간 기준 세운 지지) — 절·태·사 등 큰 페널티
  *   8) 핵심 신살 (천을귀인 / 양인 / 도화)
  *
- * 최종 clamp: 15~98
+ * 최종: raw 15~98 → 60~97 선형 매핑 (전 운세 일관 밴드)
  */
 
 import { Solar } from 'lunar-javascript';
@@ -181,7 +183,7 @@ function yearGanZhi(year: number): { gan: string; zhi: string } {
 // ============================================
 
 export interface LifetimeScoreResult {
-  score: number;        // 15~98
+  score: number;        // 60~97 (전 운세 일관 밴드)
   yearGan: string;
   yearZhi: string;
   yearGanZhi: string;
@@ -283,7 +285,12 @@ export function computeLifetimeScore(
     DOHWA_FROM_TRIO[saju.pillars.day.zhi] ?? DOHWA_FROM_TRIO[saju.pillars.year.zhi];
   if (dohwaTarget && dohwaTarget === yearZhi) score += W_DOHWA;
 
-  const finalScore = Math.max(15, Math.min(98, Math.round(score)));
+  // ★ 다른 운세(periodFortune: 신년·월별·실시간·지정일)는 60~97 로 상향 평준화돼 있어
+  //   평생 흐름만 15~98 로 박하게 떨어져 일관성이 깨졌었다(유저 제보).
+  //   → 원점수(raw 15~98)를 60~97 밴드로 '선형 매핑'한다. 곡선의 상대적 굴곡(피크·저점 위치·
+  //     기복감)은 그대로 보존하면서, 박한 저점(흉 15~45)만 제거해 전 운세와 동일 밴드로 통일.
+  const raw = Math.max(15, Math.min(98, Math.round(score)));
+  const finalScore = Math.round(60 + ((raw - 15) / (98 - 15)) * (97 - 60));
 
   return {
     score: finalScore,
@@ -296,11 +303,13 @@ export function computeLifetimeScore(
 // 점수 → 등급
 export type LifetimeGrade = '대길' | '길' | '중길' | '평' | '중흉' | '흉';
 
+// ★ 등급 컷을 periodFortune.gradeFromScore 와 동일하게 통일 — 같은 점수가 어디서든 같은 등급.
+//   (60~97 밴드라 실질적으로 흉(60미만)은 나오지 않고 중흉이 최저)
 export function lifetimeGrade(score: number): LifetimeGrade {
-  if (score >= 85) return '대길';
-  if (score >= 72) return '길';
-  if (score >= 60) return '중길';
-  if (score >= 45) return '평';
-  if (score >= 32) return '중흉';
+  if (score >= 90) return '대길';
+  if (score >= 82) return '길';
+  if (score >= 72) return '중길';
+  if (score >= 65) return '평';
+  if (score >= 60) return '중흉';
   return '흉';
 }
