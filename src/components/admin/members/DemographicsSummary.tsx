@@ -4,6 +4,7 @@
  */
 'use client';
 
+import { useState } from 'react';
 import { DonutChart } from '../charts/DonutChart';
 import { HorizontalBarChart } from '../charts/HorizontalBarChart';
 import { VerticalBarChart } from '../charts/VerticalBarChart';
@@ -24,6 +25,7 @@ export interface MemberSummary {
   ageCounts: Record<string, number>;
   provider: Record<string, number>;
   cohort: Array<{ month: string; count: number }>;
+  cohortDaily?: Array<{ date: string; count: number }>;
   segments: Record<UserSegment, number>;
 }
 
@@ -35,7 +37,7 @@ interface Props {
 
 export function DemographicsSummary({ summary, activeSegment, onSegmentChange }: Props) {
   if (!summary) return null;
-  const { kpi, gender, ageCounts, provider, cohort, segments } = summary;
+  const { kpi, gender, ageCounts, provider, cohort, cohortDaily, segments } = summary;
 
   const todayDelta = kpi.joinedToday - kpi.joinedYesterday;
 
@@ -109,13 +111,44 @@ export function DemographicsSummary({ summary, activeSegment, onSegmentChange }:
           />
         </Card>
 
-        <Card title="월별 가입 코호트 (최근 12개월)">
-          <VerticalBarChart
-            bars={cohort.map(c => ({ key: c.month, label: c.month.slice(5), value: c.count }))}
-            color="rgba(167, 139, 250, 0.75)"
-          />
-        </Card>
+        <CohortCard cohort={cohort} cohortDaily={cohortDaily} />
       </div>
+    </div>
+  );
+}
+
+/** 가입 코호트 — 월별/일별 토글 */
+function CohortCard({
+  cohort, cohortDaily,
+}: {
+  cohort: Array<{ month: string; count: number }>;
+  cohortDaily?: Array<{ date: string; count: number }>;
+}) {
+  const [view, setView] = useState<'month' | 'day'>('month');
+  const daily = cohortDaily ?? [];
+  const showDay = view === 'day' && daily.length > 0;
+  const bars = showDay
+    ? daily.map(c => ({ key: c.date, label: c.date.slice(5), value: c.count }))
+    : cohort.map(c => ({ key: c.month, label: c.month.slice(5), value: c.count }));
+  return (
+    <div className="bg-white/5 border border-white/10 rounded-xl p-4">
+      <div className="flex items-center justify-between mb-3">
+        <h3 className="text-[13px] font-semibold text-text-secondary uppercase tracking-wider">
+          가입 코호트 {showDay ? '(최근 30일)' : '(최근 12개월)'}
+        </h3>
+        <div className="flex gap-1 p-0.5 bg-white/5 rounded-lg border border-white/10">
+          {(['month', 'day'] as const).map(v => (
+            <button
+              key={v}
+              onClick={() => setView(v)}
+              className={`px-2.5 py-1 rounded text-[12px] font-medium transition-colors ${view === v ? 'bg-cta text-white' : 'text-text-tertiary hover:text-text-secondary'}`}
+            >
+              {v === 'month' ? '월별' : '일별'}
+            </button>
+          ))}
+        </div>
+      </div>
+      <VerticalBarChart bars={bars} color="rgba(167, 139, 250, 0.75)" />
     </div>
   );
 }

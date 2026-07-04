@@ -47,6 +47,22 @@ export async function GET(request: NextRequest) {
   }
   for (const [month, count] of cohortMap) cohort.push({ month, count });
 
+  // ── 일별 가입 코호트 (최근 30일, KST) ─────
+  const KST_OFFSET_MIN = 540;
+  const dayKeyKst = (iso: string) => new Date(new Date(iso).getTime() + KST_OFFSET_MIN * 60_000).toISOString().slice(0, 10);
+  const kstNow = new Date(Date.now() + KST_OFFSET_MIN * 60_000);
+  const dayMap = new Map<string, number>();
+  for (let i = 29; i >= 0; i--) {
+    const d = new Date(kstNow);
+    d.setUTCDate(d.getUTCDate() - i);
+    dayMap.set(d.toISOString().slice(0, 10), 0);
+  }
+  for (const u of users) {
+    const key = dayKeyKst(u.createdAt);
+    if (dayMap.has(key)) dayMap.set(key, (dayMap.get(key) ?? 0) + 1);
+  }
+  const cohortDaily = [...dayMap.entries()].map(([date, count]) => ({ date, count }));
+
   // ── 세그먼트 카운트 ───────────────────────
   const segments = { new: 0, active: 0, dormant: 0, vip: 0, paying: 0, free: 0 };
   for (const u of users) {
@@ -76,7 +92,7 @@ export async function GET(request: NextRequest) {
         totalUsers, joinedToday, joinedYesterday, joined7d, joined30d,
         payingTotal, conversionRate, newDaysWindow: NEW_DAYS,
       },
-      gender, ageCounts, provider, cohort, segments,
+      gender, ageCounts, provider, cohort, cohortDaily, segments,
     },
     { headers: { 'Cache-Control': 'private, max-age=30, stale-while-revalidate=60' } },
   );

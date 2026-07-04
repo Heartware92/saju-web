@@ -49,7 +49,7 @@ export interface AnalyticsSummary {
     d30Cohort: number;
   };
   sources: Counted[];
-  daily: { date: string; sessions: number; visitors: number; pageviews: number }[];
+  daily: { date: string; sessions: number; visitors: number; pageviews: number; signups?: number }[];
   entryPages: Counted[];
   exitPages: Counted[];
   topPages: Counted[];
@@ -280,6 +280,8 @@ export function AnalyticsSection({ summary }: { summary: AnalyticsSummary | null
 
   const { kpi } = summary;
   const visitorBars = summary.daily.map((d) => ({ key: d.date, label: d.date.slice(5), value: d.visitors }));
+  const signupBars = summary.daily.map((d) => ({ key: d.date, label: d.date.slice(5), value: d.signups ?? 0 }));
+  const signupTotal = summary.daily.reduce((s, d) => s + (d.signups ?? 0), 0);
   const sharePages = Array.isArray(summary.sharePages) ? summary.sharePages : [];
   const shareChannels = summary.shareChannels ?? { kakao: 0, url: 0, total: 0 };
 
@@ -330,10 +332,15 @@ export function AnalyticsSection({ summary }: { summary: AnalyticsSummary | null
       {/* 가입 후 첫 운세 (온보딩 활성화) */}
       {summary.firstReading && <FirstReadingCard data={summary.firstReading} />}
 
-      {/* 일별 방문자 추이 */}
-      <Card title="일별 방문자 추이" sub="최근 30일 고유 방문자(visitor) 기준">
-        <VerticalBarChart bars={visitorBars} color="rgba(96, 165, 250, 0.75)" height={180} />
-      </Card>
+      {/* 일별 방문자 추이 + 일별 가입자 추이 */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <Card title="일별 방문자 추이" sub="최근 30일 고유 방문자(visitor) 기준">
+          <VerticalBarChart bars={visitorBars} color="rgba(96, 165, 250, 0.75)" height={180} />
+        </Card>
+        <Card title="일별 가입자 추이" sub={`최근 30일 · 합계 ${fmt(signupTotal)}명 (약관 동의 기준)`}>
+          <VerticalBarChart bars={signupBars} color="rgba(52, 211, 153, 0.75)" height={180} />
+        </Card>
+      </div>
 
       {/* 유입 출처 + 디바이스 */}
       <div className="grid md:grid-cols-2 gap-4">

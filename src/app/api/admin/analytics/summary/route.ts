@@ -421,9 +421,22 @@ async function computeSummary(audience: Set<string> | null) {
     if (r.visitor_id) agg.visitors.add(r.visitor_id);
     agg.pv++;
   }
+  // 일별 가입자 (user_agreements.terms_agreed_at, KST) — 제외/오디언스 적용
+  const signupSinceIso = new Date(Date.now() - WINDOW_DAYS * 86_400_000).toISOString();
+  const signupRes = await includeAudience(
+    excludeUsers(supabaseAdmin.from('user_agreements').select('terms_agreed_at, user_id').gte('terms_agreed_at', signupSinceIso), excluded),
+    audience,
+  );
+  const signupByDay = new Map<string, number>();
+  for (const d of days) signupByDay.set(d, 0);
+  for (const r of signupRes.data ?? []) {
+    const k = dayKey(r.terms_agreed_at);
+    if (signupByDay.has(k)) signupByDay.set(k, (signupByDay.get(k) ?? 0) + 1);
+  }
+
   const daily = days.map((d) => {
     const a = dayAgg.get(d)!;
-    return { date: d, sessions: a.sessions.size, visitors: a.visitors.size, pageviews: a.pv };
+    return { date: d, sessions: a.sessions.size, visitors: a.visitors.size, pageviews: a.pv, signups: signupByDay.get(d) ?? 0 };
   });
 
   // ── 페이지 흐름: 각 출발 페이지에서 바로 다음에 간 화면(+이탈) ──
