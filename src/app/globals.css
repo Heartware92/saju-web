@@ -741,3 +741,12 @@ html {
     box-shadow: 0 0 80px rgba(232, 164, 144, 0.1);
   }
 }
+
+/* 가로 스크롤 카드 스프레드용 — 스크롤바 숨김 (만신 오라클 등) */
+.scrollbar-hide {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
