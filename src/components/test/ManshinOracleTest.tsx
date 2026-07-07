@@ -88,10 +88,15 @@ function parseInterpretation(raw: string | null): Partial<Record<SectionKey, str
  */
 function RevealLine({ children, className, style }: { children: ReactNode; className?: string; style?: React.CSSProperties }) {
   const ref = useRef<HTMLParagraphElement>(null);
-  // 문장 상단이 뷰포트 95% 지점(하단)에 들어올 때 0 → 62% 지점(읽는 눈높이)에서 1
-  const { scrollYProgress } = useScroll({ target: ref, offset: ['start 0.95', 'start 0.62'] });
-  const opacity = useTransform(scrollYProgress, [0, 1], [0.14, 1]);
-  const y = useTransform(scrollYProgress, [0, 1], [10, 0]);
+  // 뷰포트 통과 전 구간을 비율로 추적: 0 = 문장이 화면 하단 진입, 1 = 화면 상단 이탈.
+  // 가운데(읽는 눈높이, 40~62% 구간)만 또렷하고 위아래는 흐릿 — 데스크톱/모바일 공통 비율 기준.
+  const { scrollYProgress } = useScroll({ target: ref, offset: ['start end', 'start start'] });
+  const opacity = useTransform(
+    scrollYProgress,
+    [0, 0.22, 0.38, 0.62, 0.82, 1],
+    [0.1, 0.3, 1, 1, 0.28, 0.12],
+  );
+  const y = useTransform(scrollYProgress, [0, 0.38], [10, 0]);
   return (
     <motion.p ref={ref} style={{ opacity, y, willChange: 'transform, opacity', ...style }} className={className}>
       {children}
@@ -630,7 +635,19 @@ export function ManshinOracleTest() {
               </div>
 
               <div className="px-5 py-5">
-                <div className="text-[11.5px] tracking-[0.2em] text-text-tertiary mb-4">공수 내리시길</div>
+                {/* 신령 소개 — 설화 기반 lore (신령부 36장 전원 보유) */}
+                {deity.lore && (
+                  <div className="mb-4 rounded-xl px-4 py-3 bg-white/[0.04] border border-[var(--border-subtle)]">
+                    <div className="text-[11px] tracking-[0.18em] text-text-tertiary mb-1.5">이 신령은</div>
+                    <p className="text-[13.5px] text-text-secondary leading-[1.75]">{deity.lore}</p>
+                  </div>
+                )}
+                <div className="mb-4">
+                  <div className="text-[11.5px] tracking-[0.2em] text-text-tertiary">공수 내리시길</div>
+                  <div className="text-[11px] text-text-tertiary mt-1" style={{ opacity: 0.75 }}>
+                    공수(空唱) — 신령이 사람의 입을 빌려 직접 들려주는 말
+                  </div>
+                </div>
                 {/* 결과 전에는 기본 문구를 미리 보여주지 않는다 — 로딩 → 결과만 자연스럽게.
                     문장은 스크롤 연동 리빌: 화면 밖 줄은 흐릿(0.1), 들어오면 선명해진다 */}
                 <div className="space-y-5 border-l-2 pl-4" style={{ borderColor: `${deityColor}66` }}>
