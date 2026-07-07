@@ -390,24 +390,37 @@ export function ManshinOracleTest() {
         {/* ── 뽑기: 3단계 부채꼴 (신령 → 풍습 → 엽전) ── */}
         {phase === 'pick' && (
           <motion.div key="pick" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-            {/* 진행 표시 */}
-            <div className="flex justify-center gap-2 mb-3">
+            {/* 진행 표시 — 연결선으로 이어진 세 패 여정 */}
+            <div className="flex items-center justify-center mb-6">
               {STEP_META.map((m, i) => {
                 const done = !!selected[m.key];
                 const active = i === step;
                 return (
-                  <div
-                    key={m.key}
-                    className={`px-3 py-1.5 rounded-full text-[12px] border transition-colors ${
-                      done
-                        ? 'border-cta/60 text-cta bg-cta/10'
-                        : active
-                          ? 'border-[rgba(201,166,255,0.5)] text-text-primary bg-white/5'
-                          : 'border-[var(--border-subtle)] text-text-tertiary'
-                    }`}
-                  >
-                    {m.label}
-                    {done ? ` · ${selected[m.key]!.name}` : ''}
+                  <div key={m.key} className="flex items-center">
+                    {i > 0 && (
+                      <div
+                        className="w-5 h-px mx-1"
+                        style={{
+                          background: done || active
+                            ? 'linear-gradient(90deg, rgba(232,164,144,0.6), rgba(201,166,255,0.4))'
+                            : 'var(--border-subtle)',
+                        }}
+                      />
+                    )}
+                    <motion.div
+                      animate={active ? { scale: [1, 1.04, 1] } : { scale: 1 }}
+                      transition={active ? { duration: 2, repeat: Infinity, ease: 'easeInOut' } : undefined}
+                      className={`px-4 py-2 rounded-full text-[14px] font-semibold border transition-colors ${
+                        done
+                          ? 'border-cta/60 text-cta bg-cta/10'
+                          : active
+                            ? 'border-[rgba(201,166,255,0.65)] text-text-primary bg-[rgba(201,166,255,0.12)] shadow-[0_0_16px_rgba(201,166,255,0.25)]'
+                            : 'border-[var(--border-subtle)] text-text-tertiary'
+                      }`}
+                    >
+                      {m.label}
+                      {done ? ` · ${selected[m.key]!.name}` : ''}
+                    </motion.div>
                   </div>
                 );
               })}
@@ -424,13 +437,26 @@ export function ManshinOracleTest() {
                   transition={{ duration: 0.8 }}
                   className="text-center mb-1"
                 >
-                  <p className="text-[17px] text-text-primary leading-relaxed" style={{ fontFamily: 'var(--font-serif)' }}>
+                  {/* 장식 문양 — 회전 마름모 + 양옆 라인 */}
+                  <div className="flex items-center justify-center gap-3 mb-4">
+                    <div className="w-10 h-px" style={{ background: 'linear-gradient(90deg, transparent, rgba(232,164,144,0.5))' }} />
+                    <motion.span
+                      className="block w-2 h-2 rotate-45 bg-cta/70"
+                      animate={{ opacity: [0.5, 1, 0.5] }}
+                      transition={{ duration: 2.4, repeat: Infinity, ease: 'easeInOut' }}
+                    />
+                    <div className="w-10 h-px" style={{ background: 'linear-gradient(90deg, rgba(232,164,144,0.5), transparent)' }} />
+                  </div>
+                  <p
+                    className="text-[22px] text-text-primary leading-[1.65] tracking-[0.01em]"
+                    style={{ fontFamily: 'var(--font-serif)' }}
+                  >
                     마음속에 묻고 싶은 것을
                     <br />
                     하나 품어 보거라
                   </p>
                   <motion.p
-                    className="text-[12.5px] text-text-tertiary mt-2"
+                    className="text-[14.5px] text-text-tertiary mt-3"
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     transition={{ delay: 1.1, duration: 0.8 }}
@@ -439,16 +465,22 @@ export function ManshinOracleTest() {
                   </motion.p>
                 </motion.div>
               ) : (
-                <motion.p
+                <motion.div
                   key={`guide-${step}`}
                   initial={{ opacity: 0, y: 8 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -6 }}
-                  className="text-center text-[15px] text-text-primary mb-1"
-                  style={{ fontFamily: 'var(--font-serif)' }}
+                  className="text-center mb-1"
                 >
-                  {STEP_META[step].guide}
-                </motion.p>
+                  <div className="flex items-center justify-center gap-3 mb-3">
+                    <div className="w-10 h-px" style={{ background: 'linear-gradient(90deg, transparent, rgba(232,164,144,0.5))' }} />
+                    <span className="block w-1.5 h-1.5 rotate-45 bg-cta/70" />
+                    <div className="w-10 h-px" style={{ background: 'linear-gradient(90deg, rgba(232,164,144,0.5), transparent)' }} />
+                  </div>
+                  <p className="text-[20px] text-text-primary leading-relaxed" style={{ fontFamily: 'var(--font-serif)' }}>
+                    {STEP_META[step].guide}
+                  </p>
+                </motion.div>
               )}
             </AnimatePresence>
 
