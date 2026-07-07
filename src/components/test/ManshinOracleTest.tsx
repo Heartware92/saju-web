@@ -387,19 +387,28 @@ export function ManshinOracleTest() {
           </motion.div>
         )}
 
-        {/* ── 뽑기: 3단계 부채꼴 (신령 → 풍습 → 엽전) ── */}
+        {/* ── 뽑기: 3단계 부채꼴 (신령 → 풍습 → 엽전) ──
+             한 화면 맞춤: 세로 플렉스 + dvh 기반 높이 — 스크롤 없이 안내/부채꼴/버튼이
+             균등한 리듬으로 배치 (부채꼴이 남는 공간을 흡수) */}
         {phase === 'pick' && (
-          <motion.div key="pick" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+          <motion.div
+            key="pick"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="flex flex-col"
+            style={{ height: 'calc(100dvh - 252px)', minHeight: 470 }}
+          >
             {/* 진행 표시 — 연결선으로 이어진 세 패 여정 */}
-            <div className="flex items-center justify-center mb-6">
+            <div className="flex items-center justify-center mb-4">
               {STEP_META.map((m, i) => {
                 const done = !!selected[m.key];
                 const active = i === step;
                 return (
-                  <div key={m.key} className="flex items-center">
+                  <div key={m.key} className="flex items-center shrink-0">
                     {i > 0 && (
                       <div
-                        className="w-5 h-px mx-1"
+                        className="w-4 h-px mx-1 shrink-0"
                         style={{
                           background: done || active
                             ? 'linear-gradient(90deg, rgba(232,164,144,0.6), rgba(201,166,255,0.4))'
@@ -407,10 +416,11 @@ export function ManshinOracleTest() {
                         }}
                       />
                     )}
+                    {/* whitespace-nowrap — "신령패 · 남이 장군" 같은 라벨이 중간에서 꺾이지 않게 */}
                     <motion.div
                       animate={active ? { scale: [1, 1.04, 1] } : { scale: 1 }}
                       transition={active ? { duration: 2, repeat: Infinity, ease: 'easeInOut' } : undefined}
-                      className={`px-4 py-2 rounded-full text-[14px] font-semibold border transition-colors ${
+                      className={`px-3.5 py-2 rounded-full text-[13.5px] font-semibold border whitespace-nowrap transition-colors ${
                         done
                           ? 'border-cta/60 text-cta bg-cta/10'
                           : active
@@ -419,7 +429,7 @@ export function ManshinOracleTest() {
                       }`}
                     >
                       {m.label}
-                      {done ? ` · ${selected[m.key]!.name}` : ''}
+                      {done ? `·${selected[m.key]!.name}` : ''}
                     </motion.div>
                   </div>
                 );
@@ -484,7 +494,7 @@ export function ManshinOracleTest() {
               )}
             </AnimatePresence>
 
-            {/* 부채꼴 — 단계별로 새로 펼침 */}
+            {/* 부채꼴 — 단계별로 새로 펼침. flex-1 로 남는 공간을 채워 세로 중심 배치 */}
             <AnimatePresence mode="wait">
               <motion.div
                 key={`fan-${step}`}
@@ -492,7 +502,7 @@ export function ManshinOracleTest() {
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0, scale: 0.96 }}
                 transition={{ duration: 0.3 }}
-                className="relative h-[320px]"
+                className="relative flex-1 min-h-[270px]"
               >
                 {pools[STEP_META[step].key].slice(0, STEP_META[step].fan).map((_, idx) => {
                   const fanCount = Math.min(pools[STEP_META[step].key].length, STEP_META[step].fan);
@@ -540,7 +550,7 @@ export function ManshinOracleTest() {
 
             <button
               onClick={reset}
-              className="w-full py-3 rounded-xl bg-white/5 border border-[var(--border-subtle)] text-[13.5px] text-text-tertiary"
+              className="w-full py-3 mt-4 shrink-0 rounded-xl bg-white/5 border border-[var(--border-subtle)] text-[13.5px] text-text-tertiary"
             >
               처음으로
             </button>
@@ -568,13 +578,16 @@ export function ManshinOracleTest() {
                       {m.label}
                     </div>
                     <div
-                      className="px-1 py-3 flex flex-col items-center justify-center min-h-[86px]"
+                      className="px-1.5 py-3 flex flex-col items-center justify-center min-h-[112px]"
                       style={{ background: `radial-gradient(circle at 50% 0%, ${color}22, rgba(20,12,38,0.4))` }}
                     >
                       <div className="text-[16px] font-bold text-text-primary leading-tight" style={{ fontFamily: 'var(--font-title)' }}>
                         {card.name}
                       </div>
-                      <div className="text-[10.5px] text-text-tertiary mt-1 leading-snug px-1">{card.title}</div>
+                      <div className="text-[11.5px] text-text-secondary mt-1.5 leading-snug px-0.5">{card.title}</div>
+                      <div className="text-[10px] mt-1.5 leading-snug px-0.5" style={{ color: `${color}cc` }}>
+                        {card.domains}
+                      </div>
                     </div>
                   </motion.div>
                 );
@@ -607,7 +620,8 @@ export function ManshinOracleTest() {
                 <div className="text-[32px] font-bold text-text-primary leading-tight text-center relative" style={{ fontFamily: 'var(--font-title)' }}>
                   {deity.name}
                 </div>
-                <div className="text-[13px] text-text-secondary mt-2 text-center relative">
+                <div className="text-[13.5px] text-text-secondary mt-1.5 text-center relative">{deity.title}</div>
+                <div className="text-[12.5px] text-text-tertiary mt-2.5 text-center relative">
                   {selected.custom.name}의 장면에 {selected.coin.name}을 얹어 공수를 내립니다
                 </div>
                 <div className="absolute bottom-2 right-3 text-[10px] text-[rgba(255,245,225,0.25)]">
