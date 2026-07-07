@@ -3,14 +3,22 @@
 /**
  * 만신 오라클 테스트 페이지 (/tarot_test 전용)
  *
- * 흐름: 인트로(장수 선택) → 셔플 연출 → 질문 떠올리기 + 리본 스프레드에서 뽑기 → 플립 공개
- * - 공수(총운)는 문장 단위로 한 줄씩 천천히 내려오며 등장
- * - 연애/재물/일·사업/건강은 탭하면 열리는 아코디언 (한 번에 벽글 노출 방지)
- * - 크레딧·DB·AI 호출 없음. 라이브 타로와 완전 격리.
+ * 흐름: 인트로(장수 선택) → 셔플 연출 → 질문 떠올리기 + 부채꼴 스프레드에서 뽑기 → 플립 공개
+ *
+ * 모바일웹 성능 원칙 (웹/모바일웹 공통):
+ * - 애니메이션은 transform/opacity 만 사용 (레이아웃·페인트 유발 속성 금지)
+ * - box-shadow/filter 는 애니메이션하지 않음 — 글로우는 별도 레이어의 opacity 로
+ * - 카드 텍스처는 소형본(back_sm.png, 280px)으로 GPU 메모리 절약
+ * - 화면에 그리는 카드는 부채꼴 15장만 (60장 전체를 그리지 않음 — 덱은 셔플돼 있어
+ *   보이는 15장 = 무작위 15장이므로 확률적으로 동일)
+ * - willChange: transform 로 컴포지터 레이어 승격
+ *
+ * 크레딧·DB·AI 호출 없음. 라이브 타로와 완전 격리.
  */
 
 import { useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { supabase } from '@/services/supabase';
 import {
   MANSHIN_DECK,
   MANSHIN_GROUP_COLORS,
@@ -21,7 +29,13 @@ import {
 
 type Phase = 'intro' | 'shuffle' | 'pick' | 'reveal';
 
-const BACK_IMG = "url('/manshin/back.png')";
+/** AI 생성 공수 — cardId → { total?, love?, money?, work?, health? } */
+type AiReadings = Record<string, Partial<Record<'total' | keyof ManshinFortunes, string>>>;
+
+const BACK_SM = "url('/manshin/back_sm.png')";
+/** 부채꼴에 실제로 펼치는 장수 — 덱이 셔플돼 있어 무작위성은 60장 기준과 동일 */
+const FAN_COUNT = 15;
+const FAN_STEP_DEG = 6; // 카드 간 각도
 
 function shuffleDeck(cards: ManshinCard[]): ManshinCard[] {
   const a = [...cards];
@@ -40,15 +54,13 @@ function speechLines(speech: string): string[] {
     .filter(Boolean);
 }
 
-/** 카드 아트 영역에 떠다니는 별가루 */
+/** 카드 아트 영역에 떠다니는 별가루 (transform/opacity 만 사용) */
 function Sparkles({ color }: { color: string }) {
   const dots = [
-    { left: '14%', top: '22%', size: 3, delay: 0 },
-    { left: '82%', top: '18%', size: 2, delay: 0.8 },
-    { left: '70%', top: '68%', size: 3, delay: 1.4 },
-    { left: '24%', top: '74%', size: 2, delay: 2.0 },
-    { left: '50%', top: '12%', size: 2, delay: 2.6 },
-    { left: '90%', top: '46%', size: 2, delay: 3.1 },
+    { left: '16%', top: '24%', size: 3, delay: 0 },
+    { left: '80%', top: '18%', size: 2, delay: 1.1 },
+    { left: '68%', top: '70%', size: 3, delay: 2.0 },
+    { left: '28%', top: '72%', size: 2, delay: 2.8 },
   ];
   return (
     <>
@@ -56,9 +68,9 @@ function Sparkles({ color }: { color: string }) {
         <motion.span
           key={i}
           className="absolute rounded-full pointer-events-none"
-          style={{ left: d.left, top: d.top, width: d.size, height: d.size, background: color }}
-          animate={{ opacity: [0, 1, 0], y: [0, -10, -20], scale: [0.6, 1.2, 0.5] }}
-          transition={{ duration: 3.2, delay: d.delay, repeat: Infinity, ease: 'easeInOut' }}
+          style={{ left: d.left, top: d.top, width: d.size, height: d.size, background: color, willChange: 'transform, opacity' }}
+          animate={{ opacity: [0, 1, 0], y: [0, -12, -22] }}
+          transition={{ duration: 3.6, delay: d.delay, repeat: Infinity, ease: 'easeInOut' }}
         />
       ))}
     </>
@@ -72,16 +84,57 @@ export function ManshinOracleTest() {
   const [picked, setPicked] = useState<number[]>([]);
   /** reveal 아코디언: `${cardIdx}-${sectionKey}` → open */
   const [openSections, setOpenSections] = useState<Record<string, boolean>>({});
+  /** AI 깊은 공수 — 공개 시 1회 요청, 도착하면 기본 공수를 대체 */
+  const [aiReadings, setAiReadings] = useState<AiReadings>({});
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiError, setAiError] = useState<string | null>(null);
+  const aiRequested = useRef(false);
   const shuffleTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => () => { if (shuffleTimer.current) clearTimeout(shuffleTimer.current); }, []);
+
+  // 공개 단계 진입 시 AI 공수 1회 요청 (실패해도 기본 공수는 그대로 보임)
+  useEffect(() => {
+    if (phase !== 'reveal' || aiRequested.current || picked.length === 0) return;
+    aiRequested.current = true;
+    const cardIds = picked.map((idx) => deck[idx]?.id).filter(Boolean);
+    (async () => {
+      setAiLoading(true);
+      setAiError(null);
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session?.access_token) {
+          setAiError('로그인하면 신령의 깊은 공수를 들을 수 있어요');
+          return;
+        }
+        const res = await fetch('/api/test/manshin', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${session.access_token}`,
+          },
+          body: JSON.stringify({ cardIds }),
+        });
+        const json = await res.json();
+        if (res.ok && json?.readings) setAiReadings(json.readings);
+        else setAiError(json?.error || '깊은 공수를 받지 못했어요');
+      } catch {
+        setAiError('깊은 공수를 받지 못했어요');
+      } finally {
+        setAiLoading(false);
+      }
+    })();
+  }, [phase, picked, deck]);
 
   const startShuffle = () => {
     setDeck(shuffleDeck(MANSHIN_DECK));
     setPicked([]);
     setOpenSections({});
+    setAiReadings({});
+    setAiError(null);
+    aiRequested.current = false;
     setPhase('shuffle');
-    shuffleTimer.current = setTimeout(() => setPhase('pick'), 2100);
+    shuffleTimer.current = setTimeout(() => setPhase('pick'), 2000);
   };
 
   const togglePick = (idx: number) => {
@@ -93,7 +146,7 @@ export function ManshinOracleTest() {
     const next = [...picked, idx];
     setPicked(next);
     if (next.length === drawCount) {
-      setTimeout(() => setPhase('reveal'), 650);
+      setTimeout(() => setPhase('reveal'), 700);
     }
   };
 
@@ -101,6 +154,9 @@ export function ManshinOracleTest() {
     setPicked([]);
     setDeck([]);
     setOpenSections({});
+    setAiReadings({});
+    setAiError(null);
+    aiRequested.current = false;
     setPhase('intro');
   };
 
@@ -133,15 +189,16 @@ export function ManshinOracleTest() {
             <div className="flex justify-center py-4">
               <motion.div
                 className="relative w-[120px] aspect-[2/3]"
+                style={{ willChange: 'transform' }}
                 animate={{ y: [0, -8, 0] }}
-                transition={{ duration: 3.2, repeat: Infinity, ease: 'easeInOut' }}
+                transition={{ duration: 3.4, repeat: Infinity, ease: 'easeInOut' }}
               >
                 {[2, 1, 0].map((layer) => (
                   <div
                     key={layer}
                     className="absolute inset-0 rounded-lg border border-[rgba(201,166,255,0.3)]"
                     style={{
-                      backgroundImage: BACK_IMG,
+                      backgroundImage: BACK_SM,
                       backgroundSize: 'cover',
                       backgroundPosition: 'center',
                       transform: `translate(${layer * 3}px, ${layer * -3}px) rotate(${layer * 2 - 2}deg)`,
@@ -182,39 +239,41 @@ export function ManshinOracleTest() {
           </motion.div>
         )}
 
-        {/* ── 셔플 연출 ── */}
+        {/* ── 셔플 연출 — 8장, transform 만 애니메이션 ── */}
         {phase === 'shuffle' && (
           <motion.div
             key="shuffle"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            exit={{ opacity: 0, scale: 0.96 }}
-            className="relative h-[340px] flex items-center justify-center"
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.35 }}
+            className="relative h-[320px] flex items-center justify-center"
           >
-            {Array.from({ length: 10 }).map((_, i) => {
+            {Array.from({ length: 8 }).map((_, i) => {
               const dir = i % 2 === 0 ? 1 : -1;
-              const spread = 46 + (i % 5) * 16;
+              const spread = 42 + (i % 4) * 14;
               return (
                 <motion.div
                   key={i}
-                  className="absolute w-[92px] aspect-[2/3] rounded-lg border border-[rgba(201,166,255,0.35)]"
+                  className="absolute w-[88px] aspect-[2/3] rounded-lg border border-[rgba(201,166,255,0.35)]"
                   style={{
-                    backgroundImage: BACK_IMG,
+                    backgroundImage: BACK_SM,
                     backgroundSize: 'cover',
                     backgroundPosition: 'center',
                     zIndex: i,
+                    willChange: 'transform',
                   }}
                   animate={{
-                    x: [0, dir * spread, 0, -dir * (spread * 0.7), 0],
-                    y: [0, -(10 + (i % 3) * 8), 4, -(6 + (i % 4) * 6), 0],
-                    rotate: [0, dir * (8 + (i % 4) * 4), 0, -dir * 6, 0],
+                    x: [0, dir * spread, 0, -dir * spread * 0.65, 0],
+                    y: [0, -(8 + (i % 3) * 7), 3, -(5 + (i % 4) * 5), 0],
+                    rotate: [0, dir * (7 + (i % 4) * 4), 0, -dir * 5, 0],
                   }}
-                  transition={{ duration: 1.9, times: [0, 0.25, 0.5, 0.75, 1], ease: 'easeInOut' }}
+                  transition={{ duration: 1.8, times: [0, 0.25, 0.5, 0.75, 1], ease: 'easeInOut' }}
                 />
               );
             })}
             <motion.p
-              className="absolute bottom-2 text-[14px] text-text-secondary tracking-wide"
+              className="absolute bottom-1 text-[14px] text-text-secondary tracking-wide"
               animate={{ opacity: [0.4, 1, 0.4] }}
               transition={{ duration: 1.2, repeat: Infinity }}
             >
@@ -223,7 +282,7 @@ export function ManshinOracleTest() {
           </motion.div>
         )}
 
-        {/* ── 뽑기: 질문 떠올리기 + 리본 스프레드 ── */}
+        {/* ── 뽑기: 질문 떠올리기 + 부채꼴 스프레드 (스크롤 없음, 한 화면) ── */}
         {phase === 'pick' && (
           <motion.div key="pick" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
             {/* 질문 안내 — 카드 클릭 전 */}
@@ -235,7 +294,7 @@ export function ManshinOracleTest() {
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -8 }}
                   transition={{ duration: 0.8 }}
-                  className="text-center mb-2"
+                  className="text-center mb-1"
                 >
                   <p className="text-[17px] text-text-primary leading-relaxed" style={{ fontFamily: 'var(--font-serif)' }}>
                     마음속으로 묻고 싶은 것을
@@ -248,7 +307,7 @@ export function ManshinOracleTest() {
                     animate={{ opacity: 1 }}
                     transition={{ delay: 1.2, duration: 0.8 }}
                   >
-                    준비되었다면, 옆으로 밀며 끌리는 카드를 {drawCount}장 골라 주세요
+                    준비되었다면, 끌리는 카드를 {drawCount}장 골라 주세요
                   </motion.p>
                 </motion.div>
               ) : (
@@ -256,7 +315,7 @@ export function ManshinOracleTest() {
                   key="count"
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
-                  className="text-center text-[14px] text-text-secondary mb-2"
+                  className="text-center text-[14px] text-text-secondary mb-1"
                 >
                   <span className="text-cta font-bold">{picked.length}</span>
                   <span className="text-text-tertiary"> / {drawCount}장</span>
@@ -264,50 +323,65 @@ export function ManshinOracleTest() {
               )}
             </AnimatePresence>
 
-            {/* 리본 스프레드 — 옆으로 스크롤하며 고르기 */}
-            <div className="-mx-5 overflow-x-auto scrollbar-hide">
-              <div className="flex w-max items-end px-8 pt-12 pb-8">
-                {deck.map((_, idx) => {
-                  const isPicked = picked.includes(idx);
-                  const jitter = ((idx * 7) % 5) - 2; // -2 ~ 2 결정적 지터
-                  return (
-                    <motion.button
-                      key={idx}
-                      initial={{ x: -140, opacity: 0, rotate: -10 }}
-                      animate={{
-                        x: 0,
-                        opacity: 1,
-                        rotate: isPicked ? 0 : jitter * 0.8,
-                        y: isPicked ? -22 : 0,
-                        scale: isPicked ? 1.08 : 1,
-                      }}
-                      transition={{ delay: idx * 0.018, type: 'spring', stiffness: 260, damping: 24 }}
-                      whileTap={{ scale: 0.95 }}
-                      onClick={() => togglePick(idx)}
-                      className={`relative shrink-0 w-[68px] aspect-[2/3] rounded-md border -ml-[44px] first:ml-0 transition-colors ${
-                        isPicked
-                          ? 'border-cta shadow-[0_0_18px_rgba(232,164,144,0.55)]'
-                          : 'border-[rgba(201,166,255,0.3)]'
-                      }`}
-                      style={{
-                        backgroundImage: BACK_IMG,
-                        backgroundSize: 'cover',
-                        backgroundPosition: 'center',
-                        zIndex: isPicked ? 200 : idx,
-                      }}
-                      aria-label={`카드 ${idx + 1}`}
-                    />
-                  );
-                })}
-              </div>
+            {/* 부채꼴 스프레드 */}
+            <div className="relative h-[330px]">
+              {deck.slice(0, FAN_COUNT).map((_, idx) => {
+                const isPicked = picked.includes(idx);
+                const angle = (idx - (FAN_COUNT - 1) / 2) * FAN_STEP_DEG;
+                return (
+                  <motion.button
+                    key={idx}
+                    initial={{ rotate: 0, opacity: 0 }}
+                    animate={{
+                      rotate: angle,
+                      opacity: 1,
+                      y: isPicked ? -26 : 0,
+                      scale: isPicked ? 1.07 : 1,
+                    }}
+                    transition={{
+                      rotate: { delay: 0.25 + idx * 0.045, type: 'spring', stiffness: 160, damping: 19 },
+                      opacity: { delay: 0.25 + idx * 0.045, duration: 0.3 },
+                      y: { type: 'spring', stiffness: 300, damping: 20 },
+                      scale: { type: 'spring', stiffness: 300, damping: 20 },
+                    }}
+                    whileHover={{ y: isPicked ? -26 : -12 }}
+                    whileTap={{ scale: 1.02 }}
+                    onClick={() => togglePick(idx)}
+                    className={`absolute left-1/2 bottom-10 w-[92px] aspect-[2/3] -ml-[46px] rounded-lg border ${
+                      isPicked
+                        ? 'border-cta shadow-[0_0_18px_rgba(232,164,144,0.55)]'
+                        : 'border-[rgba(201,166,255,0.35)]'
+                    }`}
+                    style={{
+                      backgroundImage: BACK_SM,
+                      backgroundSize: 'cover',
+                      backgroundPosition: 'center',
+                      transformOrigin: '50% 135%',
+                      zIndex: isPicked ? 200 : idx,
+                      willChange: 'transform',
+                    }}
+                    aria-label={`카드 ${idx + 1}`}
+                  />
+                );
+              })}
             </div>
 
-            <button
-              onClick={reset}
-              className="mt-4 w-full py-3 rounded-xl bg-white/5 border border-[var(--border-subtle)] text-[13.5px] text-text-tertiary"
-            >
-              처음으로
-            </button>
+            <div className="flex gap-2">
+              <motion.button
+                whileTap={{ scale: 0.97 }}
+                onClick={startShuffle}
+                className="flex-1 py-3 rounded-xl bg-white/5 border border-[var(--border-subtle)] text-[13.5px] text-text-tertiary"
+              >
+                다시 섞기
+              </motion.button>
+              <motion.button
+                whileTap={{ scale: 0.97 }}
+                onClick={reset}
+                className="flex-1 py-3 rounded-xl bg-white/5 border border-[var(--border-subtle)] text-[13.5px] text-text-tertiary"
+              >
+                처음으로
+              </motion.button>
+            </div>
           </motion.div>
         )}
 
@@ -335,12 +409,12 @@ export function ManshinOracleTest() {
                     }}
                   >
                     <Sparkles color={color} />
-                    {/* 뒤에서 번지는 광륜 */}
+                    {/* 뒤에서 번지는 광륜 — opacity/scale 만 애니메이션 */}
                     <motion.div
                       className="absolute w-[180px] h-[180px] rounded-full pointer-events-none"
-                      style={{ background: `radial-gradient(circle, ${color}2e, transparent 70%)` }}
-                      animate={{ scale: [1, 1.25, 1], opacity: [0.6, 1, 0.6] }}
-                      transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut' }}
+                      style={{ background: `radial-gradient(circle, ${color}2e, transparent 70%)`, willChange: 'transform, opacity' }}
+                      animate={{ scale: [1, 1.22, 1], opacity: [0.6, 1, 0.6] }}
+                      transition={{ duration: 4.2, repeat: Infinity, ease: 'easeInOut' }}
                     />
                     <motion.div
                       initial={{ opacity: 0, y: 8 }}
@@ -394,25 +468,37 @@ export function ManshinOracleTest() {
                       공수 내리시길
                     </motion.div>
                     <div className="space-y-3 border-l-2 pl-4" style={{ borderColor: `${color}66` }}>
-                      {speechLines(card.speech).map((line, li) => (
+                      {speechLines(aiReadings[card.id]?.total ?? card.speech).map((line, li) => (
                         <motion.p
-                          key={li}
+                          key={`${aiReadings[card.id]?.total ? 'ai' : 'base'}-${li}`}
                           initial={{ opacity: 0, y: 16 }}
                           animate={{ opacity: 1, y: 0 }}
-                          transition={{ delay: baseDelay + 1.15 + li * 0.55, duration: 0.7, ease: 'easeOut' }}
+                          transition={{ delay: aiReadings[card.id]?.total ? li * 0.35 : baseDelay + 1.15 + li * 0.5, duration: 0.7, ease: 'easeOut' }}
                           className="text-[16px] text-text-primary leading-[1.85]"
                           style={{ fontFamily: 'var(--font-serif)' }}
                         >
                           {line}
                         </motion.p>
                       ))}
+                      {aiLoading && !aiReadings[card.id]?.total && (
+                        <motion.p
+                          animate={{ opacity: [0.35, 0.9, 0.35] }}
+                          transition={{ duration: 1.4, repeat: Infinity }}
+                          className="text-[13px] text-text-tertiary"
+                        >
+                          신령이 깊은 공수를 고르는 중입니다
+                        </motion.p>
+                      )}
+                      {aiError && !aiLoading && !aiReadings[card.id]?.total && (
+                        <p className="text-[12px] text-text-tertiary">{aiError}</p>
+                      )}
                     </div>
 
                     {/* 키워드 */}
                     <motion.div
                       initial={{ opacity: 0 }}
                       animate={{ opacity: 1 }}
-                      transition={{ delay: baseDelay + 1.2 + speechLines(card.speech).length * 0.55 }}
+                      transition={{ delay: baseDelay + 1.1 + speechLines(card.speech).length * 0.5 }}
                       className="flex flex-wrap gap-1.5 mt-4"
                     >
                       {card.keywords.map((k) => (
@@ -430,7 +516,7 @@ export function ManshinOracleTest() {
                     <motion.div
                       initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: baseDelay + 1.5 + speechLines(card.speech).length * 0.55 }}
+                      transition={{ delay: baseDelay + 1.4 + speechLines(card.speech).length * 0.5 }}
                       className="mt-5 space-y-2"
                     >
                       <div className="text-[11.5px] text-text-tertiary mb-1">
@@ -439,7 +525,8 @@ export function ManshinOracleTest() {
                       {FORTUNE_SECTIONS.map((sec) => {
                         const key = `${deckIdx}-${sec.key}`;
                         const open = !!openSections[key];
-                        const text = card.fortunes[sec.key as keyof ManshinFortunes];
+                        const aiText = aiReadings[card.id]?.[sec.key];
+                        const text = aiText ?? card.fortunes[sec.key as keyof ManshinFortunes];
                         return (
                           <div
                             key={sec.key}
@@ -471,19 +558,28 @@ export function ManshinOracleTest() {
                                   exit={{ height: 0, opacity: 0 }}
                                   transition={{ duration: 0.35, ease: 'easeInOut' }}
                                 >
-                                  <div className="px-4 pb-4 pt-1 space-y-2">
+                                  <div className="px-4 pb-4 pt-1 space-y-2.5">
                                     {speechLines(text).map((line, li) => (
                                       <motion.p
-                                        key={li}
+                                        key={`${aiText ? 'ai' : 'base'}-${li}`}
                                         initial={{ opacity: 0, y: 8 }}
                                         animate={{ opacity: 1, y: 0 }}
-                                        transition={{ delay: 0.12 + li * 0.3, duration: 0.5 }}
-                                        className="text-[15px] text-text-primary leading-[1.8]"
+                                        transition={{ delay: 0.12 + li * 0.22, duration: 0.5 }}
+                                        className="text-[15px] text-text-primary leading-[1.85]"
                                         style={{ fontFamily: 'var(--font-serif)' }}
                                       >
                                         {line}
                                       </motion.p>
                                     ))}
+                                    {!aiText && aiLoading && (
+                                      <motion.p
+                                        animate={{ opacity: [0.35, 0.9, 0.35] }}
+                                        transition={{ duration: 1.4, repeat: Infinity }}
+                                        className="text-[12.5px] text-text-tertiary"
+                                      >
+                                        더 깊은 공수를 받아오는 중입니다
+                                      </motion.p>
+                                    )}
                                   </div>
                                 </motion.div>
                               )}
