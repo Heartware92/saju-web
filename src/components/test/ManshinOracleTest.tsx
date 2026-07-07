@@ -36,10 +36,11 @@ type SectionKey = 'total' | keyof ManshinFortunes;
 
 const BACK_SM = "url('/manshin/back_sm.png')";
 
+// 안내 문구도 전부 공수체로 통일 (일반 안내투 금지)
 const STEP_META: { key: 'deity' | 'custom' | 'coin'; label: string; guide: string; fan: number }[] = [
-  { key: 'deity', label: '신령패', guide: '오늘 너를 봐줄 신령을 모시세요', fan: 12 },
-  { key: 'custom', label: '풍습패', guide: '지금 네 앞의 장면을 뽑으세요', fan: 12 },
-  { key: 'coin', label: '엽전패', guide: '엽전을 던져 때를 보세요', fan: 6 },
+  { key: 'deity', label: '신령패', guide: '오늘 너를 봐줄 신령부터 모시거라', fan: 12 },
+  { key: 'custom', label: '풍습패', guide: '네 앞에 펼쳐질 장면을 짚어 보거라', fan: 12 },
+  { key: 'coin', label: '엽전패', guide: '엽전을 던져 때를 물어 보거라', fan: 6 },
 ];
 
 const SECTION_MARKERS: Record<SectionKey, string> = {
@@ -284,7 +285,7 @@ export function ManshinOracleTest() {
             </div>
 
             <div className="rounded-2xl p-5 bg-[rgba(20,12,38,0.55)] border border-[var(--border-subtle)]">
-              <div className="text-[14px] font-semibold text-text-primary mb-3">세 개의 패를 뽑습니다</div>
+              <div className="text-[14px] font-semibold text-text-primary mb-3">세 개의 패를 뽑느니라</div>
               <div className="space-y-2">
                 {STEP_META.map((m, i) => (
                   <div key={m.key} className="flex items-center gap-3">
@@ -307,7 +308,9 @@ export function ManshinOracleTest() {
           </motion.div>
         )}
 
-        {/* ── 컷 셔플: 덱이 좌우로 갈라졌다 합쳐지기 ×3 (스태거 + transform-only) ── */}
+        {/* ── 스파이럴 오빗 셔플: 덱이 원형으로 피어났다 소용돌이치며 다시 모인다 ──
+             (수학 곡선 키프레임 + linear 타이밍 = 구간 꺾임 없는 완전히 매끄러운 궤적,
+              transform-only, 20ms 스태거) */}
         {phase === 'shuffle' && (
           <motion.div
             key="shuffle"
@@ -317,12 +320,29 @@ export function ManshinOracleTest() {
             transition={{ duration: 0.3 }}
             className="relative h-[320px] flex items-center justify-center"
           >
+            {/* 중심에서 번지는 기운 */}
+            <motion.div
+              className="absolute w-[220px] h-[220px] rounded-full pointer-events-none"
+              style={{ background: 'radial-gradient(circle, rgba(201,166,255,0.22), transparent 70%)', willChange: 'transform, opacity' }}
+              animate={{ scale: [0.7, 1.15, 0.75], opacity: [0.3, 0.85, 0.4] }}
+              transition={{ duration: 2.4, ease: 'easeInOut' }}
+            />
             {Array.from({ length: 8 }).map((_, i) => {
-              // 라운드마다 소속 패킷(좌/우)이 바뀌어 '컷 & 머지' 느낌
-              const d0 = i % 2 === 0 ? -1 : 1;
-              const d1 = (i + 1) % 2 === 0 ? -1 : 1;
-              const d2 = i % 2 === 0 ? 1 : -1;
-              const S = 62;
+              // 카드 i 의 나선 궤적: 반지름 r(t)=R·sin(πt) — 스택에서 피어나 궤도를 돌고 다시 스택으로
+              const STEPS = 15;
+              const phase0 = (i / 8) * Math.PI * 2;
+              const xs: number[] = [];
+              const ys: number[] = [];
+              const rots: number[] = [];
+              for (let k = 0; k < STEPS; k++) {
+                const t = k / (STEPS - 1);
+                const bloom = Math.sin(Math.PI * t); // 0 → 1 → 0
+                const ang = phase0 + Math.PI * 3.2 * t; // 약 1.6바퀴 공전
+                const r = 84 * bloom;
+                xs.push(Math.cos(ang) * r);
+                ys.push(Math.sin(ang) * r * 0.58); // 타원 궤도 — 살짝 눕힌 3D 느낌
+                rots.push(Math.sin(ang) * 10 * bloom); // 궤도 따라 기우는 카드
+              }
               return (
                 <motion.div
                   key={i}
@@ -334,17 +354,8 @@ export function ManshinOracleTest() {
                     zIndex: i,
                     willChange: 'transform',
                   }}
-                  animate={{
-                    x: [0, d0 * S, 0, d1 * S, 0, d2 * S, 0],
-                    y: [0, -10, 2, -10, 2, -10, 0],
-                    rotate: [0, d0 * 5, 0, d1 * 5, 0, d2 * 5, 0],
-                  }}
-                  transition={{
-                    duration: 2.2,
-                    times: [0, 0.16, 0.33, 0.5, 0.66, 0.83, 1],
-                    ease: 'easeInOut',
-                    delay: (i % 4) * 0.04, // 스태거 40ms
-                  }}
+                  animate={{ x: xs, y: ys, rotate: rots }}
+                  transition={{ duration: 2.3, ease: 'linear', delay: i * 0.02 }}
                 />
               );
             })}
@@ -353,7 +364,7 @@ export function ManshinOracleTest() {
               animate={{ opacity: [0.4, 1, 0.4] }}
               transition={{ duration: 1.2, repeat: Infinity }}
             >
-              괘를 섞고 있습니다
+              괘를 섞고 있느니라
             </motion.p>
           </motion.div>
         )}
@@ -396,9 +407,9 @@ export function ManshinOracleTest() {
                   className="text-center mb-1"
                 >
                   <p className="text-[17px] text-text-primary leading-relaxed" style={{ fontFamily: 'var(--font-serif)' }}>
-                    마음속으로 묻고 싶은 것을
+                    마음속에 묻고 싶은 것을
                     <br />
-                    하나 떠올려 주세요
+                    하나 품어 보거라
                   </p>
                   <motion.p
                     className="text-[12.5px] text-text-tertiary mt-2"
@@ -406,7 +417,7 @@ export function ManshinOracleTest() {
                     animate={{ opacity: 1 }}
                     transition={{ delay: 1.1, duration: 0.8 }}
                   >
-                    준비되었다면 {STEP_META[0].guide}
+                    품었거든, {STEP_META[0].guide}
                   </motion.p>
                 </motion.div>
               ) : (
@@ -555,33 +566,43 @@ export function ManshinOracleTest() {
               </div>
 
               <div className="px-5 py-5">
-                <div className="text-[11.5px] tracking-[0.2em] text-text-tertiary mb-3">공수 내리시길</div>
-                <div className="space-y-3 border-l-2 pl-4" style={{ borderColor: `${deityColor}66` }}>
-                  {speechLines(reading.total ?? deity.speech).map((line, li) => (
-                    <motion.p
-                      key={`${reading.total ? 'ai' : 'base'}-${li}`}
-                      initial={{ opacity: 0, y: 16 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: li * 0.35, duration: 0.7, ease: 'easeOut' }}
-                      className="text-[16px] text-text-primary leading-[1.85]"
-                      style={{ fontFamily: 'var(--font-serif)' }}
-                    >
-                      {line}
-                    </motion.p>
-                  ))}
-                  {jobRunning && !reading.total && (
+                <div className="text-[11.5px] tracking-[0.2em] text-text-tertiary mb-4">공수 내리시길</div>
+                {/* 결과 전에는 기본 문구를 미리 보여주지 않는다 — 로딩 → 결과만 자연스럽게.
+                    문장은 스크롤 연동 리빌: 화면 밖 줄은 흐릿(0.1), 들어오면 선명해진다 */}
+                <div className="space-y-5 border-l-2 pl-4" style={{ borderColor: `${deityColor}66` }}>
+                  {reading.total ? (
+                    speechLines(reading.total).map((line, li) => (
+                      <motion.p
+                        key={`ai-${li}`}
+                        initial={{ opacity: 0.1, y: 10 }}
+                        whileInView={{ opacity: 1, y: 0 }}
+                        viewport={{ once: true, amount: 0.6 }}
+                        transition={{ duration: 0.55, ease: 'easeOut' }}
+                        className="text-[19px] text-text-primary leading-[2.05]"
+                        style={{ fontFamily: 'var(--font-serif)' }}
+                      >
+                        {line}
+                      </motion.p>
+                    ))
+                  ) : createError || jobFailed ? (
+                    <>
+                      {speechLines(deity.speech).map((line, li) => (
+                        <p key={li} className="text-[19px] text-text-primary leading-[2.05]" style={{ fontFamily: 'var(--font-serif)' }}>
+                          {line}
+                        </p>
+                      ))}
+                      <p className="text-[12px] text-text-tertiary">
+                        {createError || job?.errorMessage || '공수 생성에 실패했어요. 다시 뽑아주세요.'}
+                      </p>
+                    </>
+                  ) : (
                     <motion.p
                       animate={{ opacity: [0.35, 0.9, 0.35] }}
                       transition={{ duration: 1.4, repeat: Infinity }}
-                      className="text-[13px] text-text-tertiary"
+                      className="text-[14px] text-text-tertiary"
                     >
-                      신령이 세 패를 읽고 있습니다 (잠시 자리를 비워도 계속됩니다)
+                      신령이 세 패를 읽고 있느니라. 잠시 자리를 비워도 공수는 이어지느니.
                     </motion.p>
-                  )}
-                  {(createError || jobFailed) && !reading.total && (
-                    <p className="text-[12px] text-text-tertiary">
-                      {createError || job?.errorMessage || '공수 생성에 실패했어요. 다시 뽑아주세요.'}
-                    </p>
                   )}
                 </div>
 
@@ -599,11 +620,12 @@ export function ManshinOracleTest() {
 
                 {/* 카테고리별 공수 — 탭하면 열리는 아코디언 */}
                 <div className="mt-5 space-y-2">
-                  <div className="text-[11.5px] text-text-tertiary mb-1">궁금한 운을 눌러 마저 들어보세요</div>
+                  <div className="text-[11.5px] text-text-tertiary mb-1">궁금한 운을 짚어 마저 듣거라</div>
                   {FORTUNE_SECTIONS.map((sec) => {
                     const open = !!openSections[sec.key];
                     const aiText = reading[sec.key];
-                    const text = aiText ?? deity.fortunes[sec.key as keyof ManshinFortunes];
+                    // 결과 전에는 씨앗 문구를 미리 보여주지 않는다 (실패 시에만 폴백)
+                    const text = aiText ?? (createError || jobFailed ? deity.fortunes[sec.key as keyof ManshinFortunes] : null);
                     return (
                       <div
                         key={sec.key}
@@ -635,26 +657,28 @@ export function ManshinOracleTest() {
                               exit={{ height: 0, opacity: 0 }}
                               transition={{ duration: 0.35, ease: 'easeInOut' }}
                             >
-                              <div className="px-4 pb-4 pt-1 space-y-2.5">
-                                {speechLines(text).map((line, li) => (
-                                  <motion.p
-                                    key={`${aiText ? 'ai' : 'base'}-${li}`}
-                                    initial={{ opacity: 0, y: 8 }}
-                                    animate={{ opacity: 1, y: 0 }}
-                                    transition={{ delay: 0.12 + li * 0.22, duration: 0.5 }}
-                                    className="text-[15px] text-text-primary leading-[1.85]"
-                                    style={{ fontFamily: 'var(--font-serif)' }}
-                                  >
-                                    {line}
-                                  </motion.p>
-                                ))}
-                                {!aiText && jobRunning && (
+                              <div className="px-4 pb-5 pt-1 space-y-4">
+                                {text &&
+                                  speechLines(text).map((line, li) => (
+                                    <motion.p
+                                      key={`${aiText ? 'ai' : 'base'}-${li}`}
+                                      initial={{ opacity: 0.1, y: 8 }}
+                                      whileInView={{ opacity: 1, y: 0 }}
+                                      viewport={{ once: true, amount: 0.6 }}
+                                      transition={{ duration: 0.5, ease: 'easeOut' }}
+                                      className="text-[18px] text-text-primary leading-[2.0]"
+                                      style={{ fontFamily: 'var(--font-serif)' }}
+                                    >
+                                      {line}
+                                    </motion.p>
+                                  ))}
+                                {!text && jobRunning && (
                                   <motion.p
                                     animate={{ opacity: [0.35, 0.9, 0.35] }}
                                     transition={{ duration: 1.4, repeat: Infinity }}
-                                    className="text-[12.5px] text-text-tertiary"
+                                    className="text-[13px] text-text-tertiary"
                                   >
-                                    더 깊은 공수를 받아오는 중입니다
+                                    깊은 공수를 받아오는 중이니라
                                   </motion.p>
                                 )}
                               </div>
