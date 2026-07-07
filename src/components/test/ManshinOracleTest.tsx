@@ -148,19 +148,18 @@ export function ManshinOracleTest() {
                     }}
                     transition={{ delay: idx * 0.012, type: 'spring', stiffness: 300, damping: 22 }}
                     onClick={() => togglePick(idx)}
-                    className={`aspect-[2/3] rounded-md border transition-colors ${
+                    className={`aspect-[2/3] rounded-md border overflow-hidden transition-colors ${
                       isPicked
                         ? 'border-cta shadow-[0_0_12px_rgba(232,164,144,0.5)]'
                         : 'border-[rgba(201,166,255,0.25)]'
                     }`}
                     style={{
-                      background:
-                        'radial-gradient(circle at 50% 35%, rgba(201,166,255,0.28), rgba(20,12,38,0.9))',
+                      backgroundImage: "url('/manshin/back.png')",
+                      backgroundSize: 'cover',
+                      backgroundPosition: 'center',
                     }}
                     aria-label={`카드 ${idx + 1}`}
-                  >
-                    <span className="block text-[10px] text-[rgba(255,245,225,0.4)]">卍</span>
-                  </motion.button>
+                  />
                 );
               })}
             </div>
