@@ -18,8 +18,8 @@
  * - 카드 텍스처는 소형본(back_sm.png), willChange 로 레이어 승격
  */
 
-import { useEffect, useRef, useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { motion, AnimatePresence, useScroll, useTransform } from 'framer-motion';
 import { supabase } from '@/services/supabase';
 import { useFortuneJob } from '@/hooks/useFortuneJob';
 import {
@@ -79,6 +79,24 @@ function parseInterpretation(raw: string | null): Partial<Record<SectionKey, str
     if (text && text.length >= 40) out[key] = text;
   });
   return out;
+}
+
+/**
+ * 스크롤 연동 문장 — 읽는 지점(뷰포트 65% 높이)에 오면 선명, 그 아래는 흐릿.
+ * whileInView(1회성)가 아니라 스크롤 위치에 "연속" 연동: 내리는 만큼 점점 밝아진다.
+ * (opacity/transform 만 변경 — 리렌더 없이 스타일만 갱신되어 모바일에서도 60fps)
+ */
+function RevealLine({ children, className, style }: { children: ReactNode; className?: string; style?: React.CSSProperties }) {
+  const ref = useRef<HTMLParagraphElement>(null);
+  // 문장 상단이 뷰포트 95% 지점(하단)에 들어올 때 0 → 62% 지점(읽는 눈높이)에서 1
+  const { scrollYProgress } = useScroll({ target: ref, offset: ['start 0.95', 'start 0.62'] });
+  const opacity = useTransform(scrollYProgress, [0, 1], [0.14, 1]);
+  const y = useTransform(scrollYProgress, [0, 1], [10, 0]);
+  return (
+    <motion.p ref={ref} style={{ opacity, y, willChange: 'transform, opacity', ...style }} className={className}>
+      {children}
+    </motion.p>
+  );
 }
 
 /** 카드 아트 영역 별가루 (transform/opacity 만) */
@@ -572,17 +590,13 @@ export function ManshinOracleTest() {
                 <div className="space-y-5 border-l-2 pl-4" style={{ borderColor: `${deityColor}66` }}>
                   {reading.total ? (
                     speechLines(reading.total).map((line, li) => (
-                      <motion.p
+                      <RevealLine
                         key={`ai-${li}`}
-                        initial={{ opacity: 0.1, y: 10 }}
-                        whileInView={{ opacity: 1, y: 0 }}
-                        viewport={{ once: true, amount: 0.6 }}
-                        transition={{ duration: 0.55, ease: 'easeOut' }}
                         className="text-[19px] text-text-primary leading-[2.05]"
                         style={{ fontFamily: 'var(--font-serif)' }}
                       >
                         {line}
-                      </motion.p>
+                      </RevealLine>
                     ))
                   ) : createError || jobFailed ? (
                     <>
@@ -660,17 +674,13 @@ export function ManshinOracleTest() {
                               <div className="px-4 pb-5 pt-1 space-y-4">
                                 {text &&
                                   speechLines(text).map((line, li) => (
-                                    <motion.p
+                                    <RevealLine
                                       key={`${aiText ? 'ai' : 'base'}-${li}`}
-                                      initial={{ opacity: 0.1, y: 8 }}
-                                      whileInView={{ opacity: 1, y: 0 }}
-                                      viewport={{ once: true, amount: 0.6 }}
-                                      transition={{ duration: 0.5, ease: 'easeOut' }}
                                       className="text-[18px] text-text-primary leading-[2.0]"
                                       style={{ fontFamily: 'var(--font-serif)' }}
                                     >
                                       {line}
-                                    </motion.p>
+                                    </RevealLine>
                                   ))}
                                 {!text && jobRunning && (
                                   <motion.p
