@@ -68,6 +68,37 @@ function speechLines(speech: string): string[] {
     .filter(Boolean);
 }
 
+/**
+ * 공수 강조 2단계 렌더 — ==핵심==(1차: 빨강) / **중요**(2차: 노랑).
+ * 서버 프롬프트의 강조 규칙과 짝. 짝이 안 맞는 홑 마커는 텍스트 그대로 둔다.
+ */
+const MANSHIN_EMPHASIS_RE = /==([^=]+?)==|\*\*([^*]+?)\*\*/g;
+function renderManshinEmphasis(text: string): ReactNode[] {
+  const nodes: ReactNode[] = [];
+  let lastIndex = 0;
+  let match: RegExpExecArray | null;
+  const re = new RegExp(MANSHIN_EMPHASIS_RE.source, 'g');
+  while ((match = re.exec(text)) !== null) {
+    if (match.index > lastIndex) nodes.push(text.slice(lastIndex, match.index));
+    if (match[1] !== undefined) {
+      nodes.push(
+        <strong key={`em1-${match.index}`} style={{ color: '#ff5f5f', fontWeight: 700 }}>
+          {match[1]}
+        </strong>,
+      );
+    } else {
+      nodes.push(
+        <strong key={`em2-${match.index}`} style={{ color: '#ffd54a', fontWeight: 700 }}>
+          {match[2]}
+        </strong>,
+      );
+    }
+    lastIndex = match.index + match[0].length;
+  }
+  if (lastIndex < text.length) nodes.push(text.slice(lastIndex));
+  return nodes.length > 0 ? nodes : [text];
+}
+
 /** interpretation 원문([총운]... 마커)을 섹션별로 파싱 */
 function parseInterpretation(raw: string | null): Partial<Record<SectionKey, string>> {
   if (!raw) return {};
@@ -658,7 +689,7 @@ export function ManshinOracleTest() {
                         className="text-[19px] text-text-primary leading-[2.05]"
                         style={{ fontFamily: 'var(--font-serif)' }}
                       >
-                        {line}
+                        {renderManshinEmphasis(line)}
                       </RevealLine>
                     ))
                   ) : createError || jobFailed ? (
@@ -742,7 +773,7 @@ export function ManshinOracleTest() {
                                       className="text-[18px] text-text-primary leading-[2.0]"
                                       style={{ fontFamily: 'var(--font-serif)' }}
                                     >
-                                      {line}
+                                      {renderManshinEmphasis(line)}
                                     </RevealLine>
                                   ))}
                                 {!text && jobRunning && (
