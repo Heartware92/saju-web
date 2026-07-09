@@ -20,7 +20,7 @@ import { auth, sajuDB, tarotDB, supabase } from './supabase';
 export type ArchiveCategory =
   | 'traditional'  // 정통 사주
   | 'basic'        // 무료 기본 해석
-  | 'today'        // 실시간 운세 (내부 키 today legacy 유지)
+  | 'today'        // 오늘의 운세 (내부 키 today legacy 유지)
   | 'newyear'      // 신년운세
   | 'taekil'       // 택일 운세
   | 'tojeong'      // 토정비결

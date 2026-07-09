@@ -1,7 +1,7 @@
 'use client';
 
 /**
- * TodayResultView — 실시간 운세 "결과 본문" 공유 렌더러.
+ * TodayResultView — 오늘의 운세 "결과 본문" 공유 렌더러.
  * 제품 페이지(TodayFortunePage)와 temp_test 가 동일 코드를 쓰도록 결과 렌더 JSX를 추출.
  * (헤더·공유바·푸터·모달 등 인터랙션은 제품 페이지가 따로 감싼다 — 여기는 순수 결과 뷰)
  *

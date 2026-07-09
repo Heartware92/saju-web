@@ -2421,7 +2421,7 @@ function MoreFortuneSectionedCard({
                   );
                 })()
               ) : (
-                /* 일반 섹션 — 정통사주(SajuResultPage:641)·실시간 운세(TodayFortunePage:1126) 동일 패턴.
+                /* 일반 섹션 — 정통사주(SajuResultPage:641)·오늘의 운세(TodayFortunePage:1126) 동일 패턴.
                    단락 \n\n split + <p whitespace-pre-line>. wordBreak 미지정(default normal). */
                 <div className="text-[17px] text-text-secondary leading-[1.85] tracking-[-0.005em] space-y-3">
                   {(() => {

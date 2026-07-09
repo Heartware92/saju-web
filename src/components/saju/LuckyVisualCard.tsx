@@ -1,6 +1,6 @@
 'use client';
 
-// 행운 시각 카드 — 실시간 운세 / 신년운세 / 정통사주 공통 사용
+// 행운 시각 카드 — 오늘의 운세 / 신년운세 / 정통사주 공통 사용
 // 나침반(compass) + 색상 스와치 + 숫자 + 시간대 + 보조 텍스트
 
 import { annotateTimeSlot } from '../../utils/annotateTimeSlot';

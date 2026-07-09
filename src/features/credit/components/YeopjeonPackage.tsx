@@ -81,7 +81,7 @@ export const PackageComparison: React.FC = () => {
     { name: '신년운세 / 평생·시기 운세 / 지정일 운세', cost: '🌙 10' },
     { name: '궁합', cost: '🌙 10' },
     { name: '토정비결 · 자미두수 · 택일', cost: '🌙 10' },
-    { name: '실시간 운세', cost: '🌙 5' },
+    { name: '오늘의 운세', cost: '🌙 5' },
     { name: '더 많은 운세 (성격·자녀·학업·이름·꿈)', cost: '🌙 5' },
     { name: '타로 (오늘 · 이달 · 질문)', cost: '🌙 1' },
     { name: '상담소 (질문 1개당)', cost: '🌙 1' },

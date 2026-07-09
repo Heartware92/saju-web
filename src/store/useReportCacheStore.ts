@@ -20,12 +20,12 @@ const ERROR_TTL_MS = 60 * 1000;          // 1분 — 실패 응답 (즉시 재�
 const MAX_ENTRIES = 100; // LRU 상한 — localStorage 5MB 한도 보호
 
 export type ReportKind =
-  | 'today'         // 실시간 운세 / 지정일 운세 (TodayFortunePage)
+  | 'today'         // 오늘의 운세 / 지정일 운세 (TodayFortunePage)
   | 'jungtong'      // 정통사주 (SajuResultPage)
   | 'zamidusu'      // 자미두수 (ZamidusuResultPage)
   | 'tojeong'       // 토정비결 (TojeongResultPage)
   | 'newyear'       // 신년운세 (PeriodFortunePage scope=year)
-  | 'period_day'    // 실시간 운세 (PeriodFortunePage scope=day)
+  | 'period_day'    // 오늘의 운세 (PeriodFortunePage scope=day)
   | 'period_date'   // 지정일 운세 (PeriodFortunePage scope=date)
   | 'taekil'        // 택일 (TaekilPage)
   | 'gunghap'       // 궁합 (GunghapPage)

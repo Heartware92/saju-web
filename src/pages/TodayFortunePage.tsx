@@ -1,7 +1,7 @@
 'use client';
 
 /**
- * 실시간 운세 V3 (내부 식별자는 today/V3 legacy 유지) — 시간대 기반 + 사용자 입력 반영 13섹션 풀이
+ * 오늘의 운세 V3 (내부 식별자는 today/V3 legacy 유지) — 시간대 기반 + 사용자 입력 반영 13섹션 풀이
  *
  * 흐름:
  *   1. 진입 → 시간대 자동 감지 (자정/아침/오후/저녁)
@@ -325,7 +325,7 @@ function InputForm({
           boxShadow: '0 4px 20px rgba(139,92,246,0.3)',
         }}
       >
-        실시간 운세 보기
+        오늘의 운세 보기
       </button>
       {!canSubmit && (
         <p className="text-[12px] text-text-tertiary text-center -mt-1">취미·직업·연애 상태를 모두 선택해주세요</p>
@@ -614,7 +614,7 @@ export default function TodayFortunePage() {
   if (needsProfileSelect) {
     return (
       <QuickFortuneGate
-        serviceName="실시간 운세"
+        serviceName="오늘의 운세"
         archiveCategory="today"
         creditType="moon"
         creditCost={MOON_COST_MORE}
@@ -684,7 +684,7 @@ export default function TodayFortunePage() {
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M15 18l-6-6 6-6" /></svg>
           </button>
           <div className="flex-1 flex flex-col items-center">
-            <h1 className="text-2xl font-bold text-text-primary" style={{ fontFamily: 'var(--font-serif)' }}>실시간 운세</h1>
+            <h1 className="text-2xl font-bold text-text-primary" style={{ fontFamily: 'var(--font-serif)' }}>오늘의 운세</h1>
             <span className="text-[12px] text-text-tertiary mt-0.5">{todayDateStr}</span>
           </div>
           <div className="w-9" />
@@ -700,7 +700,7 @@ export default function TodayFortunePage() {
         />
         <RestoreReportModal
           open={!!cacheGate}
-          title="실시간 운세"
+          title="오늘의 운세"
           onUseCached={handleUseCached}
           onRefresh={handleRefetch}
           onClose={() => setCacheGate(null)}
@@ -744,7 +744,7 @@ export default function TodayFortunePage() {
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M15 18l-6-6 6-6" /></svg>
         </button>
         <div className="flex-1 flex flex-col items-center">
-          <h1 className="text-2xl font-bold text-text-primary" style={{ fontFamily: 'var(--font-serif)' }}>실시간 운세</h1>
+          <h1 className="text-2xl font-bold text-text-primary" style={{ fontFamily: 'var(--font-serif)' }}>오늘의 운세</h1>
           {isArchiveMode && archivedAt ? (
             <span className="text-[11px] text-text-tertiary mt-0.5">
               보관함 · {new Date(archivedAt).toLocaleString('ko-KR', { dateStyle: 'medium', timeStyle: 'short' })}
@@ -798,7 +798,7 @@ export default function TodayFortunePage() {
 
       <RestoreReportModal
         open={!!cacheGate}
-        title="실시간 운세"
+        title="오늘의 운세"
         onUseCached={handleUseCached}
         onRefresh={handleRefetch}
         onClose={() => setCacheGate(null)}

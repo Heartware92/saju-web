@@ -210,7 +210,7 @@ const CATEGORY_POLICY: Record<
   tojeong: { creditCost: 10, reason: '토정비결' },
   zamidusu: { creditCost: 10, reason: '자미두수' },
   taekil: { creditCost: 10, reason: '택일' },
-  today: { creditCost: 5, reason: '실시간 운세' },    // MOON_COST_MORE = 5
+  today: { creditCost: 5, reason: '오늘의 운세' },    // MOON_COST_MORE = 5
   period: { creditCost: 10, reason: '지정일 운세' },  // archive category='period'
   // 더많은 운세 5개 — MOON_COST_MORE = 5 (실시간과 동일)
   study: { creditCost: 5, reason: '학업·시험운' },

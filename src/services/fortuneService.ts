@@ -1017,7 +1017,7 @@ export const getJungtongsajuReport = async (
   }
 };
 
-// ── 실시간 운세 — V3 만 사용 (V1 함수·인터페이스는 데드코드로 제거) ──
+// ── 오늘의 운세 — V3 만 사용 (V1 함수·인터페이스는 데드코드로 제거) ──
 
 /** 한자 매핑 */
 const GAN_HANJA: Record<string, string> = {
@@ -1068,7 +1068,7 @@ export function calcTodayGanZhi(result: SajuResult, isoDate: string): TodayGanZh
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// 실시간 운세 V3 — 14 섹션 + 9 항목 점수 + 4 시간대 흐름 + 사용자 입력 반영
+// 오늘의 운세 V3 — 14 섹션 + 9 항목 점수 + 4 시간대 흐름 + 사용자 입력 반영
 // ─────────────────────────────────────────────────────────────────────────────
 
 /** 9 항목 점수 (0~100) */
@@ -1339,7 +1339,7 @@ export const getTodayFortuneV3Report = async (
 };
 
 /**
- * 실시간 운세 V3 prompt 빌드 — 백그라운드 잡 시스템용.
+ * 오늘의 운세 V3 prompt 빌드 — 백그라운드 잡 시스템용.
  * getTodayFortuneV3Report 의 prompt 생성 로직(분류기 포함)을 추출.
  * 클라이언트가 호출해 완성된 prompt 를 /api/fortune/jobs/create 로 전달.
  */

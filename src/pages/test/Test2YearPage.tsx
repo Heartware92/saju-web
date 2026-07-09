@@ -461,7 +461,7 @@ export default function Test2YearPage({ scope }: { scope: FortuneScope | 'date' 
   const isFromYearFortune = sourceParam === 'year-fortune';
   const pageTitle =
     scope === 'year' ? (isFromYearFortune ? `${targetYear}년도 운세 풀이` : `${targetYear} 신년운세`)
-    : scope === 'day' ? '실시간 운세'
+    : scope === 'day' ? '오늘의 운세'
     : '지정일 운세';
 
   // 영역별 AI 상세 설명 (5문장)
@@ -1673,7 +1673,7 @@ export default function Test2YearPage({ scope }: { scope: FortuneScope | 'date' 
 
       <RestoreReportModal
         open={!!cacheGate}
-        title={scope === 'year' ? '신년운세' : scope === 'date' ? '지정일 운세' : '실시간 운세'}
+        title={scope === 'year' ? '신년운세' : scope === 'date' ? '지정일 운세' : '오늘의 운세'}
         onUseCached={handleUseCached}
         onRefresh={handleRefetch}
         onClose={() => setCacheGate(null)}

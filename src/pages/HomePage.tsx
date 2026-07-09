@@ -111,12 +111,12 @@ const TOP_SERVICES = [
 // 모든 서비스 버튼은 결과 페이지로 직행한다.
 // 대표 프로필이 없으면 결과 페이지 자체에서 "프로필 등록" 안내가 표시된다.
 
-// "더 많은 운세" — 달 크레딧 5개 소모 (5종) + 실시간 운세를 1행 1열 첫 카드로 prepend.
-// 실시간 운세도 같은 단가(5달)이라 시각적으로 같은 카드 사이즈로 통일.
+// "더 많은 운세" — 달 크레딧 5개 소모 (5종) + 오늘의 운세를 1행 1열 첫 카드로 prepend.
+// 오늘의 운세도 같은 단가(5달)이라 시각적으로 같은 카드 사이즈로 통일.
 const SUB_SERVICES = [
   {
     id: 'today',
-    title: '실시간 운세',
+    title: '오늘의 운세',
     icon: '☀️',
     desc: '지금의 운세',
     href: '/saju/today',
@@ -148,7 +148,7 @@ type GateConfig = Omit<QuickFortuneGateProps, 'onClose'>;
 
 function buildGateConfig(path: string): GateConfig | null {
   const GATE_SERVICES: Record<string, GateConfig> = {
-    '/saju/today': { serviceName: '실시간 운세', archiveCategory: 'today' as ArchiveCategory, creditType: 'moon', creditCost: MOON_COST_MORE, targetPath: '/saju/today' },
+    '/saju/today': { serviceName: '오늘의 운세', archiveCategory: 'today' as ArchiveCategory, creditType: 'moon', creditCost: MOON_COST_MORE, targetPath: '/saju/today' },
     '/saju/date': { serviceName: '지정일 운세', archiveCategory: 'period' as ArchiveCategory, creditType: 'moon', creditCost: SUN_COST_BIG, targetPath: '/saju/date' },
     '/saju/taekil': { serviceName: '택일 운세', archiveCategory: 'taekil' as ArchiveCategory, creditType: 'moon', creditCost: SUN_COST_BIG, targetPath: '/saju/taekil' },
     '/saju/tojeong': { serviceName: '토정비결', description: '조선 시대 토정 이지함 선생이 만든 연간 신수 풀이예요. 음력 생년월일과 세는 나이로 144괘 중 하나를 뽑아 올해의 총운, 12개월 흐름, 재물·애정·건강·직장운을 살펴봅니다.', archiveCategory: 'tojeong' as ArchiveCategory, creditType: 'moon', creditCost: SUN_COST_BIG, targetPath: '/saju/tojeong' },
@@ -556,8 +556,34 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* 상단 서비스 7종 — 지정일·택일 운세 사이즈로 통일 (h-[88], 폰트 19/15) */}
+      {/* 더 많은 운세 (오늘의 운세 포함, 달 5개) — 메인 풀이보다 위 배치 */}
       <section className="px-4 -mt-3 relative z-10">
+        <div className="flex items-center justify-between mb-3 px-1">
+          <h2 className="text-base font-bold text-text-primary">더 많은 운세</h2>
+          <span className="text-[12px] text-text-tertiary">🌙 5개 소모</span>
+        </div>
+        <motion.div
+          variants={stagger}
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true }}
+          className="grid grid-cols-3 gap-2"
+        >
+          {SUB_SERVICES.map((svc) => (
+            <motion.div key={svc.id} variants={fadeUp}>
+              <button type="button" onClick={(e) => handleServiceClick(e, svc.href)} className="w-full">
+                <div className="service-card flex flex-col items-center justify-center h-[80px] p-2.5 rounded-xl bg-space-surface/60 border border-[var(--border-subtle)]">
+                  <span className="text-[17px] font-bold text-text-primary text-center leading-tight mb-1 whitespace-nowrap">{svc.title}</span>
+                  <span className="text-[14px] text-text-tertiary text-center leading-tight line-clamp-1 whitespace-nowrap">{svc.desc}</span>
+                </div>
+              </button>
+            </motion.div>
+          ))}
+        </motion.div>
+      </section>
+
+      {/* 메인 풀이 7종 — 지정일·택일 운세 사이즈로 통일 (h-[88], 폰트 19/15) */}
+      <section className="px-4 mt-5">
         <div className="flex items-center justify-between mb-3 px-1">
           <h2 className="text-base font-bold text-text-primary">메인 풀이</h2>
           <span className="text-[12px] text-text-tertiary">🌙 10개 소모</span>
@@ -581,32 +607,6 @@ export default function HomePage() {
                 `}>
                   <h3 className="text-[19px] font-bold text-text-primary tracking-tight">{svc.title}</h3>
                   <p className="text-[15px] font-medium text-text-secondary">{svc.desc}</p>
-                </div>
-              </button>
-            </motion.div>
-          ))}
-        </motion.div>
-      </section>
-
-      {/* 추가 서비스 - 더 많은 운세 9종 (달 크레딧) */}
-      <section className="px-4 mt-5">
-        <div className="flex items-center justify-between mb-3 px-1">
-          <h2 className="text-base font-bold text-text-primary">더 많은 운세</h2>
-          <span className="text-[12px] text-text-tertiary">🌙 5개 소모</span>
-        </div>
-        <motion.div
-          variants={stagger}
-          initial="hidden"
-          whileInView="visible"
-          viewport={{ once: true }}
-          className="grid grid-cols-3 gap-2"
-        >
-          {SUB_SERVICES.map((svc) => (
-            <motion.div key={svc.id} variants={fadeUp}>
-              <button type="button" onClick={(e) => handleServiceClick(e, svc.href)} className="w-full">
-                <div className="service-card flex flex-col items-center justify-center h-[80px] p-2.5 rounded-xl bg-space-surface/60 border border-[var(--border-subtle)]">
-                  <span className="text-[17px] font-bold text-text-primary text-center leading-tight mb-1 whitespace-nowrap">{svc.title}</span>
-                  <span className="text-[14px] text-text-tertiary text-center leading-tight line-clamp-1 whitespace-nowrap">{svc.desc}</span>
                 </div>
               </button>
             </motion.div>
