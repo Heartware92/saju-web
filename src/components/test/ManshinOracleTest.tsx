@@ -615,7 +615,7 @@ export function ManshinOracleTest() {
                   >
                     <div className="flex items-center gap-2.5">
                       <span
-                        className="shrink-0 text-[12.5px] font-semibold tracking-[0.1em] px-2.5 py-1 rounded-md whitespace-nowrap"
+                        className="shrink-0 text-[14px] font-semibold tracking-[0.1em] px-3 py-1 rounded-md whitespace-nowrap"
                         style={{ background: `${color}22`, color }}
                       >
                         {m.label}
@@ -651,7 +651,7 @@ export function ManshinOracleTest() {
                   animate={{ scale: [1, 1.22, 1], opacity: [0.6, 1, 0.6] }}
                   transition={{ duration: 4.2, repeat: Infinity, ease: 'easeInOut' }}
                 />
-                <div className="text-[13px] tracking-[0.25em] mb-2 relative" style={{ color: deityColor }}>
+                <div className="text-[15px] tracking-[0.22em] mb-2 relative" style={{ color: deityColor }}>
                   {deity.group} · 제{deity.no}패
                 </div>
                 <div className="text-[32px] font-bold text-text-primary leading-tight text-center relative" style={{ fontFamily: 'var(--font-title)' }}>
