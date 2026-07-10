@@ -339,12 +339,12 @@ export function ManshinOracleTest() {
             </div>
 
             <div className="rounded-2xl p-5 bg-[rgba(20,12,38,0.55)] border border-[var(--border-subtle)]">
-              <div className="text-[14px] font-semibold text-text-primary mb-3">세 개의 패를 뽑느니라</div>
+              <div className="text-[16px] font-semibold text-text-primary mb-3">세 개의 패를 뽑느니라</div>
               <div className="space-y-2">
                 {STEP_META.map((m, i) => (
                   <div key={m.key} className="flex items-center gap-3">
-                    <span className="w-14 shrink-0 text-[13px] font-bold text-cta">{m.label}</span>
-                    <span className="text-[13px] text-text-tertiary">
+                    <span className="w-16 shrink-0 text-[14.5px] font-bold text-cta">{m.label}</span>
+                    <span className="text-[14.5px] text-text-tertiary">
                       {i === 0 ? '누가 너를 도울지' : i === 1 ? '무슨 일이 벌어질지' : '얼마나, 언제일지'}
                     </span>
                   </div>
@@ -596,35 +596,36 @@ export function ManshinOracleTest() {
         {/* ── 공개: 세 패 + 신령의 단일 공수 ── */}
         {phase === 'reveal' && deity && selected.custom && selected.coin && (
           <motion.div key="reveal" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-5">
-            {/* 세 패 요약 */}
-            <div className="grid grid-cols-3 gap-2">
+            {/* 세 패 요약 — 전폭 가로 행.
+                덱 전수분석: name 최장 7자 · title 최장 21자 · domains 최장 19자.
+                390px 폰에서도 행 내부 폭 ~310px → title 15px(21자 ≈ 305px)·domains 13.5px 가
+                전부 한 줄에 수납되어 단어 중간 줄바꿈이 발생하지 않는다 */}
+            <div className="space-y-2.5">
               {STEP_META.map((m, i) => {
                 const card = selected[m.key]!;
                 const color = MANSHIN_GROUP_COLORS[card.group];
                 return (
                   <motion.div
                     key={m.key}
-                    initial={{ rotateY: 100, opacity: 0 }}
-                    animate={{ rotateY: 0, opacity: 1 }}
-                    transition={{ delay: i * 0.3, duration: 0.55, ease: [0.16, 1, 0.3, 1] }}
-                    style={{ transformPerspective: 700 }}
-                    className="rounded-xl border border-[var(--border-subtle)] overflow-hidden text-center"
+                    initial={{ x: -16, opacity: 0 }}
+                    animate={{ x: 0, opacity: 1 }}
+                    transition={{ delay: i * 0.25, duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+                    className="rounded-xl border border-[var(--border-subtle)] px-4 py-3.5"
+                    style={{ background: `linear-gradient(90deg, ${color}16, rgba(20,12,38,0.45))` }}
                   >
-                    <div className="py-1.5 text-[10.5px] tracking-[0.15em]" style={{ background: `${color}1a`, color }}>
-                      {m.label}
-                    </div>
-                    <div
-                      className="px-1.5 py-3 flex flex-col items-center justify-center min-h-[112px]"
-                      style={{ background: `radial-gradient(circle at 50% 0%, ${color}22, rgba(20,12,38,0.4))` }}
-                    >
-                      <div className="text-[16px] font-bold text-text-primary leading-tight" style={{ fontFamily: 'var(--font-title)' }}>
+                    <div className="flex items-center gap-2.5">
+                      <span
+                        className="shrink-0 text-[12.5px] font-semibold tracking-[0.1em] px-2.5 py-1 rounded-md whitespace-nowrap"
+                        style={{ background: `${color}22`, color }}
+                      >
+                        {m.label}
+                      </span>
+                      <span className="text-[20px] font-bold text-text-primary leading-tight" style={{ fontFamily: 'var(--font-title)' }}>
                         {card.name}
-                      </div>
-                      <div className="text-[11.5px] text-text-secondary mt-1.5 leading-snug px-0.5">{card.title}</div>
-                      <div className="text-[10px] mt-1.5 leading-snug px-0.5" style={{ color: `${color}cc` }}>
-                        {card.domains}
-                      </div>
+                      </span>
                     </div>
+                    <div className="text-[15px] text-text-secondary leading-snug mt-2">{card.title}</div>
+                    <div className="text-[13.5px] mt-1" style={{ color: `${color}dd` }}>{card.domains}</div>
                   </motion.div>
                 );
               })}
@@ -650,17 +651,17 @@ export function ManshinOracleTest() {
                   animate={{ scale: [1, 1.22, 1], opacity: [0.6, 1, 0.6] }}
                   transition={{ duration: 4.2, repeat: Infinity, ease: 'easeInOut' }}
                 />
-                <div className="text-[11px] tracking-[0.25em] mb-2 relative" style={{ color: deityColor }}>
+                <div className="text-[13px] tracking-[0.25em] mb-2 relative" style={{ color: deityColor }}>
                   {deity.group} · 제{deity.no}패
                 </div>
                 <div className="text-[32px] font-bold text-text-primary leading-tight text-center relative" style={{ fontFamily: 'var(--font-title)' }}>
                   {deity.name}
                 </div>
-                <div className="text-[13.5px] text-text-secondary mt-1.5 text-center relative">{deity.title}</div>
-                <div className="text-[12.5px] text-text-tertiary mt-2.5 text-center relative">
+                <div className="text-[15.5px] text-text-secondary mt-1.5 text-center relative">{deity.title}</div>
+                <div className="text-[14px] text-text-tertiary mt-2.5 text-center relative">
                   {selected.custom.name}의 장면에 {selected.coin.name}을 얹어 공수를 내립니다
                 </div>
-                <div className="absolute bottom-2 right-3 text-[10px] text-[rgba(255,245,225,0.25)]">
+                <div className="absolute bottom-2 right-3 text-[11.5px] text-[rgba(255,245,225,0.3)]">
                   일러스트 준비 중
                 </div>
               </div>
@@ -669,13 +670,13 @@ export function ManshinOracleTest() {
                 {/* 신령 소개 — 설화 기반 lore (신령부 36장 전원 보유) */}
                 {deity.lore && (
                   <div className="mb-4 rounded-xl px-4 py-3 bg-white/[0.04] border border-[var(--border-subtle)]">
-                    <div className="text-[11px] tracking-[0.18em] text-text-tertiary mb-1.5">이 신령은</div>
-                    <p className="text-[13.5px] text-text-secondary leading-[1.75]">{deity.lore}</p>
+                    <div className="text-[13px] tracking-[0.18em] text-text-tertiary mb-1.5">이 신령은</div>
+                    <p className="text-[15px] text-text-secondary leading-[1.8]">{deity.lore}</p>
                   </div>
                 )}
                 <div className="mb-4">
-                  <div className="text-[11.5px] tracking-[0.2em] text-text-tertiary">공수 내리시길</div>
-                  <div className="text-[11px] text-text-tertiary mt-1" style={{ opacity: 0.75 }}>
+                  <div className="text-[13.5px] tracking-[0.2em] text-text-tertiary">공수 내리시길</div>
+                  <div className="text-[12.5px] text-text-tertiary mt-1" style={{ opacity: 0.75 }}>
                     공수(空唱) — 신령이 사람의 입을 빌려 직접 들려주는 말
                   </div>
                 </div>
@@ -699,7 +700,7 @@ export function ManshinOracleTest() {
                           {line}
                         </p>
                       ))}
-                      <p className="text-[12px] text-text-tertiary">
+                      <p className="text-[13.5px] text-text-tertiary">
                         {createError || job?.errorMessage || '공수 생성에 실패했어요. 다시 뽑아주세요.'}
                       </p>
                     </>
@@ -718,7 +719,7 @@ export function ManshinOracleTest() {
                   {deity.keywords.map((k) => (
                     <span
                       key={k}
-                      className="text-[12px] px-2.5 py-1 rounded-full border"
+                      className="text-[13.5px] px-3 py-1.5 rounded-full border"
                       style={{ color: deityColor, borderColor: `${deityColor}55`, background: `${deityColor}14` }}
                     >
                       {k}
@@ -728,7 +729,7 @@ export function ManshinOracleTest() {
 
                 {/* 카테고리별 공수 — 탭하면 열리는 아코디언 */}
                 <div className="mt-5 space-y-2">
-                  <div className="text-[11.5px] text-text-tertiary mb-1">궁금한 운을 짚어 마저 듣거라</div>
+                  <div className="text-[13.5px] text-text-tertiary mb-1.5">궁금한 운을 짚어 마저 듣거라</div>
                   {FORTUNE_SECTIONS.map((sec) => {
                     const open = !!openSections[sec.key];
                     const aiText = reading[sec.key];
@@ -746,13 +747,13 @@ export function ManshinOracleTest() {
                           className="w-full flex items-center justify-between px-4 py-3"
                           style={{ background: open ? `${deityColor}0f` : 'rgba(255,255,255,0.03)' }}
                         >
-                          <span className="text-[14px] font-semibold" style={{ color: open ? deityColor : 'var(--text-secondary)' }}>
+                          <span className="text-[17px] font-semibold" style={{ color: open ? deityColor : 'var(--text-secondary)' }}>
                             {sec.label}
                           </span>
                           <motion.span
                             animate={{ rotate: open ? 180 : 0 }}
                             transition={{ duration: 0.25 }}
-                            className="text-[11px] text-text-tertiary"
+                            className="text-[12.5px] text-text-tertiary"
                           >
                             ▾
                           </motion.span>
@@ -780,7 +781,7 @@ export function ManshinOracleTest() {
                                   <motion.p
                                     animate={{ opacity: [0.35, 0.9, 0.35] }}
                                     transition={{ duration: 1.4, repeat: Infinity }}
-                                    className="text-[13px] text-text-tertiary"
+                                    className="text-[14px] text-text-tertiary"
                                   >
                                     깊은 공수를 받아오는 중이니라
                                   </motion.p>

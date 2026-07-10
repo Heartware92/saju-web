@@ -184,7 +184,7 @@ export function ManshinImageCompareTest() {
             );
           })}
         </div>
-        <div className="text-[11px] tracking-[0.18em] text-text-tertiary mb-2">일러스트 후보 — 탭해서 비교</div>
+        <div className="text-[13px] tracking-[0.18em] text-text-tertiary mb-2">일러스트 후보 — 탭해서 비교</div>
         <div className="flex flex-wrap gap-1.5">
           {deitySet.variants.map((v) => {
             const active = v.id === variant.id;
@@ -192,7 +192,7 @@ export function ManshinImageCompareTest() {
               <button
                 key={v.id}
                 onClick={() => setVariantId(v.id)}
-                className="text-[12.5px] px-3 py-1.5 rounded-full border transition-colors"
+                className="text-[14px] px-3.5 py-1.5 rounded-full border transition-colors"
                 style={{
                   color: active ? '#1a1030' : 'var(--text-secondary)',
                   background: active ? deityColor : 'rgba(255,255,255,0.04)',
@@ -205,13 +205,13 @@ export function ManshinImageCompareTest() {
             );
           })}
         </div>
-        <div className="text-[10.5px] text-text-tertiary mt-1.5">{variant.note}</div>
+        <div className="text-[12px] text-text-tertiary mt-1.5">{variant.note}</div>
       </div>
 
       <div className="space-y-5 mt-5">
         {/* ── 부채꼴 크기(92px) 미리보기 — 뽑기 화면에서 보이는 실제 크기 ── */}
         <div className="rounded-xl border border-[var(--border-subtle)] p-3 bg-white/[0.03]">
-          <div className="text-[11px] tracking-[0.15em] text-text-tertiary mb-2.5">뽑기 화면 크기(92px)에서는 이렇게 보입니다</div>
+          <div className="text-[13px] tracking-[0.15em] text-text-tertiary mb-2.5">뽑기 화면 크기(92px)에서는 이렇게 보입니다</div>
           <div className="flex gap-2 overflow-x-auto pb-1">
             {deitySet.variants.map((v) => (
               <button key={v.id} onClick={() => setVariantId(v.id)} className="shrink-0">
@@ -222,7 +222,7 @@ export function ManshinImageCompareTest() {
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img src={v.src} alt={v.label} className="w-full h-full object-cover" loading="lazy" />
                 </div>
-                <div className="text-[10px] mt-1 text-center" style={{ color: v.id === variant.id ? deityColor : 'var(--text-tertiary)' }}>
+                <div className="text-[12px] mt-1 text-center" style={{ color: v.id === variant.id ? deityColor : 'var(--text-tertiary)' }}>
                   {v.label}
                 </div>
               </button>
@@ -230,27 +230,30 @@ export function ManshinImageCompareTest() {
           </div>
         </div>
 
-        {/* ── 세 패 요약 (reveal 동일) ── */}
-        <div className="grid grid-cols-3 gap-2">
+        {/* ── 세 패 요약 — 전폭 가로 행 (reveal 동일).
+             덱 전수분석: name 최장 7자 · title 최장 21자 · domains 최장 19자 → 이 폭이면 전부 한 줄 수납 ── */}
+        <div className="space-y-2.5">
           {threeCards.map(({ label, card }) => {
             const color = MANSHIN_GROUP_COLORS[card.group];
             return (
-              <div key={label} className="rounded-xl border border-[var(--border-subtle)] overflow-hidden text-center">
-                <div className="py-1.5 text-[10.5px] tracking-[0.15em]" style={{ background: `${color}1a`, color }}>
-                  {label}
-                </div>
-                <div
-                  className="px-1.5 py-3 flex flex-col items-center justify-center min-h-[112px]"
-                  style={{ background: `radial-gradient(circle at 50% 0%, ${color}22, rgba(20,12,38,0.4))` }}
-                >
-                  <div className="text-[16px] font-bold text-text-primary leading-tight" style={{ fontFamily: 'var(--font-title)' }}>
+              <div
+                key={label}
+                className="rounded-xl border border-[var(--border-subtle)] px-4 py-3.5"
+                style={{ background: `linear-gradient(90deg, ${color}16, rgba(20,12,38,0.45))` }}
+              >
+                <div className="flex items-center gap-2.5">
+                  <span
+                    className="shrink-0 text-[12.5px] font-semibold tracking-[0.1em] px-2.5 py-1 rounded-md whitespace-nowrap"
+                    style={{ background: `${color}22`, color }}
+                  >
+                    {label}
+                  </span>
+                  <span className="text-[20px] font-bold text-text-primary leading-tight" style={{ fontFamily: 'var(--font-title)' }}>
                     {card.name}
-                  </div>
-                  <div className="text-[11.5px] text-text-secondary mt-1.5 leading-snug px-0.5">{card.title}</div>
-                  <div className="text-[10px] mt-1.5 leading-snug px-0.5" style={{ color: `${color}cc` }}>
-                    {card.domains}
-                  </div>
+                  </span>
                 </div>
+                <div className="text-[15px] text-text-secondary leading-snug mt-2">{card.title}</div>
+                <div className="text-[13.5px] mt-1" style={{ color: `${color}dd` }}>{card.domains}</div>
               </div>
             );
           })}
@@ -270,7 +273,7 @@ export function ManshinImageCompareTest() {
               animate={{ scale: [1, 1.22, 1], opacity: [0.6, 1, 0.6] }}
               transition={{ duration: 4.2, repeat: Infinity, ease: 'easeInOut' }}
             />
-            <div className="text-[11px] tracking-[0.25em] mb-3 relative" style={{ color: deityColor }}>
+            <div className="text-[13px] tracking-[0.25em] mb-3 relative" style={{ color: deityColor }}>
               {deity.group} · 제{deity.no}패
             </div>
             {/* 카드 일러스트 — 2:3 카드 프레임 */}
@@ -289,8 +292,8 @@ export function ManshinImageCompareTest() {
             <div className="text-[32px] font-bold text-text-primary leading-tight text-center relative mt-4" style={{ fontFamily: 'var(--font-title)' }}>
               {deity.name}
             </div>
-            <div className="text-[13.5px] text-text-secondary mt-1.5 text-center relative">{deity.title}</div>
-            <div className="text-[12.5px] text-text-tertiary mt-2.5 text-center relative">
+            <div className="text-[15.5px] text-text-secondary mt-1.5 text-center relative">{deity.title}</div>
+            <div className="text-[14px] text-text-tertiary mt-2.5 text-center relative">
               {custom.name}의 장면에 {coin.name}을 얹어 공수를 내립니다
             </div>
           </div>
@@ -298,13 +301,13 @@ export function ManshinImageCompareTest() {
           <div className="px-5 py-5">
             {deity.lore && (
               <div className="mb-4 rounded-xl px-4 py-3 bg-white/[0.04] border border-[var(--border-subtle)]">
-                <div className="text-[11px] tracking-[0.18em] text-text-tertiary mb-1.5">이 신령은</div>
-                <p className="text-[13.5px] text-text-secondary leading-[1.75]">{deity.lore}</p>
+                <div className="text-[13px] tracking-[0.18em] text-text-tertiary mb-1.5">이 신령은</div>
+                <p className="text-[15px] text-text-secondary leading-[1.8]">{deity.lore}</p>
               </div>
             )}
             <div className="mb-4">
-              <div className="text-[11.5px] tracking-[0.2em] text-text-tertiary">공수 내리시길</div>
-              <div className="text-[11px] text-text-tertiary mt-1" style={{ opacity: 0.75 }}>
+              <div className="text-[13.5px] tracking-[0.2em] text-text-tertiary">공수 내리시길</div>
+              <div className="text-[12.5px] text-text-tertiary mt-1" style={{ opacity: 0.75 }}>
                 공수(空唱) — 신령이 사람의 입을 빌려 직접 들려주는 말
               </div>
             </div>
@@ -324,7 +327,7 @@ export function ManshinImageCompareTest() {
               {deity.keywords.map((k) => (
                 <span
                   key={k}
-                  className="text-[12px] px-2.5 py-1 rounded-full border"
+                  className="text-[13.5px] px-3 py-1.5 rounded-full border"
                   style={{ color: deityColor, borderColor: `${deityColor}55`, background: `${deityColor}14` }}
                 >
                   {k}
@@ -334,7 +337,7 @@ export function ManshinImageCompareTest() {
 
             {/* 카테고리별 공수 아코디언 (reveal 동일) */}
             <div className="mt-5 space-y-2">
-              <div className="text-[11.5px] text-text-tertiary mb-1">궁금한 운을 짚어 마저 듣거라</div>
+              <div className="text-[13.5px] text-text-tertiary mb-1.5">궁금한 운을 짚어 마저 듣거라</div>
               {FORTUNE_SECTIONS.map((sec) => {
                 const open = !!openSections[sec.key];
                 const text = reading[sec.key];
@@ -349,13 +352,13 @@ export function ManshinImageCompareTest() {
                       className="w-full flex items-center justify-between px-4 py-3"
                       style={{ background: open ? `${deityColor}0f` : 'rgba(255,255,255,0.03)' }}
                     >
-                      <span className="text-[14px] font-semibold" style={{ color: open ? deityColor : 'var(--text-secondary)' }}>
+                      <span className="text-[17px] font-semibold" style={{ color: open ? deityColor : 'var(--text-secondary)' }}>
                         {sec.label}
                       </span>
                       <motion.span
                         animate={{ rotate: open ? 180 : 0 }}
                         transition={{ duration: 0.25 }}
-                        className="text-[11px] text-text-tertiary"
+                        className="text-[12.5px] text-text-tertiary"
                       >
                         ▾
                       </motion.span>
