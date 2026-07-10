@@ -27,6 +27,7 @@ const VARIANTS: { id: string; label: string; src: string; note: string }[] = [
   { id: 'mj4', label: '미드저니 4', src: '/manshin/test2/mj4.jpg', note: '1:1 원본 — 좌우 크롭됨' },
   { id: 'banana', label: '지피티', src: '/manshin/test2/banana.jpg', note: '2:3 원본' },
   { id: 'gemini', label: '제미나이', src: '/manshin/test2/gemini.jpg', note: '2:3 원본' },
+  { id: 'grok', label: '그록', src: '/manshin/test2/grok.jpg', note: '2:3 원본' },
 ];
 
 /** 실제 생성 공수 (gemini-3.1-flash-lite · 옥황상제+혼례+엽전 세 닢 · 2026-07-10) */
