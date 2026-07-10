@@ -143,7 +143,7 @@ function RevealLine({ children, className, style }: { children: ReactNode; class
 function SummaryPatCard({ label, card, imageSrc, large }: { label: string; card: ManshinCard; imageSrc?: string; large?: boolean }) {
   const color = MANSHIN_GROUP_COLORS[card.group];
   return (
-    <div className={large ? 'w-[176px]' : 'w-[142px]'}>
+    <div className={large ? 'w-[176px]' : 'w-[156px]'}>
       <div
         className="relative aspect-[2/3] rounded-xl overflow-hidden border"
         style={{ borderColor: `${color}66`, boxShadow: `0 6px 24px ${color}22` }}
@@ -646,29 +646,19 @@ export function ManshinOracleTest() {
         {/* ── 공개: 세 패 + 신령의 단일 공수 ── */}
         {phase === 'reveal' && deity && selected.custom && selected.coin && (
           <motion.div key="reveal" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-5">
-            {/* 세 패 요약 — 삼각 배치: 상단 신령패 大, 하단 풍습·엽전 2장 (점상에 패 놓인 그림) */}
-            <div className="flex flex-col items-center gap-4">
-              <motion.div
-                initial={{ rotateY: 100, opacity: 0 }}
-                animate={{ rotateY: 0, opacity: 1 }}
-                transition={{ duration: 0.55, ease: [0.16, 1, 0.3, 1] }}
-                style={{ transformPerspective: 700 }}
-              >
-                <SummaryPatCard label="신령패" card={selected.deity!} large />
-              </motion.div>
-              <div className="flex justify-center gap-4">
-                {(['custom', 'coin'] as const).map((key, i) => (
-                  <motion.div
-                    key={key}
-                    initial={{ rotateY: 100, opacity: 0 }}
-                    animate={{ rotateY: 0, opacity: 1 }}
-                    transition={{ delay: 0.3 + i * 0.25, duration: 0.55, ease: [0.16, 1, 0.3, 1] }}
-                    style={{ transformPerspective: 700 }}
-                  >
-                    <SummaryPatCard label={key === 'custom' ? '풍습패' : '엽전패'} card={selected[key]!} />
-                  </motion.div>
-                ))}
-              </div>
+            {/* 세 패 요약 — 풍습·엽전 2장만 (신령패는 아래 공수 카드의 대형 카드로 표시, 중복 제거) */}
+            <div className="flex justify-center gap-4">
+              {(['custom', 'coin'] as const).map((key, i) => (
+                <motion.div
+                  key={key}
+                  initial={{ rotateY: 100, opacity: 0 }}
+                  animate={{ rotateY: 0, opacity: 1 }}
+                  transition={{ delay: i * 0.25, duration: 0.55, ease: [0.16, 1, 0.3, 1] }}
+                  style={{ transformPerspective: 700 }}
+                >
+                  <SummaryPatCard label={key === 'custom' ? '풍습패' : '엽전패'} card={selected[key]!} />
+                </motion.div>
+              ))}
             </div>
 
             {/* 공수 카드 */}
@@ -691,18 +681,38 @@ export function ManshinOracleTest() {
                   animate={{ scale: [1, 1.22, 1], opacity: [0.6, 1, 0.6] }}
                   transition={{ duration: 4.2, repeat: Infinity, ease: 'easeInOut' }}
                 />
-                <div className="text-[15px] tracking-[0.22em] mb-2 relative" style={{ color: deityColor }}>
+                <div className="text-[15px] tracking-[0.22em] mb-3 relative" style={{ color: deityColor }}>
                   {deity.group} · 제{deity.no}패
                 </div>
+                {/* 신령패 대형 카드 — 일러스트 나오기 전까지 카드백(삼태극) 플레이스홀더 */}
+                <motion.div
+                  initial={{ opacity: 0, rotateY: 60 }}
+                  animate={{ opacity: 1, rotateY: 0 }}
+                  transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+                  style={{ transformPerspective: 700 }}
+                  className="relative w-[264px] aspect-[2/3] rounded-xl overflow-hidden border-2 mb-4"
+                >
+                  <div className="absolute inset-0 rounded-xl pointer-events-none z-10 border-2" style={{ borderColor: `${deityColor}88` }} />
+                  <div className="absolute inset-0" style={{ backgroundImage: BACK_SM, backgroundSize: 'cover', backgroundPosition: 'center' }} />
+                  <div className="absolute inset-0" style={{ background: `radial-gradient(circle at 50% 22%, ${deityColor}30, rgba(10,6,20,0.72))` }} />
+                  <div className="absolute top-2.5 inset-x-0 flex justify-center z-10">
+                    <span
+                      className="text-[13px] font-semibold tracking-[0.14em] px-3 py-1 rounded-full border"
+                      style={{ background: 'rgba(10,6,20,0.6)', color: deityColor, borderColor: `${deityColor}55` }}
+                    >
+                      신령패
+                    </span>
+                  </div>
+                  <div className="absolute bottom-3 inset-x-0 text-center text-[12px] text-[rgba(255,245,225,0.4)]">
+                    일러스트 준비 중
+                  </div>
+                </motion.div>
                 <div className="text-[32px] font-bold text-text-primary leading-tight text-center relative" style={{ fontFamily: 'var(--font-title)' }}>
                   {deity.name}
                 </div>
                 <div className="text-[15.5px] text-text-secondary mt-1.5 text-center relative">{deity.title}</div>
                 <div className="text-[14px] text-text-tertiary mt-2.5 text-center relative">
                   {selected.custom.name}의 장면에 {selected.coin.name}을 얹어 공수를 내립니다
-                </div>
-                <div className="absolute bottom-2 right-3 text-[11.5px] text-[rgba(255,245,225,0.3)]">
-                  일러스트 준비 중
                 </div>
               </div>
 

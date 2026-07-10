@@ -125,7 +125,7 @@ function speechLines(speech: string): string[] {
 function SummaryPatCard({ label, card, imageSrc, large }: { label: string; card: (typeof MANSHIN_DECK)[number]; imageSrc?: string; large?: boolean }) {
   const color = MANSHIN_GROUP_COLORS[card.group];
   return (
-    <div className={large ? 'w-[176px]' : 'w-[142px]'}>
+    <div className={large ? 'w-[176px]' : 'w-[156px]'}>
       <div
         className="relative aspect-[2/3] rounded-xl overflow-hidden border"
         style={{ borderColor: `${color}66`, boxShadow: `0 6px 24px ${color}22` }}
@@ -273,13 +273,10 @@ export function ManshinImageCompareTest() {
           </div>
         </div>
 
-        {/* ── 세 패 요약 — 삼각 배치: 상단 신령패(선택한 일러스트) 大, 하단 풍습·엽전 2장 ── */}
-        <div className="flex flex-col items-center gap-4">
-          <SummaryPatCard label="신령패" card={deity} imageSrc={variant.src} large />
-          <div className="flex justify-center gap-4">
-            <SummaryPatCard label="풍습패" card={custom} />
-            <SummaryPatCard label="엽전패" card={coin} />
-          </div>
+        {/* ── 세 패 요약 — 풍습·엽전 2장만 (신령패는 아래 공수 카드의 대형 일러스트로 표시, 중복 제거) ── */}
+        <div className="flex justify-center gap-4">
+          <SummaryPatCard label="풍습패" card={custom} />
+          <SummaryPatCard label="엽전패" card={coin} />
         </div>
 
         {/* ── 공수 카드 (reveal 동일 + 일러스트 삽입) ── */}
@@ -306,11 +303,19 @@ export function ManshinImageCompareTest() {
               animate={{ opacity: 1, rotateY: 0 }}
               transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
               style={{ transformPerspective: 700 }}
-              className="relative w-[216px] aspect-[2/3] rounded-xl overflow-hidden border-2"
+              className="relative w-[264px] aspect-[2/3] rounded-xl overflow-hidden border-2"
             >
               <div className="absolute inset-0 rounded-xl pointer-events-none z-10 border-2" style={{ borderColor: `${deityColor}88` }} />
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={variant.src} alt={`${deity.name} — ${variant.label}`} className="w-full h-full object-cover" />
+              <div className="absolute top-2.5 inset-x-0 flex justify-center z-10">
+                <span
+                  className="text-[13px] font-semibold tracking-[0.14em] px-3 py-1 rounded-full border"
+                  style={{ background: 'rgba(10,6,20,0.6)', color: deityColor, borderColor: `${deityColor}55` }}
+                >
+                  신령패
+                </span>
+              </div>
             </motion.div>
             <div className="text-[32px] font-bold text-text-primary leading-tight text-center relative mt-4" style={{ fontFamily: 'var(--font-title)' }}>
               {deity.name}
