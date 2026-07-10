@@ -22,6 +22,19 @@ type SectionKey = 'total' | keyof ManshinFortunes;
 
 type Variant = { id: string; label: string; src: string; note: string };
 
+/** 공용 카드 프레임 오버레이 (미드저니 생성 → 중앙 투명 펀칭. 60장 물리 동일 보장) */
+const FRAME_SRC = '/manshin/frame.png';
+
+/** 확정 엽전패 일러스트 6종 (2026-07-10) — 카드 id → 이미지 */
+const COIN_IMAGES: Record<string, string> = {
+  yeopjeon1: '/manshin/coins/y1.jpg',
+  yeopjeon2: '/manshin/coins/y2.jpg',
+  yeopjeon3: '/manshin/coins/y3.jpg',
+  yeopjeon4: '/manshin/coins/y4.jpg',
+  yeopjeon5: '/manshin/coins/y5.jpg',
+  yeopjeon6: '/manshin/coins/y6.jpg',
+};
+
 type DeitySet = {
   deityId: string;
   tabLabel: string;
@@ -124,16 +137,17 @@ function speechLines(speech: string): string[] {
  */
 function SummaryPatCard({ label, card, imageSrc, large }: { label: string; card: (typeof MANSHIN_DECK)[number]; imageSrc?: string; large?: boolean }) {
   const color = MANSHIN_GROUP_COLORS[card.group];
+  const src = imageSrc ?? COIN_IMAGES[card.id]; // 엽전패는 확정 일러스트 자동 매칭
   return (
     <div className={large ? 'w-[176px]' : 'w-[156px]'}>
       <div
-        className="relative aspect-[2/3] rounded-xl overflow-hidden border"
-        style={{ borderColor: `${color}66`, boxShadow: `0 6px 24px ${color}22` }}
+        className="relative aspect-[2/3] rounded-xl overflow-hidden"
+        style={{ boxShadow: `0 6px 24px ${color}22` }}
       >
-        {imageSrc ? (
+        {src ? (
           <>
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={imageSrc} alt={card.name} className="absolute inset-0 w-full h-full object-cover" />
+            <img src={src} alt={card.name} className="absolute inset-0 w-full h-full object-cover" />
             <div className="absolute inset-x-0 bottom-0 h-2/5" style={{ background: 'linear-gradient(180deg, transparent, rgba(10,6,20,0.9))' }} />
           </>
         ) : (
@@ -142,7 +156,19 @@ function SummaryPatCard({ label, card, imageSrc, large }: { label: string; card:
             <div className="absolute inset-0" style={{ background: `radial-gradient(circle at 50% 22%, ${color}30, rgba(10,6,20,0.78))` }} />
           </>
         )}
-        <div className="absolute top-2.5 inset-x-0 flex justify-center">
+        {/* 공용 프레임 오버레이 — 60장 동일 금테 */}
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={FRAME_SRC} alt="" aria-hidden className="absolute inset-0 w-full h-full z-20 pointer-events-none" />
+        {/* 한자 인장 뱃지 — 코드(폰트) 렌더. AI 글자 금지 원칙 */}
+        {card.hanja && card.hanja.length <= 2 && (
+          <div
+            className={`absolute z-30 rounded-full flex items-center justify-center border font-bold ${large ? 'top-2.5 left-2.5 w-8 h-8 text-[15px]' : 'top-2 left-2 w-7 h-7 text-[13.5px]'}`}
+            style={{ background: 'rgba(10,6,20,0.72)', color, borderColor: `${color}66`, fontFamily: 'var(--font-serif)' }}
+          >
+            {card.hanja}
+          </div>
+        )}
+        <div className="absolute top-2.5 inset-x-0 flex justify-center z-30">
           <span
             className="text-[12.5px] font-semibold tracking-[0.14em] px-2.5 py-0.5 rounded-full border"
             style={{ background: 'rgba(10,6,20,0.6)', color, borderColor: `${color}55` }}
@@ -151,8 +177,8 @@ function SummaryPatCard({ label, card, imageSrc, large }: { label: string; card:
           </span>
         </div>
         <div
-          className={`absolute inset-x-0 text-center font-bold text-text-primary px-2 leading-tight ${
-            imageSrc ? 'bottom-3' : 'top-1/2 -translate-y-1/2'
+          className={`absolute inset-x-0 z-30 text-center font-bold text-text-primary px-2 leading-tight ${
+            src ? 'bottom-4' : 'top-1/2 -translate-y-1/2'
           } ${large ? 'text-[22px]' : 'text-[18px]'}`}
           style={{ fontFamily: 'var(--font-title)', textShadow: '0 2px 10px rgba(10,6,20,0.8)' }}
         >
@@ -259,11 +285,13 @@ export function ManshinImageCompareTest() {
             {deitySet.variants.map((v) => (
               <button key={v.id} onClick={() => setVariantId(v.id)} className="shrink-0">
                 <div
-                  className="w-[92px] aspect-[2/3] rounded-lg border overflow-hidden"
+                  className="relative w-[92px] aspect-[2/3] rounded-lg border overflow-hidden"
                   style={{ borderColor: v.id === variant.id ? deityColor : 'rgba(201,166,255,0.35)' }}
                 >
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img src={v.src} alt={v.label} className="w-full h-full object-cover" loading="lazy" />
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={FRAME_SRC} alt="" aria-hidden className="absolute inset-0 w-full h-full pointer-events-none" />
                 </div>
                 <div className="text-[12px] mt-1 text-center" style={{ color: v.id === variant.id ? deityColor : 'var(--text-tertiary)' }}>
                   {v.label}
@@ -277,6 +305,17 @@ export function ManshinImageCompareTest() {
         <div className="flex justify-center gap-4">
           <SummaryPatCard label="풍습패" card={custom} />
           <SummaryPatCard label="엽전패" card={coin} />
+        </div>
+
+        {/* ── 엽전패 6종 갤러리 — 확정 일러스트 + 프레임 + 한자 뱃지 검수용 ── */}
+        <div className="rounded-xl border border-[var(--border-subtle)] p-4 bg-white/[0.03]">
+          <div className="text-[13px] tracking-[0.15em] text-text-tertiary mb-3">엽전패 6종 — 프레임·한자 뱃지 적용 상태</div>
+          <div className="grid grid-cols-2 gap-x-3 gap-y-5 justify-items-center">
+            {(['yeopjeon1', 'yeopjeon2', 'yeopjeon3', 'yeopjeon4', 'yeopjeon5', 'yeopjeon6'] as const).map((id) => {
+              const c = MANSHIN_DECK.find((x) => x.id === id)!;
+              return <SummaryPatCard key={id} label="엽전패" card={c} />;
+            })}
+          </div>
         </div>
 
         {/* ── 공수 카드 (reveal 동일 + 일러스트 삽입) ── */}
@@ -303,12 +342,13 @@ export function ManshinImageCompareTest() {
               animate={{ opacity: 1, rotateY: 0 }}
               transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
               style={{ transformPerspective: 700 }}
-              className="relative w-[264px] aspect-[2/3] rounded-xl overflow-hidden border-2"
+              className="relative w-[264px] aspect-[2/3] rounded-xl overflow-hidden"
             >
-              <div className="absolute inset-0 rounded-xl pointer-events-none z-10 border-2" style={{ borderColor: `${deityColor}88` }} />
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={variant.src} alt={`${deity.name} — ${variant.label}`} className="w-full h-full object-cover" />
-              <div className="absolute top-2.5 inset-x-0 flex justify-center z-10">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={FRAME_SRC} alt="" aria-hidden className="absolute inset-0 w-full h-full z-20 pointer-events-none" />
+              <div className="absolute top-3 inset-x-0 flex justify-center z-30">
                 <span
                   className="text-[13px] font-semibold tracking-[0.14em] px-3 py-1 rounded-full border"
                   style={{ background: 'rgba(10,6,20,0.6)', color: deityColor, borderColor: `${deityColor}55` }}
