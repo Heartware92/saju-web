@@ -5,7 +5,7 @@
 import { LegalComparison, type CmpRow } from '../../components/temp/LegalComparison';
 import { PRIVACY_DETAILS } from './details';
 
-export const metadata = { title: '개인정보처리방침 5축 비교 (검토용)' };
+export const metadata = { title: '개인정보처리방침 5축 비교 (검토용)', robots: { index: false, follow: false } };
 
 const SERVICES = ['이천점', '사주아이', '청월당', '포스텔러', '헬로우봇'];
 

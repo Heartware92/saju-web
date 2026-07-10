@@ -37,6 +37,10 @@ export const metadata: Metadata = {
   icons: {
     icon: '/favicon.png',
   },
+  // 페이지별 self-canonical — apex/www 중복에서 www 를 표준으로 선언 (서치콘솔 "표준 미선택 중복" 대응)
+  alternates: {
+    canonical: './',
+  },
   openGraph: {
     title: '이천점 — 우주의 기운을 드려요',
     description: '우주의 기운으로 풀어내는 사주·타로·자미두수',

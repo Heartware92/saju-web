@@ -17,6 +17,19 @@ export default function robots(): MetadataRoute.Robots {
           '/admin',
           '/temp_test',
           '/temp_test2',
+          '/temp_terms',     // 약관 비교 검토용 임시 페이지 (/terms 와 중복 방지)
+          '/temp_privacy',   // 방침 비교 검토용 임시 페이지 (/privacy 와 중복 방지)
+          '/tarot_test',     // 만신 타로 실험
+          '/tarot_test2',    // 만신 일러스트 비교
+          '/test_1',         // 정통 프롬프트 미러 (임시)
+          '/test_2',
+          '/credit_test',
+          '/intro',          // 오프닝 시안 (미연결)
+          '/intro1',
+          '/intro2',
+          '/intro3',
+          '/intro4',
+          '/login2',
           '/auth/',          // 콜백·동의·휴대폰인증 등
           '/payment/',       // 결제 콜백
           '/login',
