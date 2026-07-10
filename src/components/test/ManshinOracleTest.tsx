@@ -135,6 +135,56 @@ function RevealLine({ children, className, style }: { children: ReactNode; class
   );
 }
 
+/**
+ * 세 패 요약 카드 — 삼각 배치(상단 신령패 大, 하단 풍습·엽전 2장)용.
+ * 일러스트 전이라 카드백(삼태극) 텍스처 + 어둡게 깔고 이름만 크게. 일러스트 나오면 imageSrc 로 교체.
+ * 캡션(title·domains)은 카드 아래 중앙 정렬 — 덱 전수분석상 title 최장 21자라 카드 내부엔 넣지 않는다.
+ */
+function SummaryPatCard({ label, card, imageSrc, large }: { label: string; card: ManshinCard; imageSrc?: string; large?: boolean }) {
+  const color = MANSHIN_GROUP_COLORS[card.group];
+  return (
+    <div className={large ? 'w-[176px]' : 'w-[142px]'}>
+      <div
+        className="relative aspect-[2/3] rounded-xl overflow-hidden border"
+        style={{ borderColor: `${color}66`, boxShadow: `0 6px 24px ${color}22` }}
+      >
+        {imageSrc ? (
+          <>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={imageSrc} alt={card.name} className="absolute inset-0 w-full h-full object-cover" />
+            <div className="absolute inset-x-0 bottom-0 h-2/5" style={{ background: 'linear-gradient(180deg, transparent, rgba(10,6,20,0.9))' }} />
+          </>
+        ) : (
+          <>
+            <div className="absolute inset-0" style={{ backgroundImage: BACK_SM, backgroundSize: 'cover', backgroundPosition: 'center' }} />
+            <div className="absolute inset-0" style={{ background: `radial-gradient(circle at 50% 22%, ${color}30, rgba(10,6,20,0.78))` }} />
+          </>
+        )}
+        <div className="absolute top-2.5 inset-x-0 flex justify-center">
+          <span
+            className="text-[12.5px] font-semibold tracking-[0.14em] px-2.5 py-0.5 rounded-full border"
+            style={{ background: 'rgba(10,6,20,0.6)', color, borderColor: `${color}55` }}
+          >
+            {label}
+          </span>
+        </div>
+        <div
+          className={`absolute inset-x-0 text-center font-bold text-text-primary px-2 leading-tight ${
+            imageSrc ? 'bottom-3' : 'top-1/2 -translate-y-1/2'
+          } ${large ? 'text-[22px]' : 'text-[18px]'}`}
+          style={{ fontFamily: 'var(--font-title)', textShadow: '0 2px 10px rgba(10,6,20,0.8)' }}
+        >
+          {card.name}
+        </div>
+      </div>
+      <div className={`mt-2 text-center text-text-secondary leading-snug ${large ? 'text-[14.5px]' : 'text-[13px]'}`}>{card.title}</div>
+      <div className="mt-1 text-center text-[12.5px] leading-snug" style={{ color: `${color}dd` }}>
+        {card.domains}
+      </div>
+    </div>
+  );
+}
+
 /** 카드 아트 영역 별가루 (transform/opacity 만) */
 function Sparkles({ color }: { color: string }) {
   const dots = [
@@ -596,39 +646,29 @@ export function ManshinOracleTest() {
         {/* ── 공개: 세 패 + 신령의 단일 공수 ── */}
         {phase === 'reveal' && deity && selected.custom && selected.coin && (
           <motion.div key="reveal" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-5">
-            {/* 세 패 요약 — 전폭 가로 행.
-                덱 전수분석: name 최장 7자 · title 최장 21자 · domains 최장 19자.
-                390px 폰에서도 행 내부 폭 ~310px → title 15px(21자 ≈ 305px)·domains 13.5px 가
-                전부 한 줄에 수납되어 단어 중간 줄바꿈이 발생하지 않는다 */}
-            <div className="space-y-2.5">
-              {STEP_META.map((m, i) => {
-                const card = selected[m.key]!;
-                const color = MANSHIN_GROUP_COLORS[card.group];
-                return (
+            {/* 세 패 요약 — 삼각 배치: 상단 신령패 大, 하단 풍습·엽전 2장 (점상에 패 놓인 그림) */}
+            <div className="flex flex-col items-center gap-4">
+              <motion.div
+                initial={{ rotateY: 100, opacity: 0 }}
+                animate={{ rotateY: 0, opacity: 1 }}
+                transition={{ duration: 0.55, ease: [0.16, 1, 0.3, 1] }}
+                style={{ transformPerspective: 700 }}
+              >
+                <SummaryPatCard label="신령패" card={selected.deity!} large />
+              </motion.div>
+              <div className="flex justify-center gap-4">
+                {(['custom', 'coin'] as const).map((key, i) => (
                   <motion.div
-                    key={m.key}
-                    initial={{ x: -16, opacity: 0 }}
-                    animate={{ x: 0, opacity: 1 }}
-                    transition={{ delay: i * 0.25, duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
-                    className="rounded-xl border border-[var(--border-subtle)] px-4 py-3.5"
-                    style={{ background: `linear-gradient(90deg, ${color}16, rgba(20,12,38,0.45))` }}
+                    key={key}
+                    initial={{ rotateY: 100, opacity: 0 }}
+                    animate={{ rotateY: 0, opacity: 1 }}
+                    transition={{ delay: 0.3 + i * 0.25, duration: 0.55, ease: [0.16, 1, 0.3, 1] }}
+                    style={{ transformPerspective: 700 }}
                   >
-                    <div className="flex items-center gap-2.5">
-                      <span
-                        className="shrink-0 text-[14px] font-semibold tracking-[0.1em] px-3 py-1 rounded-md whitespace-nowrap"
-                        style={{ background: `${color}22`, color }}
-                      >
-                        {m.label}
-                      </span>
-                      <span className="text-[20px] font-bold text-text-primary leading-tight" style={{ fontFamily: 'var(--font-title)' }}>
-                        {card.name}
-                      </span>
-                    </div>
-                    <div className="text-[15px] text-text-secondary leading-snug mt-2">{card.title}</div>
-                    <div className="text-[13.5px] mt-1" style={{ color: `${color}dd` }}>{card.domains}</div>
+                    <SummaryPatCard label={key === 'custom' ? '풍습패' : '엽전패'} card={selected[key]!} />
                   </motion.div>
-                );
-              })}
+                ))}
+              </div>
             </div>
 
             {/* 공수 카드 */}

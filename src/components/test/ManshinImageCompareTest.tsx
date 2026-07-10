@@ -118,6 +118,55 @@ function speechLines(speech: string): string[] {
     .filter(Boolean);
 }
 
+/**
+ * 세 패 요약 카드 — 삼각 배치용 (ManshinOracleTest 와 동일 디자인).
+ * 신령패는 선택한 후보 일러스트(imageSrc), 풍습·엽전은 카드백(삼태극) 플레이스홀더.
+ */
+function SummaryPatCard({ label, card, imageSrc, large }: { label: string; card: (typeof MANSHIN_DECK)[number]; imageSrc?: string; large?: boolean }) {
+  const color = MANSHIN_GROUP_COLORS[card.group];
+  return (
+    <div className={large ? 'w-[176px]' : 'w-[142px]'}>
+      <div
+        className="relative aspect-[2/3] rounded-xl overflow-hidden border"
+        style={{ borderColor: `${color}66`, boxShadow: `0 6px 24px ${color}22` }}
+      >
+        {imageSrc ? (
+          <>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={imageSrc} alt={card.name} className="absolute inset-0 w-full h-full object-cover" />
+            <div className="absolute inset-x-0 bottom-0 h-2/5" style={{ background: 'linear-gradient(180deg, transparent, rgba(10,6,20,0.9))' }} />
+          </>
+        ) : (
+          <>
+            <div className="absolute inset-0" style={{ backgroundImage: "url('/manshin/back_sm.png')", backgroundSize: 'cover', backgroundPosition: 'center' }} />
+            <div className="absolute inset-0" style={{ background: `radial-gradient(circle at 50% 22%, ${color}30, rgba(10,6,20,0.78))` }} />
+          </>
+        )}
+        <div className="absolute top-2.5 inset-x-0 flex justify-center">
+          <span
+            className="text-[12.5px] font-semibold tracking-[0.14em] px-2.5 py-0.5 rounded-full border"
+            style={{ background: 'rgba(10,6,20,0.6)', color, borderColor: `${color}55` }}
+          >
+            {label}
+          </span>
+        </div>
+        <div
+          className={`absolute inset-x-0 text-center font-bold text-text-primary px-2 leading-tight ${
+            imageSrc ? 'bottom-3' : 'top-1/2 -translate-y-1/2'
+          } ${large ? 'text-[22px]' : 'text-[18px]'}`}
+          style={{ fontFamily: 'var(--font-title)', textShadow: '0 2px 10px rgba(10,6,20,0.8)' }}
+        >
+          {card.name}
+        </div>
+      </div>
+      <div className={`mt-2 text-center text-text-secondary leading-snug ${large ? 'text-[14.5px]' : 'text-[13px]'}`}>{card.title}</div>
+      <div className="mt-1 text-center text-[12.5px] leading-snug" style={{ color: `${color}dd` }}>
+        {card.domains}
+      </div>
+    </div>
+  );
+}
+
 /** 스크롤 연동 문장 리빌 (ManshinOracleTest 와 동일) */
 function RevealLine({ children, className, style }: { children: ReactNode; className?: string; style?: React.CSSProperties }) {
   const ref = useRef<HTMLParagraphElement>(null);
@@ -153,12 +202,6 @@ export function ManshinImageCompareTest() {
     setSetIdx(idx);
     setVariantId(DEITY_SETS[idx].variants[0].id);
   };
-
-  const threeCards = [
-    { label: '신령패', card: deity },
-    { label: '풍습패', card: custom },
-    { label: '엽전패', card: coin },
-  ];
 
   return (
     <div className="max-w-[480px] mx-auto px-4 pb-16">
@@ -230,33 +273,13 @@ export function ManshinImageCompareTest() {
           </div>
         </div>
 
-        {/* ── 세 패 요약 — 전폭 가로 행 (reveal 동일).
-             덱 전수분석: name 최장 7자 · title 최장 21자 · domains 최장 19자 → 이 폭이면 전부 한 줄 수납 ── */}
-        <div className="space-y-2.5">
-          {threeCards.map(({ label, card }) => {
-            const color = MANSHIN_GROUP_COLORS[card.group];
-            return (
-              <div
-                key={label}
-                className="rounded-xl border border-[var(--border-subtle)] px-4 py-3.5"
-                style={{ background: `linear-gradient(90deg, ${color}16, rgba(20,12,38,0.45))` }}
-              >
-                <div className="flex items-center gap-2.5">
-                  <span
-                    className="shrink-0 text-[14px] font-semibold tracking-[0.1em] px-3 py-1 rounded-md whitespace-nowrap"
-                    style={{ background: `${color}22`, color }}
-                  >
-                    {label}
-                  </span>
-                  <span className="text-[20px] font-bold text-text-primary leading-tight" style={{ fontFamily: 'var(--font-title)' }}>
-                    {card.name}
-                  </span>
-                </div>
-                <div className="text-[15px] text-text-secondary leading-snug mt-2">{card.title}</div>
-                <div className="text-[13.5px] mt-1" style={{ color: `${color}dd` }}>{card.domains}</div>
-              </div>
-            );
-          })}
+        {/* ── 세 패 요약 — 삼각 배치: 상단 신령패(선택한 일러스트) 大, 하단 풍습·엽전 2장 ── */}
+        <div className="flex flex-col items-center gap-4">
+          <SummaryPatCard label="신령패" card={deity} imageSrc={variant.src} large />
+          <div className="flex justify-center gap-4">
+            <SummaryPatCard label="풍습패" card={custom} />
+            <SummaryPatCard label="엽전패" card={coin} />
+          </div>
         </div>
 
         {/* ── 공수 카드 (reveal 동일 + 일러스트 삽입) ── */}
