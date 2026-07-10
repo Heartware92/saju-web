@@ -25,7 +25,7 @@ const VARIANTS: { id: string; label: string; src: string; note: string }[] = [
   { id: 'mj2', label: '미드저니 2', src: '/manshin/test2/mj2.jpg', note: '1:1 원본 — 좌우 크롭됨' },
   { id: 'mj3', label: '미드저니 3', src: '/manshin/test2/mj3.jpg', note: '1:1 원본 — 좌우 크롭됨' },
   { id: 'mj4', label: '미드저니 4', src: '/manshin/test2/mj4.jpg', note: '1:1 원본 — 좌우 크롭됨' },
-  { id: 'banana', label: '나노바나나', src: '/manshin/test2/banana.jpg', note: '2:3 원본' },
+  { id: 'banana', label: '지피티', src: '/manshin/test2/banana.jpg', note: '2:3 원본' },
   { id: 'gemini', label: '제미나이', src: '/manshin/test2/gemini.jpg', note: '2:3 원본' },
 ];
 
