@@ -174,9 +174,11 @@ function SummaryPatCard({ label, card, imageSrc, large }: { label: string; card:
             <div className="absolute inset-0" style={{ background: `radial-gradient(circle at 50% 22%, ${color}30, rgba(10,6,20,0.78))` }} />
           </>
         )}
-        {/* 공용 프레임 오버레이 — 60장 동일 금테 */}
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={FRAME_SRC} alt="" aria-hidden className="absolute inset-0 w-full h-full z-20 pointer-events-none" />
+        {/* 공용 프레임 오버레이 — 일러스트 카드에만 (카드백은 자체 테두리 보유, 이중 테두리 방지) */}
+        {src && (
+          /* eslint-disable-next-line @next/next/no-img-element */
+          <img src={FRAME_SRC} alt="" aria-hidden className="absolute inset-0 w-full h-full z-20 pointer-events-none" />
+        )}
         {/* 한자 인장 뱃지 — 코드(폰트) 렌더. AI 글자 금지 원칙 */}
         {card.hanja && card.hanja.length <= 2 && (
           <div
@@ -718,10 +720,9 @@ export function ManshinOracleTest() {
                   style={{ transformPerspective: 700 }}
                   className="relative w-[264px] aspect-[2/3] rounded-xl overflow-hidden mb-4"
                 >
+                  {/* 카드백 플레이스홀더 — 자체 테두리가 있어 프레임 오버레이 미적용 (일러스트 교체 시 FRAME_SRC 적용) */}
                   <div className="absolute inset-0" style={{ backgroundImage: BACK_SM, backgroundSize: 'cover', backgroundPosition: 'center' }} />
                   <div className="absolute inset-0" style={{ background: `radial-gradient(circle at 50% 22%, ${deityColor}30, rgba(10,6,20,0.72))` }} />
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={FRAME_SRC} alt="" aria-hidden className="absolute inset-0 w-full h-full z-20 pointer-events-none" />
                   <div className="absolute top-3 inset-x-0 flex justify-center z-30">
                     <span
                       className="text-[13px] font-semibold tracking-[0.14em] px-3 py-1 rounded-full border"
