@@ -814,8 +814,9 @@ export function ManshinOracleTest() {
                     onAnimationComplete={() => setBurst(false)}
                   />
                 )}
+                {/* 신령패 라벨은 카드 위가 아닌 여기(카드 밖)에 — 캐릭터 모자/머리 가림 방지 */}
                 <div className="text-[15px] tracking-[0.22em] mb-3 relative" style={{ color: deityRevealed ? deityColor : '#c9a6ff' }}>
-                  {deityRevealed ? `${deity.group} · 제${deity.no}패` : '마지막 패가 남았느니라'}
+                  {deityRevealed ? `신령패 · ${deity.group} · 제${deity.no}패` : '마지막 패가 남았느니라'}
                 </div>
                 {!deityRevealed ? (
                   /* 유보 리빌 — 신령패는 손을 얹고 기원해야 모습을 드러낸다 */
@@ -834,14 +835,6 @@ export function ManshinOracleTest() {
                           대형 카드라 고해상본(BACK_LG) 사용 — 소형본은 이 크기에서 뭉개짐 */}
                       <div className="absolute inset-0" style={{ backgroundImage: BACK_LG, backgroundSize: 'cover', backgroundPosition: 'center' }} />
                       <div className="absolute inset-0" style={{ background: `radial-gradient(circle at 50% 22%, ${deityColor}30, rgba(10,6,20,0.72))` }} />
-                      <div className="absolute top-3 inset-x-0 flex justify-center z-30">
-                        <span
-                          className="text-[13px] font-semibold tracking-[0.14em] px-3 py-1 rounded-full border"
-                          style={{ background: 'rgba(10,6,20,0.6)', color: deityColor, borderColor: `${deityColor}55` }}
-                        >
-                          신령패
-                        </span>
-                      </div>
                       <div className="absolute bottom-4 inset-x-0 text-center text-[12px] text-[rgba(255,245,225,0.4)] z-30">
                         일러스트 준비 중
                       </div>

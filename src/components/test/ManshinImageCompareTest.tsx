@@ -335,8 +335,9 @@ export function ManshinImageCompareTest() {
               animate={{ scale: [1, 1.22, 1], opacity: [0.6, 1, 0.6] }}
               transition={{ duration: 4.2, repeat: Infinity, ease: 'easeInOut' }}
             />
+            {/* 신령패 라벨은 카드 위가 아닌 여기(카드 밖)에 — 캐릭터 모자/머리 가림 방지 */}
             <div className="text-[15px] tracking-[0.22em] mb-3 relative" style={{ color: deityColor }}>
-              {deity.group} · 제{deity.no}패
+              신령패 · {deity.group} · 제{deity.no}패
             </div>
             {/* 카드 일러스트 — 2:3 카드 프레임 */}
             <motion.div
@@ -351,14 +352,6 @@ export function ManshinImageCompareTest() {
               <img src={variant.src} alt={`${deity.name} — ${variant.label}`} className="w-full h-full object-cover" />
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={FRAME_SRC} alt="" aria-hidden className="absolute inset-0 w-full h-full z-20 pointer-events-none" />
-              <div className="absolute top-3 inset-x-0 flex justify-center z-30">
-                <span
-                  className="text-[13px] font-semibold tracking-[0.14em] px-3 py-1 rounded-full border"
-                  style={{ background: 'rgba(10,6,20,0.6)', color: deityColor, borderColor: `${deityColor}55` }}
-                >
-                  신령패
-                </span>
-              </div>
             </motion.div>
             <div className="text-[32px] font-bold text-text-primary leading-tight text-center relative mt-4" style={{ fontFamily: 'var(--font-title)' }}>
               {deity.name}
