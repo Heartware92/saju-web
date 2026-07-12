@@ -48,6 +48,7 @@ const DEITY_SETS: DeitySet[] = [
     deityId: 'okhwang',
     tabLabel: '옥황상제',
     variants: [
+      { id: 'mj_final', label: '미드저니 완성본', src: '/manshin/test2/okhwang_final.jpg', note: '2:3 원본 — 확정 후보 (2026-07-12)' },
       { id: 'mj1', label: '미드저니 1', src: '/manshin/test2/mj1.jpg', note: '1:1 원본 — 좌우 크롭됨' },
       { id: 'mj2', label: '미드저니 2', src: '/manshin/test2/mj2.jpg', note: '1:1 원본 — 좌우 크롭됨' },
       { id: 'mj3', label: '미드저니 3', src: '/manshin/test2/mj3.jpg', note: '1:1 원본 — 좌우 크롭됨' },
@@ -161,10 +162,10 @@ function SummaryPatCard({ label, card, imageSrc, large }: { label: string; card:
           /* eslint-disable-next-line @next/next/no-img-element */
           <img src={FRAME_SRC} alt="" aria-hidden className="absolute inset-0 w-full h-full z-20 pointer-events-none" />
         )}
-        {/* 한자 인장 뱃지 — 코드(폰트) 렌더. AI 글자 금지 원칙 */}
+        {/* 한자 인장 뱃지 — 코드(폰트) 렌더. AI 글자 금지 원칙. 프레임 모서리 장식과 겹치지 않게 창 안쪽(7%)으로 */}
         {card.hanja && card.hanja.length <= 2 && (
           <div
-            className={`absolute z-30 rounded-full flex items-center justify-center border font-bold ${large ? 'top-2.5 left-2.5 w-8 h-8 text-[15px]' : 'top-2 left-2 w-7 h-7 text-[13.5px]'}`}
+            className={`absolute z-30 top-[7%] left-[7%] rounded-full flex items-center justify-center border font-bold ${large ? 'w-8 h-8 text-[15px]' : 'w-7 h-7 text-[13.5px]'}`}
             style={{ background: 'rgba(10,6,20,0.72)', color, borderColor: `${color}66`, fontFamily: 'var(--font-serif)' }}
           >
             {card.hanja}
