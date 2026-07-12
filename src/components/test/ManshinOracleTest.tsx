@@ -51,6 +51,11 @@ const COIN_IMAGES: Record<string, string> = {
   yeopjeon6: '/manshin/coins/y6.jpg',
 };
 
+/** 확정 풍습패 일러스트 — 카드 id → 이미지 (1호 혼례 2026-07-12, 후처리: 4% 크롭+얼룩 청소) */
+const CUSTOM_IMAGES: Record<string, string> = {
+  honrye: '/manshin/customs/honrye.jpg',
+};
+
 // 안내 문구도 전부 공수체로 통일 (일반 안내투 금지)
 const STEP_META: { key: 'deity' | 'custom' | 'coin'; label: string; guide: string; fan: number }[] = [
   { key: 'deity', label: '신령패', guide: '오늘 너를 봐줄 신령부터 모시거라', fan: 12 },
@@ -157,7 +162,7 @@ function RevealLine({ children, className, style }: { children: ReactNode; class
  */
 function SummaryPatCard({ label, card, imageSrc, large }: { label: string; card: ManshinCard; imageSrc?: string; large?: boolean }) {
   const color = MANSHIN_GROUP_COLORS[card.group];
-  const src = imageSrc ?? COIN_IMAGES[card.id]; // 엽전패는 확정 일러스트 자동 매칭
+  const src = imageSrc ?? COIN_IMAGES[card.id] ?? CUSTOM_IMAGES[card.id]; // 엽전·풍습패는 확정 일러스트 자동 매칭
   return (
     <div className={large ? 'w-[229px]' : 'w-full max-w-[203px]'}>
       <div
