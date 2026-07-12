@@ -35,6 +35,8 @@ type PickStep = 0 | 1 | 2; // 0=신령 1=풍습 2=엽전
 type SectionKey = 'total' | keyof ManshinFortunes;
 
 const BACK_SM = "url('/manshin/back_sm.png')";
+/** 공개 화면 대형 신령패 전용 고해상 카드백 (작은 카드들은 소형본으로 성능 우선) */
+const BACK_LG = "url('/manshin/back.png')";
 
 /** 공용 카드 프레임 오버레이 (중앙 투명 펀칭 PNG — 60장 물리 동일 보장) */
 const FRAME_SRC = '/manshin/frame.png';
@@ -157,7 +159,7 @@ function SummaryPatCard({ label, card, imageSrc, large }: { label: string; card:
   const color = MANSHIN_GROUP_COLORS[card.group];
   const src = imageSrc ?? COIN_IMAGES[card.id]; // 엽전패는 확정 일러스트 자동 매칭
   return (
-    <div className={large ? 'w-[176px]' : 'w-[156px]'}>
+    <div className={large ? 'w-[229px]' : 'w-full max-w-[203px]'}>
       <div
         className="relative aspect-[2/3] rounded-xl overflow-hidden"
         style={{ boxShadow: `0 6px 24px ${color}22` }}
@@ -395,7 +397,7 @@ export function ManshinOracleTest() {
           >
             <div className="flex justify-center py-4">
               <motion.div
-                className="relative w-[120px] aspect-[2/3]"
+                className="relative w-[156px] aspect-[2/3]"
                 style={{ willChange: 'transform' }}
                 animate={{ y: [0, -8, 0] }}
                 transition={{ duration: 3.4, repeat: Infinity, ease: 'easeInOut' }}
@@ -450,11 +452,11 @@ export function ManshinOracleTest() {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.3 }}
-            className="relative h-[320px] flex items-center justify-center"
+            className="relative h-[400px] flex items-center justify-center"
           >
             {/* 중심에서 번지는 기운 */}
             <motion.div
-              className="absolute w-[220px] h-[220px] rounded-full pointer-events-none"
+              className="absolute w-[280px] h-[280px] rounded-full pointer-events-none"
               style={{ background: 'radial-gradient(circle, rgba(201,166,255,0.22), transparent 70%)', willChange: 'transform, opacity' }}
               animate={{ scale: [0.7, 1.15, 0.75], opacity: [0.3, 0.85, 0.4] }}
               transition={{ duration: 2.4, ease: 'easeInOut' }}
@@ -470,7 +472,7 @@ export function ManshinOracleTest() {
                 const t = k / (STEPS - 1);
                 const bloom = Math.sin(Math.PI * t); // 0 → 1 → 0
                 const ang = phase0 + Math.PI * 3.2 * t; // 약 1.6바퀴 공전
-                const r = 84 * bloom;
+                const r = 104 * bloom;
                 xs.push(Math.cos(ang) * r);
                 ys.push(Math.sin(ang) * r * 0.58); // 타원 궤도 — 살짝 눕힌 3D 느낌
                 rots.push(Math.sin(ang) * 10 * bloom); // 궤도 따라 기우는 카드
@@ -478,7 +480,7 @@ export function ManshinOracleTest() {
               return (
                 <motion.div
                   key={i}
-                  className="absolute w-[92px] aspect-[2/3] rounded-lg border border-[rgba(201,166,255,0.35)]"
+                  className="absolute w-[120px] aspect-[2/3] rounded-lg border border-[rgba(201,166,255,0.35)]"
                   style={{
                     backgroundImage: BACK_SM,
                     backgroundSize: 'cover',
@@ -511,7 +513,7 @@ export function ManshinOracleTest() {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             className="flex flex-col"
-            style={{ height: 'calc(100dvh - 252px)', minHeight: 470 }}
+            style={{ height: 'calc(100dvh - 252px)', minHeight: 520 }}
           >
             {/* 진행 표시 — 연결선으로 이어진 세 패 여정 */}
             <div className="flex items-center justify-center mb-4">
@@ -616,11 +618,12 @@ export function ManshinOracleTest() {
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0, scale: 0.96 }}
                 transition={{ duration: 0.3 }}
-                className="relative flex-1 min-h-[270px]"
+                className="relative flex-1 min-h-[330px]"
               >
                 {pools[STEP_META[step].key].slice(0, STEP_META[step].fan).map((_, idx) => {
                   const fanCount = Math.min(pools[STEP_META[step].key].length, STEP_META[step].fan);
-                  const stepDeg = fanCount > 8 ? 7 : 10;
+                  // 1.3배 카드에 맞춰 각도 축소 — 375px 폭에서도 부채 끝이 잘리지 않는 값
+                  const stepDeg = fanCount > 8 ? 6 : 9;
                   const angle = (idx - (fanCount - 1) / 2) * stepDeg;
                   const isPicked = pendingIdx === idx;
                   return (
@@ -642,7 +645,7 @@ export function ManshinOracleTest() {
                       whileHover={{ y: isPicked ? -26 : -12 }}
                       whileTap={{ scale: 1.02 }}
                       onClick={() => pickCard(idx)}
-                      className={`absolute left-1/2 bottom-10 w-[92px] aspect-[2/3] -ml-[46px] rounded-lg border ${
+                      className={`absolute left-1/2 bottom-10 w-[120px] aspect-[2/3] -ml-[60px] rounded-lg border ${
                         isPicked
                           ? 'border-cta shadow-[0_0_18px_rgba(232,164,144,0.55)]'
                           : 'border-[rgba(201,166,255,0.35)]'
@@ -679,6 +682,7 @@ export function ManshinOracleTest() {
               {(['custom', 'coin'] as const).map((key, i) => (
                 <motion.div
                   key={key}
+                  className="flex-1 max-w-[203px]"
                   initial={{ rotateY: 100, opacity: 0 }}
                   animate={{ rotateY: 0, opacity: 1 }}
                   transition={{ delay: i * 0.25, duration: 0.55, ease: [0.16, 1, 0.3, 1] }}
@@ -704,7 +708,7 @@ export function ManshinOracleTest() {
               >
                 <Sparkles color={deityColor} />
                 <motion.div
-                  className="absolute w-[180px] h-[180px] rounded-full pointer-events-none"
+                  className="absolute w-[230px] h-[230px] rounded-full pointer-events-none"
                   style={{ background: `radial-gradient(circle, ${deityColor}2e, transparent 70%)`, willChange: 'transform, opacity' }}
                   animate={{ scale: [1, 1.22, 1], opacity: [0.6, 1, 0.6] }}
                   transition={{ duration: 4.2, repeat: Infinity, ease: 'easeInOut' }}
@@ -718,10 +722,11 @@ export function ManshinOracleTest() {
                   animate={{ opacity: 1, rotateY: 0 }}
                   transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
                   style={{ transformPerspective: 700 }}
-                  className="relative w-[264px] aspect-[2/3] rounded-xl overflow-hidden mb-4"
+                  className="relative w-[min(343px,80vw)] aspect-[2/3] rounded-xl overflow-hidden mb-4"
                 >
-                  {/* 카드백 플레이스홀더 — 자체 테두리가 있어 프레임 오버레이 미적용 (일러스트 교체 시 FRAME_SRC 적용) */}
-                  <div className="absolute inset-0" style={{ backgroundImage: BACK_SM, backgroundSize: 'cover', backgroundPosition: 'center' }} />
+                  {/* 카드백 플레이스홀더 — 자체 테두리가 있어 프레임 오버레이 미적용 (일러스트 교체 시 FRAME_SRC 적용)
+                      대형 카드라 고해상본(BACK_LG) 사용 — 소형본은 이 크기에서 뭉개짐 */}
+                  <div className="absolute inset-0" style={{ backgroundImage: BACK_LG, backgroundSize: 'cover', backgroundPosition: 'center' }} />
                   <div className="absolute inset-0" style={{ background: `radial-gradient(circle at 50% 22%, ${deityColor}30, rgba(10,6,20,0.72))` }} />
                   <div className="absolute top-3 inset-x-0 flex justify-center z-30">
                     <span
