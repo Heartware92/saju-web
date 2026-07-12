@@ -215,6 +215,82 @@ function SummaryPatCard({ label, card, imageSrc, large }: { label: string; card:
   );
 }
 
+/**
+ * 신령패 홀드-투-리빌 — "카드에 손을 얹고 기원한다"는 무속 서사와 일치하는 유보 공개.
+ * 길게 누르는 동안 글로우가 차오르고(anticipation), 완충되면 onReveal.
+ * 성능: 글로우/밝기 전부 transform·opacity 만 애니메이션 (box-shadow/filter 금지 원칙 유지)
+ */
+const HOLD_MS = 1100;
+function DeityHoldReveal({ onReveal }: { onReveal: () => void }) {
+  const [charging, setCharging] = useState(false);
+  const holdTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const start = () => {
+    if (holdTimer.current) return;
+    setCharging(true);
+    holdTimer.current = setTimeout(() => {
+      holdTimer.current = null;
+      // 완충 햅틱 — 지원 기기(안드로이드)만, 미지원은 조용히 무시
+      try { navigator.vibrate?.(35); } catch { /* noop */ }
+      onReveal();
+    }, HOLD_MS);
+  };
+  const cancel = () => {
+    if (holdTimer.current) { clearTimeout(holdTimer.current); holdTimer.current = null; }
+    setCharging(false);
+  };
+  useEffect(() => () => { if (holdTimer.current) clearTimeout(holdTimer.current); }, []);
+  return (
+    <div className="relative flex flex-col items-center">
+      <div className="relative w-[min(343px,80vw)]">
+        {/* 차오르는 기운 — 대기 중엔 은은한 펄스, 누르는 동안 HOLD_MS 에 맞춰 차오름 */}
+        <motion.div
+          className="absolute -inset-6 rounded-[30px] pointer-events-none"
+          style={{ background: 'radial-gradient(circle, rgba(201,166,255,0.5), transparent 70%)', willChange: 'transform, opacity' }}
+          animate={charging ? { opacity: 1, scale: 1.12 } : { opacity: [0.16, 0.38, 0.16], scale: 1 }}
+          transition={charging ? { duration: HOLD_MS / 1000, ease: 'easeIn' } : { duration: 2.6, repeat: Infinity, ease: 'easeInOut' }}
+        />
+        <motion.button
+          type="button"
+          onPointerDown={start}
+          onPointerUp={cancel}
+          onPointerLeave={cancel}
+          onPointerCancel={cancel}
+          onContextMenu={(e) => e.preventDefault()}
+          className="relative block w-full aspect-[2/3] rounded-xl overflow-hidden select-none"
+          style={{ WebkitTouchCallout: 'none', touchAction: 'manipulation', willChange: 'transform' }}
+          animate={charging ? { scale: 1.045 } : { scale: 1 }}
+          transition={charging ? { duration: HOLD_MS / 1000, ease: 'easeOut' } : { type: 'spring', stiffness: 300, damping: 22 }}
+          aria-label="신령패 공개 — 길게 누르기"
+        >
+          <div className="absolute inset-0" style={{ backgroundImage: BACK_LG, backgroundSize: 'cover', backgroundPosition: 'center' }} />
+          {/* 누르는 동안 카드가 안쪽부터 밝아짐 */}
+          <motion.div
+            className="absolute inset-0 pointer-events-none"
+            style={{ background: 'radial-gradient(circle at 50% 45%, rgba(255,245,225,0.55), transparent 75%)' }}
+            animate={{ opacity: charging ? 0.6 : 0 }}
+            transition={{ duration: charging ? HOLD_MS / 1000 : 0.25, ease: 'easeIn' }}
+          />
+          <div className="absolute top-3 inset-x-0 flex justify-center">
+            <span
+              className="text-[13px] font-semibold tracking-[0.14em] px-3 py-1 rounded-full border"
+              style={{ background: 'rgba(10,6,20,0.6)', color: '#c9a6ff', borderColor: 'rgba(201,166,255,0.4)' }}
+            >
+              신령패
+            </span>
+          </div>
+        </motion.button>
+      </div>
+      <motion.p
+        className="mt-4 text-[15px] text-text-secondary text-center"
+        animate={{ opacity: [0.55, 1, 0.55] }}
+        transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
+      >
+        {charging ? '신령이 다가오고 있느니라' : '카드에 손을 얹고 지그시 누르고 있거라'}
+      </motion.p>
+    </div>
+  );
+}
+
 /** 카드 아트 영역 별가루 (transform/opacity 만) */
 function Sparkles({ color }: { color: string }) {
   const dots = [
@@ -247,6 +323,9 @@ export function ManshinOracleTest() {
   const [openSections, setOpenSections] = useState<Record<string, boolean>>({});
   const [jobId, setJobId] = useState<string | null>(null);
   const [createError, setCreateError] = useState<string | null>(null);
+  // 유보 리빌: 풍습·엽전은 바로 보여주고 신령패는 홀드-투-리빌로 마지막에 공개
+  const [deityRevealed, setDeityRevealed] = useState(false);
+  const [burst, setBurst] = useState(false);
   const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
 
   // 백그라운드 잡 구독 (기존 타로와 동일 훅 — 실시간 + 폴백 fetch)
@@ -265,6 +344,7 @@ export function ManshinOracleTest() {
     if (!resumeId) return;
     setJobId(resumeId);
     setPhase('reveal');
+    setDeityRevealed(true); // 재진입은 이미 본 결과 — 홀드 의식 생략
     // 세 패 스냅샷 복원 (tarot_records.cards)
     (async () => {
       const { data } = await supabase
@@ -326,6 +406,8 @@ export function ManshinOracleTest() {
     setOpenSections({});
     setJobId(null);
     setCreateError(null);
+    setDeityRevealed(false);
+    setBurst(false);
     const u = new URL(window.location.href);
     u.searchParams.delete('jobId');
     window.history.replaceState(null, '', u.toString());
@@ -362,6 +444,8 @@ export function ManshinOracleTest() {
     setOpenSections({});
     setJobId(null);
     setCreateError(null);
+    setDeityRevealed(false);
+    setBurst(false);
     const u = new URL(window.location.href);
     u.searchParams.delete('jobId');
     window.history.replaceState(null, '', u.toString());
@@ -703,52 +787,77 @@ export function ManshinOracleTest() {
               <div
                 className="relative flex flex-col items-center justify-center py-8 px-4 overflow-hidden"
                 style={{
-                  background: `radial-gradient(circle at 50% 20%, ${deityColor}33, rgba(20,12,38,0.2)), linear-gradient(180deg, ${deityColor}22, transparent)`,
+                  // 공개 전엔 신령의 기운(색)을 누설하지 않는다 — 중립 라벤더 유지
+                  background: deityRevealed
+                    ? `radial-gradient(circle at 50% 20%, ${deityColor}33, rgba(20,12,38,0.2)), linear-gradient(180deg, ${deityColor}22, transparent)`
+                    : 'radial-gradient(circle at 50% 20%, rgba(201,166,255,0.18), rgba(20,12,38,0.2))',
                 }}
               >
-                <Sparkles color={deityColor} />
+                <Sparkles color={deityRevealed ? deityColor : '#c9a6ff'} />
                 <motion.div
                   className="absolute w-[230px] h-[230px] rounded-full pointer-events-none"
-                  style={{ background: `radial-gradient(circle, ${deityColor}2e, transparent 70%)`, willChange: 'transform, opacity' }}
+                  style={{
+                    background: `radial-gradient(circle, ${deityRevealed ? deityColor : '#c9a6ff'}2e, transparent 70%)`,
+                    willChange: 'transform, opacity',
+                  }}
                   animate={{ scale: [1, 1.22, 1], opacity: [0.6, 1, 0.6] }}
                   transition={{ duration: 4.2, repeat: Infinity, ease: 'easeInOut' }}
                 />
-                <div className="text-[15px] tracking-[0.22em] mb-3 relative" style={{ color: deityColor }}>
-                  {deity.group} · 제{deity.no}패
+                {/* 공개 순간 글로우 버스트 — 1회성, transform/opacity 만 */}
+                {burst && (
+                  <motion.div
+                    className="absolute w-[300px] h-[300px] rounded-full pointer-events-none z-10"
+                    style={{ background: `radial-gradient(circle, ${deityColor}66, transparent 60%)`, willChange: 'transform, opacity' }}
+                    initial={{ scale: 0.2, opacity: 0.95 }}
+                    animate={{ scale: 3, opacity: 0 }}
+                    transition={{ duration: 0.65, ease: 'easeOut' }}
+                    onAnimationComplete={() => setBurst(false)}
+                  />
+                )}
+                <div className="text-[15px] tracking-[0.22em] mb-3 relative" style={{ color: deityRevealed ? deityColor : '#c9a6ff' }}>
+                  {deityRevealed ? `${deity.group} · 제${deity.no}패` : '마지막 패가 남았느니라'}
                 </div>
-                {/* 신령패 대형 카드 — 일러스트 나오기 전까지 카드백(삼태극) 플레이스홀더 */}
-                <motion.div
-                  initial={{ opacity: 0, rotateY: 60 }}
-                  animate={{ opacity: 1, rotateY: 0 }}
-                  transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
-                  style={{ transformPerspective: 700 }}
-                  className="relative w-[min(343px,80vw)] aspect-[2/3] rounded-xl overflow-hidden mb-4"
-                >
-                  {/* 카드백 플레이스홀더 — 자체 테두리가 있어 프레임 오버레이 미적용 (일러스트 교체 시 FRAME_SRC 적용)
-                      대형 카드라 고해상본(BACK_LG) 사용 — 소형본은 이 크기에서 뭉개짐 */}
-                  <div className="absolute inset-0" style={{ backgroundImage: BACK_LG, backgroundSize: 'cover', backgroundPosition: 'center' }} />
-                  <div className="absolute inset-0" style={{ background: `radial-gradient(circle at 50% 22%, ${deityColor}30, rgba(10,6,20,0.72))` }} />
-                  <div className="absolute top-3 inset-x-0 flex justify-center z-30">
-                    <span
-                      className="text-[13px] font-semibold tracking-[0.14em] px-3 py-1 rounded-full border"
-                      style={{ background: 'rgba(10,6,20,0.6)', color: deityColor, borderColor: `${deityColor}55` }}
+                {!deityRevealed ? (
+                  /* 유보 리빌 — 신령패는 손을 얹고 기원해야 모습을 드러낸다 */
+                  <DeityHoldReveal onReveal={() => { setBurst(true); setDeityRevealed(true); }} />
+                ) : (
+                  <>
+                    {/* 신령패 대형 카드 — 일러스트 나오기 전까지 카드백(삼태극) 플레이스홀더 */}
+                    <motion.div
+                      initial={{ opacity: 0, rotateY: 100, scale: 0.92 }}
+                      animate={{ opacity: 1, rotateY: 0, scale: [0.92, 1.05, 1] }}
+                      transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
+                      style={{ transformPerspective: 900, willChange: 'transform, opacity' }}
+                      className="relative w-[min(343px,80vw)] aspect-[2/3] rounded-xl overflow-hidden mb-4"
                     >
-                      신령패
-                    </span>
-                  </div>
-                  <div className="absolute bottom-4 inset-x-0 text-center text-[12px] text-[rgba(255,245,225,0.4)] z-30">
-                    일러스트 준비 중
-                  </div>
-                </motion.div>
-                <div className="text-[32px] font-bold text-text-primary leading-tight text-center relative" style={{ fontFamily: 'var(--font-title)' }}>
-                  {deity.name}
-                </div>
-                <div className="text-[15.5px] text-text-secondary mt-1.5 text-center relative">{deity.title}</div>
-                <div className="text-[14px] text-text-tertiary mt-2.5 text-center relative">
-                  {selected.custom.name}의 장면에 {selected.coin.name}을 얹어 공수를 내립니다
-                </div>
+                      {/* 카드백 플레이스홀더 — 자체 테두리가 있어 프레임 오버레이 미적용 (일러스트 교체 시 FRAME_SRC 적용)
+                          대형 카드라 고해상본(BACK_LG) 사용 — 소형본은 이 크기에서 뭉개짐 */}
+                      <div className="absolute inset-0" style={{ backgroundImage: BACK_LG, backgroundSize: 'cover', backgroundPosition: 'center' }} />
+                      <div className="absolute inset-0" style={{ background: `radial-gradient(circle at 50% 22%, ${deityColor}30, rgba(10,6,20,0.72))` }} />
+                      <div className="absolute top-3 inset-x-0 flex justify-center z-30">
+                        <span
+                          className="text-[13px] font-semibold tracking-[0.14em] px-3 py-1 rounded-full border"
+                          style={{ background: 'rgba(10,6,20,0.6)', color: deityColor, borderColor: `${deityColor}55` }}
+                        >
+                          신령패
+                        </span>
+                      </div>
+                      <div className="absolute bottom-4 inset-x-0 text-center text-[12px] text-[rgba(255,245,225,0.4)] z-30">
+                        일러스트 준비 중
+                      </div>
+                    </motion.div>
+                    <div className="text-[32px] font-bold text-text-primary leading-tight text-center relative" style={{ fontFamily: 'var(--font-title)' }}>
+                      {deity.name}
+                    </div>
+                    <div className="text-[15.5px] text-text-secondary mt-1.5 text-center relative">{deity.title}</div>
+                    <div className="text-[14px] text-text-tertiary mt-2.5 text-center relative">
+                      {selected.custom.name}의 장면에 {selected.coin.name}을 얹어 공수를 내립니다
+                    </div>
+                  </>
+                )}
               </div>
 
+              {deityRevealed && (
               <div className="px-5 py-5">
                 {/* 신령 소개 — 설화 기반 lore (신령부 36장 전원 보유) */}
                 {deity.lore && (
@@ -878,6 +987,7 @@ export function ManshinOracleTest() {
                   })}
                 </div>
               </div>
+              )}
             </motion.div>
 
             <div className="flex gap-2 pt-1">
