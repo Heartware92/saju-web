@@ -200,7 +200,7 @@ function SummaryPatCard({ label, card, imageSrc, large }: { label: string; card:
         </div>
         <div
           className={`absolute inset-x-0 z-30 text-center font-bold text-text-primary px-2 leading-tight ${
-            src ? 'bottom-4' : 'top-1/2 -translate-y-1/2'
+            src ? 'bottom-[11%]' : 'top-1/2 -translate-y-1/2'
           } ${large ? 'text-[22px]' : 'text-[18px]'}`}
           style={{ fontFamily: 'var(--font-title)', textShadow: '0 2px 10px rgba(10,6,20,0.8)' }}
         >
