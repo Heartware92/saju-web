@@ -10,7 +10,7 @@
  */
 
 import { useRef, useState, type ReactNode } from 'react';
-import { motion, useScroll, useTransform } from 'framer-motion';
+import { motion, useScroll, useTransform, useMotionValue, useSpring, useMotionTemplate } from 'framer-motion';
 import {
   MANSHIN_DECK,
   MANSHIN_GROUP_COLORS,
@@ -100,6 +100,49 @@ const DEITY_SETS: DeitySet[] = [
     },
   },
 ];
+
+/** 터치/포인터 추적 3D 틸트 + 광택 (ManshinOracleTest 와 동일 — Spline interactive cards 참고) */
+function TiltGlareCard({ className, children }: { className?: string; children: ReactNode }) {
+  const px = useMotionValue(0.5);
+  const py = useMotionValue(0.5);
+  const active = useMotionValue(0);
+  const sp = { stiffness: 160, damping: 18, mass: 0.6 };
+  const rotateX = useSpring(useTransform(py, [0, 1], [8, -8]), sp);
+  const rotateY = useSpring(useTransform(px, [0, 1], [-12, 12]), sp);
+  const glareX = useSpring(useTransform(px, [0, 1], [-28, 28]), sp);
+  const glareY = useSpring(useTransform(py, [0, 1], [-28, 28]), sp);
+  const glareOpacity = useSpring(active, { stiffness: 120, damping: 22 });
+  const glareTransform = useMotionTemplate`translate(${glareX}%, ${glareY}%)`;
+  const move = (e: React.PointerEvent<HTMLDivElement>) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    px.set(Math.min(1, Math.max(0, (e.clientX - rect.left) / rect.width)));
+    py.set(Math.min(1, Math.max(0, (e.clientY - rect.top) / rect.height)));
+    active.set(0.5);
+  };
+  const reset = () => { px.set(0.5); py.set(0.5); active.set(0); };
+  return (
+    <motion.div
+      onPointerMove={move}
+      onPointerLeave={reset}
+      onPointerCancel={reset}
+      onPointerUp={reset}
+      className={className}
+      style={{ rotateX, rotateY, transformPerspective: 800, touchAction: 'pan-y', willChange: 'transform' }}
+    >
+      {children}
+      <motion.div
+        aria-hidden
+        className="absolute -inset-[35%] z-40 pointer-events-none rounded-full"
+        style={{
+          transform: glareTransform,
+          opacity: glareOpacity,
+          background: 'radial-gradient(circle, rgba(255,245,225,0.4), rgba(201,166,255,0.12) 45%, transparent 68%)',
+          willChange: 'transform, opacity',
+        }}
+      />
+    </motion.div>
+  );
+}
 
 /** 공수 강조 2단계 — ==핵심==(빨강) / **중요**(노랑). ManshinOracleTest 와 동일 규칙 */
 const EMPHASIS_RE = /==([^=]+?)==|\*\*([^*]+?)\*\*/g;
@@ -344,19 +387,21 @@ export function ManshinImageCompareTest() {
             <div className="text-[15px] tracking-[0.22em] mb-3 relative" style={{ color: deityColor }}>
               신령패 · {deity.group} · 제{deity.no}패
             </div>
-            {/* 카드 일러스트 — 2:3 카드 프레임 */}
+            {/* 카드 일러스트 — 진입 플립(외부) + 터치 틸트/광택(내부) 분리 */}
             <motion.div
               key={`${deitySet.deityId}-${variant.id}`}
               initial={{ opacity: 0, rotateY: 60 }}
               animate={{ opacity: 1, rotateY: 0 }}
               transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
               style={{ transformPerspective: 700 }}
-              className="relative w-[264px] aspect-[2/3] rounded-xl overflow-hidden"
+              className="relative w-[264px]"
             >
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={variant.src} alt={`${deity.name} — ${variant.label}`} className="w-full h-full object-cover" />
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={FRAME_SRC} alt="" aria-hidden className="absolute inset-0 w-full h-full z-20 pointer-events-none" />
+              <TiltGlareCard className="relative w-full aspect-[2/3] rounded-xl overflow-hidden">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={variant.src} alt={`${deity.name} — ${variant.label}`} className="absolute inset-0 w-full h-full object-cover" />
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={FRAME_SRC} alt="" aria-hidden className="absolute inset-0 w-full h-full z-20 pointer-events-none" />
+              </TiltGlareCard>
             </motion.div>
             <div className="text-[32px] font-bold text-text-primary leading-tight text-center relative mt-4" style={{ fontFamily: 'var(--font-title)' }}>
               {deity.name}

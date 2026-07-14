@@ -19,7 +19,7 @@
  */
 
 import { useEffect, useRef, useState, type ReactNode } from 'react';
-import { motion, AnimatePresence, useScroll, useTransform } from 'framer-motion';
+import { motion, AnimatePresence, useScroll, useTransform, useMotionValue, useSpring, useMotionTemplate } from 'framer-motion';
 import { supabase } from '@/services/supabase';
 import { useFortuneJob } from '@/hooks/useFortuneJob';
 import {
@@ -293,6 +293,56 @@ function DeityHoldReveal({ onReveal }: { onReveal: () => void }) {
         {charging ? '신령이 다가오고 있느니라' : '카드에 손을 얹고 지그시 누르고 있거라'}
       </motion.p>
     </div>
+  );
+}
+
+/**
+ * 터치/포인터 추적 3D 틸트 + 흐르는 광택 (Spline interactive cards 참고)
+ * - MotionValue 직결(리렌더 0) + 스프링. glare 는 translate 이동 — 전부 transform/opacity (GPU 합성)
+ * - touchAction: pan-y — 세로 스크롤은 네이티브 유지, 카드 위 가로 터치 이동이 틸트
+ */
+function TiltGlareCard({ className, children }: { className?: string; children: ReactNode }) {
+  const px = useMotionValue(0.5);
+  const py = useMotionValue(0.5);
+  const active = useMotionValue(0);
+  const sp = { stiffness: 160, damping: 18, mass: 0.6 };
+  const rotateX = useSpring(useTransform(py, [0, 1], [8, -8]), sp);
+  const rotateY = useSpring(useTransform(px, [0, 1], [-12, 12]), sp);
+  const glareX = useSpring(useTransform(px, [0, 1], [-28, 28]), sp);
+  const glareY = useSpring(useTransform(py, [0, 1], [-28, 28]), sp);
+  const glareOpacity = useSpring(active, { stiffness: 120, damping: 22 });
+  const glareTransform = useMotionTemplate`translate(${glareX}%, ${glareY}%)`;
+
+  const move = (e: React.PointerEvent<HTMLDivElement>) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    px.set(Math.min(1, Math.max(0, (e.clientX - rect.left) / rect.width)));
+    py.set(Math.min(1, Math.max(0, (e.clientY - rect.top) / rect.height)));
+    active.set(0.5);
+  };
+  const reset = () => { px.set(0.5); py.set(0.5); active.set(0); };
+
+  return (
+    <motion.div
+      onPointerMove={move}
+      onPointerLeave={reset}
+      onPointerCancel={reset}
+      onPointerUp={reset}
+      className={className}
+      style={{ rotateX, rotateY, transformPerspective: 800, touchAction: 'pan-y', willChange: 'transform' }}
+    >
+      {children}
+      {/* 광택 — 카드보다 크게 깔고 translate 로만 이동 (배경 위치 애니메이션 금지 원칙) */}
+      <motion.div
+        aria-hidden
+        className="absolute -inset-[35%] z-40 pointer-events-none rounded-full"
+        style={{
+          transform: glareTransform,
+          opacity: glareOpacity,
+          background: 'radial-gradient(circle, rgba(255,245,225,0.4), rgba(201,166,255,0.12) 45%, transparent 68%)',
+          willChange: 'transform, opacity',
+        }}
+      />
+    </motion.div>
   );
 }
 
@@ -828,21 +878,23 @@ export function ManshinOracleTest() {
                   <DeityHoldReveal onReveal={() => { setBurst(true); setDeityRevealed(true); }} />
                 ) : (
                   <>
-                    {/* 신령패 대형 카드 — 일러스트 나오기 전까지 카드백(삼태극) 플레이스홀더 */}
+                    {/* 신령패 대형 카드 — 진입 플립(외부) + 터치 틸트/광택(내부) 분리 */}
                     <motion.div
                       initial={{ opacity: 0, rotateY: 100, scale: 0.92 }}
                       animate={{ opacity: 1, rotateY: 0, scale: [0.92, 1.05, 1] }}
                       transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
                       style={{ transformPerspective: 900, willChange: 'transform, opacity' }}
-                      className="relative w-[min(343px,80vw)] aspect-[2/3] rounded-xl overflow-hidden mb-4"
+                      className="relative w-[min(343px,80vw)] mb-4"
                     >
-                      {/* 카드백 플레이스홀더 — 자체 테두리가 있어 프레임 오버레이 미적용 (일러스트 교체 시 FRAME_SRC 적용)
-                          대형 카드라 고해상본(BACK_LG) 사용 — 소형본은 이 크기에서 뭉개짐 */}
-                      <div className="absolute inset-0" style={{ backgroundImage: BACK_LG, backgroundSize: 'cover', backgroundPosition: 'center' }} />
-                      <div className="absolute inset-0" style={{ background: `radial-gradient(circle at 50% 22%, ${deityColor}30, rgba(10,6,20,0.72))` }} />
-                      <div className="absolute bottom-4 inset-x-0 text-center text-[12px] text-[rgba(255,245,225,0.4)] z-30">
-                        일러스트 준비 중
-                      </div>
+                      <TiltGlareCard className="relative w-full aspect-[2/3] rounded-xl overflow-hidden">
+                        {/* 카드백 플레이스홀더 — 자체 테두리가 있어 프레임 오버레이 미적용 (일러스트 교체 시 FRAME_SRC 적용)
+                            대형 카드라 고해상본(BACK_LG) 사용 — 소형본은 이 크기에서 뭉개짐 */}
+                        <div className="absolute inset-0" style={{ backgroundImage: BACK_LG, backgroundSize: 'cover', backgroundPosition: 'center' }} />
+                        <div className="absolute inset-0" style={{ background: `radial-gradient(circle at 50% 22%, ${deityColor}30, rgba(10,6,20,0.72))` }} />
+                        <div className="absolute bottom-4 inset-x-0 text-center text-[12px] text-[rgba(255,245,225,0.4)] z-30">
+                          일러스트 준비 중
+                        </div>
+                      </TiltGlareCard>
                     </motion.div>
                     <div className="text-[32px] font-bold text-text-primary leading-tight text-center relative" style={{ fontFamily: 'var(--font-title)' }}>
                       {deity.name}
