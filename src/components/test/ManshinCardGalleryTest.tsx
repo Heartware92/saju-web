@@ -20,8 +20,20 @@ const FRAME_SRC = '/manshin/frame.png';
 const CARD_IMAGES: Record<string, string> = {
   // 신령패 (1/36)
   okhwang: '/manshin/test2/okhwang_final.jpg',
-  // 풍습패 (1/18)
+  // 풍습패 (13/18) — 2026-07-14 12장 일괄 후처리(4% 크롭, 징검다리 낙관·금줄 문패 글자 제거)
   honrye: '/manshin/customs/honrye.jpg',
+  isa: '/manshin/customs/isa.jpg',
+  geupje: '/manshin/customs/geupje.jpg',
+  baetgil: '/manshin/customs/baetgil.jpg',
+  seodang: '/manshin/customs/seodang.jpg',
+  gutpan: '/manshin/customs/gutpan.jpg',
+  geumjul: '/manshin/customs/geumjul.jpg',
+  bujeok: '/manshin/customs/bujeok.jpg',
+  dalmaji: '/manshin/customs/dalmaji.jpg',
+  geune: '/manshin/customs/geune.jpg',
+  neol: '/manshin/customs/neol.jpg',
+  jumak: '/manshin/customs/jumak.jpg',
+  jinggeom: '/manshin/customs/jinggeom.jpg',
   // 엽전패 (6/6 완료)
   yeopjeon1: '/manshin/coins/y1.jpg',
   yeopjeon2: '/manshin/coins/y2.jpg',
