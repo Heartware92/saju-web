@@ -46,7 +46,7 @@ export interface ManshinCard {
 }
 
 export const FORTUNE_SECTIONS: { key: keyof ManshinFortunes; label: string }[] = [
-  { key: 'love', label: '연애운' },
+  { key: 'love', label: '연애·이성운' },
   { key: 'money', label: '재물운' },
   { key: 'work', label: '일·사업운' },
   { key: 'health', label: '건강운' },
