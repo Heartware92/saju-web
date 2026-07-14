@@ -19,7 +19,7 @@
  */
 
 import { useEffect, useRef, useState, type ReactNode } from 'react';
-import { motion, AnimatePresence, useScroll, useTransform, useMotionValue, useSpring, useMotionTemplate } from 'framer-motion';
+import { motion, AnimatePresence, useScroll, useTransform, useMotionValue, useSpring, useMotionTemplate, animate } from 'framer-motion';
 import { supabase } from '@/services/supabase';
 import { useFortuneJob } from '@/hooks/useFortuneJob';
 import {
@@ -297,9 +297,12 @@ function DeityHoldReveal({ onReveal }: { onReveal: () => void }) {
 }
 
 /**
- * 터치/포인터 추적 3D 틸트 + 흐르는 광택 (Spline interactive cards 참고)
+ * 3D 틸트 + 흐르는 광택 (Spline interactive cards 참고)
+ * - 아이들 오토 모션: 스스로 은은하게 일렁이고 광택이 주기적으로 쓸고 지나감
+ *   (모바일은 hover 가 없고 터치 드래그는 스크롤과 충돌 — pan-y 에선 pointercancel 로 즉시 리셋되므로
+ *    "살아있는 카드" 루프가 모바일의 기본 경험. Balatro 방식)
+ * - 포인터가 닿으면 아이들을 멈추고 추적 틸트로 전환, 떼면 아이들 재개
  * - MotionValue 직결(리렌더 0) + 스프링. glare 는 translate 이동 — 전부 transform/opacity (GPU 합성)
- * - touchAction: pan-y — 세로 스크롤은 네이티브 유지, 카드 위 가로 터치 이동이 틸트
  */
 function TiltGlareCard({ className, children }: { className?: string; children: ReactNode }) {
   const px = useMotionValue(0.5);
@@ -313,13 +316,28 @@ function TiltGlareCard({ className, children }: { className?: string; children: 
   const glareOpacity = useSpring(active, { stiffness: 120, damping: 22 });
   const glareTransform = useMotionTemplate`translate(${glareX}%, ${glareY}%)`;
 
+  // 아이들 루프 — 포인터와 같은 px/py 를 구동해 틸트·광택이 한 체계로 움직인다
+  const idleControls = useRef<{ stop: () => void }[]>([]);
+  const stopIdle = () => { idleControls.current.forEach((c) => c.stop()); idleControls.current = []; };
+  const startIdle = () => {
+    stopIdle();
+    idleControls.current = [
+      animate(px, [0.5, 0.72, 0.32, 0.62, 0.5], { duration: 9, repeat: Infinity, ease: 'easeInOut' }),
+      animate(py, [0.5, 0.36, 0.62, 0.42, 0.5], { duration: 9, repeat: Infinity, ease: 'easeInOut', delay: 0.6 }),
+      animate(active, [0.2, 0.38, 0.2], { duration: 4.5, repeat: Infinity, ease: 'easeInOut' }),
+    ];
+  };
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- 아이들 루프는 마운트 시 1회 시작
+  useEffect(() => { startIdle(); return stopIdle; }, []);
+
   const move = (e: React.PointerEvent<HTMLDivElement>) => {
+    stopIdle();
     const rect = e.currentTarget.getBoundingClientRect();
     px.set(Math.min(1, Math.max(0, (e.clientX - rect.left) / rect.width)));
     py.set(Math.min(1, Math.max(0, (e.clientY - rect.top) / rect.height)));
     active.set(0.5);
   };
-  const reset = () => { px.set(0.5); py.set(0.5); active.set(0); };
+  const reset = () => { px.set(0.5); py.set(0.5); active.set(0); startIdle(); };
 
   return (
     <motion.div

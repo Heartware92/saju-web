@@ -9,8 +9,8 @@
  * 스타일 확정 후 이 페이지·public/manshin/test2 는 삭제한다.
  */
 
-import { useRef, useState, type ReactNode } from 'react';
-import { motion, useScroll, useTransform, useMotionValue, useSpring, useMotionTemplate } from 'framer-motion';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { motion, useScroll, useTransform, useMotionValue, useSpring, useMotionTemplate, animate } from 'framer-motion';
 import {
   MANSHIN_DECK,
   MANSHIN_GROUP_COLORS,
@@ -101,7 +101,7 @@ const DEITY_SETS: DeitySet[] = [
   },
 ];
 
-/** 터치/포인터 추적 3D 틸트 + 광택 (ManshinOracleTest 와 동일 — Spline interactive cards 참고) */
+/** 3D 틸트 + 광택 — 아이들 오토 모션 + 포인터 추적 (ManshinOracleTest 와 동일 — Spline interactive cards 참고) */
 function TiltGlareCard({ className, children }: { className?: string; children: ReactNode }) {
   const px = useMotionValue(0.5);
   const py = useMotionValue(0.5);
@@ -113,13 +113,27 @@ function TiltGlareCard({ className, children }: { className?: string; children: 
   const glareY = useSpring(useTransform(py, [0, 1], [-28, 28]), sp);
   const glareOpacity = useSpring(active, { stiffness: 120, damping: 22 });
   const glareTransform = useMotionTemplate`translate(${glareX}%, ${glareY}%)`;
+  // 아이들 루프 — 모바일(hover 없음)의 기본 경험. 포인터가 닿으면 정지, 떼면 재개
+  const idleControls = useRef<{ stop: () => void }[]>([]);
+  const stopIdle = () => { idleControls.current.forEach((c) => c.stop()); idleControls.current = []; };
+  const startIdle = () => {
+    stopIdle();
+    idleControls.current = [
+      animate(px, [0.5, 0.72, 0.32, 0.62, 0.5], { duration: 9, repeat: Infinity, ease: 'easeInOut' }),
+      animate(py, [0.5, 0.36, 0.62, 0.42, 0.5], { duration: 9, repeat: Infinity, ease: 'easeInOut', delay: 0.6 }),
+      animate(active, [0.2, 0.38, 0.2], { duration: 4.5, repeat: Infinity, ease: 'easeInOut' }),
+    ];
+  };
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- 아이들 루프는 마운트 시 1회 시작
+  useEffect(() => { startIdle(); return stopIdle; }, []);
   const move = (e: React.PointerEvent<HTMLDivElement>) => {
+    stopIdle();
     const rect = e.currentTarget.getBoundingClientRect();
     px.set(Math.min(1, Math.max(0, (e.clientX - rect.left) / rect.width)));
     py.set(Math.min(1, Math.max(0, (e.clientY - rect.top) / rect.height)));
     active.set(0.5);
   };
-  const reset = () => { px.set(0.5); py.set(0.5); active.set(0); };
+  const reset = () => { px.set(0.5); py.set(0.5); active.set(0); startIdle(); };
   return (
     <motion.div
       onPointerMove={move}
