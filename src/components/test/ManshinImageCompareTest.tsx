@@ -119,9 +119,9 @@ function TiltGlareCard({ className, children }: { className?: string; children: 
   const startIdle = () => {
     stopIdle();
     idleControls.current = [
-      animate(px, [0.5, 0.72, 0.32, 0.62, 0.5], { duration: 9, repeat: Infinity, ease: 'easeInOut' }),
-      animate(py, [0.5, 0.36, 0.62, 0.42, 0.5], { duration: 9, repeat: Infinity, ease: 'easeInOut', delay: 0.6 }),
-      animate(active, [0.2, 0.38, 0.2], { duration: 4.5, repeat: Infinity, ease: 'easeInOut' }),
+      animate(px, [0.5, 0.84, 0.2, 0.74, 0.5], { duration: 7, repeat: Infinity, ease: 'easeInOut' }),
+      animate(py, [0.5, 0.28, 0.7, 0.36, 0.5], { duration: 7, repeat: Infinity, ease: 'easeInOut', delay: 0.5 }),
+      animate(active, [0.24, 0.46, 0.24], { duration: 3.5, repeat: Infinity, ease: 'easeInOut' }),
     ];
   };
   // eslint-disable-next-line react-hooks/exhaustive-deps -- 아이들 루프는 마운트 시 1회 시작
@@ -140,6 +140,7 @@ function TiltGlareCard({ className, children }: { className?: string; children: 
       onPointerLeave={reset}
       onPointerCancel={reset}
       onPointerUp={reset}
+      onContextMenu={(e) => e.preventDefault()}
       className={className}
       style={{ rotateX, rotateY, transformPerspective: 800, touchAction: 'pan-y', willChange: 'transform' }}
     >
@@ -210,7 +211,7 @@ function SummaryPatCard({ label, card, imageSrc, large }: { label: string; card:
         {src ? (
           <>
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={src} alt={card.name} className="absolute inset-0 w-full h-full object-cover" />
+            <img src={src} alt={card.name} draggable={false} className="absolute inset-0 w-full h-full object-cover pointer-events-none select-none [-webkit-touch-callout:none]" />
             <div className="absolute inset-x-0 bottom-0 h-2/5" style={{ background: 'linear-gradient(180deg, transparent, rgba(10,6,20,0.9))' }} />
           </>
         ) : (
@@ -222,7 +223,7 @@ function SummaryPatCard({ label, card, imageSrc, large }: { label: string; card:
         {/* 공용 프레임 오버레이 — 일러스트 카드에만 (카드백은 자체 테두리 보유, 이중 테두리 방지) */}
         {src && (
           /* eslint-disable-next-line @next/next/no-img-element */
-          <img src={FRAME_SRC} alt="" aria-hidden className="absolute inset-0 w-full h-full z-20 pointer-events-none" />
+          <img src={FRAME_SRC} alt="" aria-hidden className="absolute inset-0 w-full h-full z-20 pointer-events-none select-none [-webkit-touch-callout:none]" />
         )}
         {/* 한자 인장 뱃지 — 코드(폰트) 렌더. AI 글자 금지 원칙. 프레임 모서리 장식과 겹치지 않게 창 안쪽(7%)으로 */}
         {card.hanja && card.hanja.length <= 2 && (
@@ -354,9 +355,9 @@ export function ManshinImageCompareTest() {
                   style={{ borderColor: v.id === variant.id ? deityColor : 'rgba(201,166,255,0.35)' }}
                 >
                   {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={v.src} alt={v.label} className="w-full h-full object-cover" loading="lazy" />
+                  <img src={v.src} alt={v.label} draggable={false} className="w-full h-full object-cover pointer-events-none select-none [-webkit-touch-callout:none]" loading="lazy" />
                   {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={FRAME_SRC} alt="" aria-hidden className="absolute inset-0 w-full h-full pointer-events-none" />
+                  <img src={FRAME_SRC} alt="" aria-hidden className="absolute inset-0 w-full h-full pointer-events-none select-none [-webkit-touch-callout:none]" />
                 </div>
                 <div className="text-[12px] mt-1 text-center" style={{ color: v.id === variant.id ? deityColor : 'var(--text-tertiary)' }}>
                   {v.label}
@@ -412,9 +413,9 @@ export function ManshinImageCompareTest() {
             >
               <TiltGlareCard className="relative w-full aspect-[2/3] rounded-xl overflow-hidden">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={variant.src} alt={`${deity.name} — ${variant.label}`} className="absolute inset-0 w-full h-full object-cover" />
+                <img src={variant.src} alt={`${deity.name} — ${variant.label}`} draggable={false} className="absolute inset-0 w-full h-full object-cover pointer-events-none select-none [-webkit-touch-callout:none]" />
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={FRAME_SRC} alt="" aria-hidden className="absolute inset-0 w-full h-full z-20 pointer-events-none" />
+                <img src={FRAME_SRC} alt="" aria-hidden className="absolute inset-0 w-full h-full z-20 pointer-events-none select-none [-webkit-touch-callout:none]" />
               </TiltGlareCard>
             </motion.div>
             <div className="text-[32px] font-bold text-text-primary leading-tight text-center relative mt-4" style={{ fontFamily: 'var(--font-title)' }}>
