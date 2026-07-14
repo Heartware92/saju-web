@@ -225,15 +225,7 @@ function SummaryPatCard({ label, card, imageSrc, large }: { label: string; card:
           /* eslint-disable-next-line @next/next/no-img-element */
           <img src={FRAME_SRC} alt="" aria-hidden className="absolute inset-0 w-full h-full z-20 pointer-events-none select-none [-webkit-touch-callout:none]" />
         )}
-        {/* 한자 인장 뱃지 — 코드(폰트) 렌더. AI 글자 금지 원칙. 프레임 모서리 장식과 겹치지 않게 창 안쪽(7%)으로 */}
-        {card.hanja && card.hanja.length <= 2 && (
-          <div
-            className={`absolute z-30 top-[7%] left-[7%] rounded-full flex items-center justify-center border font-bold ${large ? 'w-8 h-8 text-[15px]' : 'w-7 h-7 text-[13.5px]'}`}
-            style={{ background: 'rgba(10,6,20,0.72)', color, borderColor: `${color}66`, fontFamily: 'var(--font-serif)' }}
-          >
-            {card.hanja}
-          </div>
-        )}
+        {/* 한자 인장 뱃지는 제거 (2026-07-13) — 하단 한글 카드명과 정보 중복 */}
         <div className="absolute top-2.5 inset-x-0 flex justify-center z-30">
           <span
             className="text-[12.5px] font-semibold tracking-[0.14em] px-2.5 py-0.5 rounded-full border"
