@@ -21,8 +21,15 @@ const EASY_PAY_PROVIDERS: { label: string; value: string }[] = [
 ];
 
 // 채널키 프리셋 — 클릭으로 채움. PortOne channelKey는 클라이언트에 노출되는 공개값.
-const CHANNEL_PRESETS: { label: string; key: string }[] = [
+// payMethod/easyPayProvider 가 있으면 클릭 시 결제수단까지 자동 세팅(원클릭 테스트).
+const CHANNEL_PRESETS: { label: string; key: string; payMethod?: string; easyPayProvider?: string }[] = [
   { label: 'KPN (포트원)', key: 'channel-key-8d7ca754-c4de-4a24-bb5c-ac6d27b24659' },
+  {
+    label: '카카오페이',
+    key: 'channel-key-b249efa8-2c72-4b85-b32c-76ea193e5431',
+    payMethod: 'EASY_PAY',
+    easyPayProvider: 'EASY_PAY_PROVIDER_KAKAOPAY',
+  },
 ];
 
 export default function CreditTestClient() {
@@ -85,7 +92,11 @@ export default function CreditTestClient() {
           <button
             key={p.label}
             type="button"
-            onClick={() => setChannelKey(p.key)}
+            onClick={() => {
+              setChannelKey(p.key);
+              if (p.payMethod) setPayMethod(p.payMethod);
+              if (p.easyPayProvider) setEasyPayProvider(p.easyPayProvider);
+            }}
             className="px-2.5 py-1 rounded-lg text-[12px] bg-white/5 border border-white/15 text-text-secondary hover:border-cta/40 transition-colors"
           >
             {p.label}
