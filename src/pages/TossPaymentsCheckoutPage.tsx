@@ -1,7 +1,7 @@
 'use client';
 
 /**
- * 토스페이먼츠 결제위젯 체크아웃 페이지 (계약 심사/테스트용 — 2026-07-16)
+ * 토스페이먼츠 결제위젯 체크아웃 페이지 (계약 심사/테스트용 — 2026-07-16, 현재 테스트 위젯 키 모드)
  * /credit 결제수단 모달의 "신용·체크카드 (테스트용)" → pending 주문 생성 후 이 페이지로 온다.
  * 위젯(결제수단 선택 UI + 약관)을 렌더하고, 결제하기 버튼으로 토스 결제창을 띄운다.
  * 완료 시 successUrl(/payment/tosspayments/callback) → /api/payment/tosspayments/confirm 승인.
