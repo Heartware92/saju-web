@@ -157,6 +157,19 @@ ${fortunes}
 }
 console.log(`카드 노트 60장 생성, 이미지 ${imgCopied}장 복사`);
 
+// ── 3-1. 카드 목차 (덱 번호순 통독용 — 탐색기는 가나다순이라 별도 제공) ──
+let toc = `# 카드 목차 — 덱 번호순\n\n한 장씩 통독할 때 이 순서대로. 신령패는 말투 한 줄을 같이 표기했다. 전체 화법 규칙: [[공수 원칙]]\n`;
+let curGroup = '';
+for (const c of DECK) {
+  if (c.group !== curGroup) {
+    curGroup = c.group;
+    toc += `\n## ${KIND(c)} — ${curGroup}\n`;
+  }
+  const tone = TONES[c.id];
+  toc += `${c.no}. [[${c.name}]] — ${c.title}${tone ? ` · _${tone[1].split('—')[0].trim()}_` : ''}\n`;
+}
+fs.writeFileSync(path.join(VAULT, '만신타로/카드 목차.md'), toc);
+
 // ── 4. 리딩 기록 내보내기 (증분) ───────────────────────────────────────
 const nameById = Object.fromEntries(DECK.map((c) => [c.id, c.name]));
 let newRecords = 0, totalRecords = 0;
@@ -253,6 +266,7 @@ const home = `# 이천점 보관함
 만신타로 데이터 보관함입니다. \`saju-web\`에서 \`node scripts/export-obsidian.mjs\` 를 실행하면 최신 데이터로 갱신됩니다 (리딩 기록은 증분 추가).
 
 ## 만신타로
+- **[[카드 목차]]** — 60장 덱 번호순 통독용 (신령패는 말투 한 줄 표기)
 - **[[공수 원칙]]** — 톤앤매너 헌법 (화자 원칙 · 세 패 역할 · 강조 규칙 · 분량)
 - **카드 도감**: [[만신타로/카드/신령패/옥황상제|신령패]] · [[만신타로/카드/풍습패/혼례|풍습패]] · [[만신타로/카드/엽전패/엽전 한 닢|엽전패]] — 총 60장. 신령패에는 신별 캐릭터·말투·시그니처 스펙 포함
 - **리딩 기록**: \`만신타로/리딩기록\` 폴더 (생성된 공수 풀이 전부)
