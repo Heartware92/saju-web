@@ -264,6 +264,103 @@ export const processTossPayment = async (
 };
 
 /**
+ * 토스페이먼츠(TossPayments) PG 직연동 — 카드 결제창 (API 개별 연동, 결제위젯 아님).
+ * 토스페이(간편결제)와는 완전히 별개 서비스. 계약 심사/테스트용으로 우선 연동 (2026-07-16).
+ *
+ * 흐름: pending 주문 생성(payment_method=tosspayments) → SDK 결제창(CARD) →
+ *       successUrl(/payment/tosspayments/callback) 복귀 → /api/payment/tosspayments/confirm
+ *       에서 서버 승인 + 크레딧 지급 (멱등).
+ *
+ * 모바일은 결제창으로 전체 페이지가 리다이렉트되고, 데스크톱은 창이 뜬 뒤
+ * 완료 시 successUrl 로 이동한다. 사용자가 창을 닫으면 SDK가 reject → 취소 처리.
+ */
+const TOSSPAYMENTS_CLIENT_KEY = process.env.NEXT_PUBLIC_TOSSPAYMENTS_CLIENT_KEY || '';
+
+export const processTossPaymentsCard = async (
+  request: PaymentRequest
+): Promise<PaymentResult> => {
+  let orderId: string | null = null;
+  try {
+    if (!TOSSPAYMENTS_CLIENT_KEY) {
+      return {
+        success: false,
+        error: 'CONFIG_MISSING',
+        message: '토스페이먼츠 키가 아직 설정되지 않았습니다.',
+      };
+    }
+
+    // 1. 로그인 확인
+    const user = await auth.getCurrentUser();
+    if (!user) {
+      return { success: false, error: 'LOGIN_REQUIRED', message: '로그인이 필요합니다' };
+    }
+
+    // 2. 패키지 조회
+    const packageInfo = getPackageById(request.packageId);
+    if (!packageInfo) {
+      return { success: false, error: 'INVALID_PACKAGE', message: '올바르지 않은 패키지입니다' };
+    }
+
+    // 3. 주문 생성 (status=pending, payment_method=tosspayments — confirm 라우트의 CAS 락 선점 조건)
+    const orderData: Omit<Order, 'id' | 'created_at'> = {
+      user_id: user.id,
+      package_id: request.packageId,
+      package_name: packageInfo.name,
+      amount: request.amount,
+      moon_credit_amount: packageInfo.moonCredit,
+      status: 'pending',
+      payment_method: 'tosspayments',
+    };
+    const order = await orderDB.createOrder(orderData);
+    orderId = order.id;
+
+    // 4. 토스페이먼츠 SDK 로드 → 카드 결제창 호출
+    const { loadTossPayments, ANONYMOUS } = await import('@tosspayments/tosspayments-sdk');
+    const tossPayments = await loadTossPayments(TOSSPAYMENTS_CLIENT_KEY);
+    const payment = tossPayments.payment({ customerKey: ANONYMOUS });
+
+    // 모바일 리다이렉트 대비 미완료 플래그 (기존 토스페이와 동일한 취소 모달 로직 재사용)
+    try { sessionStorage.setItem('toss_payment_pending', order.id); } catch { /* noop */ }
+
+    await payment.requestPayment({
+      method: 'CARD',
+      amount: { currency: 'KRW', value: request.amount },
+      orderId: order.id,
+      orderName: `크레딧 ${request.creditAmount}개 (${packageInfo.name})`,
+      successUrl: `${BASE_URL}/payment/tosspayments/callback`,
+      failUrl: `${BASE_URL}/payment/tosspayments/callback`,
+      customerEmail: user.email || undefined,
+      customerName: user.user_metadata?.name || user.user_metadata?.full_name || '구매자',
+      card: {
+        useEscrow: false,
+        flowMode: 'DEFAULT',
+        useCardPoint: false,
+        useAppCardOnly: false,
+      },
+    });
+
+    // 데스크톱: requestPayment resolve 후 successUrl 로 이동한다. 여기 도달 = 인증 완료 직후.
+    return { success: true, orderId: order.id, message: '결제창으로 이동합니다' };
+  } catch (error: any) {
+    // 사용자가 결제창을 닫음/취소 — SDK reject
+    try { sessionStorage.removeItem('toss_payment_pending'); } catch { /* noop */ }
+    if (orderId) {
+      await orderDB.updateOrderStatus(orderId, 'cancelled').catch(() => undefined);
+    }
+    const code = error?.code as string | undefined;
+    const isCanceled = code === 'USER_CANCEL' || code === 'PAY_PROCESS_CANCELED';
+    console.error('TossPayments payment error:', error);
+    return {
+      success: false,
+      orderId: orderId ?? undefined,
+      error: code || 'TOSSPAYMENTS_ERROR',
+      canceled: true,
+      message: isCanceled ? '결제를 취소하였습니다.' : (error?.message || '결제에 실패했습니다. 잠시 후 다시 시도해 주세요.'),
+    };
+  }
+};
+
+/**
  * 리다이렉트 방식 결제 콜백 — /payment/callback 페이지에서 호출.
  * paymentId와 orderId를 받아 서버 verify 라우트를 호출한다.
  */

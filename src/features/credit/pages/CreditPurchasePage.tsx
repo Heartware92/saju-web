@@ -9,7 +9,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useCreditStore } from '@/store/useCreditStore';
 import { CREDIT_PACKAGES } from '@/constants/pricing';
-import { processPayment, processTossPayment } from '@/services/payment';
+import { processPayment, processTossPayment, processTossPaymentsCard } from '@/services/payment';
 import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
 import type { CreditPackage } from '@/constants/pricing';
@@ -143,6 +143,33 @@ export const CreditPurchasePage: React.FC = () => {
       console.error('Kakao purchase error:', error);
       alert('결제 처리 중 오류가 발생했습니다.');
     } finally {
+      setLoading(null);
+    }
+  };
+
+  // 토스페이먼츠 PG 직연동 카드결제 — 계약 심사/테스트용 (2026-07-16)
+  const payWithTossPayments = async (pkg: CreditPackage) => {
+    setMethodPkg(null);
+    setLoading(pkg.id);
+    try {
+      const result = await processTossPaymentsCard({
+        packageId: pkg.id,
+        amount: pkg.price,
+        creditAmount: pkg.moonCredit,
+      });
+      if (result.success) {
+        // successUrl 로 페이지 이동 중 — 로딩 유지
+        return;
+      }
+      if (result.canceled) {
+        setCanceledNotice(true);
+      } else {
+        alert(result.message || '결제에 실패했습니다.');
+      }
+      setLoading(null);
+    } catch (error) {
+      console.error('TossPayments purchase error:', error);
+      alert('결제 처리 중 오류가 발생했습니다.');
       setLoading(null);
     }
   };
@@ -284,6 +311,21 @@ export const CreditPurchasePage: React.FC = () => {
               <p className="text-[11.5px] text-text-tertiary text-center leading-relaxed">
                 토스페이·카카오페이는 각 앱/계좌·카드로, 신용·체크카드는 카드사 결제창으로 진행됩니다.
               </p>
+
+              {/* 토스페이먼츠 테스트 구역 — 계약 심사용 임시 (검증 후 정식 전환) */}
+              <div className="pt-3 border-t border-[var(--border-subtle)] space-y-2">
+                <p className="text-[11.5px] text-text-tertiary text-center">토스페이먼츠 테스트 전용입니다.</p>
+                <button
+                  onClick={() => payWithTossPayments(methodPkg)}
+                  className="w-full rounded-xl bg-white border border-[#E5E8EB] py-3.5 flex items-center justify-center gap-2 transition-all active:scale-[0.99] hover:border-[#0064FF]"
+                >
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#4E5968" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                    <rect x="2" y="5" width="20" height="14" rx="2.5" />
+                    <path d="M2 10h20" />
+                  </svg>
+                  <span className="font-bold text-[14px] text-[#191F28]">신용 · 체크카드 (테스트용)</span>
+                </button>
+              </div>
             </div>
           )}
         </Modal>
