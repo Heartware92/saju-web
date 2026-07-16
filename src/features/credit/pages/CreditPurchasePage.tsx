@@ -14,6 +14,12 @@ import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
 import type { CreditPackage } from '@/constants/pricing';
 
+// 카카오페이 전용 PortOne 채널키 (간편결제 EASY_PAY). channelKey는 클라이언트 노출 공개값.
+// env 우선, 없으면 하드코딩 폴백(2026-07-16 카카오페이 채널 승인분). 토스=직연동/카드=active_channel과 별개 채널.
+const KAKAO_CHANNEL_KEY =
+  process.env.NEXT_PUBLIC_PORTONE_KAKAO_CHANNEL_KEY ||
+  'channel-key-b249efa8-2c72-4b85-b32c-76ea193e5431';
+
 export const CreditPurchasePage: React.FC = () => {
   const router = useRouter();
   const { moonBalance } = useCreditStore();
@@ -109,6 +115,34 @@ export const CreditPurchasePage: React.FC = () => {
     } catch (error) {
       console.error('Toss purchase error:', error);
       alert('결제 처리 중 오류가 발생했습니다.');
+      setLoading(null);
+    }
+  };
+
+  // 카카오페이 — 포트원 간편결제(EASY_PAY). 카카오페이 전용 채널키로 결제(active_channel 무관).
+  const payWithKakao = async (pkg: CreditPackage) => {
+    setMethodPkg(null);
+    setLoading(pkg.id);
+    // 결제창 진행 중 뒤로가기 흡수 (카드결제와 동일 가드)
+    cardBackGuard.current = true;
+    try { window.history.pushState({ paymentOpen: true }, ''); } catch { /* noop */ }
+    try {
+      const result = await processPayment(
+        { packageId: pkg.id, amount: pkg.price, creditAmount: pkg.moonCredit },
+        { channelKeyOverride: KAKAO_CHANNEL_KEY, payMethod: 'EASY_PAY', easyPayProvider: 'EASY_PAY_PROVIDER_KAKAOPAY' },
+      );
+      cardBackGuard.current = false;
+      if (result.success) {
+        alert(`${pkg.name} 구매 완료! 🌙 ${pkg.moonCredit}개 충전!`);
+      } else if (result.canceled) {
+        setCanceledNotice(true);
+      } else {
+        alert(result.message || '결제에 실패했습니다.');
+      }
+    } catch (error) {
+      console.error('Kakao purchase error:', error);
+      alert('결제 처리 중 오류가 발생했습니다.');
+    } finally {
       setLoading(null);
     }
   };
@@ -224,6 +258,17 @@ export const CreditPurchasePage: React.FC = () => {
                 <TossPayLogo />
               </button>
 
+              {/* 카카오페이 — 카카오 옐로우 + 말풍선 심볼 */}
+              <button
+                onClick={() => payWithKakao(methodPkg)}
+                className="w-full rounded-xl bg-[#FEE500] py-4 flex items-center justify-center gap-1.5 transition-all active:scale-[0.99] hover:brightness-95"
+              >
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="#191919" aria-hidden="true">
+                  <path d="M12 3C6.9 3 3 6.3 3 10.2c0 2.5 1.7 4.7 4.2 5.9-.2.6-.7 2.5-.8 2.9 0 .2.1.4.4.2.2-.1 2.7-1.8 3.7-2.5.5.1 1 .1 1.5.1 5.1 0 9-3.3 9-7.3S17.1 3 12 3z"/>
+                </svg>
+                <span className="font-bold text-[15px] text-[#191919]">카카오페이</span>
+              </button>
+
               {/* 일반카드 — 포트원(KG이니시스) */}
               <button
                 onClick={() => payWithCard(methodPkg)}
@@ -237,7 +282,7 @@ export const CreditPurchasePage: React.FC = () => {
               </button>
 
               <p className="text-[11.5px] text-text-tertiary text-center leading-relaxed">
-                토스페이는 토스 앱/계좌·카드로, 신용·체크카드는 카드사 결제창으로 진행됩니다.
+                토스페이·카카오페이는 각 앱/계좌·카드로, 신용·체크카드는 카드사 결제창으로 진행됩니다.
               </p>
             </div>
           )}
