@@ -264,20 +264,25 @@ export const processTossPayment = async (
 };
 
 /**
- * 토스페이먼츠(TossPayments) PG 직연동 — 결제위젯 방식. (토스페이 간편결제와 별개 서비스)
- * 계약 심사/테스트용으로 우선 연동 (2026-07-16, 위젯 키 live_gck 사용).
+ * 토스페이먼츠(TossPayments) PG 직연동. (토스페이 간편결제와 별개 서비스)
+ * 계약 심사/테스트용으로 우선 연동 (2026-07-16).
  *
- * 흐름: pending 주문 생성(payment_method=tosspayments) → /payment/tosspayments/checkout
- *       페이지에서 위젯 렌더 + 결제 요청 → successUrl(/payment/tosspayments/callback) 복귀 →
+ * 키 종류에 따라 흐름이 자동 분기된다 (키를 바꿔 끼워도 코드 수정 불필요):
+ *   - 결제위젯 키(*_gck_*): /payment/tosspayments/checkout 페이지에서 위젯 렌더 후 결제
+ *   - API 개별 연동 키(*_ck_*): 이 함수에서 바로 카드 결제창(payment.requestPayment) 호출
+ *
+ * 공통: pending 주문 생성(payment_method=tosspayments) → 결제 →
+ *       successUrl(/payment/tosspayments/callback) 복귀 →
  *       /api/payment/tosspayments/confirm 에서 서버 승인 + 크레딧 지급 (멱등).
- *
- * 성공 시 이 함수는 체크아웃 페이지로 이동하며 반환값의 success=true 는 "이동 시작"을 뜻한다.
  */
+const TOSSPAYMENTS_CLIENT_KEY = process.env.NEXT_PUBLIC_TOSSPAYMENTS_CLIENT_KEY || '';
+
 export const processTossPaymentsCard = async (
   request: PaymentRequest
 ): Promise<PaymentResult> => {
+  let orderId: string | null = null;
   try {
-    if (!process.env.NEXT_PUBLIC_TOSSPAYMENTS_CLIENT_KEY) {
+    if (!TOSSPAYMENTS_CLIENT_KEY) {
       return {
         success: false,
         error: 'CONFIG_MISSING',
@@ -308,16 +313,56 @@ export const processTossPaymentsCard = async (
       payment_method: 'tosspayments',
     };
     const order = await orderDB.createOrder(orderData);
+    orderId = order.id;
 
-    // 4. 위젯 체크아웃 페이지로 이동 (위젯은 DOM 렌더가 필요해 전용 페이지에서 진행)
-    window.location.href = `/payment/tosspayments/checkout?orderId=${order.id}`;
-    return { success: true, orderId: order.id, message: '결제 페이지로 이동합니다' };
+    // 4-a. 결제위젯 키 → 위젯 체크아웃 페이지로 이동 (위젯은 DOM 렌더가 필요해 전용 페이지에서 진행)
+    if (TOSSPAYMENTS_CLIENT_KEY.includes('_gck_')) {
+      window.location.href = `/payment/tosspayments/checkout?orderId=${order.id}`;
+      return { success: true, orderId: order.id, message: '결제 페이지로 이동합니다' };
+    }
+
+    // 4-b. API 개별 연동 키 → 바로 카드 결제창 호출
+    const { loadTossPayments, ANONYMOUS } = await import('@tosspayments/tosspayments-sdk');
+    const tossPayments = await loadTossPayments(TOSSPAYMENTS_CLIENT_KEY);
+    const payment = tossPayments.payment({ customerKey: ANONYMOUS });
+
+    // 모바일 리다이렉트 대비 미완료 플래그 (기존 토스페이와 동일한 취소 모달 로직 재사용)
+    try { sessionStorage.setItem('toss_payment_pending', order.id); } catch { /* noop */ }
+
+    await payment.requestPayment({
+      method: 'CARD',
+      amount: { currency: 'KRW', value: request.amount },
+      orderId: order.id,
+      orderName: `크레딧 ${request.creditAmount}개 (${packageInfo.name})`,
+      successUrl: `${BASE_URL}/payment/tosspayments/callback`,
+      failUrl: `${BASE_URL}/payment/tosspayments/callback`,
+      customerEmail: user.email || undefined,
+      customerName: user.user_metadata?.name || user.user_metadata?.full_name || '구매자',
+      card: {
+        useEscrow: false,
+        flowMode: 'DEFAULT',
+        useCardPoint: false,
+        useAppCardOnly: false,
+      },
+    });
+
+    // 데스크톱: requestPayment resolve 후 successUrl 로 이동한다. 여기 도달 = 인증 완료 직후.
+    return { success: true, orderId: order.id, message: '결제창으로 이동합니다' };
   } catch (error: any) {
+    // 사용자가 결제창을 닫음/취소 — SDK reject
+    try { sessionStorage.removeItem('toss_payment_pending'); } catch { /* noop */ }
+    if (orderId) {
+      await orderDB.updateOrderStatus(orderId, 'cancelled').catch(() => undefined);
+    }
+    const code = error?.code as string | undefined;
+    const isCanceled = code === 'USER_CANCEL' || code === 'PAY_PROCESS_CANCELED';
     console.error('TossPayments payment error:', error);
     return {
       success: false,
-      error: 'TOSSPAYMENTS_ERROR',
-      message: error?.message || '결제 처리 중 오류가 발생했습니다.',
+      orderId: orderId ?? undefined,
+      error: code || 'TOSSPAYMENTS_ERROR',
+      canceled: true,
+      message: isCanceled ? '결제를 취소하였습니다.' : (error?.message || '결제에 실패했습니다. 잠시 후 다시 시도해 주세요.'),
     };
   }
 };
