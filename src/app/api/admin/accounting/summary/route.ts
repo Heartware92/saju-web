@@ -46,7 +46,7 @@ interface Lot { moon: number; unit: number; paid: boolean; }
 async function compute() {
   const ex = await excludedUserIds();
 
-  const [ordersRes, txRes, delRes] = await Promise.all([
+  const [ordersRes, txRes, delRes, refundRes] = await Promise.all([
     excludeUsers(
       supabaseAdmin.from('orders')
         .select('user_id, amount, moon_credit_amount, package_id, package_name, payment_method, status, completed_at, created_at')
@@ -60,6 +60,12 @@ async function compute() {
       ex,
     ),
     supabaseAdmin.from('account_deletion_logs').select('email, deleted_at'),
+    excludeUsers(
+      supabaseAdmin.from('orders')
+        .select('user_id, amount, moon_credit_amount, completed_at, created_at')
+        .eq('status', 'refunded'),
+      ex,
+    ),
   ]);
 
   const activeOrders = ordersRes.data ?? [];
@@ -106,7 +112,10 @@ async function compute() {
     const a = byUser.get(t.user_id) ?? [];
     a.push(t as any); byUser.set(t.user_id, a);
   }
-  const revByMonth = new Map<string, number>();
+  // 일 단위로 집계(월별은 일별에서 파생) — 일별 운영 현황·일별 매출 인식 모두 지원.
+  const revByDay = new Map<string, number>();
+  const paidMoonByDay = new Map<string, number>();
+  const freeMoonByDay = new Map<string, number>();
   let paidIssuedSupply = 0, freeConsumed = 0, paidUnusedSupply = 0, freeUnused = 0, freeIssued = 0, paidConsumedSupply = 0;
   for (const list of byUser.values()) {
     list.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
@@ -118,11 +127,18 @@ async function compute() {
       const isAdd = a > 0 && (t.type === 'purchase' || t.type === 'bonus' || t.type === 'admin_adjust' || t.type === 'signup_bonus');
       const isDrain = t.type === 'consume' || t.type === 'expire' || a < 0;
       if (isDrain) {
-        let need = Math.abs(a); const m = monthKey(t.created_at);
+        let need = Math.abs(a); const dk = dayKey(t.created_at);
         while (need > 0 && lots.length) {
           const lot = lots[0]; const take = Math.min(lot.moon, need);
-          if (lot.paid) { const r = take * lot.unit; revByMonth.set(m, (revByMonth.get(m) ?? 0) + r); paidConsumedSupply += r; }
-          else freeConsumed += take;
+          if (lot.paid) {
+            const r = take * lot.unit;
+            revByDay.set(dk, (revByDay.get(dk) ?? 0) + r);
+            paidMoonByDay.set(dk, (paidMoonByDay.get(dk) ?? 0) + take);
+            paidConsumedSupply += r;
+          } else {
+            freeConsumed += take;
+            freeMoonByDay.set(dk, (freeMoonByDay.get(dk) ?? 0) + take);
+          }
           lot.moon -= take; need -= take; if (lot.moon <= 1e-9) lots.shift();
         }
       } else if (isAdd) {
@@ -131,6 +147,23 @@ async function compute() {
       }
     }
     for (const lot of lots) { if (lot.paid) paidUnusedSupply += lot.moon * lot.unit; else freeUnused += lot.moon; }
+  }
+  // 월별 매출 = 일별 합산
+  const revByMonth = new Map<string, number>();
+  for (const [dk, v] of revByDay) {
+    const m = dk.slice(0, 7);
+    revByMonth.set(m, (revByMonth.get(m) ?? 0) + v);
+  }
+
+  // ── 환불 — 일자별 (주의: refunded_at 컬럼이 없어 completed_at ?? created_at 로 근사) ──
+  const refundByDay = new Map<string, { count: number; amount: number; moon: number }>();
+  let refundTotal = 0, refundCount = 0;
+  for (const o of refundRes.data ?? []) {
+    const dk = dayKey(o.completed_at ?? o.created_at);
+    const e = refundByDay.get(dk) ?? { count: 0, amount: 0, moon: 0 };
+    e.count++; e.amount += o.amount ?? 0; e.moon += o.moon_credit_amount ?? 0;
+    refundByDay.set(dk, e);
+    refundTotal += o.amount ?? 0; refundCount++;
   }
 
   // ── 3) 탈퇴 낙전 매출 — preserved 전액을 탈퇴월(없으면 결제월) 매출로 ──
@@ -161,7 +194,24 @@ async function compute() {
   // ── 4) 무료 크레딧 통계 ──
   const free = { issued: freeIssued, consumed: freeConsumed, balance: freeUnused };
 
+  // ── 5) 일별 운영 현황 — 결제·달 사용(유/무료)·사용매출·환불을 한 줄로 ──
+  const opsDates = new Set<string>([
+    ...chargeMap.keys(), ...paidMoonByDay.keys(), ...freeMoonByDay.keys(), ...refundByDay.keys(),
+  ]);
+  const dailyOps = [...opsDates].sort().map((d) => ({
+    date: d,
+    payCount: chargeMap.get(d)?.count ?? 0,
+    payAmount: chargeMap.get(d)?.amount ?? 0,
+    paidMoonUsed: Math.round((paidMoonByDay.get(d) ?? 0) * 100) / 100,
+    freeMoonUsed: Math.round((freeMoonByDay.get(d) ?? 0) * 100) / 100,
+    usageRevenue: Math.round(revByDay.get(d) ?? 0),
+    refundCount: refundByDay.get(d)?.count ?? 0,
+    refundAmount: refundByDay.get(d)?.amount ?? 0,
+  }));
+
   return {
+    dailyOps,
+    refunds: { count: refundCount, amount: refundTotal },
     generatedAt: new Date().toISOString(),
     charge: {
       byDate: charges,

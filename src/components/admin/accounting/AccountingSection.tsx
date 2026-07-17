@@ -12,8 +12,17 @@ import { toCsv, downloadCsv, timestampSuffix } from '../csvExport';
 
 interface ChargeDay { date: string; amount: number; contractLiab: number; vat: number; count: number; moon: number; }
 interface RevMonth { month: string; usage: number; breakage: number; total: number; }
+interface DailyOps {
+  date: string;
+  payCount: number; payAmount: number;
+  paidMoonUsed: number; freeMoonUsed: number;
+  usageRevenue: number;
+  refundCount: number; refundAmount: number;
+}
 export interface AccountingSummary {
   generatedAt: string;
+  dailyOps: DailyOps[];
+  refunds: { count: number; amount: number };
   charge: {
     byDate: ChargeDay[]; total: number; contractLiab: number; vat: number;
     pgTotals: Record<string, number>;
@@ -165,6 +174,29 @@ export function AccountingSection({ token }: { token: string | null }) {
             </div>
           ))}
         </div>
+      </Card>
+
+      {/* 일별 운영 현황 — 결제·사용·환불 */}
+      <Card title="일별 운영 현황 (결제 · 달 사용 · 환불)">
+        <Table head={['날짜', '결제', '결제액', '환불', '환불액', '유료 달 사용', '무료 달 사용', '사용매출(공급가)']}>
+          {[...(data.dailyOps ?? [])].reverse().map((d) => (
+            <tr key={d.date} className="border-t border-white/5">
+              <Td>{d.date}</Td>
+              <Td right>{d.payCount > 0 ? `${d.payCount}건` : '-'}</Td>
+              <Td right>{d.payAmount > 0 ? won(d.payAmount) : '-'}</Td>
+              <Td right>{d.refundCount > 0 ? `${d.refundCount}건` : '-'}</Td>
+              <Td right>{d.refundAmount > 0 ? won(d.refundAmount) : '-'}</Td>
+              <Td right>{d.paidMoonUsed > 0 ? `${d.paidMoonUsed}달` : '-'}</Td>
+              <Td right>{d.freeMoonUsed > 0 ? `${d.freeMoonUsed}달` : '-'}</Td>
+              <Td right>{d.usageRevenue > 0 ? won(d.usageRevenue) : '-'}</Td>
+            </tr>
+          ))}
+        </Table>
+        <p className="text-[12px] text-text-tertiary mt-2">
+          사용매출 = 유료 달 소비분(FIFO)의 공급가액 — 월 합계가 "월 마감 분개"의 사용 매출과 일치.
+          환불 발생 시 분개: <span className="font-mono">3차 계약부채 + 3차 부가세예수금 / 4대 보통예금(또는 미수금)</span>.
+          {data.refunds?.count > 0 && <span className="text-red-300"> 누적 환불 {data.refunds.count}건 · {won(data.refunds.amount)}</span>}
+        </p>
       </Card>
 
       {/* 충전 일자별 + 분개 */}
