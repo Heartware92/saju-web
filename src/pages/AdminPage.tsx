@@ -20,6 +20,7 @@ import { PhoneAllowlistSection } from '@/components/admin/ops/PhoneAllowlistSect
 import { JobsSection } from '@/components/admin/jobs/JobsSection';
 import { PaymentsSection } from '@/components/admin/payments/PaymentsSection';
 import { PaymentGatewaySection } from '@/components/admin/ops/PaymentGatewaySection';
+import { AccountingSection } from '@/components/admin/accounting/AccountingSection';
 import { AudienceFilterBar, EMPTY_AUDIENCE, type AudienceFilterValue } from '@/components/admin/AudienceFilterBar';
 import { toCsv, downloadCsv, timestampSuffix } from '@/components/admin/csvExport';
 import { SAJU_CATEGORY_LABEL, TAROT_SPREAD_LABEL, ORDER_STATUS_LABEL, GENDER_LABEL, PROVIDER_LABEL, CREDIT_REASON_LABEL, DELETION_REASON_LABEL, type UserSegment, type AgeBucketKey } from '@/constants/adminLabels';
@@ -86,7 +87,7 @@ interface DeletedMember {
   deleted_at: string;
 }
 
-type Tab = 'overview' | 'members' | 'orders' | 'usage' | 'credits' | 'records' | 'consultations' | 'ops' | 'inquiries' | 'jobs' | 'insights' | 'analytics' | 'payments';
+type Tab = 'overview' | 'members' | 'orders' | 'usage' | 'credits' | 'records' | 'consultations' | 'ops' | 'inquiries' | 'jobs' | 'insights' | 'analytics' | 'payments' | 'accounting';
 type SortKey = 'joined' | 'lastSeen' | 'totalSpent' | 'analysisCount' | 'orderCount';
 
 // ── 유틸 ──────────────────────────────────────────────────
@@ -645,6 +646,7 @@ export default function AdminPage() {
     { key: 'payments', label: '결제내역' },
     { key: 'insights', label: '인사이트' },
     { key: 'analytics', label: '유입·이탈' },
+    { key: 'accounting', label: '회계' },
   ];
 
   // ── 상위 7개 그룹 (각 탭 = 그룹 내 서브탭). 의미축을 하나로 통일 ──
@@ -658,6 +660,7 @@ export default function AdminPage() {
     { key: 'g-support',   label: '고객 지원',   tabs: ['inquiries'] },
     { key: 'g-analytics', label: '분석',        tabs: ['analytics', 'insights'] },
     { key: 'g-system',    label: '시스템',      tabs: ['ops', 'payments', 'jobs'] },
+    { key: 'g-accounting', label: '회계',       tabs: ['accounting'] },
   ];
   const activeGroup = GROUPS.find(g => g.tabs.includes(tab)) ?? GROUPS[0];
   // 단일 서브탭 그룹은 그 탭 라벨(카운트 포함)을, 복수면 그룹명을 상단에 노출
@@ -1171,6 +1174,11 @@ export default function AdminPage() {
         {/* ── 유입·이탈 분석 ── */}
         {tab === 'analytics' && (
           <AnalyticsSection summary={analytics} />
+        )}
+
+        {/* ── 회계 ── */}
+        {tab === 'accounting' && (
+          <AccountingSection token={token} />
         )}
 
         {/* ── 이용 기록 ── */}
