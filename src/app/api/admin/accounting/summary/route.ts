@@ -102,6 +102,39 @@ async function compute() {
     const pg = (p.payment_method ?? '').startsWith('tosspay') ? 'tosspay' : 'inicis';
     pgTotals[pg] += p.amount ?? 0;
   }
+  // ── 1b) 부가세 신고기간별 집계 (법인 분기 — 예정/확정) ──
+  const vatPeriodMap = new Map<string, { key: string; label: string; tosspay: number; inicis: number }>();
+  const periodOf = (iso: string) => {
+    const kst = new Date(new Date(iso).getTime() + KST * 60_000);
+    const y = kst.getUTCFullYear();
+    const q = Math.floor(kst.getUTCMonth() / 3) + 1;
+    const half = q <= 2 ? '1기' : '2기';
+    const kind = q % 2 === 1 ? '예정' : '확정';
+    return { key: `${y}-Q${q}`, label: `${y}년 ${half} ${kind} (${(q - 1) * 3 + 1}~${q * 3}월)` };
+  };
+  const addVatPeriod = (iso: string, method: string | null, amount: number) => {
+    const p = periodOf(iso);
+    const e = vatPeriodMap.get(p.key) ?? { key: p.key, label: p.label, tosspay: 0, inicis: 0 };
+    if ((method ?? '').startsWith('tosspay')) e.tosspay += amount; else e.inicis += amount;
+    vatPeriodMap.set(p.key, e);
+  };
+  for (const o of activeOrders) addVatPeriod(o.completed_at ?? o.created_at, o.payment_method, o.amount ?? 0);
+  for (const p of preserved) {
+    if (p.status !== 'completed') continue;
+    addVatPeriod(p.created_at ?? p.completed_at ?? new Date(0).toISOString(), p.payment_method, p.amount ?? 0);
+  }
+  const vatPeriods = [...vatPeriodMap.values()]
+    .sort((a, b) => a.key.localeCompare(b.key))
+    .map((e) => {
+      const total = e.tosspay + e.inicis;
+      const supply = Math.round(total * 100 / 110);
+      return {
+        key: e.key, label: e.label, total, supply, vat: total - supply,
+        inicis: e.inicis, inicisVat: e.inicis - Math.round(e.inicis * 100 / 110),
+        tosspay: e.tosspay, tosspayVat: e.tosspay - Math.round(e.tosspay * 100 / 110),
+      };
+    });
+
   const charges = [...chargeMap.values()].sort((a, b) => a.date.localeCompare(b.date));
   const chargeTotal = charges.reduce((s, c) => s + c.amount, 0);
   // 총액 기준으로 1회만 반올림 — 일별 반올림 합산 시 1~2원 끗수가 생기는 것 방지.
@@ -320,7 +353,7 @@ async function compute() {
       balance: contractLiabBalance,
       paidUnusedSupply: Math.round(paidUnusedSupply),
     },
-    vat: { payable: vatIssued },
+    vat: { payable: vatIssued, periods: vatPeriods },
     free,
     unitTable: UNIT_BY_NAME.map((u) => ({ name: u.name, supplyUnit: Math.round(u.unit * 100) / 100 })),
   };
