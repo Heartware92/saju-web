@@ -72,8 +72,8 @@ export function AccountingSection({ token }: { token: string | null }) {
       rows.push(['충전', c.date, '', '', '부가세예수금', c.vat, '매출부가세(결제시)']);
     }
     for (const m of data.revenue.byMonth) {
-      if (m.usage > 0) rows.push(['매출(사용)', m.month, '계약부채', m.usage, '매출', m.usage, 'FIFO 유료 소비분']);
-      if (m.breakage > 0) rows.push(['매출(낙전)', m.month, '계약부채', m.breakage, '매출', m.breakage, '탈퇴 미사용']);
+      if (m.usage > 0) rows.push(['매출(사용)', m.month, '계약부채', m.usage, '용역매출', m.usage, 'FIFO 유료 소비분']);
+      if (m.breakage > 0) rows.push(['매출(낙전)', m.month, '계약부채', m.breakage, '용역매출', m.breakage, '탈퇴 미사용']);
     }
     if (fee) for (const pg of ['tosspay', 'inicis'] as const) {
       if (fee[pg].total > 0) {
@@ -138,7 +138,40 @@ export function AccountingSection({ token }: { token: string | null }) {
             <Td>합계</Td><Td right>{won(data.revenue.usageTotal)}</Td><Td right>{won(data.revenue.breakageTotal)}</Td><Td right>{won(data.revenue.total)}</Td>
           </tr>
         </Table>
-        <p className="text-[12px] text-text-tertiary mt-2">분개: (차)계약부채 / (대)매출. 부가세 없음(결제 시 이미 예수금).</p>
+        <p className="text-[12px] text-text-tertiary mt-2">분개: (차)계약부채 / (대)용역매출. 부가세 없음(결제 시 이미 예수금).</p>
+      </Card>
+
+      {/* 월 마감 분개 — 이카운트 일반전표 그대로 옮겨 적는 용도 */}
+      <Card title="월 마감 분개 (월 1회 · 이카운트 일반전표용)">
+        <div className="space-y-3">
+          {data.revenue.byMonth.map((m) => {
+            const nowMonth = new Date(Date.now() + 540 * 60_000).toISOString().slice(0, 7);
+            const isOpen = m.month === nowMonth;
+            const lastDay = new Date(Number(m.month.slice(0, 4)), Number(m.month.slice(5, 7)), 0).getDate();
+            return (
+              <div key={m.month} className={`rounded-lg border p-3 ${isOpen ? 'border-amber-500/30 bg-amber-500/5' : 'border-white/10 bg-white/[0.03]'}`}>
+                <div className="flex items-center justify-between mb-2">
+                  <p className="text-[13px] font-semibold text-text-primary">
+                    {m.month} <span className="text-text-tertiary font-normal">(전표일자 {m.month}-{String(lastDay).padStart(2, '0')})</span>
+                  </p>
+                  {isOpen && <span className="text-[11px] text-amber-300">진행중 — 월말 새로고침 후 확정치로 입력</span>}
+                </div>
+                <div className="font-mono text-[12px] text-text-secondary space-y-1">
+                  {m.usage > 0 && (
+                    <p>3차 계약부채 {m.usage.toLocaleString()} / 4대 용역매출 {m.usage.toLocaleString()} <span className="text-text-tertiary">— 크레딧 사용(FIFO)</span></p>
+                  )}
+                  {m.breakage > 0 && (
+                    <p>3차 계약부채 {m.breakage.toLocaleString()} / 4대 용역매출 {m.breakage.toLocaleString()} <span className="text-text-tertiary">— 탈퇴 미사용 낙전</span></p>
+                  )}
+                  {m.total === 0 && <p className="text-text-tertiary">인식할 매출 없음</p>}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+        <p className="text-[12px] text-text-tertiary mt-3">
+          매월 말일: 새로고침 → 해당 월 카드의 분개를 이카운트 일반전표에 그대로 입력. 함께 할 것: PG 세금계산서 수취 시 (차)지급수수료+부가세대급금 / (대)미수금, LLM API 월 청구서 비용 인식.
+        </p>
       </Card>
 
       {/* 정산 입금 → 수수료 역산 */}
