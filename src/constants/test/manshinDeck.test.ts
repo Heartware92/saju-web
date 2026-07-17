@@ -1,5 +1,5 @@
 /**
- * 만신 오라클 (테스트) — 60장 덱 데이터 (신령 36 + 풍습 18 + 엽전 6)
+ * 만신 오라클 (테스트) — 62장 덱 데이터 (신령 38 + 풍습 18 + 엽전 6)
  *
  * /tarot_test 전용 실험 데이터. 라이브 타로와 무관한 격리 파일.
  * ★ 구조 원칙: 여기 데이터는 "의미 씨앗"이다 (신살 엔진·gapjaTraits 와 같은 역할).
@@ -350,9 +350,23 @@ export const MANSHIN_DECK: ManshinCard[] = [
     },
   },
 
-  // ── 장군·대감 (5) ─────────────────────────────────────────────
+  // ── 장군·대감 (6) ─────────────────────────────────────────────
   {
-    no: 21, id: 'imgyeongeop', name: '임경업 장군', hanja: '林慶業', group: '장군·대감',
+    no: 21, id: 'choeyoung', name: '최영 장군', hanja: '崔瑩', group: '장군·대감',
+    title: '황금 보기를 돌같이 한 곧은 장군',
+    domains: '원칙 · 유혹 앞의 선택',
+    keywords: ['원칙', '청렴', '강직'],
+    lore: '고려 말 "황금 보기를 돌같이 하라"던 명장. 억울한 죽음 뒤 가장 영험한 장군신이 되어 무속에서 모셔진다.',
+    speech: '황금 보기를 돌같이 하라 일렀느니라. 눈앞의 이득에 마음을 팔지 말거라. 곧게 가는 길이 돌아 보여도, 결국 가장 빠른 길이니라.',
+    fortunes: {
+      love: '재고 따지는 연애는 오래 못 가느니라. 곧은 사람을 곧게 만나거라.',
+      money: '쉽게 버는 길에는 반드시 값이 붙는다. 눈을 돌리지 말거라.',
+      work: '원칙을 지킨 것이 손해 같아도, 끝판에는 네가 서 있을 것이다.',
+      health: '몸에도 군율을 세우거라. 정한 시간에 자는 것부터 시작이다.',
+    },
+  },
+  {
+    no: 22, id: 'imgyeongeop', name: '임경업 장군', hanja: '林慶業', group: '장군·대감',
     title: '억울함을 풀어주는 수호 장군',
     domains: '억울함 해소 · 명예 회복 · 보호',
     keywords: ['설욕', '수호', '명예'],
@@ -366,7 +380,7 @@ export const MANSHIN_DECK: ManshinCard[] = [
     },
   },
   {
-    no: 22, id: 'gwanseong', name: '관성제군', hanja: '關聖帝君', group: '장군·대감',
+    no: 23, id: 'gwanseong', name: '관성제군', hanja: '關聖帝君', group: '장군·대감',
     title: '의리와 장부를 함께 지키는 신',
     domains: '신용 · 계약 · 거래',
     keywords: ['신용', '의리', '약속'],
@@ -380,7 +394,7 @@ export const MANSHIN_DECK: ManshinCard[] = [
     },
   },
   {
-    no: 23, id: 'nami', name: '남이 장군', hanja: '南怡', group: '장군·대감',
+    no: 24, id: 'nami', name: '남이 장군', hanja: '南怡', group: '장군·대감',
     title: '스물여덟에 병조판서에 오른 젊은 장군',
     domains: '도전 · 돌파 · 승부수',
     keywords: ['패기', '돌파', '속도'],
@@ -394,7 +408,7 @@ export const MANSHIN_DECK: ManshinCard[] = [
     },
   },
   {
-    no: 24, id: 'daegam', name: '대감신', hanja: '大監', group: '장군·대감',
+    no: 25, id: 'daegam', name: '대감신', hanja: '大監', group: '장군·대감',
     title: '먹을 복 입을 복을 부르는 호탕한 신',
     domains: '재물 · 성취 · 욕망 긍정',
     keywords: ['재물복', '솔직함', '호탕함'],
@@ -408,7 +422,7 @@ export const MANSHIN_DECK: ManshinCard[] = [
     },
   },
   {
-    no: 25, id: 'obang', name: '오방신장', hanja: '五方神將', group: '장군·대감',
+    no: 26, id: 'obang', name: '오방신장', hanja: '五方神將', group: '장군·대감',
     title: '다섯 방위를 막아서는 호위 신장',
     domains: '방향 결정 · 진로 · 호위',
     keywords: ['방향', '결단', '호위'],
@@ -422,9 +436,23 @@ export const MANSHIN_DECK: ManshinCard[] = [
     },
   },
 
-  // ── 여신·설화 (5) ─────────────────────────────────────────────
+  // ── 여신·설화 (6) ─────────────────────────────────────────────
   {
-    no: 26, id: 'danggeum', name: '당금애기', hanja: '', group: '여신·설화',
+    no: 27, id: 'bari', name: '바리공주', hanja: '鉢里公主', group: '여신·설화',
+    title: '버림받고도 끝까지 걸어간 치유의 공주',
+    domains: '마음 치유 · 끝까지 가기 · 화해',
+    keywords: ['치유', '끝까지', '위로'],
+    lore: '일곱째 딸로 버려졌으나 병든 부모를 위해 저승 끝까지 걸어가 약수를 구해온 공주. 훗날 무당의 조상신이 되었다.',
+    speech: '나도 버림받았던 몸이란다. 그래도 끝까지 걸어서 생명의 약수를 길어왔지. 지금 네 서러움, 내가 제일 잘 알아. 조금만 더 가보자, 내가 손 잡아줄게.',
+    fortunes: {
+      love: '아픈 사랑을 지나온 너라서, 더 깊이 사랑할 수 있는 거란다.',
+      money: '바닥까지 가본 사람이 다시 채우는 법도 아는 거야.',
+      work: '지금 힘든 그 길, 끝까지 가면 약수가 있어. 내가 같이 걸을게.',
+      health: '마음의 병이 몸으로 오는 거란다. 오늘은 네 마음부터 안아주자.',
+    },
+  },
+  {
+    no: 28, id: 'danggeum', name: '당금애기', hanja: '', group: '여신·설화',
     title: '험한 문턱을 넘어 삼신이 된 아기씨',
     domains: '새 인연 · 만남 · 받아들임',
     keywords: ['인연', '만남', '수용'],
@@ -438,7 +466,7 @@ export const MANSHIN_DECK: ManshinCard[] = [
     },
   },
   {
-    no: 27, id: 'jacheongbi', name: '자청비', hanja: '', group: '여신·설화',
+    no: 29, id: 'jacheongbi', name: '자청비', hanja: '', group: '여신·설화',
     title: '하늘까지 올라가 사랑을 쟁취한 여신',
     domains: '연애 · 고백 · 주도권',
     keywords: ['사랑', '주도', '용기'],
@@ -452,7 +480,7 @@ export const MANSHIN_DECK: ManshinCard[] = [
     },
   },
   {
-    no: 28, id: 'gameunjang', name: '가믄장아기', hanja: '', group: '여신·설화',
+    no: 30, id: 'gameunjang', name: '가믄장아기', hanja: '', group: '여신·설화',
     title: '"내 복에 산다"고 답한 운명의 아기씨',
     domains: '자립 · 독립 · 자기 확신',
     keywords: ['자립', '주체성', '내 복'],
@@ -466,7 +494,7 @@ export const MANSHIN_DECK: ManshinCard[] = [
     },
   },
   {
-    no: 29, id: 'seolmundae', name: '설문대할망', hanja: '', group: '여신·설화',
+    no: 31, id: 'seolmundae', name: '설문대할망', hanja: '', group: '여신·설화',
     title: '치마폭으로 한라산을 쌓은 거인 할망',
     domains: '큰 프로젝트 · 확장 · 추진력',
     keywords: ['대범함', '큰 그림', '추진'],
@@ -480,7 +508,7 @@ export const MANSHIN_DECK: ManshinCard[] = [
     },
   },
   {
-    no: 30, id: 'gyeonujiknyeo', name: '견우직녀', hanja: '牽牛織女', group: '여신·설화',
+    no: 32, id: 'gyeonujiknyeo', name: '견우직녀', hanja: '牽牛織女', group: '여신·설화',
     title: '오작교에서 다시 만나는 하늘의 연인',
     domains: '재회 · 애틋한 인연 · 기다림의 결실',
     keywords: ['재회', '간절함', '오작교'],
@@ -496,7 +524,7 @@ export const MANSHIN_DECK: ManshinCard[] = [
 
   // ── 저승·이계 (6) ─────────────────────────────────────────────
   {
-    no: 31, id: 'jeoseung', name: '저승사자', hanja: '使者', group: '저승·이계',
+    no: 33, id: 'jeoseung', name: '저승사자', hanja: '使者', group: '저승·이계',
     title: '끝을 배웅하러 오는 검은 갓의 신',
     domains: '마무리 · 이별 · 손절 · 전환',
     keywords: ['마무리', '떠나보냄', '전환'],
@@ -510,7 +538,7 @@ export const MANSHIN_DECK: ManshinCard[] = [
     },
   },
   {
-    no: 32, id: 'yeomra', name: '염라대왕', hanja: '閻羅大王', group: '저승·이계',
+    no: 34, id: 'yeomra', name: '염라대왕', hanja: '閻羅大王', group: '저승·이계',
     title: '공과를 셈하는 저승의 대왕',
     domains: '결산 · 평가 · 정당한 몫',
     keywords: ['결산', '공정', '받을 몫'],
@@ -524,7 +552,7 @@ export const MANSHIN_DECK: ManshinCard[] = [
     },
   },
   {
-    no: 33, id: 'dokkaebi', name: '도깨비', hanja: '', group: '저승·이계',
+    no: 35, id: 'dokkaebi', name: '도깨비', hanja: '', group: '저승·이계',
     title: '방망이 하나로 판을 뒤집는 장난꾼',
     domains: '뜻밖의 행운 · 변수 · 재미',
     keywords: ['횡재', '변수', '유쾌함'],
@@ -538,7 +566,7 @@ export const MANSHIN_DECK: ManshinCard[] = [
     },
   },
   {
-    no: 34, id: 'sonnim', name: '손님신', hanja: '', group: '저승·이계',
+    no: 36, id: 'sonnim', name: '손님신', hanja: '', group: '저승·이계',
     title: '왔다가 반드시 떠나는 시련의 손님',
     domains: '시련 통과 · 고비 · 인내',
     keywords: ['지나감', '고비', '정성'],
@@ -552,7 +580,7 @@ export const MANSHIN_DECK: ManshinCard[] = [
     },
   },
   {
-    no: 35, id: 'changbu', name: '창부대신', hanja: '倡夫大神', group: '저승·이계',
+    no: 37, id: 'changbu', name: '창부대신', hanja: '倡夫大神', group: '저승·이계',
     title: '노래와 춤으로 액을 막는 광대 신',
     domains: '재능 · 표현 · 즐거움',
     keywords: ['끼', '표현', '흥'],
@@ -566,7 +594,7 @@ export const MANSHIN_DECK: ManshinCard[] = [
     },
   },
   {
-    no: 36, id: 'gumiho', name: '구미호', hanja: '九尾狐', group: '저승·이계',
+    no: 38, id: 'gumiho', name: '구미호', hanja: '九尾狐', group: '저승·이계',
     title: '아홉 꼬리로 마음을 홀리는 여우',
     domains: '매혹 · 직감 · 숨은 본심',
     keywords: ['매혹', '직감', '변신'],
@@ -582,7 +610,7 @@ export const MANSHIN_DECK: ManshinCard[] = [
 
   // ── 풍습부 (18) — 삶의 장면 카드. 만신이 장면을 읽어 공수 내리는 말투 ──
   {
-    no: 37, id: 'honrye', name: '혼례', hanja: '婚禮', group: '풍습',
+    no: 39, id: 'honrye', name: '혼례', hanja: '婚禮', group: '풍습',
     title: '청실홍실이 엮이는 날',
     domains: '결합 · 계약 성사 · 경사',
     keywords: ['결합', '경사', '약속'],
@@ -595,7 +623,7 @@ export const MANSHIN_DECK: ManshinCard[] = [
     },
   },
   {
-    no: 38, id: 'chulsan', name: '출산', hanja: '出産', group: '풍습',
+    no: 40, id: 'chulsan', name: '출산', hanja: '出産', group: '풍습',
     title: '새 울음소리가 문지방을 넘는 날',
     domains: '새 시작 · 창작 · 탄생',
     keywords: ['탄생', '새 시작', '첫 마음'],
@@ -608,7 +636,7 @@ export const MANSHIN_DECK: ManshinCard[] = [
     },
   },
   {
-    no: 39, id: 'doljanchi', name: '돌잔치', hanja: '', group: '풍습',
+    no: 41, id: 'doljanchi', name: '돌잔치', hanja: '', group: '풍습',
     title: '실과 붓 앞에서 숨죽이는 첫돌',
     domains: '첫 성과 · 축하 · 이정표',
     keywords: ['첫 결실', '축하', '이정표'],
@@ -621,7 +649,7 @@ export const MANSHIN_DECK: ManshinCard[] = [
     },
   },
   {
-    no: 40, id: 'isa', name: '이사', hanja: '移徙', group: '풍습',
+    no: 42, id: 'isa', name: '이사', hanja: '移徙', group: '풍습',
     title: '정든 문을 닫고 새 문을 여는 날',
     domains: '환경 변화 · 이직 · 이동',
     keywords: ['변화', '새 터', '홀가분'],
@@ -634,7 +662,7 @@ export const MANSHIN_DECK: ManshinCard[] = [
     },
   },
   {
-    no: 41, id: 'geupje', name: '과거 급제', hanja: '及第', group: '풍습',
+    no: 43, id: 'geupje', name: '과거 급제', hanja: '及第', group: '풍습',
     title: '어사화 꽂고 돌아오는 금의환향',
     domains: '합격 · 성취 · 명예',
     keywords: ['합격', '성취', '이름'],
@@ -647,7 +675,7 @@ export const MANSHIN_DECK: ManshinCard[] = [
     },
   },
   {
-    no: 42, id: 'jangteo', name: '장터', hanja: '場', group: '풍습',
+    no: 44, id: 'jangteo', name: '장터', hanja: '場', group: '풍습',
     title: '흥정 소리로 왁자한 장날',
     domains: '거래 · 소통 · 인맥',
     keywords: ['거래', '흥정', '귀인'],
@@ -660,7 +688,7 @@ export const MANSHIN_DECK: ManshinCard[] = [
     },
   },
   {
-    no: 43, id: 'pungnyeon', name: '풍년제', hanja: '豊年祭', group: '풍습',
+    no: 45, id: 'pungnyeon', name: '풍년제', hanja: '豊年祭', group: '풍습',
     title: '볏단에 지게가 휘청이는 가을',
     domains: '수확 · 보상 · 결실',
     keywords: ['수확', '보상', '넉넉함'],
@@ -673,7 +701,7 @@ export const MANSHIN_DECK: ManshinCard[] = [
     },
   },
   {
-    no: 44, id: 'baetgil', name: '뱃길', hanja: '船路', group: '풍습',
+    no: 46, id: 'baetgil', name: '뱃길', hanja: '船路', group: '풍습',
     title: '돛이 바람을 문 출항의 아침',
     domains: '여행 · 도전 · 확장',
     keywords: ['출항', '순풍', '모험'],
@@ -686,7 +714,7 @@ export const MANSHIN_DECK: ManshinCard[] = [
     },
   },
   {
-    no: 45, id: 'seodang', name: '서당', hanja: '書堂', group: '풍습',
+    no: 47, id: 'seodang', name: '서당', hanja: '書堂', group: '풍습',
     title: '글 읽는 소리 낭랑한 배움터',
     domains: '공부 · 자격증 · 자기계발',
     keywords: ['배움', '축적', '꾸준함'],
@@ -699,7 +727,7 @@ export const MANSHIN_DECK: ManshinCard[] = [
     },
   },
   {
-    no: 46, id: 'gutpan', name: '굿판', hanja: '', group: '풍습',
+    no: 48, id: 'gutpan', name: '굿판', hanja: '', group: '풍습',
     title: '북소리에 묵은 액이 떨어지는 판',
     domains: '정화 · 리셋 · 감정 해소',
     keywords: ['털어냄', '정화', '개운함'],
@@ -712,7 +740,7 @@ export const MANSHIN_DECK: ManshinCard[] = [
     },
   },
   {
-    no: 47, id: 'geumjul', name: '금줄', hanja: '禁繩', group: '풍습',
+    no: 49, id: 'geumjul', name: '금줄', hanja: '禁繩', group: '풍습',
     title: '문 앞에 걸린 지킴의 새끼줄',
     domains: '보호 · 거리두기 · 재정비',
     keywords: ['경계', '지킴', '재정비'],
@@ -725,7 +753,7 @@ export const MANSHIN_DECK: ManshinCard[] = [
     },
   },
   {
-    no: 48, id: 'bujeok', name: '부적', hanja: '符籍', group: '풍습',
+    no: 50, id: 'bujeok', name: '부적', hanja: '符籍', group: '풍습',
     title: '등 뒤를 막아서는 붉은 글씨',
     domains: '불안 해소 · 방어 · 안심',
     keywords: ['방어', '안심', '든든함'],
@@ -738,7 +766,7 @@ export const MANSHIN_DECK: ManshinCard[] = [
     },
   },
   {
-    no: 49, id: 'dalmaji', name: '달맞이', hanja: '', group: '풍습',
+    no: 51, id: 'dalmaji', name: '달맞이', hanja: '', group: '풍습',
     title: '보름달에 소원을 접어 올리는 밤',
     domains: '소원 · 희망 · 마음 정하기',
     keywords: ['소원', '차오름', '희망'],
@@ -751,7 +779,7 @@ export const MANSHIN_DECK: ManshinCard[] = [
     },
   },
   {
-    no: 50, id: 'geune', name: '그네뛰기', hanja: '', group: '풍습',
+    no: 52, id: 'geune', name: '그네뛰기', hanja: '', group: '풍습',
     title: '구를수록 하늘이 가까워지는 그네',
     domains: '도약 · 상승 · 용기',
     keywords: ['도약', '탄력', '용기'],
@@ -764,7 +792,7 @@ export const MANSHIN_DECK: ManshinCard[] = [
     },
   },
   {
-    no: 51, id: 'neol', name: '널뛰기', hanja: '', group: '풍습',
+    no: 53, id: 'neol', name: '널뛰기', hanja: '', group: '풍습',
     title: '내려간 만큼 튀어오르는 널',
     domains: '기복 · 반등 · 회복',
     keywords: ['반등', '기복', '희망'],
@@ -777,7 +805,7 @@ export const MANSHIN_DECK: ManshinCard[] = [
     },
   },
   {
-    no: 52, id: 'jumak', name: '주막', hanja: '酒幕', group: '풍습',
+    no: 54, id: 'jumak', name: '주막', hanja: '酒幕', group: '풍습',
     title: '국밥 한 그릇에 몸 녹이는 길목',
     domains: '휴식 · 우연한 만남 · 재충전',
     keywords: ['쉼', '만남', '재충전'],
@@ -790,7 +818,7 @@ export const MANSHIN_DECK: ManshinCard[] = [
     },
   },
   {
-    no: 53, id: 'ssireum', name: '씨름판', hanja: '', group: '풍습',
+    no: 55, id: 'ssireum', name: '씨름판', hanja: '', group: '풍습',
     title: '샅바 잡는 소리 팽팽한 모래판',
     domains: '경쟁 · 승부 · 협상',
     keywords: ['승부', '되치기', '전략'],
@@ -803,7 +831,7 @@ export const MANSHIN_DECK: ManshinCard[] = [
     },
   },
   {
-    no: 54, id: 'jinggeom', name: '징검다리', hanja: '', group: '풍습',
+    no: 56, id: 'jinggeom', name: '징검다리', hanja: '', group: '풍습',
     title: '물 위에 듬성듬성 놓인 돌다리',
     domains: '고비 넘기기 · 단계 · 신중',
     keywords: ['한 칸씩', '고비', '침착'],
@@ -818,7 +846,7 @@ export const MANSHIN_DECK: ManshinCard[] = [
 
   // ── 엽전부 (6) — 수량·시기·재물의 흐름을 읽는 숫자 카드 ──
   {
-    no: 55, id: 'yeopjeon1', name: '엽전 한 닢', hanja: '一', group: '엽전',
+    no: 57, id: 'yeopjeon1', name: '엽전 한 닢', hanja: '一', group: '엽전',
     title: '모든 곳간의 첫 닢',
     domains: '시작 · 종잣돈 · 첫걸음',
     keywords: ['시작', '종잣돈', '첫걸음'],
@@ -831,7 +859,7 @@ export const MANSHIN_DECK: ManshinCard[] = [
     },
   },
   {
-    no: 56, id: 'yeopjeon2', name: '엽전 두 닢', hanja: '二', group: '엽전',
+    no: 58, id: 'yeopjeon2', name: '엽전 두 닢', hanja: '二', group: '엽전',
     title: '나란히 놓인 두 갈래',
     domains: '선택 · 짝 · 균형',
     keywords: ['선택', '짝', '저울질'],
@@ -844,7 +872,7 @@ export const MANSHIN_DECK: ManshinCard[] = [
     },
   },
   {
-    no: 57, id: 'yeopjeon3', name: '엽전 세 닢', hanja: '三', group: '엽전',
+    no: 59, id: 'yeopjeon3', name: '엽전 세 닢', hanja: '三', group: '엽전',
     title: '굴러가기 시작한 세 닢',
     domains: '성장 · 석 달 · 투자',
     keywords: ['성장', '석 달', '불어남'],
@@ -857,7 +885,7 @@ export const MANSHIN_DECK: ManshinCard[] = [
     },
   },
   {
-    no: 58, id: 'yeopjeon4', name: '엽전 네 닢', hanja: '四', group: '엽전',
+    no: 60, id: 'yeopjeon4', name: '엽전 네 닢', hanja: '四', group: '엽전',
     title: '사방을 반듯하게 누른 네 닢',
     domains: '안정 · 갈무리 · 관리',
     keywords: ['안정', '갈무리', '단속'],
@@ -870,7 +898,7 @@ export const MANSHIN_DECK: ManshinCard[] = [
     },
   },
   {
-    no: 59, id: 'yeopjeon5', name: '엽전 다섯 닢', hanja: '五', group: '엽전',
+    no: 61, id: 'yeopjeon5', name: '엽전 다섯 닢', hanja: '五', group: '엽전',
     title: '오행을 고루 갖춘 다섯 닢',
     domains: '절정 · 다각화 · 확장',
     keywords: ['절정', '여러 길', '그릇'],
@@ -883,7 +911,7 @@ export const MANSHIN_DECK: ManshinCard[] = [
     },
   },
   {
-    no: 60, id: 'yeopjeon6', name: '엽전 여섯 닢', hanja: '六', group: '엽전',
+    no: 62, id: 'yeopjeon6', name: '엽전 여섯 닢', hanja: '六', group: '엽전',
     title: '꿰미를 가득 채운 여섯 닢',
     domains: '완성 · 결산 · 다음 판',
     keywords: ['매듭', '결산', '밑천'],

@@ -38,7 +38,7 @@ const start = deckSrc.indexOf('export const MANSHIN_DECK');
 const arrStart = deckSrc.indexOf('[', start);
 const arrEnd = deckSrc.lastIndexOf('];');
 const DECK = new Function(`return ${deckSrc.slice(arrStart, arrEnd + 1)};`)();
-if (!Array.isArray(DECK) || DECK.length !== 60) {
+if (!Array.isArray(DECK) || DECK.length < 60) {
   throw new Error(`덱 추출 실패: ${Array.isArray(DECK) ? DECK.length : typeof DECK}`);
 }
 
@@ -71,11 +71,13 @@ const TONES = {
   munsin: ['대문을 지키는 문지기 신. 단호한 경계병', '단호 보증체 — "아닌 것은 아니라 말하거라", "내가 보증하마"', '대문·문턱·거절. 거절해도 복 안 나간다는 허가를 내려줌'],
   cheuksin: ['뒷간 구석의 새침한 각시 신', '새침 톡톡체 — "아이고", "~지", "~게야". 여성적이고 가벼움', '구석·뒤처리·개운함. 미룬 일을 해치우는 시원함 담당'],
   geollip: ['집집이 돌며 복을 걷어 나르는 활동가 신', '활기찬 장돌뱅이체 — "나가서 부딪히거라". 추진력 있게', '발품·문 두드리기·수확. 방에만 있지 말라는 채근'],
+  choeyoung: ['황금 보기를 돌같이 한 곧은 장군', '강직 호령체 — "~하거라", "~니라". 타협 없이 곧음', '황금·군율·원칙. 유혹 앞에서 원칙을 세워주는 칼같음'],
   imgyeongeop: ['억울함을 풀어주는 수호 장군. 의협심', '의협 호령체 — "내가 네 편에 서마", "기죽지 말거라"', '설욕·칼·뒷배. 참아온 억울함을 알아주고 힘을 실어줌'],
   gwanseong: ['의리와 장부를 함께 지키는 신(관우). 신용의 화신', '대인배 장부체 — 의리와 셈을 같이 말함. "~느니"', '약속·계약서·도장. "신용이 곧 재물"'],
   nami: ['스물여덟에 병조판서에 오른 젊은 장군. 패기', '젊은 돌파체 — 속도감 있게. "지금 치고 나가거라"', '젊음·승부수·돌파. "늦었다고 못할 일이 어디 있느냐"'],
   daegam: ['먹을 복 입을 복을 부르는 호탕한 대감', '호탕 대감체 — 첫마디 "어허". 흥 많고 솔직함 예찬', '먹을 복·값 부르기·솔직함. "겸손이 밥 먹여주지 않느니라"'],
   obang: ['다섯 방위를 막아서는 호위 신장', '호위 무사체 — "방향만 정하거라, 잡스러운 것은 내가 치워주마"', '동서남북·갈림길·호위. 결정만 하면 뒤는 지켜준다는 든든함'],
+  bari: ['버림받고도 끝까지 걸어간 치유의 공주. 가장 따뜻함', '다정한 언니 반말체 — "~란다", "내가 손 잡아줄게". 유일하게 같이 아파해줌', '약수·먼 길·동행. 자기 상처를 먼저 꺼내 공감함 ("나도 버림받았던 몸")'],
   danggeum: ['험한 문턱을 넘어 삼신이 된 아기씨. 부드러운 어머니', '부드러운 어멈체 — "~란다", "~어라". 겁내는 이를 다독임', '문턱·노크·받아들임. "세 번 두드리거든 문을 열어주어라"'],
   jacheongbi: ['하늘까지 올라가 사랑을 쟁취한 당찬 여신', '당찬 언니체 — 직진 권유. "네 마음 먼저 말해도 하나도 안 부끄럽다"', '쟁취·직진·씨앗. 기다리지 말고 걸어가라는 주도권 화법'],
   gameunjang: ['"내 복에 산다"고 답한 자존의 아기씨', '자존 선언체 — 단단한 단문. "네 복은 네 안에 있느니"', '내 복·자립·주체. 남의 장단에 춤추지 말라는 중심 잡기'],
@@ -140,7 +142,7 @@ const IMG = {
   okhwang: 'public/manshin/test2/okhwang_final.jpg',
 };
 for (const c of DECK) {
-  if (c.group === '엽전') IMG[c.id] = `public/manshin/coins/y${c.no - 54}.jpg`;
+  if (c.group === '엽전') IMG[c.id] = `public/manshin/coins/y${c.id.replace('yeopjeon', '')}.jpg`; // 번호 재배치와 무관하게 id 기반
   if (c.group === '풍습') IMG[c.id] = `public/manshin/customs/${c.id}.jpg`;
 }
 
@@ -201,7 +203,7 @@ ${fortunes}
 `;
   fs.writeFileSync(path.join(VAULT, '만신타로/카드', kind, `${c.name}.md`), md);
 }
-console.log(`카드 노트 60장 생성, 이미지 ${imgCopied}장 복사`);
+console.log(`카드 노트 ${DECK.length}장 생성, 이미지 ${imgCopied}장 복사`);
 
 // ── 3-1. 카드 목차 (덱 번호순 통독용 — 탐색기는 가나다순이라 별도 제공) ──
 let toc = `# 카드 목차 — 덱 번호순\n\n한 장씩 통독할 때 이 순서대로. 신령패는 말투 한 줄을 같이 표기했다. 전체 화법 규칙: [[공수 원칙]]\n`;
