@@ -84,6 +84,21 @@ export function AccountingSection({ token }: { token: string | null }) {
     downloadCsv(`accounting-${timestampSuffix()}.csv`, toCsv(rows[0] as string[], rows.slice(1)));
   };
 
+  // 일별 분개 카드용 — 최근 10일(KST), 결제 없는 날 포함
+  const dailyJournal = useMemo(() => {
+    if (!data) return [];
+    const map = new Map(data.charge.byDate.map((c) => [c.date, c]));
+    const kstNow = new Date(Date.now() + 540 * 60_000);
+    const days: { date: string; c?: ChargeDay; isToday: boolean }[] = [];
+    for (let i = 0; i < 10; i++) {
+      const d = new Date(kstNow);
+      d.setUTCDate(d.getUTCDate() - i);
+      const key = d.toISOString().slice(0, 10);
+      days.push({ date: key, c: map.get(key), isToday: i === 0 });
+    }
+    return days;
+  }, [data]);
+
   if (loading && !data) return <div className="text-[14px] text-text-tertiary">회계 자료 불러오는 중…</div>;
   if (error) return <div className="px-4 py-3 rounded-xl bg-red-500/10 border border-red-500/30 text-[14px] text-red-300">{error}</div>;
   if (!data) return null;
@@ -109,8 +124,51 @@ export function AccountingSection({ token }: { token: string | null }) {
         <Kpi label="부가세예수금" value={won(data.vat.payable)} color="text-amber-300" sub="매출세액(결제시)" />
       </div>
 
+      {/* 회계 루틴 가이드 */}
+      <Card title="회계 루틴 (이카운트 일반전표 · 3차=차변 4대=대변)">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-[12px] text-text-secondary leading-relaxed">
+          <div className="rounded-lg border border-white/10 bg-white/[0.03] p-3">
+            <p className="text-[13px] font-semibold text-text-primary mb-1.5">매일 (전일분)</p>
+            <p>1. 아래 "일별 분개"에서 어제 결제 확인 → 있으면 그대로 입력</p>
+            <p>2. 통장에 PG 정산 입금 시: <span className="font-mono">3차 보통예금 / 4대 미수금</span> (입금액 그대로)</p>
+          </div>
+          <div className="rounded-lg border border-white/10 bg-white/[0.03] p-3">
+            <p className="text-[13px] font-semibold text-text-primary mb-1.5">매월 말일</p>
+            <p>1. "월 마감 분개" 카드 → 용역매출 인식</p>
+            <p>2. PG 세금계산서 수취: <span className="font-mono">3차 지급수수료+부가세대급금 / 4대 미수금</span></p>
+            <p>3. LLM API 청구서 비용 인식</p>
+            <p>4. 대사: 이카운트 계약부채 잔액 = 이 탭의 "계약부채 잔액"</p>
+          </div>
+          <div className="rounded-lg border border-white/10 bg-white/[0.03] p-3">
+            <p className="text-[13px] font-semibold text-text-primary mb-1.5">분기 (부가세 신고)</p>
+            <p>매출세액 = 이 탭 부가세예수금 누계(신고기간분)</p>
+            <p>신고서 반영: 신용카드·현금영수증 발행분 + 기타(토스부담). 매입세액 = PG 수수료 세금계산서분</p>
+          </div>
+        </div>
+      </Card>
+
+      {/* 일별 분개 (최근 10일) */}
+      <Card title="일별 분개 — 최근 10일 (매일 이것만 입력)">
+        <div className="space-y-1.5">
+          {dailyJournal.map((d) => (
+            <div key={d.date} className={`flex flex-wrap items-baseline gap-x-3 gap-y-0.5 rounded-lg px-3 py-2 border ${d.isToday ? 'border-amber-500/30 bg-amber-500/5' : 'border-white/5 bg-white/[0.02]'}`}>
+              <span className="text-[12px] text-text-tertiary w-[84px] shrink-0">{d.date}{d.isToday ? ' (오늘)' : ''}</span>
+              {d.c ? (
+                <span className="font-mono text-[12px] text-text-secondary">
+                  3차 미수금 {d.c.amount.toLocaleString()} / 4대 계약부채 {d.c.contractLiab.toLocaleString()} / 4대 부가세예수금 {d.c.vat.toLocaleString()}
+                  <span className="text-text-tertiary"> — 결제 {d.c.count}건 · 달 {d.c.moon}</span>
+                  {d.isToday && <span className="text-amber-300"> (진행중 — 내일 확정치로 입력)</span>}
+                </span>
+              ) : (
+                <span className="text-[12px] text-text-tertiary">결제 없음 — 분개 불필요</span>
+              )}
+            </div>
+          ))}
+        </div>
+      </Card>
+
       {/* 충전 일자별 + 분개 */}
-      <Card title="충전(결제) — 일자별 분개">
+      <Card title="충전(결제) — 일자별 분개 (전체 이력)">
         <Table head={['결제일', '결제총액', '(대)계약부채', '(대)부가세예수금', '건수', '발행 달']}>
           {data.charge.byDate.map((c) => (
             <tr key={c.date} className="border-t border-white/5">
