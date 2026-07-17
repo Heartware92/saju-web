@@ -350,23 +350,9 @@ export const MANSHIN_DECK: ManshinCard[] = [
     },
   },
 
-  // ── 장군·대감 (6) ─────────────────────────────────────────────
+  // ── 장군·대감 (5) ─────────────────────────────────────────────
   {
-    no: 21, id: 'choeyoung', name: '최영 장군', hanja: '崔瑩', group: '장군·대감',
-    title: '황금 보기를 돌같이 한 곧은 장군',
-    domains: '원칙 · 유혹 앞의 선택',
-    keywords: ['원칙', '청렴', '강직'],
-    lore: '고려 말 "황금 보기를 돌같이 하라"던 명장. 억울한 죽음 뒤 가장 영험한 장군신이 되어 무속에서 모셔진다.',
-    speech: '황금 보기를 돌같이 하라 일렀느니라. 눈앞의 이득에 마음을 팔지 말거라. 곧게 가는 길이 돌아 보여도, 결국 가장 빠른 길이니라.',
-    fortunes: {
-      love: '재고 따지는 연애는 오래 못 가느니라. 곧은 사람을 곧게 만나거라.',
-      money: '쉽게 버는 길에는 반드시 값이 붙는다. 눈을 돌리지 말거라.',
-      work: '원칙을 지킨 것이 손해 같아도, 끝판에는 네가 서 있을 것이다.',
-      health: '몸에도 군율을 세우거라. 정한 시간에 자는 것부터 시작이다.',
-    },
-  },
-  {
-    no: 22, id: 'imgyeongeop', name: '임경업 장군', hanja: '林慶業', group: '장군·대감',
+    no: 21, id: 'imgyeongeop', name: '임경업 장군', hanja: '林慶業', group: '장군·대감',
     title: '억울함을 풀어주는 수호 장군',
     domains: '억울함 해소 · 명예 회복 · 보호',
     keywords: ['설욕', '수호', '명예'],
@@ -380,7 +366,7 @@ export const MANSHIN_DECK: ManshinCard[] = [
     },
   },
   {
-    no: 23, id: 'gwanseong', name: '관성제군', hanja: '關聖帝君', group: '장군·대감',
+    no: 22, id: 'gwanseong', name: '관성제군', hanja: '關聖帝君', group: '장군·대감',
     title: '의리와 장부를 함께 지키는 신',
     domains: '신용 · 계약 · 거래',
     keywords: ['신용', '의리', '약속'],
@@ -394,7 +380,7 @@ export const MANSHIN_DECK: ManshinCard[] = [
     },
   },
   {
-    no: 24, id: 'nami', name: '남이 장군', hanja: '南怡', group: '장군·대감',
+    no: 23, id: 'nami', name: '남이 장군', hanja: '南怡', group: '장군·대감',
     title: '스물여덟에 병조판서에 오른 젊은 장군',
     domains: '도전 · 돌파 · 승부수',
     keywords: ['패기', '돌파', '속도'],
@@ -408,7 +394,7 @@ export const MANSHIN_DECK: ManshinCard[] = [
     },
   },
   {
-    no: 25, id: 'daegam', name: '대감신', hanja: '大監', group: '장군·대감',
+    no: 24, id: 'daegam', name: '대감신', hanja: '大監', group: '장군·대감',
     title: '먹을 복 입을 복을 부르는 호탕한 신',
     domains: '재물 · 성취 · 욕망 긍정',
     keywords: ['재물복', '솔직함', '호탕함'],
@@ -422,7 +408,7 @@ export const MANSHIN_DECK: ManshinCard[] = [
     },
   },
   {
-    no: 26, id: 'obang', name: '오방신장', hanja: '五方神將', group: '장군·대감',
+    no: 25, id: 'obang', name: '오방신장', hanja: '五方神將', group: '장군·대감',
     title: '다섯 방위를 막아서는 호위 신장',
     domains: '방향 결정 · 진로 · 호위',
     keywords: ['방향', '결단', '호위'],
@@ -438,21 +424,7 @@ export const MANSHIN_DECK: ManshinCard[] = [
 
   // ── 여신·설화 (5) ─────────────────────────────────────────────
   {
-    no: 27, id: 'bari', name: '바리공주', hanja: '鉢里公主', group: '여신·설화',
-    title: '버림받고도 끝까지 걸어간 치유의 공주',
-    domains: '마음 치유 · 끝까지 가기 · 화해',
-    keywords: ['치유', '끝까지', '위로'],
-    lore: '일곱째 딸로 버려졌으나 병든 부모를 위해 저승 끝까지 걸어가 약수를 구해온 공주. 훗날 무당의 조상신이 되었다.',
-    speech: '나도 버림받았던 몸이란다. 그래도 끝까지 걸어서 생명의 약수를 길어왔지. 지금 네 서러움, 내가 제일 잘 알아. 조금만 더 가보자, 내가 손 잡아줄게.',
-    fortunes: {
-      love: '아픈 사랑을 지나온 너라서, 더 깊이 사랑할 수 있는 거란다.',
-      money: '바닥까지 가본 사람이 다시 채우는 법도 아는 거야.',
-      work: '지금 힘든 그 길, 끝까지 가면 약수가 있어. 내가 같이 걸을게.',
-      health: '마음의 병이 몸으로 오는 거란다. 오늘은 네 마음부터 안아주자.',
-    },
-  },
-  {
-    no: 28, id: 'danggeum', name: '당금애기', hanja: '', group: '여신·설화',
+    no: 26, id: 'danggeum', name: '당금애기', hanja: '', group: '여신·설화',
     title: '험한 문턱을 넘어 삼신이 된 아기씨',
     domains: '새 인연 · 만남 · 받아들임',
     keywords: ['인연', '만남', '수용'],
@@ -466,7 +438,7 @@ export const MANSHIN_DECK: ManshinCard[] = [
     },
   },
   {
-    no: 29, id: 'jacheongbi', name: '자청비', hanja: '', group: '여신·설화',
+    no: 27, id: 'jacheongbi', name: '자청비', hanja: '', group: '여신·설화',
     title: '하늘까지 올라가 사랑을 쟁취한 여신',
     domains: '연애 · 고백 · 주도권',
     keywords: ['사랑', '주도', '용기'],
@@ -480,7 +452,7 @@ export const MANSHIN_DECK: ManshinCard[] = [
     },
   },
   {
-    no: 30, id: 'gameunjang', name: '가믄장아기', hanja: '', group: '여신·설화',
+    no: 28, id: 'gameunjang', name: '가믄장아기', hanja: '', group: '여신·설화',
     title: '"내 복에 산다"고 답한 운명의 아기씨',
     domains: '자립 · 독립 · 자기 확신',
     keywords: ['자립', '주체성', '내 복'],
@@ -494,7 +466,7 @@ export const MANSHIN_DECK: ManshinCard[] = [
     },
   },
   {
-    no: 31, id: 'seolmundae', name: '설문대할망', hanja: '', group: '여신·설화',
+    no: 29, id: 'seolmundae', name: '설문대할망', hanja: '', group: '여신·설화',
     title: '치마폭으로 한라산을 쌓은 거인 할망',
     domains: '큰 프로젝트 · 확장 · 추진력',
     keywords: ['대범함', '큰 그림', '추진'],
@@ -507,10 +479,24 @@ export const MANSHIN_DECK: ManshinCard[] = [
       health: '큰일 하는 몸일수록 잠이 커야 하느니. 오늘은 일찍 눕거라.',
     },
   },
-
-  // ── 저승·이계 (5) ─────────────────────────────────────────────
   {
-    no: 32, id: 'jeoseung', name: '저승사자', hanja: '使者', group: '저승·이계',
+    no: 30, id: 'gyeonujiknyeo', name: '견우직녀', hanja: '牽牛織女', group: '여신·설화',
+    title: '오작교에서 다시 만나는 하늘의 연인',
+    domains: '재회 · 애틋한 인연 · 기다림의 결실',
+    keywords: ['재회', '간절함', '오작교'],
+    lore: '하늘의 목동 견우와 베 짜는 직녀는 서로에게 빠져 일을 잊은 벌로 은하수 양편에 갈라섰다. 해마다 칠석날, 까마귀와 까치가 놓아준 오작교에서 단 하루 만나는 애틋한 연인 신이다.',
+    speech: '우리는 은하수를 사이에 두고도 일 년을 기다려 기어이 만난단다. 네 그리움도 헛되지 않아. 보거라, 까치들이 벌써 다리를 놓기 시작했으니 머지않아 건너오는 이가 있을 게야.',
+    fortunes: {
+      love: '멀어졌던 마음이 다시 이어지는 상이란다. 끊긴 연락, 미뤄둔 재회를 겁내지 말거라.',
+      money: '은하수 건너처럼 멀어 보여도, 기다린 돈은 날을 정해 돌아오는 법이야.',
+      work: '오래 공들인 협업에 다리가 놓인다. 일 년에 한 번 오는 기회이니 그날을 놓치지 말거라.',
+      health: '그리움도 오래 품으면 병이 되는 게야. 마음 쓰는 만큼 몸도 살피거라.',
+    },
+  },
+
+  // ── 저승·이계 (6) ─────────────────────────────────────────────
+  {
+    no: 31, id: 'jeoseung', name: '저승사자', hanja: '使者', group: '저승·이계',
     title: '끝을 배웅하러 오는 검은 갓의 신',
     domains: '마무리 · 이별 · 손절 · 전환',
     keywords: ['마무리', '떠나보냄', '전환'],
@@ -524,7 +510,7 @@ export const MANSHIN_DECK: ManshinCard[] = [
     },
   },
   {
-    no: 33, id: 'yeomra', name: '염라대왕', hanja: '閻羅大王', group: '저승·이계',
+    no: 32, id: 'yeomra', name: '염라대왕', hanja: '閻羅大王', group: '저승·이계',
     title: '공과를 셈하는 저승의 대왕',
     domains: '결산 · 평가 · 정당한 몫',
     keywords: ['결산', '공정', '받을 몫'],
@@ -538,7 +524,7 @@ export const MANSHIN_DECK: ManshinCard[] = [
     },
   },
   {
-    no: 34, id: 'dokkaebi', name: '도깨비', hanja: '', group: '저승·이계',
+    no: 33, id: 'dokkaebi', name: '도깨비', hanja: '', group: '저승·이계',
     title: '방망이 하나로 판을 뒤집는 장난꾼',
     domains: '뜻밖의 행운 · 변수 · 재미',
     keywords: ['횡재', '변수', '유쾌함'],
@@ -552,7 +538,7 @@ export const MANSHIN_DECK: ManshinCard[] = [
     },
   },
   {
-    no: 35, id: 'sonnim', name: '손님신', hanja: '', group: '저승·이계',
+    no: 34, id: 'sonnim', name: '손님신', hanja: '', group: '저승·이계',
     title: '왔다가 반드시 떠나는 시련의 손님',
     domains: '시련 통과 · 고비 · 인내',
     keywords: ['지나감', '고비', '정성'],
@@ -566,7 +552,7 @@ export const MANSHIN_DECK: ManshinCard[] = [
     },
   },
   {
-    no: 36, id: 'changbu', name: '창부대신', hanja: '倡夫大神', group: '저승·이계',
+    no: 35, id: 'changbu', name: '창부대신', hanja: '倡夫大神', group: '저승·이계',
     title: '노래와 춤으로 액을 막는 광대 신',
     domains: '재능 · 표현 · 즐거움',
     keywords: ['끼', '표현', '흥'],
@@ -577,6 +563,20 @@ export const MANSHIN_DECK: ManshinCard[] = [
       money: '재주가 돈이 되는 상이다. 취미를 썩히지 말거라.',
       work: '네 끼를 회의실에서도 꺼내거라. 무대는 어디에나 있느니.',
       health: '노는 것도 회복이니라. 죄책감일랑 두고 하루 놀거라.',
+    },
+  },
+  {
+    no: 36, id: 'gumiho', name: '구미호', hanja: '九尾狐', group: '저승·이계',
+    title: '아홉 꼬리로 마음을 홀리는 여우',
+    domains: '매혹 · 직감 · 숨은 본심',
+    keywords: ['매혹', '직감', '변신'],
+    lore: '천 년을 묵어 아홉 꼬리를 얻은 여우. 사람으로 둔갑해 마음을 홀리지만, 한번 정을 준 이에게는 누구보다 깊은 진심을 다한다는 설화가 전해진다.',
+    speech: '어머, 내 눈을 똑바로 보네? 겁도 없지. 네 속마음, 꼬리 아홉으로 벌써 다 읽었단다. 감추지 말거라, 원하는 게 있으면 홀리듯 다가가야지.',
+    fortunes: {
+      love: '네 매력이 아홉 배로 빛나는 때란다. 감추지 말고 드러내거라, 홀린 듯 다가올 테니.',
+      money: '겉포장에 홀리지 말거라. 여우 눈으로 들여다보면 알맹이가 보이느니.',
+      work: '직감이 그 어느 때보다 예리하다. 촉이 온 쪽에 패를 걸어보거라.',
+      health: '남 홀리느라 제 기운 빼지 말고, 오늘은 네 꼬리부터 쉬게 하거라.',
     },
   },
 
