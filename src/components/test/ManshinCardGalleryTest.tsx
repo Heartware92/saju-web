@@ -1,5 +1,5 @@
 /**
- * 만신 카드 전람 (/tarot_card) — 60장 전체를 신령패 → 풍습패 → 엽전패 순으로 나열.
+ * 만신 카드 전람 (/tarot_card) — 덱 전체(64장)를 신령패 → 풍습패 → 엽전패 순으로 나열.
  *
  * 카드 이미지 양산 진행 관리용 내부 페이지 (noindex).
  * ★ 새 일러스트가 확정되면 아래 CARD_IMAGES 에 `카드id: '경로'` 한 줄만 추가하면 된다.
@@ -18,7 +18,7 @@ const FRAME_SRC = '/manshin/frame.png';
 
 /** 확정 일러스트 매핑 — 카드 id → 이미지 경로. 이미지가 나올 때마다 여기에 한 줄씩 추가 */
 const CARD_IMAGES: Record<string, string> = {
-  // 신령패 (1/36)
+  // 신령패 (1/40)
   okhwang: '/manshin/test2/okhwang_final.jpg',
   // 풍습패 (18/18 완료) — 2026-07-14 후처리(4% 크롭, 징검다리·씨름판 낙관 제거)
   honrye: '/manshin/customs/honrye.jpg',

@@ -22,7 +22,7 @@ type SectionKey = 'total' | keyof ManshinFortunes;
 
 type Variant = { id: string; label: string; src: string; note: string };
 
-/** 공용 카드 프레임 오버레이 (미드저니 생성 → 중앙 투명 펀칭. 60장 물리 동일 보장) */
+/** 공용 카드 프레임 오버레이 (미드저니 생성 → 중앙 투명 펀칭. 전 카드 물리 동일 보장) */
 const FRAME_SRC = '/manshin/frame.png';
 
 /** 확정 엽전패 일러스트 6종 (2026-07-10) — 카드 id → 이미지 */

@@ -38,7 +38,7 @@ const BACK_SM = "url('/manshin/back_sm.png')";
 /** 공개 화면 대형 신령패 전용 고해상 카드백 (작은 카드들은 소형본으로 성능 우선) */
 const BACK_LG = "url('/manshin/back.png')";
 
-/** 공용 카드 프레임 오버레이 (중앙 투명 펀칭 PNG — 60장 물리 동일 보장) */
+/** 공용 카드 프레임 오버레이 (중앙 투명 펀칭 PNG — 전 카드 물리 동일 보장) */
 const FRAME_SRC = '/manshin/frame.png';
 
 /** 확정 엽전패 일러스트 6종 (2026-07-10) — 카드 id → 이미지 */
@@ -920,7 +920,7 @@ export function ManshinOracleTest() {
 
               {deityRevealed && (
               <div className="px-5 py-5">
-                {/* 신령 소개 — 설화 기반 lore (신령부 36장 전원 보유) */}
+                {/* 신령 소개 — 설화 기반 lore (신령부 전원 보유) */}
                 {deity.lore && (
                   <div className="mb-4 rounded-xl px-4 py-3 bg-white/[0.04] border border-[var(--border-subtle)]">
                     <div className="text-[13px] tracking-[0.18em] text-text-tertiary mb-1.5">이 신령은</div>
