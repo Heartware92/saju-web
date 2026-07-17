@@ -46,7 +46,7 @@ interface Lot { moon: number; unit: number; paid: boolean; }
 async function compute() {
   const ex = await excludedUserIds();
 
-  const [ordersRes, txRes, delRes, refundRes] = await Promise.all([
+  const [ordersRes, txRes, delRes, refundRes, creditsRes] = await Promise.all([
     excludeUsers(
       supabaseAdmin.from('orders')
         .select('user_id, amount, moon_credit_amount, package_id, package_name, payment_method, status, completed_at, created_at')
@@ -66,6 +66,7 @@ async function compute() {
         .eq('status', 'refunded'),
       ex,
     ),
+    excludeUsers(supabaseAdmin.from('user_credits').select('user_id, moon_balance'), ex),
   ]);
 
   const activeOrders = ordersRes.data ?? [];
@@ -117,6 +118,9 @@ async function compute() {
   const paidMoonByDay = new Map<string, number>();
   const freeMoonByDay = new Map<string, number>();
   let paidIssuedSupply = 0, freeConsumed = 0, paidUnusedSupply = 0, freeUnused = 0, freeIssued = 0, paidConsumedSupply = 0;
+  // 달 수량(개) 추적 + 무료 출처별 분해 + 소멸
+  let paidIssuedMoon = 0, paidConsumedMoon = 0, paidUnusedMoon = 0, expiredMoon = 0;
+  const freeBySource = { admin: 0, event: 0, welcome: 0 }; // 수동지급 / 가입이벤트 / 가입환영보너스
   for (const list of byUser.values()) {
     list.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
     const lots: Lot[] = [];
@@ -128,6 +132,7 @@ async function compute() {
       const isDrain = t.type === 'consume' || t.type === 'expire' || a < 0;
       if (isDrain) {
         let need = Math.abs(a); const dk = dayKey(t.created_at);
+        if (t.type === 'expire') expiredMoon += Math.abs(a);
         while (need > 0 && lots.length) {
           const lot = lots[0]; const take = Math.min(lot.moon, need);
           if (lot.paid) {
@@ -135,6 +140,7 @@ async function compute() {
             revByDay.set(dk, (revByDay.get(dk) ?? 0) + r);
             paidMoonByDay.set(dk, (paidMoonByDay.get(dk) ?? 0) + take);
             paidConsumedSupply += r;
+            paidConsumedMoon += take;
           } else {
             freeConsumed += take;
             freeMoonByDay.set(dk, (freeMoonByDay.get(dk) ?? 0) + take);
@@ -143,10 +149,21 @@ async function compute() {
         }
       } else if (isAdd) {
         lots.push({ moon: a, unit: isPaid ? (unit as number) : 0, paid: isPaid });
-        if (isPaid) paidIssuedSupply += a * (unit as number); else freeIssued += a;
+        if (isPaid) {
+          paidIssuedSupply += a * (unit as number);
+          paidIssuedMoon += a;
+        } else {
+          freeIssued += a;
+          if (t.type === 'admin_adjust') freeBySource.admin += a;
+          else if (t.type === 'bonus') freeBySource.event += a;
+          else freeBySource.welcome += a; // 가입 환영 보너스(purchase-환영 reason / signup_bonus)
+        }
       }
     }
-    for (const lot of lots) { if (lot.paid) paidUnusedSupply += lot.moon * lot.unit; else freeUnused += lot.moon; }
+    for (const lot of lots) {
+      if (lot.paid) { paidUnusedSupply += lot.moon * lot.unit; paidUnusedMoon += lot.moon; }
+      else freeUnused += lot.moon;
+    }
   }
   // 월별 매출 = 일별 합산
   const revByMonth = new Map<string, number>();
@@ -194,6 +211,39 @@ async function compute() {
   // ── 4) 무료 크레딧 통계 ──
   const free = { issued: freeIssued, consumed: freeConsumed, balance: freeUnused };
 
+  // ── 4b) 크레딧 원장(FIFO) — 달 수량 기준 + DB 잔액 대조(정합성) ──
+  const dbBalance = (creditsRes.data ?? []).reduce((s, c) => s + (c.moon_balance ?? 0), 0);
+  const round2 = (n: number) => Math.round(n * 100) / 100;
+  const computedBalance = round2(paidUnusedMoon + freeUnused);
+  const ledger = {
+    paid: {
+      issuedMoon: round2(paidIssuedMoon),
+      consumedMoon: round2(paidConsumedMoon),
+      unusedMoon: round2(paidUnusedMoon),
+      issuedSupply: Math.round(paidIssuedSupply),
+      consumedSupply: Math.round(paidConsumedSupply),
+      unusedSupply: Math.round(paidUnusedSupply),
+    },
+    free: {
+      issued: round2(freeIssued),
+      consumed: round2(freeConsumed),
+      balance: round2(freeUnused),
+      bySource: {
+        admin: round2(freeBySource.admin),
+        event: round2(freeBySource.event),
+        welcome: round2(freeBySource.welcome),
+      },
+    },
+    expiredMoon: round2(expiredMoon),
+    total: {
+      issued: round2(paidIssuedMoon + freeIssued),
+      consumed: round2(paidConsumedMoon + freeConsumed),
+      balance: computedBalance,
+    },
+    dbBalance,
+    reconciled: Math.abs(computedBalance - dbBalance) < 0.01,
+  };
+
   // ── 5) 일별 운영 현황 — 결제·달 사용(유/무료)·사용매출·환불을 한 줄로 ──
   const opsDates = new Set<string>([
     ...chargeMap.keys(), ...paidMoonByDay.keys(), ...freeMoonByDay.keys(), ...refundByDay.keys(),
@@ -211,6 +261,7 @@ async function compute() {
 
   return {
     dailyOps,
+    ledger,
     refunds: { count: refundCount, amount: refundTotal },
     generatedAt: new Date().toISOString(),
     charge: {

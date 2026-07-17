@@ -19,9 +19,18 @@ interface DailyOps {
   usageRevenue: number;
   refundCount: number; refundAmount: number;
 }
+interface Ledger {
+  paid: { issuedMoon: number; consumedMoon: number; unusedMoon: number; issuedSupply: number; consumedSupply: number; unusedSupply: number };
+  free: { issued: number; consumed: number; balance: number; bySource: { admin: number; event: number; welcome: number } };
+  expiredMoon: number;
+  total: { issued: number; consumed: number; balance: number };
+  dbBalance: number;
+  reconciled: boolean;
+}
 export interface AccountingSummary {
   generatedAt: string;
   dailyOps: DailyOps[];
+  ledger: Ledger;
   refunds: { count: number; amount: number };
   charge: {
     byDate: ChargeDay[]; total: number; contractLiab: number; vat: number;
@@ -132,6 +141,53 @@ export function AccountingSection({ token }: { token: string | null }) {
         <Kpi label="누적 매출(공급가)" value={won(data.revenue.total)} sub={`사용 ${won(data.revenue.usageTotal)} · 낙전 ${won(data.revenue.breakageTotal)}`} />
         <Kpi label="부가세예수금" value={won(data.vat.payable)} color="text-amber-300" sub="매출세액(결제시)" />
       </div>
+
+      {/* 크레딧 원장 (FIFO) — 유료/무료 발행·사용·잔액 + DB 대조 */}
+      {data.ledger && (
+        <Card title="크레딧 원장 (FIFO 기준)">
+          <Table head={['구분', '발행', '사용', '소멸', '잔액', '금액(공급가)']}>
+            <tr className="border-t border-white/5">
+              <Td>유료 (결제)</Td>
+              <Td right>{data.ledger.paid.issuedMoon.toLocaleString()}달</Td>
+              <Td right>{data.ledger.paid.consumedMoon.toLocaleString()}달</Td>
+              <Td right>-</Td>
+              <Td right>{data.ledger.paid.unusedMoon.toLocaleString()}달</Td>
+              <Td right>
+                발행 {won(data.ledger.paid.issuedSupply)} · 매출 {won(data.ledger.paid.consumedSupply)} · 잔여 {won(data.ledger.paid.unusedSupply)}
+              </Td>
+            </tr>
+            <tr className="border-t border-white/5">
+              <Td>무료</Td>
+              <Td right>{data.ledger.free.issued.toLocaleString()}달</Td>
+              <Td right>{data.ledger.free.consumed.toLocaleString()}달</Td>
+              <Td right>-</Td>
+              <Td right>{data.ledger.free.balance.toLocaleString()}달</Td>
+              <Td right><span className="text-text-tertiary">회계 무분개 (매출 아님)</span></Td>
+            </tr>
+            <tr className="border-t border-white/15 font-semibold">
+              <Td>합계</Td>
+              <Td right>{data.ledger.total.issued.toLocaleString()}달</Td>
+              <Td right>{data.ledger.total.consumed.toLocaleString()}달</Td>
+              <Td right>{data.ledger.expiredMoon.toLocaleString()}달</Td>
+              <Td right>{data.ledger.total.balance.toLocaleString()}달</Td>
+              <Td right></Td>
+            </tr>
+          </Table>
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-2 text-[12px]">
+            <span className={data.ledger.reconciled ? 'text-green-300' : 'text-red-300 font-semibold'}>
+              {data.ledger.reconciled
+                ? `정합성 OK — 원장 잔액 = DB 잔액 (${data.ledger.dbBalance.toLocaleString()}달)`
+                : `정합성 불일치! 원장 ${data.ledger.total.balance.toLocaleString()}달 vs DB ${data.ledger.dbBalance.toLocaleString()}달 — 조사 필요`}
+            </span>
+            <span className="text-text-tertiary">
+              무료 출처: 수동지급 {data.ledger.free.bySource.admin.toLocaleString()} · 가입이벤트 {data.ledger.free.bySource.event.toLocaleString()} · 환영보너스 {data.ledger.free.bySource.welcome.toLocaleString()}
+            </span>
+          </div>
+          <p className="text-[12px] text-text-tertiary mt-1.5">
+            유료 잔여 {won(data.ledger.paid.unusedSupply)} = 활성회원 계약부채. (KPI의 계약부채 잔액은 탈퇴 낙전 반영분)
+          </p>
+        </Card>
+      )}
 
       {/* 회계 루틴 가이드 */}
       <Card title="회계 루틴 (이카운트 일반전표 · 3차=차변 4대=대변)">
