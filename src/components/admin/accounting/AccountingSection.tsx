@@ -67,6 +67,8 @@ export function AccountingSection({ token }: { token: string | null }) {
   const [setlForm, setSetlForm] = useState<{ pg: 'tosspay' | 'inicis'; date: string; amount: string; memo: string }>({ pg: 'inicis', date: kstToday(), amount: '', memo: '' });
   const [setlBusy, setSetlBusy] = useState(false);
   const [setlError, setSetlError] = useState('');
+  // 일별 분개 — 최근 10일 이전 이력 펼침
+  const [showOldJournal, setShowOldJournal] = useState(false);
 
   const fetchData = useCallback(async (force = false) => {
     if (!token) return;
@@ -213,6 +215,32 @@ export function AccountingSection({ token }: { token: string | null }) {
               )}
             </div>
           ))}
+
+          {/* 10일 이전 이력 — 결제 있던 날만 분개 형식으로 */}
+          {(() => {
+            const cutoff = dailyJournal.length ? dailyJournal[dailyJournal.length - 1].date : '';
+            const older = data.charge.byDate.filter((c) => c.date < cutoff).slice().reverse();
+            if (older.length === 0) return null;
+            return (
+              <>
+                <button
+                  onClick={() => setShowOldJournal((v) => !v)}
+                  className="w-full text-center text-[12px] text-text-tertiary hover:text-text-secondary border border-white/10 hover:border-white/20 rounded-lg py-1.5 transition-colors"
+                >
+                  {showOldJournal ? '이전 분개 접기' : `이전 분개 전체 보기 (${older.length}일)`}
+                </button>
+                {showOldJournal && older.map((c) => (
+                  <div key={c.date} className="flex flex-wrap items-baseline gap-x-3 gap-y-0.5 rounded-lg px-3 py-2 border border-white/5 bg-white/[0.02]">
+                    <span className="text-[12px] text-text-tertiary w-[84px] shrink-0">{c.date}</span>
+                    <span className="font-mono text-[12px] text-text-secondary">
+                      3차 미수금 {c.amount.toLocaleString()} / 4대 계약부채 {c.contractLiab.toLocaleString()} / 4대 부가세예수금 {c.vat.toLocaleString()}
+                      <span className="text-text-tertiary"> — 결제 {c.count}건 · 달 {c.moon}</span>
+                    </span>
+                  </div>
+                ))}
+              </>
+            );
+          })()}
         </div>
       </Card>
 
