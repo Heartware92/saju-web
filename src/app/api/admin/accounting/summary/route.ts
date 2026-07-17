@@ -104,8 +104,10 @@ async function compute() {
   }
   const charges = [...chargeMap.values()].sort((a, b) => a.date.localeCompare(b.date));
   const chargeTotal = charges.reduce((s, c) => s + c.amount, 0);
-  const contractLiabIssued = charges.reduce((s, c) => s + c.contractLiab, 0);
-  const vatIssued = charges.reduce((s, c) => s + c.vat, 0);
+  // 총액 기준으로 1회만 반올림 — 일별 반올림 합산 시 1~2원 끗수가 생기는 것 방지.
+  // (일별 분개 표의 일별 값은 그날 전표 입력용 반올림 값이라 합계와 1원 차이가 날 수 있음 — 결산 시 잡손익 정리)
+  const contractLiabIssued = Math.round(chargeTotal * 100 / 110);
+  const vatIssued = chargeTotal - contractLiabIssued;
 
   // ── 2) 매출 인식 — FIFO lot (활성) ──
   const byUser = new Map<string, { type: string; amount: number; reason: string | null; created_at: string }[]>();
@@ -117,6 +119,9 @@ async function compute() {
   const revByDay = new Map<string, number>();
   const paidMoonByDay = new Map<string, number>();
   const freeMoonByDay = new Map<string, number>();
+  const paidIssueMoonByDay = new Map<string, number>();
+  const freeIssueMoonByDay = new Map<string, number>();
+  const otherDrainMoonByDay = new Map<string, number>(); // 환불·회수 등 비매출성 차감(달 잔량 누적용)
   let paidIssuedSupply = 0, freeConsumed = 0, paidUnusedSupply = 0, freeUnused = 0, freeIssued = 0, paidConsumedSupply = 0;
   // 달 수량(개) 추적 + 무료 출처별 분해 + 소멸
   let paidIssuedMoon = 0, paidConsumedMoon = 0, paidUnusedMoon = 0, expiredMoon = 0;
@@ -133,27 +138,36 @@ async function compute() {
       if (isDrain) {
         let need = Math.abs(a); const dk = dayKey(t.created_at);
         if (t.type === 'expire') expiredMoon += Math.abs(a);
+        // 매출 인식은 사용(consume)·소멸(expire)만. 환불(refund)·관리자 회수(음수 adjust)는
+        // lot 차감만 하고 매출로 잡지 않는다(환불은 계약부채·예수금 역분개, 회수는 무상 회수).
+        const isRevenueDrain = t.type === 'consume' || t.type === 'expire';
         while (need > 0 && lots.length) {
           const lot = lots[0]; const take = Math.min(lot.moon, need);
-          if (lot.paid) {
+          if (lot.paid && isRevenueDrain) {
             const r = take * lot.unit;
             revByDay.set(dk, (revByDay.get(dk) ?? 0) + r);
             paidMoonByDay.set(dk, (paidMoonByDay.get(dk) ?? 0) + take);
             paidConsumedSupply += r;
             paidConsumedMoon += take;
-          } else {
+          } else if (!lot.paid && isRevenueDrain) {
             freeConsumed += take;
             freeMoonByDay.set(dk, (freeMoonByDay.get(dk) ?? 0) + take);
+          } else {
+            // 비매출성 차감(환불·회수) — 잔량에서만 빠짐. 발행/사용 통계 불변, 달 잔량 누적에만 반영.
+            otherDrainMoonByDay.set(dk, (otherDrainMoonByDay.get(dk) ?? 0) + take);
           }
           lot.moon -= take; need -= take; if (lot.moon <= 1e-9) lots.shift();
         }
       } else if (isAdd) {
+        const dk = dayKey(t.created_at);
         lots.push({ moon: a, unit: isPaid ? (unit as number) : 0, paid: isPaid });
         if (isPaid) {
           paidIssuedSupply += a * (unit as number);
           paidIssuedMoon += a;
+          paidIssueMoonByDay.set(dk, (paidIssueMoonByDay.get(dk) ?? 0) + a);
         } else {
           freeIssued += a;
+          freeIssueMoonByDay.set(dk, (freeIssueMoonByDay.get(dk) ?? 0) + a);
           if (t.type === 'admin_adjust') freeBySource.admin += a;
           else if (t.type === 'bonus') freeBySource.event += a;
           else freeBySource.welcome += a; // 가입 환영 보너스(purchase-환영 reason / signup_bonus)
@@ -185,13 +199,15 @@ async function compute() {
 
   // ── 3) 탈퇴 낙전 매출 — preserved 전액을 탈퇴월(없으면 결제월) 매출로 ──
   const breakageByMonth = new Map<string, number>();
+  const breakageByDay = new Map<string, number>();
   let breakageTotal = 0;
   for (const p of preserved) {
     if (p.status !== 'completed') continue;
     const supply = Math.round((p.amount ?? 0) * 100 / 110);
-    // preserved 엔 탈퇴일이 없어 결제월에 낙전 매출 인식(탈퇴자는 사용/미사용 무관 전액 매출).
-    const m = monthKey(p.created_at ?? p.completed_at ?? new Date(0).toISOString());
-    breakageByMonth.set(m, (breakageByMonth.get(m) ?? 0) + supply);
+    // preserved 엔 탈퇴일이 없어 결제일에 낙전 매출 인식(탈퇴자는 사용/미사용 무관 전액 매출).
+    const iso = p.created_at ?? p.completed_at ?? new Date(0).toISOString();
+    breakageByMonth.set(monthKey(iso), (breakageByMonth.get(monthKey(iso)) ?? 0) + supply);
+    breakageByDay.set(dayKey(iso), (breakageByDay.get(dayKey(iso)) ?? 0) + supply);
     breakageTotal += supply;
   }
 
@@ -244,20 +260,40 @@ async function compute() {
     reconciled: Math.abs(computedBalance - dbBalance) < 0.01,
   };
 
-  // ── 5) 일별 운영 현황 — 결제·달 사용(유/무료)·사용매출·환불을 한 줄로 ──
+  // ── 5) 일별 운영 현황 — 결제·달 사용(유/무료)·사용매출·환불 + 계약부채 증감/잔액·달 잔량 누적 ──
   const opsDates = new Set<string>([
     ...chargeMap.keys(), ...paidMoonByDay.keys(), ...freeMoonByDay.keys(), ...refundByDay.keys(),
+    ...paidIssueMoonByDay.keys(), ...freeIssueMoonByDay.keys(), ...breakageByDay.keys(),
+    ...otherDrainMoonByDay.keys(),
   ]);
-  const dailyOps = [...opsDates].sort().map((d) => ({
-    date: d,
-    payCount: chargeMap.get(d)?.count ?? 0,
-    payAmount: chargeMap.get(d)?.amount ?? 0,
-    paidMoonUsed: Math.round((paidMoonByDay.get(d) ?? 0) * 100) / 100,
-    freeMoonUsed: Math.round((freeMoonByDay.get(d) ?? 0) * 100) / 100,
-    usageRevenue: Math.round(revByDay.get(d) ?? 0),
-    refundCount: refundByDay.get(d)?.count ?? 0,
-    refundAmount: refundByDay.get(d)?.amount ?? 0,
-  }));
+  // 누적은 float 로 계산하고 표시 시점에만 반올림 — 일별 반올림 누적으로 KPI·원장과 1~2원 어긋나는 것 방지.
+  let runLiab = 0;   // 계약부채 잔액 누적(공급가, float)
+  let runMoon = 0;   // 달 잔량 누적(유료+무료)
+  const dailyOps = [...opsDates].sort().map((d) => {
+    const incF = (chargeMap.get(d)?.amount ?? 0) * 100 / 110;        // 증가 = 충전(공급가, float)
+    const decUsageF = revByDay.get(d) ?? 0;                          // 감소 = 사용 매출(float)
+    const decBreakageF = breakageByDay.get(d) ?? 0;                  // 감소 = 탈퇴 낙전
+    runLiab += incF - decUsageF - decBreakageF;
+    const moonIssued = (paidIssueMoonByDay.get(d) ?? 0) + (freeIssueMoonByDay.get(d) ?? 0);
+    const moonUsed = (paidMoonByDay.get(d) ?? 0) + (freeMoonByDay.get(d) ?? 0) + (otherDrainMoonByDay.get(d) ?? 0);
+    runMoon += moonIssued - moonUsed;
+    return {
+      date: d,
+      payCount: chargeMap.get(d)?.count ?? 0,
+      payAmount: chargeMap.get(d)?.amount ?? 0,
+      paidMoonUsed: Math.round((paidMoonByDay.get(d) ?? 0) * 100) / 100,
+      freeMoonUsed: Math.round((freeMoonByDay.get(d) ?? 0) * 100) / 100,
+      usageRevenue: Math.round(decUsageF),
+      refundCount: refundByDay.get(d)?.count ?? 0,
+      refundAmount: refundByDay.get(d)?.amount ?? 0,
+      liabIncrease: Math.round(incF),
+      liabDecrease: Math.round(decUsageF + decBreakageF),
+      liabDelta: Math.round(incF - decUsageF - decBreakageF),
+      liabBalance: Math.round(runLiab),
+      moonIssued: Math.round(moonIssued * 100) / 100,
+      moonBalance: Math.round(runMoon * 100) / 100,
+    };
+  });
 
   return {
     dailyOps,

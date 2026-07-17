@@ -18,6 +18,8 @@ interface DailyOps {
   paidMoonUsed: number; freeMoonUsed: number;
   usageRevenue: number;
   refundCount: number; refundAmount: number;
+  liabIncrease: number; liabDecrease: number; liabDelta: number; liabBalance: number;
+  moonIssued: number; moonBalance: number;
 }
 interface Ledger {
   paid: { issuedMoon: number; consumedMoon: number; unusedMoon: number; issuedSupply: number; consumedSupply: number; unusedSupply: number };
@@ -232,24 +234,31 @@ export function AccountingSection({ token }: { token: string | null }) {
         </div>
       </Card>
 
-      {/* 일별 운영 현황 — 결제·사용·환불 */}
-      <Card title="일별 운영 현황 (결제 · 달 사용 · 환불)">
-        <Table head={['날짜', '결제', '결제액', '환불', '환불액', '유료 달 사용', '무료 달 사용', '사용매출(공급가)']}>
+      {/* 일별 운영 현황 — 결제·사용·환불·계약부채 증감·달 잔량 */}
+      <Card title="일별 운영 현황 (결제 · 사용 · 환불 · 계약부채 · 달 잔량)">
+        <Table head={['날짜', '결제', '환불', '달 사용 (유/무료)', '사용매출', '계약부채 +', '계약부채 −', '증감', '계약부채 잔액', '달 잔량']}>
           {[...(data.dailyOps ?? [])].reverse().map((d) => (
             <tr key={d.date} className="border-t border-white/5">
               <Td>{d.date}</Td>
-              <Td right>{d.payCount > 0 ? `${d.payCount}건` : '-'}</Td>
-              <Td right>{d.payAmount > 0 ? won(d.payAmount) : '-'}</Td>
-              <Td right>{d.refundCount > 0 ? `${d.refundCount}건` : '-'}</Td>
-              <Td right>{d.refundAmount > 0 ? won(d.refundAmount) : '-'}</Td>
-              <Td right>{d.paidMoonUsed > 0 ? `${d.paidMoonUsed}달` : '-'}</Td>
-              <Td right>{d.freeMoonUsed > 0 ? `${d.freeMoonUsed}달` : '-'}</Td>
+              <Td right>{d.payAmount > 0 ? `${d.payCount}건 ${won(d.payAmount)}` : '-'}</Td>
+              <Td right>{d.refundAmount > 0 ? `${d.refundCount}건 ${won(d.refundAmount)}` : '-'}</Td>
+              <Td right>{d.paidMoonUsed > 0 || d.freeMoonUsed > 0 ? `${d.paidMoonUsed} / ${d.freeMoonUsed}` : '-'}</Td>
               <Td right>{d.usageRevenue > 0 ? won(d.usageRevenue) : '-'}</Td>
+              <Td right>{d.liabIncrease > 0 ? <span className="text-green-300">+{d.liabIncrease.toLocaleString()}</span> : '-'}</Td>
+              <Td right>{d.liabDecrease > 0 ? <span className="text-red-300">−{d.liabDecrease.toLocaleString()}</span> : '-'}</Td>
+              <Td right>
+                <span className={d.liabDelta > 0 ? 'text-green-300' : d.liabDelta < 0 ? 'text-red-300' : ''}>
+                  {d.liabDelta > 0 ? '+' : ''}{d.liabDelta.toLocaleString()}
+                </span>
+              </Td>
+              <Td right><b>{d.liabBalance.toLocaleString()}</b></Td>
+              <Td right><b>{d.moonBalance.toLocaleString()}달</b></Td>
             </tr>
           ))}
         </Table>
         <p className="text-[12px] text-text-tertiary mt-2">
-          사용매출 = 유료 달 소비분(FIFO)의 공급가액 — 월 합계가 "월 마감 분개"의 사용 매출과 일치.
+          계약부채(공급가): + 충전 / − 사용매출·탈퇴낙전. 잔액·달 잔량은 그날 마감 누적 — 최신 행의 값이 현재 잔액(크레딧 원장·KPI와 일치해야 정상).
+          사용매출 월 합계 = "월 마감 분개"의 사용 매출. 수수료는 일별 미표시(월 세금계산서 실측으로만 기장).
           환불 발생 시 분개: <span className="font-mono">3차 계약부채 + 3차 부가세예수금 / 4대 보통예금(또는 미수금)</span>.
           {data.refunds?.count > 0 && <span className="text-red-300"> 누적 환불 {data.refunds.count}건 · {won(data.refunds.amount)}</span>}
         </p>
