@@ -67,8 +67,6 @@ export function AccountingSection({ token }: { token: string | null }) {
   const [setlForm, setSetlForm] = useState<{ pg: 'tosspay' | 'inicis'; date: string; amount: string; memo: string }>({ pg: 'inicis', date: kstToday(), amount: '', memo: '' });
   const [setlBusy, setSetlBusy] = useState(false);
   const [setlError, setSetlError] = useState('');
-  // 일별 분개 — 최근 10일 이전 이력 펼침
-  const [showOldJournal, setShowOldJournal] = useState(false);
 
   const fetchData = useCallback(async (force = false) => {
     if (!token) return;
@@ -124,20 +122,32 @@ export function AccountingSection({ token }: { token: string | null }) {
     } catch { /* ignore */ }
   };
 
-  // 일별 분개 카드 — 최근 10일(KST), 결제 없는 날 포함
+  // 일별 분개 카드 — 개시일부터 전체. 그날의 분개 전체(충전 + 저장된 정산입금)를 한 줄씩.
+  // 최근 10일은 결제 없는 날도 포함(매일 루틴 확인용), 그 이전은 분개 있는 날만.
   const dailyJournal = useMemo(() => {
     if (!data) return [];
-    const map = new Map(data.charge.byDate.map((c) => [c.date, c]));
+    const chargeByDay = new Map(data.charge.byDate.map((c) => [c.date, c]));
+    const setlByDay = new Map<string, Settlement[]>();
+    for (const s of setl?.items ?? []) {
+      const a = setlByDay.get(s.deposited_on) ?? [];
+      a.push(s);
+      setlByDay.set(s.deposited_on, a);
+    }
+    const dates = new Set<string>([...chargeByDay.keys(), ...setlByDay.keys()]);
     const kstNow = new Date(Date.now() + 540 * 60_000);
-    const days: { date: string; c?: ChargeDay; isToday: boolean }[] = [];
     for (let i = 0; i < 10; i++) {
       const d = new Date(kstNow);
       d.setUTCDate(d.getUTCDate() - i);
-      const key = d.toISOString().slice(0, 10);
-      days.push({ date: key, c: map.get(key), isToday: i === 0 });
+      dates.add(d.toISOString().slice(0, 10));
     }
-    return days;
-  }, [data]);
+    const today = kstNow.toISOString().slice(0, 10);
+    return [...dates].sort().reverse().map((date) => ({
+      date,
+      c: chargeByDay.get(date),
+      setls: setlByDay.get(date) ?? [],
+      isToday: date === today,
+    }));
+  }, [data, setl]);
 
   // 수수료 역산 — 저장된 입금 합계 기반 (수수료 = 결제총액 − 입금누계)
   const fee = useMemo(() => {
@@ -199,49 +209,35 @@ export function AccountingSection({ token }: { token: string | null }) {
 
       {/* ── ① 매일 루틴 ── */}
       <SectionTitle no="①" title="매일 루틴" desc="어제 결제 분개 입력 + 통장 입금 시 아래 ②의 정산 기록" />
-      <Card title="일별 분개 — 최근 10일">
+      <Card title="일별 분개 — 전체 (충전 + 정산입금)">
         <div className="space-y-1.5">
           {dailyJournal.map((d) => (
-            <div key={d.date} className={`flex flex-wrap items-baseline gap-x-3 gap-y-0.5 rounded-lg px-3 py-2 border ${d.isToday ? 'border-amber-500/30 bg-amber-500/5' : 'border-white/5 bg-white/[0.02]'}`}>
+            <div key={d.date} className={`flex flex-wrap items-baseline gap-x-3 gap-y-1 rounded-lg px-3 py-2 border ${d.isToday ? 'border-amber-500/30 bg-amber-500/5' : 'border-white/5 bg-white/[0.02]'}`}>
               <span className="text-[12px] text-text-tertiary w-[84px] shrink-0">{d.date}{d.isToday ? ' (오늘)' : ''}</span>
-              {d.c ? (
-                <span className="font-mono text-[12px] text-text-secondary">
-                  3차 미수금 {d.c.amount.toLocaleString()} / 4대 계약부채 {d.c.contractLiab.toLocaleString()} / 4대 부가세예수금 {d.c.vat.toLocaleString()}
-                  <span className="text-text-tertiary"> — 결제 {d.c.count}건 · 달 {d.c.moon}</span>
-                  {d.isToday && <span className="text-amber-300"> (진행중 — 내일 확정치로 입력)</span>}
-                </span>
-              ) : (
-                <span className="text-[12px] text-text-tertiary">결제 없음 — 분개 불필요</span>
-              )}
+              <div className="flex-1 min-w-0 space-y-0.5">
+                {d.c && (
+                  <p className="font-mono text-[12px] text-text-secondary">
+                    3차 미수금 {d.c.amount.toLocaleString()} / 4대 계약부채 {d.c.contractLiab.toLocaleString()} / 4대 부가세예수금 {d.c.vat.toLocaleString()}
+                    <span className="text-text-tertiary"> — 충전 {d.c.count}건 · 달 {d.c.moon}</span>
+                    {d.isToday && <span className="text-amber-300"> (진행중 — 내일 확정치로 입력)</span>}
+                  </p>
+                )}
+                {d.setls.map((s) => (
+                  <p key={s.id} className="font-mono text-[12px] text-text-secondary">
+                    3차 보통예금 {s.amount.toLocaleString()} / 4대 미수금 {s.amount.toLocaleString()}
+                    <span className="text-text-tertiary"> — {PG_LABEL[s.pg]} 정산입금{s.memo ? ` · ${s.memo}` : ''}</span>
+                  </p>
+                ))}
+                {!d.c && d.setls.length === 0 && (
+                  <p className="text-[12px] text-text-tertiary">분개 없음</p>
+                )}
+              </div>
             </div>
           ))}
-
-          {/* 10일 이전 이력 — 결제 있던 날만 분개 형식으로 */}
-          {(() => {
-            const cutoff = dailyJournal.length ? dailyJournal[dailyJournal.length - 1].date : '';
-            const older = data.charge.byDate.filter((c) => c.date < cutoff).slice().reverse();
-            if (older.length === 0) return null;
-            return (
-              <>
-                <button
-                  onClick={() => setShowOldJournal((v) => !v)}
-                  className="w-full text-center text-[12px] text-text-tertiary hover:text-text-secondary border border-white/10 hover:border-white/20 rounded-lg py-1.5 transition-colors"
-                >
-                  {showOldJournal ? '이전 분개 접기' : `이전 분개 전체 보기 (${older.length}일)`}
-                </button>
-                {showOldJournal && older.map((c) => (
-                  <div key={c.date} className="flex flex-wrap items-baseline gap-x-3 gap-y-0.5 rounded-lg px-3 py-2 border border-white/5 bg-white/[0.02]">
-                    <span className="text-[12px] text-text-tertiary w-[84px] shrink-0">{c.date}</span>
-                    <span className="font-mono text-[12px] text-text-secondary">
-                      3차 미수금 {c.amount.toLocaleString()} / 4대 계약부채 {c.contractLiab.toLocaleString()} / 4대 부가세예수금 {c.vat.toLocaleString()}
-                      <span className="text-text-tertiary"> — 결제 {c.count}건 · 달 {c.moon}</span>
-                    </span>
-                  </div>
-                ))}
-              </>
-            );
-          })()}
         </div>
+        <p className="text-[12px] text-text-tertiary mt-2">
+          개시일부터 전체 표시(최근 10일은 분개 없는 날 포함). 월 마감 매출·수수료 분개는 ② 월말 루틴 참조.
+        </p>
       </Card>
 
       {/* ── ② 월말 루틴 ── */}
