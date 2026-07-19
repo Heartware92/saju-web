@@ -1,5 +1,12 @@
+'use client';
+
 /**
  * 만신 카드 전람 (/tarot_card) — 덱 전체(64장)를 신령패 → 풍습패 → 엽전패 순으로 나열.
+ *
+ * 애니메이션은 모바일 웹 기준 (우리 유저 대부분이 모바일):
+ * - 스크롤 등장(whileInView once) — transform/opacity 만, 1회성이라 64장이어도 부담 없음
+ * - 탭 피드백(whileTap) — hover 없는 모바일에서 유일한 반응성
+ * - 무한 루프 애니메이션은 두지 않음 (64장 동시 구동은 모바일 배터리·프레임 저하)
  *
  * 카드 이미지 양산 진행 관리용 내부 페이지 (noindex).
  * ★ 새 일러스트가 확정되면 아래 CARD_IMAGES 에 `카드id: '경로'` 한 줄만 추가하면 된다.
@@ -7,6 +14,7 @@
  * 렌더 방식은 SummaryPatCard(ManshinOracleTest.tsx)와 동일: 일러스트 + 공용 프레임 오버레이.
  */
 
+import { motion } from 'framer-motion';
 import {
   MANSHIN_DECK,
   MANSHIN_GROUP_COLORS,
@@ -56,7 +64,15 @@ function GalleryCard({ card }: { card: ManshinCard }) {
   const color = MANSHIN_GROUP_COLORS[card.group];
   const src = CARD_IMAGES[card.id];
   return (
-    <div className="w-full">
+    <motion.div
+      className="w-full"
+      initial={{ opacity: 0, y: 18 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true, margin: '0px 0px -60px 0px' }}
+      whileTap={{ scale: 0.97 }}
+      transition={{ duration: 0.45, ease: [0.22, 0.9, 0.3, 1] }}
+      style={{ willChange: 'transform, opacity' }}
+    >
       <div
         className="relative aspect-[2/3] rounded-xl overflow-hidden"
         style={{ boxShadow: `0 6px 24px ${color}22` }}
@@ -124,7 +140,7 @@ function GalleryCard({ card }: { card: ManshinCard }) {
       <div className="mt-0.5 text-center text-[11.5px] leading-snug" style={{ color: `${color}dd` }}>
         {card.domains}
       </div>
-    </div>
+    </motion.div>
   );
 }
 

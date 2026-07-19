@@ -793,7 +793,8 @@ export function ManshinOracleTest() {
                         scale: { type: 'spring', stiffness: 300, damping: 20 },
                       }}
                       whileHover={{ y: isPicked ? -26 : -12 }}
-                      whileTap={{ scale: 1.02 }}
+                      // 모바일(hover 없음)에선 탭이 유일한 피드백 — 살짝 들어올리며 응답
+                      whileTap={{ scale: 1.04, y: isPicked ? -26 : -14 }}
                       onClick={() => pickCard(idx)}
                       className={`absolute left-1/2 bottom-10 w-[120px] aspect-[2/3] -ml-[60px] rounded-lg border ${
                         isPicked
