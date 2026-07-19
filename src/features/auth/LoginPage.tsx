@@ -4,7 +4,7 @@
 
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { useUserStore } from '../../store/useUserStore';
@@ -27,6 +27,25 @@ export const LoginPage: React.FC = () => {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
+  // 아이디(이메일) 저장 — 비밀번호는 절대 저장하지 않는다. 기본 켜짐(자동 저장), 끄면 즉시 삭제.
+  // 키에 supabase/sb- 를 쓰지 않는다 (LOGIN_TIMEOUT 복구 로직이 그 접두사를 일괄 삭제하므로).
+  const SAVED_EMAIL_KEY = 'ichon:saved_email';
+  const [rememberEmail, setRememberEmail] = useState(true);
+
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(SAVED_EMAIL_KEY);
+      if (saved) setEmail(saved);
+    } catch { /* ignore */ }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const toggleRememberEmail = (checked: boolean) => {
+    setRememberEmail(checked);
+    if (!checked) {
+      try { localStorage.removeItem(SAVED_EMAIL_KEY); } catch { /* ignore */ }
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -45,6 +64,11 @@ export const LoginPage: React.FC = () => {
 
     try {
       await Promise.race([login(email, password), timeoutPromise]);
+      // 로그인 성공 시에만 아이디 저장 (오타 이메일이 저장되는 것 방지)
+      try {
+        if (rememberEmail) localStorage.setItem(SAVED_EMAIL_KEY, email);
+        else localStorage.removeItem(SAVED_EMAIL_KEY);
+      } catch { /* ignore */ }
       router.replace('/');
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : '';
@@ -142,8 +166,17 @@ export const LoginPage: React.FC = () => {
               </div>
             </div>
 
-            {/* 비밀번호 초기화 */}
-            <div className="flex justify-end text-sm">
+            {/* 아이디 저장 + 비밀번호 초기화 */}
+            <div className="flex items-center justify-between text-sm">
+              <label className="flex items-center gap-2 cursor-pointer select-none text-text-tertiary hover:text-text-secondary transition-colors">
+                <input
+                  type="checkbox"
+                  checked={rememberEmail}
+                  onChange={(e) => toggleRememberEmail(e.target.checked)}
+                  className="w-4 h-4 rounded accent-[var(--cta-primary)] cursor-pointer"
+                />
+                아이디 저장
+              </label>
               <Link href="/auth/reset" className="text-text-tertiary hover:text-cta transition-colors">
                 비밀번호 초기화
               </Link>
