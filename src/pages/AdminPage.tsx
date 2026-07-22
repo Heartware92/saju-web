@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback, useMemo, useRef, Fragment } from 'react';
 import { DemographicsSummary, type MemberSummary } from '@/components/admin/members/DemographicsSummary';
+import { ActiveUsersPanel, type ActivePeriod } from '@/components/admin/members/ActiveUsersPanel';
 import { MembersFilterBar } from '@/components/admin/members/MembersFilterBar';
 import { MembersTable, type MemberRow } from '@/components/admin/members/MembersTable';
 import { MemberDetailDrawer } from '@/components/admin/members/MemberDetailDrawer';
@@ -169,6 +170,8 @@ export default function AdminPage() {
   const [memberOrder, setMemberOrder] = useState<'asc' | 'desc'>('desc');
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  // DAU/WAU/MAU 드릴다운 — null 이면 닫힘. ※ 훅은 로그인 게이트 위(React #310)
+  const [activeUsersPeriod, setActiveUsersPeriod] = useState<ActivePeriod | null>(null);
 
   // Deleted Members
   const [deletedMembers, setDeletedMembers] = useState<DeletedMember[]>([]);
@@ -1004,6 +1007,7 @@ export default function AdminPage() {
                   summary={memberSummary}
                   activeSegment={memberSegment}
                   onSegmentChange={setMemberSegment}
+                  onOpenActive={setActiveUsersPeriod}
                 />
 
                 <BulkActionBar
@@ -1347,6 +1351,17 @@ export default function AdminPage() {
           </div>
         )}
       </div>
+
+      {/* ── DAU/WAU/MAU 접속 회원 목록 페이지 ── */}
+      {activeUsersPeriod && (
+        <ActiveUsersPanel
+          period={activeUsersPeriod}
+          token={token}
+          onClose={() => setActiveUsersPeriod(null)}
+          onChangePeriod={setActiveUsersPeriod}
+          onOpenUser={setSelectedUserId}
+        />
+      )}
 
       {/* ── 회원 상세 Drawer ── */}
       {selectedUserId && (

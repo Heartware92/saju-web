@@ -7,7 +7,42 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireAdmin } from '../../_auth';
 import { cachedLoadAdminBundle, aggregateUsers } from '../../_userAggregates';
 import { shouldForce } from '../../_cache';
+import { supabaseAdmin } from '@/services/supabaseAdmin';
 import { AGE_BUCKETS, NEW_DAYS } from '@/constants/adminLabels';
+
+/**
+ * DAU/WAU/MAU — analytics_events 의 로그인 상태 활동(user_id 보유) 기준, KST.
+ *  - DAU: 오늘(KST 자정~), WAU: 최근 7일, MAU: 최근 30일에 활동한 "회원" 고유 수.
+ *  - 회원 = 번들 기준(약관동의+휴대폰인증, 분석 제외 계정 제외).
+ *  - 클릭 시 상세 목록은 /api/admin/users/active 참조.
+ */
+async function computeActiveCounts(memberIds: Set<string>): Promise<{ dau: number; wau: number; mau: number }> {
+  const KST = 540;
+  const kstNow = new Date(Date.now() + KST * 60_000);
+  const todayStart = Date.UTC(kstNow.getUTCFullYear(), kstNow.getUTCMonth(), kstNow.getUTCDate()) - KST * 60_000;
+  const weekStart = todayStart - 6 * 86_400_000;
+  const monthStart = todayStart - 29 * 86_400_000;
+  const dau = new Set<string>(); const wau = new Set<string>(); const mau = new Set<string>();
+  const PAGE = 1000; const MAX = 50_000;
+  for (let from = 0; from < MAX; from += PAGE) {
+    const { data, error } = await supabaseAdmin
+      .from('analytics_events')
+      .select('user_id, created_at')
+      .not('user_id', 'is', null)
+      .gte('created_at', new Date(monthStart).toISOString())
+      .range(from, from + PAGE - 1);
+    if (error || !data || data.length === 0) break;
+    for (const e of data) {
+      if (!e.user_id || !memberIds.has(e.user_id)) continue;
+      const t = new Date(e.created_at).getTime();
+      mau.add(e.user_id);
+      if (t >= weekStart) wau.add(e.user_id);
+      if (t >= todayStart) dau.add(e.user_id);
+    }
+    if (data.length < PAGE) break;
+  }
+  return { dau: dau.size, wau: wau.size, mau: mau.size };
+}
 
 export async function GET(request: NextRequest) {
   const auth = await requireAdmin(request);
@@ -86,11 +121,15 @@ export async function GET(request: NextRequest) {
   const payingTotal = users.filter(u => u.orderCount > 0).length;
   const conversionRate = totalUsers > 0 ? Math.round((payingTotal / totalUsers) * 1000) / 10 : 0;
 
+  // DAU/WAU/MAU — 회원의 로그인 상태 활동 기준
+  const activeCounts = await computeActiveCounts(new Set(users.map(u => u.id)));
+
   return NextResponse.json(
     {
       kpi: {
         totalUsers, joinedToday, joinedYesterday, joined7d, joined30d,
         payingTotal, conversionRate, newDaysWindow: NEW_DAYS,
+        ...activeCounts,
       },
       gender, ageCounts, provider, cohort, cohortDaily, segments,
     },

@@ -20,6 +20,10 @@ export interface MemberSummary {
     payingTotal: number;
     conversionRate: number;
     newDaysWindow: number;
+    /** 접속 회원 수(analytics 로그인 활동 기준) — 구캐시 응답엔 없을 수 있어 optional */
+    dau?: number;
+    wau?: number;
+    mau?: number;
   };
   gender: { male: number; female: number; unknown: number };
   ageCounts: Record<string, number>;
@@ -33,9 +37,11 @@ interface Props {
   summary: MemberSummary | null;
   activeSegment: UserSegment | '';
   onSegmentChange: (s: UserSegment | '') => void;
+  /** DAU/WAU/MAU 카드 클릭 → 접속 회원 목록 페이지 열기 */
+  onOpenActive?: (period: 'today' | 'week' | 'month') => void;
 }
 
-export function DemographicsSummary({ summary, activeSegment, onSegmentChange }: Props) {
+export function DemographicsSummary({ summary, activeSegment, onSegmentChange, onOpenActive }: Props) {
   if (!summary) return null;
   const { kpi, gender, ageCounts, provider, cohort, cohortDaily, segments } = summary;
 
@@ -56,6 +62,13 @@ export function DemographicsSummary({ summary, activeSegment, onSegmentChange }:
         <KpiCell label="30일 신규" value={kpi.joined30d.toLocaleString()} />
         <KpiCell label="결제 회원" value={kpi.payingTotal.toLocaleString()} color="text-amber-300" />
         <KpiCell label="결제 전환율" value={`${kpi.conversionRate}%`} sub="payingTotal / totalUsers" />
+      </div>
+
+      {/* ── DAU / WAU / MAU (클릭 → 접속 회원 목록) ── */}
+      <div className="grid grid-cols-3 gap-2.5">
+        <ActiveKpiCell label="DAU" desc="오늘 접속" value={kpi.dau} onClick={() => onOpenActive?.('today')} />
+        <ActiveKpiCell label="WAU" desc="최근 7일 접속" value={kpi.wau} onClick={() => onOpenActive?.('week')} />
+        <ActiveKpiCell label="MAU" desc="최근 30일 접속" value={kpi.mau} onClick={() => onOpenActive?.('month')} />
       </div>
 
       {/* ── 세그먼트 필터 칩 ─────────────── */}
@@ -150,6 +163,22 @@ function CohortCard({
       </div>
       <VerticalBarChart bars={bars} color="rgba(167, 139, 250, 0.75)" />
     </div>
+  );
+}
+
+/** 클릭 가능한 접속 지표 카드 — 클릭 시 해당 기간 접속 회원 목록으로 이동 */
+function ActiveKpiCell({ label, desc, value, onClick }: { label: string; desc: string; value?: number; onClick: () => void }) {
+  return (
+    <button
+      onClick={onClick}
+      className="text-left bg-white/5 border border-white/10 rounded-lg px-3 py-2.5 hover:border-cta/50 hover:bg-cta/5 transition-all group"
+    >
+      <p className="text-[11px] text-text-tertiary uppercase tracking-wider mb-0.5">
+        {label} <span className="normal-case">· {desc}</span>
+      </p>
+      <p className="text-[18px] font-bold text-emerald-300">{value !== undefined ? `${value.toLocaleString()}명` : '-'}</p>
+      <p className="text-[11px] text-text-tertiary mt-0.5 group-hover:text-cta transition-colors">클릭해서 회원 목록 보기 →</p>
+    </button>
   );
 }
 
