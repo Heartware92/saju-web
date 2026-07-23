@@ -45,7 +45,7 @@ export const SPIRITS: Record<string, Spirit> = {
     relationship: '사람들을 챙기고 이끌지만, 은근히 책임을 혼자 떠안는다.',
     quote:
       '나는 루트! 하늘을 향해 자라는 나무야. 때로는 너무 곧아서 부러질 것 같지만, 그게 내가 살아가는 방식이라고 믿어!',
-    image: '/intro/characters/gap.webp?v=3',
+    image: '/intro/characters/gap.webp?v=4',
   },
   을: {
     ilgan: '을',
@@ -60,7 +60,7 @@ export const SPIRITS: Record<string, Spirit> = {
     relationship: '누구와도 부드럽게 어울리지만, 속내는 끝까지 다 내보이지 않는다.',
     quote:
       '난 아이비라고 하는데. 똑바로 서느니 휘감고 오르는 쪽이 실속 있거든. 안 부러지고 끝끝내 닿고 마는 게 내 방식이지.',
-    image: '/intro/characters/eul.webp?v=3',
+    image: '/intro/characters/eul.webp?v=4',
   },
   병: {
     ilgan: '병',
@@ -75,7 +75,7 @@ export const SPIRITS: Record<string, Spirit> = {
     relationship: '어디서든 사람을 끌어모으고 분위기를 밝히지만, 빛이 강한 만큼 곁의 그늘을 놓칠 때가 있다.',
     quote:
       '어이, 난 솔이야. 떠올랐으면 누구든 안 가리고 다 비추는 게 내 일이지. 눈부시다 해도 빛은 안 줄여.',
-    image: '/intro/characters/byeong.webp?v=3',
+    image: '/intro/characters/byeong.webp?v=4',
   },
   정: {
     ilgan: '정',
@@ -91,7 +91,7 @@ export const SPIRITS: Record<string, Spirit> = {
       '요란하지 않게 곁을 지키다 꼭 필요한 순간에 빛을 내지만, 마음을 깊이 주는 만큼 혼자 속을 태우기 쉽다.',
     quote:
       '헤이 난 엠버야. 크게 못 타올라도 길 잃은 곁은 끝까지 밝혀. 작은 불이라 흔들려도 한번 켠 자린 안 꺼뜨려.',
-    image: '/intro/characters/jeong.webp?v=3',
+    image: '/intro/characters/jeong.webp?v=4',
   },
   무: {
     ilgan: '무',
@@ -106,7 +106,7 @@ export const SPIRITS: Record<string, Spirit> = {
     relationship: '말없이 곁을 내주고 기댈 곳이 되어주지만, 한번 정한 건 좀처럼 바꾸지 않아 고집스러워 보인다.',
     quote:
       '그래, 난 테라야... 휩쓸려 다니는 건 못 해… 그냥 여기 서서 다 받아낼 뿐이야… 답답해도, 기댈 데 하나쯤은 안 흔들려야지...',
-    image: '/intro/characters/mu.webp?v=3',
+    image: '/intro/characters/mu.webp?v=4',
   },
   기: {
     ilgan: '기',
@@ -121,7 +121,7 @@ export const SPIRITS: Record<string, Spirit> = {
     relationship: '곁의 사람을 살뜰히 살피고 작은 변화도 놓치지 않지만, 남을 챙기느라 정작 제 마음은 뒤로 미룬다.',
     quote:
       '응, 난 로움이야~ 화려하진 않아도 심은 건 뭐든 살려내는 흙이지. 내 몫은 잊고 남만 키우다가도, 자란 걸 보면 됐다 싶어~',
-    image: '/intro/characters/gi.webp?v=3',
+    image: '/intro/characters/gi.webp?v=4',
   },
   경: {
     ilgan: '경',
@@ -136,7 +136,7 @@ export const SPIRITS: Record<string, Spirit> = {
     relationship: '한번 믿은 사람은 끝까지 지키지만, 직설적이고 날이 서 있어 가까운 이가 그 말에 베이기도 한다.',
     quote:
       '난 아이언이다. 두들겨 맞을수록 단단해지는 쇠라, 어설픈 말은 안 한다. 무뚝뚝해도 내 사람 앞을 막는 일엔 안 물러선다.',
-    image: '/intro/characters/gyeong.webp?v=3',
+    image: '/intro/characters/gyeong.webp?v=4',
   },
   신: {
     ilgan: '신',
@@ -152,7 +152,7 @@ export const SPIRITS: Record<string, Spirit> = {
       '겉은 부드러워도 안엔 또렷한 기준이 있어, 아무에게나 곁을 주지 않고 인정한 사람에게만 진짜 빛을 보인다.',
     quote:
       '음, 난 젬이라고 해. 작아도 빛 한 줄기 허투루 흘리지 않겠어. 까다롭다지만, 함부로 안 빛나는 게 진짜를 지키는 내 방식이야.',
-    image: '/intro/characters/sin.webp?v=3',
+    image: '/intro/characters/sin.webp?v=4',
   },
   임: {
     ilgan: '임',
@@ -167,7 +167,7 @@ export const SPIRITS: Record<string, Spirit> = {
     relationship: '있는 그대로 받아주지만, 품이 넓은 만큼 속을 잘 드러내지 않아 정작 무얼 원하는지는 알기 어렵다.',
     quote:
       '안녕, 난 웨이브야. 막히면 안 다투고 돌아가, 다 품으면서 흐르거든. 어디로 갈진 몰라도 그냥 흘러가다 보면 결국 바다에 닿는다는 걸 알고 있거든.',
-    image: '/intro/characters/im.webp?v=3',
+    image: '/intro/characters/im.webp?v=4',
   },
   계: {
     ilgan: '계',
@@ -182,7 +182,7 @@ export const SPIRITS: Record<string, Spirit> = {
     relationship: '말보다 분위기를 먼저 읽고 조용히 곁에 스미지만, 남의 감정까지 떠안고 가라앉기 쉽다.',
     quote:
       '있지, 난 듀야. 큰 소리는 못 내도 분위기는 누구보다 먼저 읽어. 햇빛에 사라질 듯해도, 내가 적신 자리는 아침까지 남거든.',
-    image: '/intro/characters/gye.webp?v=3',
+    image: '/intro/characters/gye.webp?v=4',
   },
 };
 
